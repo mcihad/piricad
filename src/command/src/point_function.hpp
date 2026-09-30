@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command, private: the point functions of THE grammar.
+// PiriCAD — command, private: the point functions of THE grammar.
 //
 // `orta(A,B)`, `dik(A,B,30,-5)`, `kes(A,r1,B,r2,yon=sol)`, `n(1284)`, `son` —
 // the constructions a surveyor does on paper before typing a coordinate, written
 // where a coordinate is written (TODOS-CAD P1a). They are part of
-// `kentos_cad/command/parser.hpp` and nothing else: CLAUDE.md 5.11 allows one
+// `piricad/command/parser.hpp` and nothing else: CLAUDE.md 5.11 allows one
 // grammar, and this file is a chapter of it, not a second one.
 //
 // WHY THIS IS A SEPARATE TRANSLATION UNIT AND A PRIVATE HEADER. The table of
@@ -26,12 +26,12 @@
 // reading is never chosen in silence.
 #pragma once
 
-#include "kentos_cad/command/parser.hpp"
+#include "piricad/command/parser.hpp"
 
 #include <string>
 #include <string_view>
 
-namespace kentos::command::detail {
+namespace piricad::command::detail {
 
 /// How deep one point function may be written inside another.
 ///
@@ -78,4 +78,4 @@ core::Result<core::Point2> resolve_call(const Token& t, core::Point2 last,
 /// message or the transcript: `orta(point(0.0,0.0),@(50.0,30.0))`.
 std::string describe_call(const Token& t);
 
-} // namespace kentos::command::detail
+} // namespace piricad::command::detail

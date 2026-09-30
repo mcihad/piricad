@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // THE TURKISH END-TO-END EVALUATION SET, and what a test can honestly say about it
-// (TODOS A-08, kentoscad.md §5.6/§14).
+// (TODOS A-08, piricad.md §5.6/§14).
 //
 // THE SET ANSWERS TWO QUESTIONS AND MUST NOT CONFUSE THEM.
 //
@@ -26,20 +26,20 @@
 // THE COUNT IS REPORTED rather than asserted at 200. CLAUDE.md Article 8.9 says
 // the shortfall must be VISIBLE rather than assumed, so the case count is
 // printed on every run and the floor only guards against the set being emptied.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/commands.hpp"
+#include "piricad/ai/commands.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/parser.hpp"
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/parser.hpp"
+#include "piricad/command/registry.hpp"
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <cstdint>
 #include <fstream>
@@ -47,8 +47,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -111,7 +111,7 @@ std::vector<Case> load()
     // handed in by CMake — the same way the golden, journal and fuzz corpora are
     // found. It is deliberately NOT under `/data`: `/data` ships with the
     // program, and an answer key is not something a user installs.
-    const std::string path = std::string(KENTOS_EVAL_DIR) + "/senaryolar.json";
+    const std::string path = std::string(PIRICAD_EVAL_DIR) + "/senaryolar.json";
     std::ifstream in(path, std::ios::binary);
     REQUIRE_MESSAGE(in.good(), "değerlendirme seti açılamadı: " << path);
     const std::string body((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());

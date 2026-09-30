@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/render/text_atlas.hpp"
+#include "piricad/render/text_atlas.hpp"
 
-#include "kentos_cad/core/text_metrics.hpp"
+#include "piricad/core/text_metrics.hpp"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -22,7 +22,7 @@
 #include <cstring>
 #include <unordered_map>
 
-namespace kentos::render {
+namespace piricad::render {
 namespace {
 
 using core::ErrorCode;
@@ -666,4 +666,4 @@ std::uint64_t TextAtlas::revision() const noexcept
     return impl_->revision;
 }
 
-} // namespace kentos::render
+} // namespace piricad::render

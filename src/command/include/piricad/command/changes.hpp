@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: what one step did to the drawing, counted (TODOS F-05).
+// PiriCAD — command: what one step did to the drawing, counted (TODOS F-05).
 //
 // A COMMAND SAYS WHAT IT DID IN ITS OWN WORDS — "3 nesne taşındı" — and a batch
 // said only how many commands it ran. A script of a thousand lines, an agent's
@@ -17,15 +17,15 @@
 // the drawing as they are when the step closes.
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/json.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/json.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// What one step changed, object by object and net of itself.
 struct ChangeSummary
@@ -73,4 +73,4 @@ enum class ChangeTense : std::uint8_t {
 /// across versions.
 [[nodiscard]] core::Json changes_json(const ChangeSummary& s);
 
-} // namespace kentos::command
+} // namespace piricad::command

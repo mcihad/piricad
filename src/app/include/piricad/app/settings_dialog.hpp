@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the settings window.
+// PiriCAD — app: the settings window.
 //
 // GENERATED FROM THE CATALOGUE, not written out. Every row in this window comes
 // from `core::builtin_settings()`: its label is the setting's own primary name,
@@ -18,9 +18,9 @@
 // replay (Article 1.1, 1.2).
 #pragma once
 
-#include "kentos_cad/core/settings.hpp"
+#include "piricad/core/settings.hpp"
 
-#include "kentos_cad/app/dialog_chrome.hpp"
+#include "piricad/app/dialog_chrome.hpp"
 
 #include <QDialog>
 #include <QString>
@@ -35,7 +35,7 @@ class QStandardItemModel;
 class QVBoxLayout;
 class QWidget;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -74,7 +74,7 @@ public:
     explicit SettingsDialog(Controller& controller, Mode mode = Mode::All,
                             QWidget* parent = nullptr);
 
-    /// The sidebar's section titles, in order, for `KENTOS_SETTINGS_PROBE`.
+    /// The sidebar's section titles, in order, for `PIRICAD_SETTINGS_PROBE`.
     /// Opens the page whose section title is `title`; an unknown title leaves
     /// the window where it is. What the print menu's "Profilleri Yönet…" asks.
     void showSection(const QString& title);
@@ -314,4 +314,4 @@ private:
     std::vector<Caption> captions_;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

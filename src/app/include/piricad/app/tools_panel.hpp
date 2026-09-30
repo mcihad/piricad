@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the tools panel — the processing tools, as a tree and a card.
+// PiriCAD — app: the tools panel — the processing tools, as a tree and a card.
 //
 // The third tab beside the attributes and the history. The tree is the tool
 // registry (processing.md): one branch per group, one row per tool, each with
@@ -12,10 +12,10 @@
 // `core.islem.pencere` preference says so, in a window of its own.
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/core/units.hpp"
 
 #include <functional>
 #include <optional>
@@ -33,12 +33,12 @@ class QTreeWidgetItem;
 class QVBoxLayout;
 class QHBoxLayout;
 
-namespace kentos::processing {
+namespace piricad::processing {
 class ProcessingTool; ///< a tool of the registry, shown as a row and a card
 struct ToolParam;     ///< one of its parameters, shown as a field
-} // namespace kentos::processing
+} // namespace piricad::processing
 
-namespace kentos::app {
+namespace piricad::app {
 
 class Button;     ///< the run button (widgets.hpp)
 class Controller; ///< the bus the panel sends its line to
@@ -56,7 +56,7 @@ using ScenePicker =
 class ToolCard : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty card ("choose a tool").
@@ -156,7 +156,7 @@ private:
 class ToolsPanel : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the panel over the registry's tools.
@@ -210,4 +210,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

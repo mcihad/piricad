@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/redact.hpp"
 
 #include <array>
 #include <span>
 #include <string>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 /// ASCII lower-casing. ASCII ONLY, and deliberately not `core::turkish_fold_key`:
@@ -197,4 +197,4 @@ std::string describe_request(const HttpRequest& request)
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

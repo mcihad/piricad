@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — tests: where the view has been (`render::ViewHistory`).
+// PiriCAD — tests: where the view has been (`render::ViewHistory`).
 //
 // The rule of what counts as one step back is the feature: a history that kept
 // every wheel notch would take ten ÖNCEKİ to undo one gesture, and one that
 // kept a move that went nowhere would make ÖNCEKİ do nothing. The canvas only
 // reports its moves; this is where the rule is held, without a window.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/render/view_history.hpp"
+#include "piricad/render/view_history.hpp"
 
 #include <vector>
 
-using namespace kentos;
+using namespace piricad;
 using render::ViewHistory;
 using render::ViewState;
 

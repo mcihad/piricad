@@ -12,25 +12,25 @@
 // R12), so what the readout says is what an export would say — a measurement
 // taken off pixel positions would disagree with the tapu by whatever the zoom
 // happened to be.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/region_input.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/region_input.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// A length in metres, written the way a surveyor reads one off an instrument:
@@ -263,7 +263,7 @@ Task<void> measure_by_corners(Context& ctx)
     ctx.echo("Alan olarak çizmek için: " + line);
     ctx.offer(Offer{.title = "Ölçülen alan",
                     .text  = "Alan: " + square_metres(area) + " · " + std::to_string(ring.size()) +
-                            " köşe. Aynı köşelerle bir alan çizer.",
+                             " köşe. Aynı köşelerle bir alan çizer.",
                     .label = "Alan olarak çiz",
                     .line  = line});
 
@@ -324,7 +324,7 @@ Task<void> measure_inside(Context& ctx)
     ctx.echo("Sınır olarak çizmek için: " + line);
     ctx.offer(Offer{.title = "Ölçülen bölge",
                     .text  = "Alan: " + square_metres(face.area) +
-                            ". Bölgenin sınırını bir alan olarak çizer.",
+                             ". Bölgenin sınırını bir alan olarak çizer.",
                     .label = "Sınır olarak çiz",
                     .line  = line});
 
@@ -478,7 +478,7 @@ Task<void> run_coordinate(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(measure)
+PIRICAD_COMMAND(measure)
 {
     return CommandSpec{
         .id       = "core.measure",
@@ -499,16 +499,16 @@ KENTOS_COMMAND(measure)
                                "Nokta Sabit'i)")
                     .en("fixed"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary = "Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla "
                    "nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya "
                    "uzaklığını verir.",
-        .run = &run_measure,
+        .run     = &run_measure,
     };
 }
 
-KENTOS_COMMAND(measure_area)
+PIRICAD_COMMAND(measure_area)
 {
     return CommandSpec{
         .id       = "core.measure_area",
@@ -516,38 +516,38 @@ KENTOS_COMMAND(measure_area)
         .title    = "Alan Ölç",
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}
+                           "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}
                          .en("objects"),
                      Param::choice("yontem", Arity::optional(), {"nesne", "nokta", "ic"},
                                    "nesne: seçilen nesnelerin alanı (öntanımlı); nokta: "
-                                     "köşeleri gösterilen alan; ic: içine tıklanan bölge")
+                                   "köşeleri gösterilen alan; ic: içine tıklanan bölge")
                          .en("method"),
                      Param::points("noktalar", Arity::at_least(0),
                                    "yontem=nokta için alanın köşeleri; verilirse yöntem "
-                                     "kendiliğinden nokta olur")
+                                   "kendiliğinden nokta olur")
                          .en("points"),
                      Param{"nokta", ParamKind::Point, Arity::optional(),
-                         "yontem=ic için bölgenin içindeki nokta; verilirse yöntem "
+                           "yontem=ic için bölgenin içindeki nokta; verilirse yöntem "
                            "kendiliğinden ic olur"}
                          .en("point"),
                      Param::boolean("ada", Arity::optional(),
                                     "yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak "
-                                      "düşülür (öntanımlı evet)")
+                                    "düşülür (öntanımlı evet)")
                          .en("islands"),
                      Param::integer("bosluk", Arity::optional(),
                                     "yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; "
-                                      "0 hiç")
+                                    "0 hiç")
                          .en("gap")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
-        .summary = "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini "
-                   "yazar.",
-        .run     = &run_measure_area,
-        .targets = Targets::Faces | Targets::Curves | Targets::Hatches,
+        .summary  = "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini "
+                    "yazar.",
+        .run      = &run_measure_area,
+        .targets  = Targets::Faces | Targets::Curves | Targets::Hatches,
     };
 }
 
-KENTOS_COMMAND(coordinate)
+PIRICAD_COMMAND(coordinate)
 {
     return CommandSpec{
         .id       = "core.coordinate",
@@ -558,8 +558,8 @@ KENTOS_COMMAND(coordinate)
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary = "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.",
-        .run = &run_coordinate,
+        .run     = &run_coordinate,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

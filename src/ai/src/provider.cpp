@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/provider.hpp"
+#include "piricad/ai/provider.hpp"
 
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/redact.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <array>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -578,4 +578,4 @@ core::Result<ProviderProfiles> ProviderProfiles::from_json(std::string_view text
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

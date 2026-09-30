@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: BUDA and UZAT on lines, arcs and circles (TODOS C-04).
+// PiriCAD — core: BUDA and UZAT on lines, arcs and circles (TODOS C-04).
 //
 // THE PIECE YOU CLICK IS THE PIECE THAT GOES. A trim finds every place the
 // clicked object meets the cutting edges, and removes the stretch between the
@@ -24,15 +24,15 @@
 // (`cutting_edges`), so what the preview marks is what the click does.
 #pragma once
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// How a BUDA or UZAT run cuts — its edges and its rules — and the payload its
 /// prompts carry to the canvas (`command::RubberShape::Trim`, `TrimFence`).
@@ -125,4 +125,4 @@ std::vector<std::uint8_t> encode_trim_guide(const TrimGuide& guide);
 /// The guide back, refused when the bytes are not what the encoder writes.
 Result<TrimGuide> decode_trim_guide(std::span<const std::uint8_t> bytes);
 
-} // namespace kentos::core
+} // namespace piricad::core

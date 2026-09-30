@@ -5,9 +5,9 @@
 // the captions in scope stop following anything. They stay where they are and
 // say what they say; from here on the object they were about moves alone. A
 // caption that follows nothing is skipped and counted, never reported as changed.
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/processing/registry.hpp"
 
-namespace kentos::processing {
+namespace piricad::processing {
 namespace {
 
 class Detach final : public ProcessingTool
@@ -42,27 +42,27 @@ public:
 
 private:
     const ToolSpec spec_{
-        .id     = "islem.bag_coz",
-        .python = "detach",
-        .names  = {"BAĞÇÖZ", "BAGCOZ", "DETACH", "BÇ", "BC"},
-        .title  = "Yazının bağını çöz",
+        .id      = "islem.bag_coz",
+        .python  = "detach",
+        .names   = {"BAĞÇÖZ", "BAGCOZ", "DETACH", "BÇ", "BC"},
+        .title   = "Yazının bağını çöz",
         .summary = "Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne "
                    "bundan sonra tek başına taşınır.",
-        .group         = "Etiketleme",
-        .icon          = "bag_coz",
-        .applies       = Applies::Texts,
-        .params        = {},
-        .output        = OutputShape::InPlace,
+        .group   = "Etiketleme",
+        .icon    = "bag_coz",
+        .applies = Applies::Texts,
+        .params  = {},
+        .output  = OutputShape::InPlace,
         .output_suffix = "",
     };
 };
 
 } // namespace
 
-KENTOS_PROCESSING_TOOL(detach)
+PIRICAD_PROCESSING_TOOL(detach)
 {
     static const Detach tool;
     return tool;
 }
 
-} // namespace kentos::processing
+} // namespace piricad::processing

@@ -10,22 +10,22 @@
 // depths and the journal length before and after. The journal is in it because
 // it is the record a replay rebuilds the drawing from — a line for a command
 // whose edit was rolled back is a drawing that comes back on replay.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/changes.hpp"
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/changes.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/json_runner.hpp"
 
-#if KENTOS_HAVE_PYTHON
-#include "kentos_cad/script/python_runner.hpp"
+#if PIRICAD_HAVE_PYTHON
+#include "piricad/script/python_runner.hpp"
 #endif
 
 #include <algorithm>
@@ -40,8 +40,8 @@
 #include <thread>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -279,7 +279,7 @@ TEST_CASE("TEK İŞLEM: 500 nesne üzerinde yarıda durdurulan işlem aracı hi�
     (void)finished;
 }
 
-#if KENTOS_HAVE_PYTHON
+#if PIRICAD_HAVE_PYTHON
 
 TEST_CASE("TEK İŞLEM: 500 komutluk Python betiği yakalanmayan hatayla hiçbir iz bırakmaz (F-05)")
 {
@@ -505,7 +505,7 @@ TEST_CASE("BETİK: tamamlanan betik ne yaptığını, yarıda kalan hatasını s
     script::JsonRunner runner(r.bus, script::Sandbox::Project);
     script::install(r.bus, runner);
     const std::filesystem::path dir =
-        std::filesystem::temp_directory_path() / "kentoscad-tek-islem-betik";
+        std::filesystem::temp_directory_path() / "piricad-tek-islem-betik";
     std::filesystem::create_directories(dir);
     const std::filesystem::path good = dir / "iyi.json";
     const std::filesystem::path bad  = dir / "kotu.json";
@@ -537,7 +537,7 @@ TEST_CASE("BETİK: kılavuzun örnek betiği kılavuzdaki cümleyi yazar (F-05)"
     // this is.
     Rig r;
     script::JsonRunner runner(r.bus, script::Sandbox::Project);
-    auto ran = runner.run_file(std::string(KENTOS_JOURNAL_DIR) + "/ornek-parsel.json");
+    auto ran = runner.run_file(std::string(PIRICAD_JOURNAL_DIR) + "/ornek-parsel.json");
     if (!ran) FAIL_WITH("örnek", ran.error().message);
     CHECK_EQ(ran.value().said, "Örnek parsel çizimi: 9 komut, tek geri alma adımı — 14 nesne "
                                "eklendi; 4 katmanın ayarları değişti.");
@@ -609,7 +609,7 @@ TEST_CASE("TEK İŞLEM: yarıda kalan betik hiçbir türde iz bırakmaz; kaydedi
     r.run("ALAN 0,0 20000,0 20000,10000 0,10000");
     r.run("ÖZNİTELİK ad=ada nesne=1 deger=101");
     r.run("ÇİZGİ 0,20000 30000,20000");
-    const auto dir = std::filesystem::temp_directory_path() / "kentoscad-tek-islem-dosya";
+    const auto dir = std::filesystem::temp_directory_path() / "piricad-tek-islem-dosya";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
     const std::string first = (dir / "once.pcad").string();

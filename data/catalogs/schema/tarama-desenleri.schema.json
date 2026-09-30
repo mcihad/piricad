@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kentoscad.org/data/catalogs/schema/tarama-desenleri.schema.json",
-  "title": "KentOSCad tarama deseni kataloğu",
+  "$id": "https://piricad.org/data/catalogs/schema/tarama-desenleri.schema.json",
+  "title": "PiriCAD tarama deseni kataloğu",
   "description": "TARAMA komutunun ve DXF HATCH okuyucusunun adla bulduğu çizgi desenleri. Bir desen çizgi ailelerinden oluşur: açı (mikroderece), taban noktası, bir çizgiden ötekine kayma ve kesik dizisi; uzunluklar desen mikrometresidir ve taramanın ölçeğiyle çarpılır (core/hatch.hpp HatchDef::Family). Yönetmelik değeri taşımaz.",
   "type": "object",
   "required": ["schema_version", "package_version", "id", "source", "published", "licence", "desenler"],

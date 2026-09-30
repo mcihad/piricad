@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: a file written beside its target, put in place only when
+// PiriCAD — io: a file written beside its target, put in place only when
 // whole (TODOS F-05).
 //
 // AN EXPORT THAT FAILS HALF WAY MUST LEAVE WHAT WAS THERE. GDAL's writer and
@@ -15,7 +15,7 @@
 // THE TARGET'S OWN NAME, NOT A DISGUISED ONE. A GML names its schema file, a
 // GeoPackage its table after the file, a world file its picture by sharing a
 // stem: a file written under a staging NAME would carry that name inside it
-// after the move. Written as `<dir>/.kentos-<n>/<name>`, every file of the set
+// after the move. Written as `<dir>/.piricad-<n>/<name>`, every file of the set
 // already has the name it will have.
 //
 // A SET OF FILES MOVES TOGETHER. A DXF and its `.prj`, a picture and its world
@@ -26,13 +26,13 @@
 // and what was not, rather than called a success.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <filesystem>
 #include <string>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// What moving a staged set into place did, file by file.
 struct Placed
@@ -47,7 +47,7 @@ struct Placed
 class Staging
 {
 public:
-    /// Makes a staging directory beside `target` (`.kentos-<n>`, a name no
+    /// Makes a staging directory beside `target` (`.piricad-<n>`, a name no
     /// user file has). When the directory cannot be made the writer's own open
     /// fails on `path()` and says so, and `commit` refuses.
     explicit Staging(std::filesystem::path target);
@@ -89,4 +89,4 @@ private:
 /// lists should never be left holding.
 [[nodiscard]] bool is_staging_name(const std::string& name) noexcept;
 
-} // namespace kentos::io
+} // namespace piricad::io

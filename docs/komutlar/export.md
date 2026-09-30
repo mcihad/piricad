@@ -7,7 +7,7 @@ sisteminin nasıl taşındığını ve neyin aktarılmadığını bileceksiniz.
 ## Ne yapar
 
 Çizimdeki **görünür ve silinmemiş** nesneleri, verdiğiniz yola dış bir veri
-biçiminde yazar. Her KentOSCad katmanı hedef dosyada bir katman olur.
+biçiminde yazar. Her PiriCAD katmanı hedef dosyada bir katman olur.
 
 Dışa aktarma **biçime göre kayıplıdır**. GeoPackage'a öznitelik sütunları alan
 olarak, her nesnenin türü ve kalıcı anahtarı, yazının metni, yüksekliği, açısı ve
@@ -19,8 +19,8 @@ elips ve kısmi elips `ELLIPSE`, nokta `POINT`, yazı `TEXT`, çizgi ve alan
 `LWPOLYLINE`, yaylı çoklu çizgi şişkinlikli `LWPOLYLINE`, spline `SPLINE`, tarama
 `HATCH`, blok tanımları `BLOCK` ve referansları `INSERT`, ölçü `DIMENSION` (stili
 `DIMSTYLE` tablosuna), kılavuz çizgi `LEADER`; katmanlar rengi, kalınlığı, görünürlüğü ve
-kilidiyle; nesnenin kendi rengi ve kalınlığı; öznitelikler `KENTOSCAD` uygulama
-verisi (XDATA) olarak — KentOSCad geri okurken sütunlarına döner; başka programın
+kilidiyle; nesnenin kendi rengi ve kalınlığı; öznitelikler `PIRICAD` uygulama
+verisi (XDATA) olarak — PiriCAD geri okurken sütunlarına döner; başka programın
 XDATA'sı geldiği gibi. Çizgi tipleri bu sürümde yazılmaz ve söylenir. Çalışma
 dosyanız her zaman
 [`.pcad`](../veri/proje-dosyasi.md) olmalıdır; dış biçimler teslim içindir.
@@ -82,7 +82,7 @@ Dışa aktarıldı: ada12-teslim.gpkg  (14 öğe, 3 katman, GPKG)
   not: 2 öznitelik sütunu alan olarak yazıldı; stil bilgisi yazılmadı.
 ```
 
-DXF'e yazarken KentOSCad yanına bir `.prj` dosyası da koyar ve bunu söyler:
+DXF'e yazarken PiriCAD yanına bir `.prj` dosyası da koyar ve bunu söyler:
 
 ```text
 Dışa aktarıldı: ada12-teslim.dxf  (14 nesne, 3 katman, DXF AC1021, EPSG:5256)
@@ -102,11 +102,11 @@ DIŞAAKTAR dosya="ada12-teslim.dxf" surum=2000
 ```
 
 **İki dosyayı da teslim edin.** `.prj` olmadan DXF'iniz etiketsiz koordinat
-taşır ve KentOSCad dâhil hiçbir program hangi projeksiyonda olduğunu bilemez.
+taşır ve PiriCAD dâhil hiçbir program hangi projeksiyonda olduğunu bilemez.
 
 ### Daire, yay, elips, nokta ve yazı nasıl yazılır
 
-Dış biçimlerin dairesi, yayı ya da yazısı yoktur; KentOSCad bunları **nesnenin
+Dış biçimlerin dairesi, yayı ya da yazısı yoktur; PiriCAD bunları **nesnenin
 türüne göre** yazar. GeoPackage'da her katmanın tablosu şu alanları taşır:
 
 | Alan | İçeriği |
@@ -125,7 +125,7 @@ projenin **eğri sapmasıyla** kırılır: her kiriş eğriden en çok `eğri_sa
 AYAR eğri_sapması 5
 ```
 
-Bu dosyayı KentOSCad geri okurken `tur` alanını tanır: daire daire, yay yay, yazı yazı
+Bu dosyayı PiriCAD geri okurken `tur` alanını tanır: daire daire, yay yay, yazı yazı
 olarak geri gelir (elips bugün alan olarak gelir ve bunu söyler). Ayrıntı:
 [Sayısal doğruluk](../veri/hassasiyet.md#dışa-aktarma-eğri-sapması).
 
@@ -136,13 +136,13 @@ elips `ELLIPSE`, nokta `POINT`, yaylı çoklu çizgi şişkinlikli `LWPOLYLINE`,
 yazılmaz; AutoCAD deseni adıyla bulur), blok tanımı üyeleriyle `BLOCK`, referansı
 `INSERT`, ölçü türüyle `DIMENSION`, kılavuz çizgi `LEADER` olarak yazılır. Koordinatlar
 [`AYAR çizim_birimi`](setting.md) ayarındaki birimde yazılır ve `$INSUNITS` başlığa
-işlenir. Öznitelikler her nesnenin `KENTOSCAD` uygulama verisine `ada#0=12` biçiminde
-(ad, sütun türü, değer) yazılır; KentOSCad bu dosyayı geri okurken sütunu yoksa
+işlenir. Öznitelikler her nesnenin `PIRICAD` uygulama verisine `ada#0=12` biçiminde
+(ad, sütun türü, değer) yazılır; PiriCAD bu dosyayı geri okurken sütunu yoksa
 kurar ve değeri yerine koyar.
 
 ### Arayüz
 
-**KentOS CAD ▸ Dışa Aktar…**, şeritteki **Dışa Aktar…** (**Harita ▸ Veri**, **Çıktı ▸
+**PiriCAD CAD ▸ Dışa Aktar…**, şeritteki **Dışa Aktar…** (**Harita ▸ Veri**, **Çıktı ▸
 Dosya**) ve öznitelik tablosunun araç satırındaki **Dışa aktar** işareti aynı
 [Dışa Aktar](../baslangic/disa-aktarma.md) penceresini açar: solda yazılabilen
 biçimler, sağda dosya, altta pencerenin çalıştıracağı `DIŞAAKTAR` satırı. Pencere
@@ -191,7 +191,7 @@ oturumu yeniden oynatmak, o oturumdaki her dışa aktarmayı yeniden yapmamalıd
 
 Toplu teslim üretiminde tipik kullanım, betiğin sonunda tek çağrıdır.
 
-Sanal dosya sistemi yolları (`/vsicurl/`, `/vsis3/`) reddedilir: KentOSCad ağa ya
+Sanal dosya sistemi yolları (`/vsicurl/`, `/vsis3/`) reddedilir: PiriCAD ağa ya
 da arşivin içine yazmaz.
 
 `DIŞAAKTAR` yapay zekâya kapalıdır: bir öneri, kullanıcının diskinde dosya
@@ -210,8 +210,8 @@ oluşturmamalıdır.
 | `'...' oluşturulamadı: ... Dizin izinlerini ve boş alanı denetleyin.` | İzin yok ya da disk dolu | İzinleri ve yeri denetleyin |
 | `'...' katmanı yazılamadı: ...` | Sürücü katmanı kabul etmedi | Katman adında sürücünün kabul etmediği bir karakter olabilir |
 | `Çizimde dışa aktarılacak nesne yok; '...' yazılmadı.` | Çizim boş | Önce çizin |
-| `'...' sanal dosya sistemi yolu. KentOSCad ağa ya da arşivin içine yazmaz.` | `/vsi...` ile başlayan yol | Yerel bir yol verin |
-| `'...' bir KentOSCad proje dosyası uzantısı taşıyor.` | `.pcad` dışa aktarılmaya çalışıldı | [FARKLIKAYDET](saveas.md) kullanın |
+| `'...' sanal dosya sistemi yolu. PiriCAD ağa ya da arşivin içine yazmaz.` | `/vsi...` ile başlayan yol | Yerel bir yol verin |
+| `'...' bir PiriCAD proje dosyası uzantısı taşıyor.` | `.pcad` dışa aktarılmaya çalışıldı | [FARKLIKAYDET](saveas.md) kullanın |
 | `'...' yazılamadı. Koordinat sistemi olmayan bir dışa aktarım eksik veridir` | `.prj` yazılamadı | Dizin izinlerini denetleyin |
 | `DXF'in yanına .prj yazılmadı: sayıları milimetre …` (not) | `çizim_birimi` metre değil; `.prj` bir CBS programına sayıları metre okuturdu | Koordinat sistemini taşıyan bir DXF için `AYAR çizim_birimi metre` ile yeniden aktarın |
 | `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortam | Uygulama içinden çalıştırın |

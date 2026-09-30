@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: a pattern-filled face.
+// PiriCAD — core: a pattern-filled face.
 //
 // What a DXF `HATCH` is: boundary loops and the pattern that fills them. The
 // loops are the rings, in the face convention (R11: exterior first, islands
@@ -14,16 +14,16 @@
 // re-symbolised without guessing what it was.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
 #include <string>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The payload of a `core.hatch` slot.
 struct HatchDef
@@ -77,4 +77,4 @@ Result<HatchDef> hatch_of(const RingGeometry& geom, std::uint32_t slot);
 /// family has no offset across the lines.
 Mm hatch_family_spacing_mm(const HatchDef& def, const HatchDef::Family& family) noexcept;
 
-} // namespace kentos::core
+} // namespace piricad::core

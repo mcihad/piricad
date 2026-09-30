@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: writing Python, and running it a line at a time.
+// PiriCAD — app: writing Python, and running it a line at a time.
 //
 // THREE WIDGETS, ONE CAPABILITY. The editor and the console both end at
 // `core.python`, which is a command like any other — so what a user can do here
@@ -10,12 +10,12 @@
 // WHY AN EDITOR IN THE PROGRAM AT ALL, when every user has one. Because the API
 // is projected at run time: `cad.__all__` is the truth about what this build can
 // do, and only a window inside the program can complete against it. An editor
-// outside gets the generated stub (`docs/python/kentos_cad.pyi`) and that is the
+// outside gets the generated stub (`docs/python/piricad_cad.pyi`) and that is the
 // right answer for a plugin; a five-line batch job is not worth leaving for.
 #pragma once
 
-#include "kentos_cad/app/python_api_info.hpp"
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/python_api_info.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QPlainTextEdit>
 #include <QSyntaxHighlighter>
@@ -25,7 +25,7 @@ class QCompleter;
 class QStandardItemModel;
 class QTextDocument;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The signature strip the editor floats under the cursor; defined in the .cpp
 /// because it is painted, not assembled, and nothing outside constructs one.
@@ -79,7 +79,7 @@ private:
 class ScriptEditor : public QPlainTextEdit, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an editor with its gutter, highlighter and completer. The API names
@@ -252,7 +252,7 @@ private:
 class PythonConsole : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the panel over a controller, which outlives it. Completion comes
@@ -327,4 +327,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

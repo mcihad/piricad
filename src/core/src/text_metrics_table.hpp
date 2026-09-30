@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core (private to text_metrics.cpp): the drawing face's advance
-// table, whose data `kentos_yazi_olcusu` writes into text_metrics_table.cpp.
+// PiriCAD — core (private to text_metrics.cpp): the drawing face's advance
+// table, whose data `piricad_yazi_olcusu` writes into text_metrics_table.cpp.
 // What the numbers are and why they are compiled in is said in
-// kentos_cad/core/text_metrics.hpp.
+// piricad/core/text_metrics.hpp.
 #pragma once
 
-#include "kentos_cad/core/text_metrics.hpp"
+#include "piricad/core/text_metrics.hpp"
 
 #include <cstdint>
 #include <span>
 
-namespace kentos::core::text_table {
+namespace piricad::core::text_table {
 
 /// A stretch of characters that share one advance.
 struct Run
@@ -36,4 +36,4 @@ std::span<const std::uint16_t> direct() noexcept;
 /// Every other character whose advance is not `missing()`, as runs in order.
 std::span<const Run> runs() noexcept;
 
-} // namespace kentos::core::text_table
+} // namespace piricad::core::text_table

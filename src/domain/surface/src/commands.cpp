@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/domain/surface/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
 
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/spec.hpp"
 
-namespace kentos::command {
-KENTOS_COMMAND(contour);
-KENTOS_COMMAND(earthwork);
-} // namespace kentos::command
+namespace piricad::command {
+PIRICAD_COMMAND(contour);
+PIRICAD_COMMAND(earthwork);
+} // namespace piricad::command
 
-namespace kentos::domain::surface {
+namespace piricad::domain::surface {
 
-void register_surface_commands(kentos::command::Registry& r)
+void register_surface_commands(piricad::command::Registry& r)
 {
-    (void)r.add(kentos::command::kentos_command_contour());
-    (void)r.add(kentos::command::kentos_command_earthwork());
+    (void)r.add(piricad::command::piricad_command_contour());
+    (void)r.add(piricad::command::piricad_command_earthwork());
 }
 
-} // namespace kentos::domain::surface
+} // namespace piricad::domain::surface

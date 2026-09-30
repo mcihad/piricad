@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the design tokens, and the one place they are written down.
+// PiriCAD — app: the design tokens, and the one place they are written down.
 //
 // `Screenshots/design.md` §2 is the specification and this is its transcription.
 // Every colour the shell paints comes from here: the palette, the stylesheet and
@@ -24,7 +24,7 @@
 
 #include <QColor>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The design tokens of one theme. Named after `design.md` §2, in its order.
 ///
@@ -179,4 +179,4 @@ const Tokens& darkTokens();
 /// The light tokens: the same structure, mapped for a light ground.
 const Tokens& lightTokens();
 
-} // namespace kentos::app
+} // namespace piricad::app

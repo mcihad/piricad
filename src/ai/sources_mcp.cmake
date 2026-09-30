@@ -12,7 +12,7 @@
 # confirmed the reading. This CMake file is build plumbing rather than
 # part of the server, so it keeps the tree's licence. `NOTICE` and the SBOM are
 # where the mixed licensing is recorded for a distributor.
-set(KENTOS_AI_MCP_SOURCES
+set(PIRICAD_AI_MCP_SOURCES
     src/jsonrpc.cpp
     src/endpoint.cpp
     src/mcp.cpp

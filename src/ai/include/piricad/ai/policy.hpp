@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the decision, taken apart from the model that asked.
+// PiriCAD — ai: the decision, taken apart from the model that asked.
 //
 // WHAT THIS IS FOR. A plan arrives from somewhere — the chat, an MCP client, a
 // replayed journal — and something has to answer one question about each step:
@@ -23,14 +23,14 @@
 // here.
 #pragma once
 
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/command/value.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/command/value.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// What the engine decided about one step.
 enum class Verdict : std::uint8_t {
@@ -197,4 +197,4 @@ const char* overwrite_policy_name(OverwritePolicy p);
 /// truthfully, what the person chose.
 std::string policy_rules(const PolicyPreferences& prefs);
 
-} // namespace kentos::ai
+} // namespace piricad::ai

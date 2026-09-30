@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the attribute table, `design.md` §9.
+// PiriCAD — app: the attribute table, `design.md` §9.
 //
 // A layer's rows and columns, with a filter bar over them and field statistics
 // beside them. The window holds no copy of the data: the model reads the
@@ -16,10 +16,10 @@
 // and an attribute filter is not an exception to it (CLAUDE.md 5.11).
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/identity.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/identity.hpp"
 
 #include <QAbstractTableModel>
 #include <QPair>
@@ -31,7 +31,7 @@ class QLabel;
 class QLineEdit;
 class QToolButton;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -184,7 +184,7 @@ public:
 
     void applyTheme(ThemeMode mode) override;
 
-    /// Drives the grid the way a hand does, for `KENTOS_TABLE_PROBE`: turn the
+    /// Drives the grid the way a hand does, for `PIRICAD_TABLE_PROBE`: turn the
     /// mode on or off, type into the current cell, and read back where the
     /// cursor ended up.
     ///
@@ -285,4 +285,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

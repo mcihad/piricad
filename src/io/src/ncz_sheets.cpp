@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io (internal): a Netcad map sheet (`pafta`) drawn as the sheet it is.
+// PiriCAD — io (internal): a Netcad map sheet (`pafta`) drawn as the sheet it is.
 //
 // See ncz_sheets.hpp for what a MapSheet record holds and why its box is not
 // its frame.
@@ -10,11 +10,11 @@
 #include <cstdint>
 #include <utility>
 
-#ifdef KENTOS_HAVE_GDAL
+#ifdef PIRICAD_HAVE_GDAL
 #include <ogr_spatialref.h>
 #endif
 
-namespace kentos::io::ncz {
+namespace piricad::io::ncz {
 
 namespace {
 
@@ -31,7 +31,7 @@ const char* ellipsoid_of(std::uint8_t datum) noexcept
     }
 }
 
-#ifdef KENTOS_HAVE_GDAL
+#ifdef PIRICAD_HAVE_GDAL
 struct SrsRelease
 {
     void operator()(OGRSpatialReference* srs) const noexcept
@@ -83,7 +83,7 @@ struct SheetFrames::Impl
 {
     std::string why;
     double central_meridian{0.0};
-#ifdef KENTOS_HAVE_GDAL
+#ifdef PIRICAD_HAVE_GDAL
     std::unique_ptr<OGRCoordinateTransformation, CtRelease> forward; ///< degrees → metres
     std::unique_ptr<OGRCoordinateTransformation, CtRelease> inverse; ///< metres → degrees
 #endif
@@ -120,7 +120,7 @@ SheetFrames::SheetFrames(const Header& header) : impl_(std::make_unique<Impl>())
         return;
     }
     d.central_meridian = meridian;
-#ifdef KENTOS_HAVE_GDAL
+#ifdef PIRICAD_HAVE_GDAL
     // A projection and its own geographic system: the one conversion the box was
     // made with, so no datum shift and no grid enters it.
     const std::string definition = "+proj=tmerc +lat_0=0 +lon_0=" + std::to_string(meridian) +
@@ -147,7 +147,7 @@ SheetFrames::SheetFrames(const Header& header) : impl_(std::make_unique<Impl>())
     }
 #else
     (void)k0;
-    d.why = "bu yapıda GDAL yok (KENTOS_WITH_GDAL=OFF)";
+    d.why = "bu yapıda GDAL yok (PIRICAD_WITH_GDAL=OFF)";
 #endif
 }
 
@@ -168,7 +168,7 @@ std::optional<std::array<Coord, 4>> SheetFrames::frame(double min_easting, doubl
                                                        double max_northing) const
 {
     if (!usable()) return std::nullopt;
-#ifdef KENTOS_HAVE_GDAL
+#ifdef PIRICAD_HAVE_GDAL
     const Impl& d = *impl_;
     // The unknowns: the cell's south and north latitude, west and east longitude.
     using Four = std::array<double, 4>;
@@ -265,4 +265,4 @@ std::optional<std::array<Coord, 4>> SheetFrames::frame(double min_easting, doubl
 #endif
 }
 
-} // namespace kentos::io::ncz
+} // namespace piricad::io::ncz

@@ -1,4 +1,4 @@
-# KentOSCad
+# PiriCAD
 
 **Türkiye odaklı CBS + CAD harita yazılımı.**
 GPLv3 · C++20 · Qt 6 · komut merkezli mimari · BÖHHBÜY / MPYY / TUCBS / TKGM uyumu.
@@ -28,7 +28,7 @@ iddiadır**, niyet beyanı değil: `tests/unit/test_proof.cpp`.
 make doctor        # bu makine neyi derleyebiliyor?
 make build         # her şeyi derle
 make test          # testler + CI kapıları
-make run           # KentOSCad'i başlat
+make run           # PiriCAD'i başlat
 make help          # bütün hedefler
 ```
 
@@ -59,7 +59,7 @@ Büyük harf dönüşümü Türkçe kurallarına göre yapılır (`i` → `İ`, 
 | `src/core` | Qt'siz çekirdek: sabit-nokta koordinat, SoA geometri, doküman |
 | `src/command` | Komut veri yolu, kayıt, coroutine, işlem, günlük, **tek ayrıştırıcı** |
 | `src/render` | Sahne kurulumu, görünüm dönüşümü, arka uç arayüzü |
-| `src/script` | Betik motoru: JSON çalıştırıcı + gömülü Python (`KENTOS_WITH_PYTHON`) |
+| `src/script` | Betik motoru: JSON çalıştırıcı + gömülü Python (`PIRICAD_WITH_PYTHON`) |
 | `src/app` | Qt Widgets kabuğu |
 | `src/io` `src/ai` `src/domain` `src/plugin-api` | Faz 1–3 |
 | `data/` | Mevzuat katalogları, CRS gridleri, mevzuat korpusu — **veri, kod değil** |
@@ -70,7 +70,7 @@ Büyük harf dönüşümü Türkçe kurallarına göre yapılır (`i` → `İ`, 
 
 - **[CLAUDE.md](CLAUDE.md)** — projenin anayasası. Önce bu okunur.
 - **[.claude/](.claude/)** — her motorun kendi kesin kuralları ve kesin yasakları.
-- **[kentoscad.md](kentoscad.md)** — teknik referans ve yol haritası (niyetin kaynağı).
+- **[piricad.md](piricad.md)** — teknik referans ve yol haritası (niyetin kaynağı).
 
 Her kural bir CI kapısına, teste veya benchmark'a bağlıdır. Bağlanamayan kural
 yanlış yazılmıştır.

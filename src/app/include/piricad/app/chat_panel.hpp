@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the chat surface. The SECOND road to the same command system.
+// PiriCAD — app: the chat surface. The SECOND road to the same command system.
 //
 // TWO ROADS, ONE ENGINE. An outside agent reaches this program through the MCP
 // server (`mcp_service.hpp`); the engineer at the workstation reaches the same
@@ -23,12 +23,12 @@
 // would put the program's own subject behind the conversation about it.
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/ai/chat.hpp"
-#include "kentos_cad/ai/dialect.hpp"
-#include "kentos_cad/ai/provider.hpp"
+#include "piricad/ai/chat.hpp"
+#include "piricad/ai/dialect.hpp"
+#include "piricad/ai/provider.hpp"
 
 #include <QHash>
 #include <QPointer>
@@ -44,7 +44,7 @@
 
 class QPlainTextEdit;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The AI layer's door to the document; see ai_service.hpp.
 class AiService;
@@ -60,7 +60,7 @@ class SecretStore;
 class ChatPanel : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Takes the shell's ONE transport rather than making its own: it is the only
@@ -113,7 +113,7 @@ public:
     /// The transcript, for the probe.
     Transcript* transcript() const noexcept { return transcript_; }
 
-    /// The conversation as the PROVIDER will see it, for `KENTOS_CHAT_PROBE`.
+    /// The conversation as the PROVIDER will see it, for `PIRICAD_CHAT_PROBE`.
     ///
     /// NOT THE SAME AS THE TRANSCRIPT. The transcript is what a person reads and
     /// holds bubbles the model never sees; this is the message list that goes on
@@ -124,7 +124,7 @@ public:
     /// Drives RECORDED BYTES through the panel with no socket, as if they had
     /// arrived from `profile`'s endpoint.
     ///
-    /// FOR `KENTOS_CHAT_PROBE` AND THE TESTS, and it is not a way round
+    /// FOR `PIRICAD_CHAT_PROBE` AND THE TESTS, and it is not a way round
     /// anything: the bytes go through the same decoder, the same assembler, the
     /// same tool loop and the same approval path a real answer does — which is
     /// what makes the probe worth running (`.claude/test.md`, and ai.md P10's
@@ -262,4 +262,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

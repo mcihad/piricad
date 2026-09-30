@@ -21,17 +21,17 @@
 //
 // SESSION STATE, never the document's (model.md R43): not hashed, not journalled,
 // not undoable. A mark is scaffolding.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// A coordinate pair in metres, the way the ruler reads one.
@@ -91,7 +91,7 @@ Task<void> run(Context& ctx)
 
     const auto& marks = bus.tracking_marks();
     std::string said  = "İşaretlendi: " + metres_pair(given.as_points().back()) + ".  " +
-                       std::to_string(marks.size()) + " işaret";
+                        std::to_string(marks.size()) + " işaret";
     if (marks.size() >= 2)
         said += "; kesişim " + metres_pair(core::Point2{marks.front().x, marks.back().y}) +
                 " ya da " + metres_pair(core::Point2{marks.back().x, marks.front().y});
@@ -102,7 +102,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(tracking)
+PIRICAD_COMMAND(tracking)
 {
     return CommandSpec{
         .id       = "core.tracking",
@@ -119,12 +119,12 @@ KENTOS_COMMAND(tracking)
         // NOT UNDOABLE and not journalled as a mutation: a mark is a session aid,
         // exactly as a snap mode is (`MOD`). `ReadOnly` is what says so to the
         // bus; `Transparent` is what lets it run beside a waiting command.
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly | Flags::NoEffect |
-                 Flags::Transparent,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly | Flags::NoEffect |
+                   Flags::Transparent,
         .summary = "Geçici izleme için nokta işaretler; iki işaretin izleri kesişir.",
         .run     = &run,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

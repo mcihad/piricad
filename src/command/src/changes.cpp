@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/changes.hpp"
+#include "piricad/command/changes.hpp"
 
 #include <algorithm>
 #include <cstdint>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 using core::Op;
@@ -214,4 +214,4 @@ core::Json changes_json(const ChangeSummary& s)
     return out;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

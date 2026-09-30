@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/spline.hpp"
+#include "piricad/core/spline.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
+#include "piricad/core/curve_path.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/wire.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/wire.hpp"
 
 #include "kind_common.hpp"
 
@@ -12,7 +12,7 @@
 #include <cmath>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::uint16_t kFlagClosed   = 1u << 0;
@@ -425,7 +425,7 @@ bool spline_outline(const RingGeometry& geom, std::uint32_t slot, std::vector<Mm
     return def.value().closed;
 }
 
-KENTOS_KIND(spline)
+PIRICAD_KIND(spline)
 {
     KindSpec s{};
     s.id         = kSplineKind;
@@ -447,4 +447,4 @@ KENTOS_KIND(spline)
     return s;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

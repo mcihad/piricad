@@ -24,10 +24,10 @@
 set -euo pipefail
 
 kok="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-exe="$kok/build/asan/bin/kentos_cad"
+exe="$kok/build/asan/bin/piricad"
 
 if [[ ! -x "$exe" ]]; then
-    echo "omur: BEKLEMEDE — build/asan/bin/kentos_cad yok. 'cmake --build --preset asan'"
+    echo "omur: BEKLEMEDE — build/asan/bin/piricad yok. 'cmake --build --preset asan'"
     echo "omur:   sonrasi bu kapi gercek olcum yapar; sanitizer'siz kosmak"
     echo "omur:   'bu sefer cokmedi' demektir, 'dogru' demek degil."
     exit 0
@@ -37,7 +37,7 @@ fi
 # dies of SIGPIPE, and `pipefail` then calls a successful test a failure.
 asan_semboller="$(nm -D "$exe" 2>/dev/null | grep -c '__asan' || true)"
 if [[ "$asan_semboller" -eq 0 ]]; then
-    echo "omur: BEKLEMEDE — build/asan/bin/kentos_cad sanitizer'siz derlenmis."
+    echo "omur: BEKLEMEDE — build/asan/bin/piricad sanitizer'siz derlenmis."
     exit 0
 fi
 
@@ -64,7 +64,7 @@ cd "$kok"
 set +e
 cikti="$(ASAN_OPTIONS=detect_leaks=0:abort_on_error=0 \
          UBSAN_OPTIONS=print_stacktrace=1 \
-         KENTOS_DATA="$kok/data" KENTOS_RHI_OMUR=1 KENTOS_BUDGET_PROBE=8 \
+         PIRICAD_DATA="$kok/data" PIRICAD_RHI_OMUR=1 PIRICAD_BUDGET_PROBE=8 \
          "$exe" --betik "$sahne" 2>&1)"
 rc=$?
 set -e

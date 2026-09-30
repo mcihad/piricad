@@ -34,7 +34,7 @@ yazı tipini (`IBM Plex Sans`, `IBMPlexSans-Regular.ttf`) ve lisansını (SIL Op
 License 1.1, ayrılmış ad "Plex") taşır; komutun iletisi de aynı şeyi yazar:
 `…; yazı tipi IBM Plex Sans gömülü (SIL Open Font License 1.1)`.
 
-> **PDF şifreleme** `qpdf` ile yapılır ve `KENTOS_WITH_QPDF` kapalı derlenmiş bir
+> **PDF şifreleme** `qpdf` ile yapılır ve `PIRICAD_WITH_QPDF` kapalı derlenmiş bir
 > yapıda yoktur; o zaman `sifre`, `sahip_sifresi` ve `yazar` verilirse komut
 > nedenini söyleyerek durur.
 
@@ -247,7 +247,7 @@ karakterler nokta olarak görünür ve satır ekranda yazılıdır ama geçmişe
 | `Görüntü yazılamadı: …; hiçbir sayfa değişmedi.` / `Sayfa yazılamadı: …; hiçbir sayfa değişmedi.` | Bir sayfa görüntüsü yazılamadı | İzinleri ve boş yeri denetleyin; önceki sayfalar da eski hâlinde |
 | `Dünya dosyası yazılamadı: …; hiçbir sayfa değişmedi.` | `.pgw`/`.tfw` yazılamadı | İzinleri denetleyin; konumsuz bir görüntü "konumlu" diye teslim edilmez |
 | `'...' yerine tam konamadı. Yerine konan: … Konamayan: …` | Sayfalardan biri başka bir programda açık | O programı kapatıp yineleyin |
-| `Bu yapı PDF şifreleme ve yazar alanını içermiyor (KENTOS_WITH_QPDF). …` | qpdf'siz derlenmiş yapı | Şifresiz yazın ya da qpdf ile derleyin |
+| `Bu yapı PDF şifreleme ve yazar alanını içermiyor (PIRICAD_WITH_QPDF). …` | qpdf'siz derlenmiş yapı | Şifresiz yazın ya da qpdf ile derleyin |
 | `Yazdırma motoru bağlı değil; bu ortamda yazdırılamaz ve PDF alınamaz. …` | Arayüz olmadan çalıştırıldı | Uygulama içinden çalıştırın |
 | `N ölçü 1/1000 paftası için boyutlandırılmış; 1/5000 çıktıda yazıları 0,5 mm olur. …` (uyarı; pafta yine basılır) | Ölçüler başka bir pafta ölçeği için boyutlu | [`ÖLÇÜYENİLE olcek=N`](dimension_refresh.md) ile uyarlayıp yeniden basın |
 

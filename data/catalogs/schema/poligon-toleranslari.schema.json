@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "kentoscad/data/catalogs/schema/poligon-toleranslari.schema.json",
+  "$id": "piricad/data/catalogs/schema/poligon-toleranslari.schema.json",
   "title": "Poligon kapanma toleransları",
   "description": "BÖHHBÜY poligon bölümünden alınan açı ve kenar kapanma sınırları. Her değer TAM SAYIDIR: açı katsayıları santigrad (cc), uzunluklar milimetre. Bir mevzuat değeri kayan noktada saklanmaz — iki platformda farklı okunabilir (CLAUDE.md 2.4, data.md P3).",
   "type": "object",

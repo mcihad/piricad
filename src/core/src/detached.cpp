@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/detached.hpp"
+#include "piricad/core/detached.hpp"
 
-#include "kentos_cad/core/document.hpp"
+#include "piricad/core/document.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <numeric>
 
-namespace kentos::core {
+namespace piricad::core {
 
 namespace {
 
@@ -92,4 +92,4 @@ DetachedReport find_detached(const Document& doc, int factor)
     return out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

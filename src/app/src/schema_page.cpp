@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/schema_page.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/schema_page.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/core/attribute.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/core/attribute.hpp"
 
 #include <algorithm>
 
@@ -17,7 +17,7 @@
 #include <QTableWidget>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The columns of the schema table, in the order they help: what it is called in
@@ -465,4 +465,4 @@ void SchemaPage::applyTheme(ThemeMode mode)
     update();
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

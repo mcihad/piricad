@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // THIS FILE IS AGPL AND THE REST OF THE TREE IS GPL, deliberately. CLAUDE.md
-// Article 2.1, following §1 of kentoscad.md, puts any SERVER component under the
+// Article 2.1, following §1 of piricad.md, puts any SERVER component under the
 // GNU Affero General Public License; this file and the protocol engine it drives
 // (`ai::McpServer`) ARE that server. The list of AGPL files is in /NOTICE and
 // `scripts/ci-gate-ai.sh` checks that the list and the files agree. The two
 // licences are compatible in both directions by their own §13.
 //
-// KentOSCad — app: the socket half of the agent server, and nothing else.
+// PiriCAD — app: the socket half of the agent server, and nothing else.
 //
 // EVERYTHING THAT IS PROTOCOL LIVES IN `/src/ai`: the JSON-RPC envelope, the
 // header rules, the status codes, the tool catalogue, the plan compiler. This
@@ -25,10 +25,10 @@
 // window, so anything slow must become a `command::Job`.
 #pragma once
 
-#include "kentos_cad/ai/clients.hpp"
-#include "kentos_cad/ai/endpoint.hpp"
-#include "kentos_cad/ai/mcp.hpp"
-#include "kentos_cad/command/bus.hpp"
+#include "piricad/ai/clients.hpp"
+#include "piricad/ai/endpoint.hpp"
+#include "piricad/ai/mcp.hpp"
+#include "piricad/command/bus.hpp"
 
 #include <QObject>
 #include <QString>
@@ -40,7 +40,7 @@ class QHttpServerRequest;
 class QHttpServerResponder;
 class QTcpServer;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The dispatcher the protocol engine talks to; see ai_service.hpp.
 class AiService;
@@ -135,7 +135,7 @@ private:
     /// Declared with the Qt types forward-declared at GLOBAL scope above, not
     /// with an elaborated specifier here: `const class QHttpServerRequest&`
     /// inside a namespace declares a NEW class in that namespace, and the error
-    /// that follows names an incomplete `kentos::app::QHttpServerResponder`.
+    /// that follows names an incomplete `piricad::app::QHttpServerResponder`.
     void serve(const QHttpServerRequest& request, QHttpServerResponder& responder);
 
     /// Answers the four server verbs of `MCPSUNUCU`.
@@ -169,4 +169,4 @@ private:
     bool probing_{false};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

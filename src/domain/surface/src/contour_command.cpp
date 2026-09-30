@@ -17,22 +17,22 @@
 // point moved, a height re-read, a point erased — and every contour of the run
 // says it is out of date, because a surface is one thing and any of its points
 // can bend any of its lines.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/units.hpp"
-#include "kentos_cad/domain/surface/contour.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/units.hpp"
+#include "piricad/domain/surface/contour.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 std::string metres(core::Mm v)
@@ -49,7 +49,7 @@ Task<void> run(Context& ctx)
     if (!domain::surface::available()) {
         ctx.refuse(core::ErrorCode::Unsupported,
                    "Üçgenleme bu yapıda yok; eş yükselti eğrisi çizilemez. "
-                   "KENTOS_WITH_CDT=ON ile derleyin.");
+                   "PIRICAD_WITH_CDT=ON ile derleyin.");
         co_return;
     }
 
@@ -229,7 +229,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(contour)
+PIRICAD_COMMAND(contour)
 {
     return CommandSpec{
         .id       = "core.contour",
@@ -255,4 +255,4 @@ KENTOS_COMMAND(contour)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

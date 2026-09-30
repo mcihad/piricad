@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <array>
 
-namespace kentos::core {
+namespace piricad::core {
 
 std::string metres_fixed(Mm v, int decimals, char point)
 {
@@ -33,4 +33,4 @@ std::string metres_fixed(Mm v, int decimals, char point)
     return negative && units != 0 ? "-" + out : out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

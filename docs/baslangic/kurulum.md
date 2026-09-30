@@ -1,10 +1,10 @@
 # Kurulum ve Derleme
 
-KentOSCad'i kaynaktan derlemek isteyen kullanıcı ve sistem yöneticisi için; bu sayfayı
-bitirdiğinizde çalışan bir `kentos_cad` çalıştırılabiliri ve neyin eksik olduğunu söyleyen
+PiriCAD'i kaynaktan derlemek isteyen kullanıcı ve sistem yöneticisi için; bu sayfayı
+bitirdiğinizde çalışan bir `piricad` çalıştırılabiliri ve neyin eksik olduğunu söyleyen
 bir teşhis çıktınız olacak.
 
-KentOSCad henüz hazır paket olarak dağıtılmıyor. MSI, DMG, AppImage, `.deb` ve `.rpm`
+PiriCAD henüz hazır paket olarak dağıtılmıyor. MSI, DMG, AppImage, `.deb` ve `.rpm`
 paketleri Faz 1'de gelecek.
 
 ## Gereksinimler
@@ -59,14 +59,14 @@ anlıyordu.
 Yazısız bir yapıyı bilerek istiyorsanız yolu açıktır:
 
 ```bash
-cmake --preset dev -DKENTOS_WITH_RHI=OFF -DKENTOS_WITH_TEXT=OFF
+cmake --preset dev -DPIRICAD_WITH_RHI=OFF -DPIRICAD_WITH_TEXT=OFF
 ```
 
 ## Derleme
 
 ```bash
-git clone <depo-adresi> kentos_cad
-cd kentos_cad
+git clone <depo-adresi> piricad
+cd piricad
 make build
 ```
 
@@ -87,7 +87,7 @@ make run-script SCRIPT=tests/journal/ornek-parsel.json
 Aynı işi doğrudan da yapabilirsiniz:
 
 ```bash
-./build/dev/bin/kentos_cad --betik tests/journal/ornek-parsel.json
+./build/dev/bin/piricad --betik tests/journal/ornek-parsel.json
 ```
 
 `--betik` seçeneği verilen JSON betiğini açılışta komut veri yolundan çalıştırır ve
@@ -103,7 +103,7 @@ Bu komut makinede neyin bulunup neyin bulunmadığını, eksik olanın neye mal 
 birlikte listeler. Örnek çıktı:
 
 ```text
-KentOSCad — build environment
+PiriCAD — build environment
 
   CMake                      4.2.3
   Ninja                      1.13.2
@@ -117,7 +117,7 @@ Optional dependencies (all gated OFF by default)
 ```
 
 `MISSING` yazan bir satır derlemeyi engellemez. Bütün dış bağımlılıklar varsayılan
-olarak **kapalıdır**; kapalıyken KentOSCad çalışır, açıkken ve bağımlılık yoksa
+olarak **kapalıdır**; kapalıyken PiriCAD çalışır, açıkken ve bağımlılık yoksa
 yapılandırma ne kurulacağını söyleyerek durur.
 
 ## Derleme profilleri
@@ -159,7 +159,7 @@ make distclean       # bütün derleme ağacını siler
 make bench
 ```
 
-KentOSCad'in karşılamak zorunda olduğu hız hedefleri sabittir ve ölçülür. Örnek çıktı:
+PiriCAD'in karşılamak zorunda olduğu hız hedefleri sabittir ve ölçülür. Örnek çıktı:
 
 ```text
 senaryo                          ölçüm    bütçe      temel  durum
@@ -193,22 +193,22 @@ kökündeki `CLAUDE.md` Article 8'dedir.
 
 | Eksik | Sonucu | Ne zaman gelecek |
 |---|---|---|
-| GPU canvas (`KENTOS_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu MPYY kataloğunun **on bir sembol katmanı türünün hepsini** çizer — dolgu, çizgi, işaretçi, desen, yayımlanmış görsel — ve `KENTOS_WITH_TEXT` ile metni de. Eksik olan çizim değil ölçüm: kare bütçesi (≤16 ms) henüz koşulmadı | Bütçe ölçülüp karşılandığında varsayılan açık olacak |
-| GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. KentOSCad'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır; Netcad NCZ okuma da GDAL istemez, yalnız pafta çerçeveleri GDAL'sız gerçek biçimiyle kurulamaz ve saklanan kutuyla çizilir | Kurulduğunda kendiliğinden açılır |
+| GPU canvas (`PIRICAD_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu MPYY kataloğunun **on bir sembol katmanı türünün hepsini** çizer — dolgu, çizgi, işaretçi, desen, yayımlanmış görsel — ve `PIRICAD_WITH_TEXT` ile metni de. Eksik olan çizim değil ölçüm: kare bütçesi (≤16 ms) henüz koşulmadı | Bütçe ölçülüp karşılandığında varsayılan açık olacak |
+| GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. PiriCAD'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır; Netcad NCZ okuma da GDAL istemez, yalnız pafta çerçeveleri GDAL'sız gerçek biçimiyle kurulamaz ve saklanan kutuyla çizilir | Kurulduğunda kendiliğinden açılır |
 | PROJ / GEOS / CGAL | Koordinat dönüşümü ve geometri işlemleri sınırlı | Faz 1–2 |
 
-Python artık eksik değil: `KENTOS_WITH_PYTHON=ON` ile gömülü CPython 3.14 betik motoru
+Python artık eksik değil: `PIRICAD_WITH_PYTHON=ON` ile gömülü CPython 3.14 betik motoru
 derlenir — bkz. [Python betikleri](../betik/python.md).
 
 ## Seçimlik yapılandırma seçenekleri
 
-Hepsi `KENTOS_WITH_<AD>` biçimindedir. Açık ama gereği kurulu değilse yapılandırma,
+Hepsi `PIRICAD_WITH_<AD>` biçimindedir. Açık ama gereği kurulu değilse yapılandırma,
 hangi paketin gerektiğini söyleyerek durur — sessizce kapanmaz.
 
 Varsayılanları üç türlüdür:
 
 * **Bulununca açık.** `GDAL`, `PROJ`, `RHI`, `TEXT`: makinede varsa açık gelir.
-  Makinesinde GDAL olan biri, DXF açamayan bir KentOSCad derlememelidir.
+  Makinesinde GDAL olan biri, DXF açamayan bir PiriCAD derlememelidir.
 * **Ön ayarın talep ettiği.** `RHI` ve `TEXT` ayrıca `dev`, `debug`, `release` ve
   `asan` ön ayarlarında **açıkça ON** yazılıdır, yani bulunamazsa yapılandırma
   durur. `headless` bunu istemez: uygulama derlemez, Qt'siz hedeflerin kendi
@@ -217,17 +217,17 @@ Varsayılanları üç türlüdür:
 
 | Seçenek | Ne açar | Makinede gereken |
 |---|---|---|
-| `KENTOS_WITH_PYTHON` | Gömülü Python betik motoru | CPython 3.14 ve geliştirme başlıkları. pybind11 sabitlenmiş commit'ten iner |
-| `KENTOS_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları. Ön ayarlar talep eder |
-| `KENTOS_WITH_TEXT` | GPU tuvalinde metin (SDF atlası) | `libfreetype-dev`, `libharfbuzz-dev`. msdfgen ve stb sabitlenmiş commit'ten iner. Ön ayarlar talep eder |
-| `KENTOS_WITH_GDAL` | DXF / GeoPackage | `libgdal-dev` |
-| `KENTOS_WITH_PROJ` | Koordinat dönüşümü | `libproj-dev` |
-| `KENTOS_WITH_POSTGIS` | Canlı PostGIS bağlantısı | `libpq-dev` |
+| `PIRICAD_WITH_PYTHON` | Gömülü Python betik motoru | CPython 3.14 ve geliştirme başlıkları. pybind11 sabitlenmiş commit'ten iner |
+| `PIRICAD_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları. Ön ayarlar talep eder |
+| `PIRICAD_WITH_TEXT` | GPU tuvalinde metin (SDF atlası) | `libfreetype-dev`, `libharfbuzz-dev`. msdfgen ve stb sabitlenmiş commit'ten iner. Ön ayarlar talep eder |
+| `PIRICAD_WITH_GDAL` | DXF / GeoPackage | `libgdal-dev` |
+| `PIRICAD_WITH_PROJ` | Koordinat dönüşümü | `libproj-dev` |
+| `PIRICAD_WITH_POSTGIS` | Canlı PostGIS bağlantısı | `libpq-dev` |
 
 ### Python
 
 ```bash
-cmake --preset dev -DKENTOS_WITH_PYTHON=ON
+cmake --preset dev -DPIRICAD_WITH_PYTHON=ON
 cmake --build --preset dev
 ```
 
@@ -244,20 +244,20 @@ sabitlenmiş commit'ten iner, yani ilk yapılandırma ağ ister.
 ### GPU canvas
 
 ```bash
-cmake --preset dev -DKENTOS_WITH_RHI=ON
+cmake --preset dev -DPIRICAD_WITH_RHI=ON
 ```
 
 QRhi, Qt Gui'nin private başlıklarında yaşar ve dağıtımların çoğu bunları ayrı
 paketler. Eksikse yapılandırma şöyle durur:
 
 ```text
-KENTOS_WITH_RHI=ON but <rhi/qrhi.h> was not found. QRhi lives in Qt Gui's
+PIRICAD_WITH_RHI=ON but <rhi/qrhi.h> was not found. QRhi lives in Qt Gui's
 PRIVATE headers, which most distributions package separately from the public ones.
   Debian/Ubuntu: sudo apt install qt6-base-private-dev
   Fedora:        sudo dnf install qt6-qtbase-private-devel
   Arch:          included in qt6-base
   vcpkg:         installed with qtbase
-  Or configure with -DKENTOS_WITH_RHI=OFF to use the QPainter backend.
+  Or configure with -DPIRICAD_WITH_RHI=OFF to use the QPainter backend.
 ```
 
 Shader paketleri derleme sırasında `qsb` ile pişirilir; çalışma anında hiçbir shader

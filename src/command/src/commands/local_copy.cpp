@@ -19,19 +19,19 @@
 // EACH COPY KNOWS WHERE IT CAME FROM (core/lineage.hpp): the reference it was
 // taken out of, by key — a member's own key is read again with every reload,
 // the reference's is this drawing's and stays.
-#include "kentos_cad/command/block_edit.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/external_ref.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/block_edit.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/external_ref.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/block.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/transform.hpp"
+#include "piricad/core/block.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/transform.hpp"
 
 #include <algorithm>
 #include <array>
@@ -40,7 +40,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// One external reference placed on the sheet, and what it is asked to give up.
@@ -307,7 +307,7 @@ Task<void> run_local_copy(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(local_copy)
+PIRICAD_COMMAND(local_copy)
 {
     return CommandSpec{
         .id       = "core.local_copy",
@@ -330,13 +330,13 @@ KENTOS_COMMAND(local_copy)
                               "Yalnız bu dikdörtgene değen nesneler: iki köşe")
                     .en("window"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir dış referanstaki nesnelerin düzenlenebilir kopyalarını bu çizime alır; "
                    "bağlantı olduğu gibi kalır.",
-        .run    = &run_local_copy,
-        .effect = Effect::DocumentEdit,
+        .run     = &run_local_copy,
+        .effect  = Effect::DocumentEdit,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

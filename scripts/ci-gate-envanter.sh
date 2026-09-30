@@ -10,7 +10,7 @@
 # `Flags::AiAccessible` is a decision, and this gate makes the decision be
 # written down instead of assumed.
 #
-# The inventory is taken from the LIVE registries by `kentos_envanter`, not by
+# The inventory is taken from the LIVE registries by `piricad_envanter`, not by
 # grepping the tree for `return CommandSpec{...}`: that grep misses every command
 # a module registers through a loop or a helper, and it cannot see a parameter's
 # arity, its word list or its range. It reported 81 commands where the program
@@ -33,19 +33,19 @@ liste="$kok/tests/support/ai-kapsam.json"
 # sanitiser tree left over from an earlier session would answer with a registry
 # from before the change being tested (the same trap `ci-gate-docs.sh` fell into).
 arac=""
-if [[ -n "${1:-}" && -x "$1/bin/kentos_envanter" ]]; then
-    arac="$1/bin/kentos_envanter"
+if [[ -n "${1:-}" && -x "$1/bin/piricad_envanter" ]]; then
+    arac="$1/bin/piricad_envanter"
 else
     for aday in dev release debug asan headless; do
-        if [[ -x "$kok/build/$aday/bin/kentos_envanter" ]]; then
-            arac="$kok/build/$aday/bin/kentos_envanter"
+        if [[ -x "$kok/build/$aday/bin/piricad_envanter" ]]; then
+            arac="$kok/build/$aday/bin/piricad_envanter"
             break
         fi
     done
 fi
 
 if [[ -z "$arac" ]]; then
-    echo "envanter: kentos_envanter derlenmemiş, dolayısıyla ajan kapsamı ÖLÇÜLEMEDİ." >&2
+    echo "envanter: piricad_envanter derlenmemiş, dolayısıyla ajan kapsamı ÖLÇÜLEMEDİ." >&2
     echo "envanter:   Önce derleyin (make build). Ölçemeyen bir kapı sessizce geçemez." >&2
     exit 1
 fi
@@ -58,11 +58,11 @@ cikti="$(mktemp)"
 trap 'rm -f "$cikti"' EXIT
 "$arac" > "$cikti"
 
-KENTOS_ENVANTER="$cikti" KENTOS_KAPSAM="$liste" python3 - <<'PY'
+PIRICAD_ENVANTER="$cikti" PIRICAD_KAPSAM="$liste" python3 - <<'PY'
 import json, os, sys
 
-envanter = json.load(open(os.environ["KENTOS_ENVANTER"], encoding="utf-8"))
-kapsam = json.load(open(os.environ["KENTOS_KAPSAM"], encoding="utf-8"))
+envanter = json.load(open(os.environ["PIRICAD_ENVANTER"], encoding="utf-8"))
+kapsam = json.load(open(os.environ["PIRICAD_KAPSAM"], encoding="utf-8"))
 
 komutlar = envanter["komutlar"]
 kapali_kayit = kapsam["kapali"]

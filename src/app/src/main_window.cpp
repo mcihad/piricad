@@ -1,69 +1,69 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/main_window.hpp"
-#include "kentos_cad/app/measure_text.hpp"
+#include "piricad/app/main_window.hpp"
+#include "piricad/app/measure_text.hpp"
 
-#include "kentos_cad/app/about_dialog.hpp"
-#include "kentos_cad/app/ai_transport.hpp"
-#include "kentos_cad/app/attribute_panel.hpp"
-#include "kentos_cad/app/attribute_table.hpp"
-#include "kentos_cad/app/chat_panel.hpp"
-#include "kentos_cad/app/command_line.hpp"
-#include "kentos_cad/app/command_palette.hpp"
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/data_root.hpp"
-#include "kentos_cad/app/database_dialog.hpp"
-#include "kentos_cad/app/export_dialog.hpp"
-#include "kentos_cad/app/find_replace_dialog.hpp"
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/import_wizard.hpp"
-#include "kentos_cad/app/layout_designer.hpp"
-#include "kentos_cad/app/layout_manager.hpp"
-#include "kentos_cad/app/map_canvas.hpp"
-#include "kentos_cad/app/panels.hpp"
-#include "kentos_cad/app/print_dialog.hpp"
-#include "kentos_cad/app/print_service.hpp"
-#include "kentos_cad/app/provider_service.hpp"
-#include "kentos_cad/app/python_editor.hpp"
-#include "kentos_cad/app/ribbon.hpp"
-#include "kentos_cad/app/schema_page.hpp"
-#include "kentos_cad/app/settings_dialog.hpp"
-#include "kentos_cad/app/shell_chrome.hpp"
-#include "kentos_cad/app/style_designer.hpp"
-#include "kentos_cad/app/suggestion_card.hpp"
-#include "kentos_cad/app/swatch_row.hpp"
-#include "kentos_cad/app/text_engine.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/tools_panel.hpp"
-#include "kentos_cad/app/widgets.hpp"
-#include "kentos_cad/app/xref_panel.hpp"
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/app/about_dialog.hpp"
+#include "piricad/app/ai_transport.hpp"
+#include "piricad/app/attribute_panel.hpp"
+#include "piricad/app/attribute_table.hpp"
+#include "piricad/app/chat_panel.hpp"
+#include "piricad/app/command_line.hpp"
+#include "piricad/app/command_palette.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/data_root.hpp"
+#include "piricad/app/database_dialog.hpp"
+#include "piricad/app/export_dialog.hpp"
+#include "piricad/app/find_replace_dialog.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/import_wizard.hpp"
+#include "piricad/app/layout_designer.hpp"
+#include "piricad/app/layout_manager.hpp"
+#include "piricad/app/map_canvas.hpp"
+#include "piricad/app/panels.hpp"
+#include "piricad/app/print_dialog.hpp"
+#include "piricad/app/print_service.hpp"
+#include "piricad/app/provider_service.hpp"
+#include "piricad/app/python_editor.hpp"
+#include "piricad/app/ribbon.hpp"
+#include "piricad/app/schema_page.hpp"
+#include "piricad/app/settings_dialog.hpp"
+#include "piricad/app/shell_chrome.hpp"
+#include "piricad/app/style_designer.hpp"
+#include "piricad/app/suggestion_card.hpp"
+#include "piricad/app/swatch_row.hpp"
+#include "piricad/app/text_engine.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/tools_panel.hpp"
+#include "piricad/app/widgets.hpp"
+#include "piricad/app/xref_panel.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/io/dwg.hpp"
-#include "kentos_cad/io/format.hpp"
-#include "kentos_cad/io/staging.hpp"
-#include "kentos_cad/io/vector.hpp"
-#include "kentos_cad/render/backend.hpp"
+#include "piricad/io/dwg.hpp"
+#include "piricad/io/format.hpp"
+#include "piricad/io/staging.hpp"
+#include "piricad/io/vector.hpp"
+#include "piricad/render/backend.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/colour.hpp"
-#include "kentos_cad/command/select_modes.hpp"
-#include "kentos_cad/command/selection.hpp"
-#include "kentos_cad/command/validation.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/hatch_link.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/planar.hpp"
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/core/text_metrics.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/core/ties.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/colour.hpp"
+#include "piricad/command/select_modes.hpp"
+#include "piricad/command/selection.hpp"
+#include "piricad/command/validation.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/hatch_link.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/planar.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/core/text_metrics.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/core/ties.hpp"
 
 #include <QAction>
 #include <QClipboard>
@@ -126,7 +126,7 @@
 #include <QWheelEvent>
 #include <QWidgetAction>
 
-namespace kentos::app {
+namespace piricad::app {
 
 namespace {
 
@@ -202,15 +202,15 @@ constexpr int kLayoutVersion = 6;
 bool probe_run()
 {
     for (const char* probe : {
-             "KENTOS_PRINT_PROBE",    "KENTOS_LAYOUT_PROBE",    "KENTOS_SHOT_DIR",
-             "KENTOS_DESIGNER_PROBE", "KENTOS_WIDGETS_PROBE",   "KENTOS_DIALOG_PROBE",
-             "KENTOS_HAND_PROBE",     "KENTOS_LAYER_PROBE",     "KENTOS_PICK_PROBE",
-             "KENTOS_TABLE_PROBE",    "KENTOS_SCHEMA_PROBE",    "KENTOS_CHAT_PROBE",
-             "KENTOS_TOOL_PROBE",     "KENTOS_NORMAL_PROBE",    "KENTOS_FAMILY_PROBE",
-             "KENTOS_BUDGET_PROBE",   "KENTOS_PROBE_LINE",      "KENTOS_FRAME_DUMP",
-             "KENTOS_MCP_PROBE",      "KENTOS_EDIT_PROBE",      "KENTOS_MENU_PROBE",
-             "KENTOS_FIT_PROBE",      "KENTOS_REALMOUSE_PROBE", "KENTOS_RIBBON_SHEET",
-             "KENTOS_TOOL_DRIVE",
+             "PIRICAD_PRINT_PROBE",    "PIRICAD_LAYOUT_PROBE",    "PIRICAD_SHOT_DIR",
+             "PIRICAD_DESIGNER_PROBE", "PIRICAD_WIDGETS_PROBE",   "PIRICAD_DIALOG_PROBE",
+             "PIRICAD_HAND_PROBE",     "PIRICAD_LAYER_PROBE",     "PIRICAD_PICK_PROBE",
+             "PIRICAD_TABLE_PROBE",    "PIRICAD_SCHEMA_PROBE",    "PIRICAD_CHAT_PROBE",
+             "PIRICAD_TOOL_PROBE",     "PIRICAD_NORMAL_PROBE",    "PIRICAD_FAMILY_PROBE",
+             "PIRICAD_BUDGET_PROBE",   "PIRICAD_PROBE_LINE",      "PIRICAD_FRAME_DUMP",
+             "PIRICAD_MCP_PROBE",      "PIRICAD_EDIT_PROBE",      "PIRICAD_MENU_PROBE",
+             "PIRICAD_FIT_PROBE",      "PIRICAD_REALMOUSE_PROBE", "PIRICAD_RIBBON_SHEET",
+             "PIRICAD_TOOL_DRIVE",
          })
         if (qEnvironmentVariableIsSet(probe)) return true;
     return false;
@@ -259,7 +259,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     controller_ = new Controller(this);
 
-    setWindowTitle(tr("KentOSCad — Türkiye Odaklı CBS + CAD"));
+    setWindowTitle(tr("PiriCAD — Türkiye Odaklı CBS + CAD"));
     resize(1560, 1000);
 
     // design.md 7: the frame belongs to the window manager. The shell used to be
@@ -532,7 +532,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(layerPanel_, &LayerPanel::attributeTableRequested, this,
             [this](const QString& layer) { openAttributeTable(layer); });
 
-    onEcho(tr("KentOSCad %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(KENTOS_VERSION)));
+    onEcho(tr("PiriCAD %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(PIRICAD_VERSION)));
     onEcho(tr("Aynı komut arayüzden, komut satırından ve betikten tıpatıp aynı yolu izler."));
     if (const std::string status = render::text_backend_status(); !status.empty())
         onEcho(tr("Not: %1").arg(QString::fromStdString(status)));
@@ -666,7 +666,7 @@ ThemeMode MainWindow::themeFromPreferences() const
 // EVERY ACTION THAT RUNS A COMMAND SAYS WHICH ONE. It is not decoration: the
 // flyout prints the word beside the name so the mouse teaches the keyboard,
 // `syncToolSelection` lights the right button when the same command arrives from
-// the prompt or a script, and `KENTOS_TOOL_PROBE` answers "how much of this
+// the prompt or a script, and `PIRICAD_TOOL_PROBE` answers "how much of this
 // program can a hand reach" by walking the actions rather than by a hand-kept
 // list of what has a button — which would be the second command list CLAUDE.md
 // 5.10 exists to forbid.
@@ -832,7 +832,7 @@ void MainWindow::buildActions()
 
     actOpen_ = new QAction(tr("Aç…"), this);
     actOpen_->setShortcut(QKeySequence::Open);
-    actOpen_->setToolTip(tr("AÇ — bir KentOSCad proje dosyası açar"));
+    actOpen_->setToolTip(tr("AÇ — bir PiriCAD proje dosyası açar"));
     actOpen_->setData(static_cast<int>(Glyph::Open));
     actOpen_->setProperty(kToolCommand, QStringLiteral("AÇ"));
     connect(actOpen_, &QAction::triggered, this, &MainWindow::openProject);
@@ -965,7 +965,7 @@ void MainWindow::buildActions()
         action->setProperty(kToolRepeats, true);
 
         // Named so a test can reach the button a user would press. Nothing in the
-        // shell looks an action up by name; this exists for `KENTOS_EDIT_PROBE`,
+        // shell looks an action up by name; this exists for `PIRICAD_EDIT_PROBE`,
         // which drives the tool column the way a hand does.
         action->setObjectName(QStringLiteral("toolAction.") + command);
 
@@ -1072,7 +1072,7 @@ void MainWindow::buildActions()
                       "kısaltma: TDZ"));
     actBlock_  = modifyTool(Glyph::BlockDefine, tr("Blok"), QStringLiteral("BLOK"),
                             tr("BLOK — seçilen nesnelerden adlı blok tanımlar ve yerine bir "
-                                "referans koyar  ·  kısaltma: BLK"));
+                               "referans koyar  ·  kısaltma: BLK"));
     actInsert_ = drawTool(Glyph::BlockInsert, tr("Blok Ekle"), QStringLiteral("BLOKEKLE"),
                           tr("BLOKEKLE — tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle "
                              "yerleştirir  ·  kısaltma: BE"));
@@ -1192,8 +1192,8 @@ void MainWindow::buildActions()
     };
     actBlockSave_   = editStep(Glyph::Check, tr("Bloğu Kaydet"), QStringLiteral("blockEditSave"),
                                tr("BLOKDÜZENLE islem=kaydet — bloğun tanımını düzenlenen "
-                                    "nesnelerden yeniden kurar; bütün referanslar yeni biçimi "
-                                    "çizer"),
+                                  "nesnelerden yeniden kurar; bütün referanslar yeni biçimi "
+                                  "çizer"),
                                true);
     actBlockCancel_ = editStep(Glyph::Close, tr("Vazgeç"), QStringLiteral("blockEditCancel"),
                                tr("BLOKDÜZENLE islem=vazgec — açılan nesneleri kaldırır, tanım "
@@ -1476,8 +1476,8 @@ void MainWindow::buildActions()
                                 "gösterilir  ·  kısaltma: PH"));
     actFillet_  = modifyTool(Glyph::Fillet, tr("Yuvarla"), QStringLiteral("YUVARLA"),
                              tr("YUVARLA — köşeye ya da iki nesneye kalacak parçalarından "
-                                 "tıklayın; köşeyi teğet bir yayla yuvarlatır, 0 keskin köşe  ·  "
-                                 "kısaltma: YV"));
+                                "tıklayın; köşeyi teğet bir yayla yuvarlatır, 0 keskin köşe  ·  "
+                                "kısaltma: YV"));
     // EVERY CORNER AT ONCE (TODOS C-06), each its own entry so a hand reaches
     // it: a chain rounded or cut by one size, the corners it does not fit
     // passed over and counted.
@@ -1507,7 +1507,7 @@ void MainWindow::buildActions()
                          "oturumun birim ve kuralıyla okunur  ·  kısaltma: KLV"));
     actLabel_    = commandAction(Glyph::Label, tr("Etiket"), QStringLiteral("ETİKET"),
                                  tr("ETİKET — katmandaki nesneleri özniteliklerinden okuyarak "
-                                       "etiketler  ·  kısaltma: ETK"));
+                                    "etiketler  ·  kısaltma: ETK"));
     actStakeout_ = commandAction(Glyph::Locate, tr("Aplikasyon"), QStringLiteral("APLİKASYON"),
                                  tr("APLİKASYON — istasyondan hedefe semt açısı ve kenar  ·  "
                                     "kısaltma: APL"));
@@ -1518,19 +1518,19 @@ void MainWindow::buildActions()
     // not be in the column at all — which is where a hand looks for PAH.
     actBreak_    = modifyTool(Glyph::Break, tr("Kır"), QStringLiteral("KIR"),
                               tr("KIR — iki nokta arasındaki parçayı çıkarır; tek nokta boşluksuz "
-                                    "böler  ·  kısaltma: KR"));
+                                 "böler  ·  kısaltma: KR"));
     actLengthen_ = modifyTool(Glyph::Lengthen, tr("Uzunluk"), QStringLiteral("UZUNLUK"),
                               tr("UZUNLUK — bir ucu kendi doğrultusunda hareket ettirir  ·  "
                                  "kısaltma: UZN"));
     actJoin_     = modifyTool(Glyph::Join, tr("Uç Uca Ekle"), QStringLiteral("UÇUCA"),
                               tr("UÇUCA — uçları değen çizgileri tek çizgiye ekler; BİRLEŞTİR ile "
-                                     "karıştırmayın  ·  kısaltma: UÇE"));
+                                 "karıştırmayın  ·  kısaltma: UÇE"));
     actExplode_  = modifyTool(Glyph::Explode, tr("Patlat"), QStringLiteral("PATLAT"),
                               tr("PATLAT — çizgiyi kenarlara, alanı sınırına, bloğu bileşenlerine "
-                                  "ayırır  ·  kısaltma: PTL"));
-    actAlign_    = modifyTool(Glyph::Align, tr("Hizala"), QStringLiteral("HİZALA"),
-                              tr("HİZALA — bir ya da iki nokta çiftiyle taşır, döndürür ve istenirse "
-                                    "ölçekler  ·  kısaltma: HZL"));
+                                 "ayırır  ·  kısaltma: PTL"));
+    actAlign_ = modifyTool(Glyph::Align, tr("Hizala"), QStringLiteral("HİZALA"),
+                           tr("HİZALA — bir ya da iki nokta çiftiyle taşır, döndürür ve istenirse "
+                              "ölçekler  ·  kısaltma: HZL"));
     // AND THE SCALING FORM, whose whole line rides on the button: the second
     // pair's length then stretches the objects too — a sketch fitted onto its
     // surveyed corners. It was reachable only by typing `olcekle=evet`.
@@ -1548,9 +1548,9 @@ void MainWindow::buildActions()
     actVertexMove_ = modifyTool(Glyph::VertexMove, tr("Köşe Taşı"), QStringLiteral("KÖŞETAŞI"),
                                 tr("KÖŞETAŞI — köşeye tıklayın, yeni yerini gösterin; kenarlar "
                                    "imleci izler  ·  kısaltma: KT"));
-    actVertexAdd_ = modifyTool(Glyph::VertexAdd, tr("Köşe Ekle"), QStringLiteral("KÖŞEEKLE"),
-                               tr("KÖŞEEKLE — kenara tıklayın, yeni köşenin yerini gösterin  ·  "
-                                  "kısaltma: KE"));
+    actVertexAdd_  = modifyTool(Glyph::VertexAdd, tr("Köşe Ekle"), QStringLiteral("KÖŞEEKLE"),
+                                tr("KÖŞEEKLE — kenara tıklayın, yeni köşenin yerini gösterin  ·  "
+                                   "kısaltma: KE"));
     // THE TWO EDITS A CORNER AND AN EDGE STILL LACKED (TODOS C-07): a corner
     // taken out, and an edge's kind changed — straight to arc and back.
     actVertexDelete_ =
@@ -1718,9 +1718,9 @@ void MainWindow::buildActions()
     });
 
     // ---- seçim ----
-    actSelectAll_ = commandAction(Glyph::Select, tr("Tümünü Seç"), QStringLiteral("SEÇ TÜMÜ"),
-                                  tr("SEÇ TÜMÜ — görünür bütün nesneleri seçer"),
-                                  QKeySequence(Qt::CTRL | Qt::Key_A));
+    actSelectAll_  = commandAction(Glyph::Select, tr("Tümünü Seç"), QStringLiteral("SEÇ TÜMÜ"),
+                                   tr("SEÇ TÜMÜ — görünür bütün nesneleri seçer"),
+                                   QKeySequence(Qt::CTRL | Qt::Key_A));
     actSelectNone_ = commandAction(
         Glyph::Select, tr("Seçimi Temizle"), QStringLiteral("SEÇ TEMİZLE"),
         tr("SEÇ TEMİZLE — seçimi boşaltır"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
@@ -1790,9 +1790,9 @@ void MainWindow::buildActions()
     // THE TWO QUESTIONS OF P7, as tools rather than as menu rows only: both arm
     // and then wait for the hand, so they belong in the exclusive group beside
     // ÖLÇ and ALANÖLÇ, and `modifyTool` is what puts them there.
-    actEntityInfo_ = modifyTool(Glyph::Info, tr("Nesne Bilgisi"), QStringLiteral("NESNEBİLGİ"),
-                                tr("NESNEBİLGİ — tür, katman, köşe sayısı, çevre, alan ve "
-                                   "öznitelikler  ·  kısaltma: NB"));
+    actEntityInfo_   = modifyTool(Glyph::Info, tr("Nesne Bilgisi"), QStringLiteral("NESNEBİLGİ"),
+                                  tr("NESNEBİLGİ — tür, katman, köşe sayısı, çevre, alan ve "
+                                     "öznitelikler  ·  kısaltma: NB"));
     actMeasureAngle_ = modifyTool(Glyph::MeasureAngle, tr("Açı Ölç"), QStringLiteral("AÇIÖLÇ"),
                                   tr("AÇIÖLÇ — tepe ve iki kol; açıyı oturumun birim ve "
                                      "kuralıyla yazar  ·  kısaltma: AÇÖ"));
@@ -1851,7 +1851,7 @@ void MainWindow::buildActions()
     connect(actTheme_, &QAction::toggled, this, &MainWindow::toggleTheme);
 
     // Render statistics are a developer overlay, never a user-facing feature
-    // (kentoscad.md §6.3, .claude/render.md). Off by default.
+    // (piricad.md §6.3, .claude/render.md). Off by default.
     actHud_ = new QAction(tr("Geliştirici Bilgisi"), this);
     actHud_->setData(static_cast<int>(Glyph::Hud));
     actHud_->setToolTip(tr("Kare süresi, çizilen nesne sayısı ve arka uç: geliştirici için (F12)"));
@@ -2255,7 +2255,7 @@ void MainWindow::loadSymbolLibrary()
 
 void MainWindow::refreshAgentCell()
 {
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
     McpService* server = controller_->mcpService();
     if (server == nullptr) {
         statusStrip_->setAgent(tr("MCP yok"), StatusStrip::AgentState::Off);
@@ -2357,7 +2357,7 @@ void MainWindow::buildStatusBar()
     connect(statusStrip_, &StatusStrip::agentClicked, this, [this] {
         if (actMcp_ != nullptr) actMcp_->trigger();
     });
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
     if (McpService* server = controller_->mcpService(); server != nullptr)
         connect(server, &McpService::stateChanged, this, &MainWindow::refreshAgentCell);
 #endif
@@ -2811,10 +2811,10 @@ void MainWindow::showPickCycle()
     } else {
         const bool picking = controller_->awaitingInput() &&
                              controller_->promptKind() == command::ParamKind::Selection;
-        const bool ctrl = c.modifiers.testFlag(Qt::ControlModifier);
-        const bool one  = picking && controller_->promptPickMost() == 1 && !ctrl;
-        result          = c.before;
-        const auto held = std::find(result.begin(), result.end(), current);
+        const bool ctrl    = c.modifiers.testFlag(Qt::ControlModifier);
+        const bool one     = picking && controller_->promptPickMost() == 1 && !ctrl;
+        result             = c.before;
+        const auto held    = std::find(result.begin(), result.end(), current);
         if (ctrl) {
             if (held != result.end()) result.erase(held);
         } else if (one || (!picking && !c.modifiers.testFlag(Qt::ShiftModifier))) {
@@ -3330,11 +3330,11 @@ void MainWindow::probeSchemaPage()
         say(QStringLiteral("seçenekler son bölüm: %1").arg(options.probeSections().back()));
     }
 
-    // PHOTOGRAPHED WHEN ASKED, the same bargain `KENTOS_PICK_PROBE` makes: a
+    // PHOTOGRAPHED WHEN ASKED, the same bargain `PIRICAD_PICK_PROBE` makes: a
     // transcript proves the rows are right and says nothing about whether a
     // person can read them. The frame around an input is exactly the kind of
     // thing only a picture answers.
-    const QByteArray into = qgetenv("KENTOS_SCHEMA_PROBE");
+    const QByteArray into = qgetenv("PIRICAD_SCHEMA_PROBE");
     if (into.isEmpty() || into == "1") return;
 
     const QString dir = QString::fromLocal8Bit(into);
@@ -3456,7 +3456,7 @@ void MainWindow::probeAttributeGrid()
     // a question only a picture answers: the ground used to be the selection
     // accent at twelve per cent, so the stored value and the typed one were both
     // legible at once, at different alignments, in the same box.
-    const QByteArray into = qgetenv("KENTOS_TABLE_PROBE");
+    const QByteArray into = qgetenv("PIRICAD_TABLE_PROBE");
     if (!into.isEmpty() && into != "1") {
         const QString dir = QString::fromLocal8Bit(into);
         QDir().mkpath(dir);
@@ -3529,7 +3529,7 @@ void MainWindow::probeWidgets()
     // Photographed when the variable carries a path, the same bargain every probe
     // here makes: an inventory proves the components exist at their heights, and
     // says nothing about whether a person would call them one set.
-    const QByteArray into = qgetenv("KENTOS_WIDGETS_PROBE");
+    const QByteArray into = qgetenv("PIRICAD_WIDGETS_PROBE");
     if (!into.isEmpty() && into != "1") {
         const QString dir = QString::fromLocal8Bit(into);
         QDir().mkpath(dir);
@@ -3582,7 +3582,7 @@ void MainWindow::probeDesigner()
     for (const QString& line : designer.probeRenderer(QStringLiteral("nitelik")))
         say(line);
 
-    const QByteArray into = qgetenv("KENTOS_DESIGNER_PROBE");
+    const QByteArray into = qgetenv("PIRICAD_DESIGNER_PROBE");
     if (!into.isEmpty() && into != "1") {
         const QString dir = QString::fromLocal8Bit(into);
         QDir().mkpath(dir);
@@ -3884,7 +3884,7 @@ int MainWindow::probeViewHistory()
     const std::size_t before_drag = behind();
     const core::Point2 centre     = canvas_->view().centre();
     const auto mouse              = [this](QEvent::Type type, QPointF at, Qt::MouseButton button,
-                              Qt::MouseButtons held) {
+                                           Qt::MouseButtons held) {
         QMouseEvent e(type, at, canvas_->mapToGlobal(at), button, held, Qt::NoModifier);
         QCoreApplication::sendEvent(canvas_, &e);
     };
@@ -4381,7 +4381,7 @@ int MainWindow::probeFit()
     if (count(chatDock_)) say("sohbet paneli en küçük", chatDock_->minimumSizeHint());
     if (centralWidget() != nullptr) say("orta alan en küçük", centralWidget()->minimumSizeHint());
 
-    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_FIT_PROBE"));
+    const QString into  = QString::fromLocal8Bit(qgetenv("PIRICAD_FIT_PROBE"));
     const bool shooting = into.size() > 1;
     if (shooting) QDir().mkpath(into);
 
@@ -4436,7 +4436,7 @@ int MainWindow::probeFit()
 
 int MainWindow::probeStatusStrip()
 {
-    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_STRIP_PROBE"));
+    const QString into  = QString::fromLocal8Bit(qgetenv("PIRICAD_STRIP_PROBE"));
     const bool shooting = into.size() > 1;
     if (shooting) QDir().mkpath(into);
 
@@ -4541,7 +4541,7 @@ int MainWindow::probeStatusStrip()
 
 int MainWindow::probeRealMouse()
 {
-    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_REALMOUSE_PROBE"));
+    const QString into  = QString::fromLocal8Bit(qgetenv("PIRICAD_REALMOUSE_PROBE"));
     const bool shooting = into.size() > 1;
     if (shooting) QDir().mkpath(into);
 
@@ -4695,7 +4695,7 @@ int MainWindow::probeRealMouse()
     // `paintEvent`, and the offscreen platform gives a `QRhiWidget` no `QRhi`:
     // it paints nothing, so it builds nothing, and a guide count of zero there
     // is the absence of a backend rather than the absence of a guide. Run with a
-    // real window — `KENTOS_REALMOUSE_PROBE` and no `QT_QPA_PLATFORM` — and this
+    // real window — `PIRICAD_REALMOUSE_PROBE` and no `QT_QPA_PLATFORM` — and this
     // is the check that matters.
     if (!canvas_->grabCanvas().isNull())
         check(drawn > 0, QStringLiteral("kılavuz fareyi izliyor"));
@@ -4938,7 +4938,7 @@ int MainWindow::probeRealMouse()
         const auto corners           = [this] {
             const command::Session* live = controller_->session();
             return live != nullptr && live->waiting() ? live->prompt().rubber_chain.size()
-                                                                : std::size_t{0};
+                                                      : std::size_t{0};
         };
         const auto press = [this](int key, Qt::KeyboardModifiers mods, QAction* action) {
             if (isActiveWindow()) {
@@ -6003,9 +6003,9 @@ int MainWindow::probeRealMouse()
                 runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.6"));
                 runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
                 const QString line = QString::fromUtf8(c.line);
-                QAction* tool      = line == QStringLiteral("ÖLÇÜ")
-                                         ? actDimension_
-                                         : findChild<QAction*>(QStringLiteral("toolAction.") + line);
+                QAction* tool = line == QStringLiteral("ÖLÇÜ")
+                                    ? actDimension_
+                                    : findChild<QAction*>(QStringLiteral("toolAction.") + line);
                 check(tool != nullptr && ribbonButton(tool, false) != nullptr,
                       QStringLiteral("Ölçü: %1 şeritteki Ölçü ailesinde").arg(line));
                 if (tool == nullptr) continue;
@@ -6603,7 +6603,7 @@ int MainWindow::probeRealMouse()
             if (const core::EntityId e = slot_of(line); e != core::kNoEntity && doc.alive(e)) {
                 const core::RingSpan rs = doc.geometry().rings_of(doc.entities().slot[e]);
                 moved                   = core::Point2{doc.geometry().ring_xs(rs.first).back(),
-                                     doc.geometry().ring_ys(rs.first).back()};
+                                                       doc.geometry().ring_ys(rs.first).back()};
             }
             check(std::abs(moved.y - 2'500) <= 300,
                   QStringLiteral("açılan çizginin ucu tutamaktan sürüklendi (%1, %2)")
@@ -6707,7 +6707,7 @@ int MainWindow::probeRealMouse()
                     if (m == core::kNoEntity || !doc.texts().has(doc.entities().slot[m])) continue;
                     const core::RingSpan rs = doc.geometry().rings_of(doc.entities().slot[m]);
                     caption_start           = core::Point2{doc.geometry().ring_xs(rs.first)[0],
-                                                 doc.geometry().ring_ys(rs.first)[0]};
+                                                           doc.geometry().ring_ys(rs.first)[0]};
                 }
             const QPointF number_at =
                 screen(core::Point2{landed.x + caption_start.x, landed.y + caption_start.y});
@@ -6742,7 +6742,7 @@ int MainWindow::probeRealMouse()
                 doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(placed)));
             const core::AttrId no = doc.attributes().find("no");
             const bool valued     = placed_slot != core::kNoEntity && no != core::kNoAttr &&
-                                doc.attribute(no, placed_slot).value().text == "K-7";
+                                    doc.attribute(no, placed_slot).value().text == "K-7";
             check(valued, QStringLiteral("yazılan değer referansın 'no' hücresinde: K-7"));
             shoot("oznitelik-cizildi");
 
@@ -7065,10 +7065,10 @@ int MainWindow::probeRealMouse()
                 (void)side.execute_line("KATMAN ad=YOL", command::Origin::Test);
                 for (int r = 0; r < roads; ++r)
                     (void)side.execute_line("ÇİZGİ -4," + std::to_string(-3 - 4 * r) + " 30," +
-                                                  std::to_string(-3 - 4 * r),
-                                              command::Origin::Test);
+                                                std::to_string(-3 - 4 * r),
+                                            command::Origin::Test);
                 (void)side.execute_line("FARKLIKAYDET \"" + base_map.toStdString() + "\"",
-                                          command::Origin::Test);
+                                        command::Origin::Test);
             };
             write_map(1);
             runScriptLine(QStringLiteral("YENİ"));
@@ -7281,14 +7281,14 @@ int MainWindow::probeRealMouse()
             onCanvas(QEvent::MouseMove, screen(shown_corner) + QPointF(4.0, -3.0), Qt::NoButton);
             const core::SnapResult* near_shown = canvas_->snapPreviewForProbe();
             const bool took_shown              = near_shown != nullptr &&
-                                    near_shown->mode == core::SnapEndpoint &&
-                                    near_shown->point == shown_corner;
+                                                 near_shown->mode == core::SnapEndpoint &&
+                                                 near_shown->point == shown_corner;
             const core::Point2 hidden_corner{60'000, 30'000};
             onCanvas(QEvent::MouseMove, screen(hidden_corner) + QPointF(4.0, -3.0), Qt::NoButton);
             const core::SnapResult* near_hidden = canvas_->snapPreviewForProbe();
             const bool took_hidden              = near_hidden != nullptr &&
-                                     near_hidden->mode == core::SnapEndpoint &&
-                                     near_hidden->point == hidden_corner;
+                                                  near_hidden->mode == core::SnapEndpoint &&
+                                                  near_hidden->point == hidden_corner;
             check(took_shown && !took_hidden,
                   QStringLiteral("görünen parsel köşesi yakalandı, sınır dışındaki köşe "
                                  "yakalanmadı"));
@@ -7863,7 +7863,7 @@ int MainWindow::probeRealMouse()
             };
 
             if (!controller_->bus().on_crs_resolve) {
-                (void)std::fprintf(stdout, "[fare] not: CRS çözücüsü yok (KENTOS_DATA?); "
+                (void)std::fprintf(stdout, "[fare] not: CRS çözücüsü yok (PIRICAD_DATA?); "
                                            "sistem reddi sınanmadı\n");
             } else {
                 transcript_->clear();
@@ -8390,14 +8390,14 @@ int MainWindow::probeRealMouse()
                 endCommand();
             }
             canvas_->zoomToBox(core::Box2{485'290'000, 4'310'170'000, 485'390'000, 4'310'240'000});
-            const QString dir = QDir::temp().filePath(QStringLiteral("kentos-f05-probe"));
+            const QString dir = QDir::temp().filePath(QStringLiteral("piricad-f05-probe"));
             QDir(dir).removeRecursively();
             QDir().mkpath(dir);
             const QString dxf       = dir + QStringLiteral("/pafta.dxf");
             const QString prj       = dir + QStringLiteral("/pafta.prj");
             const auto staging_left = [&dir] {
                 return !QDir(dir)
-                            .entryList(QStringList{QStringLiteral(".kentos-*")},
+                            .entryList(QStringList{QStringLiteral(".piricad-*")},
                                        QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot)
                             .isEmpty();
             };
@@ -8451,7 +8451,7 @@ int MainWindow::probeRealMouse()
         {
             runScriptLine(QStringLiteral("YENİ"));
             endCommand();
-            const QString dir = QDir::temp().filePath(QStringLiteral("kentos-f05-tek-islem"));
+            const QString dir = QDir::temp().filePath(QStringLiteral("piricad-f05-tek-islem"));
             QDir(dir).removeRecursively();
             QDir().mkpath(dir);
             const auto write = [&dir](const QString& name, const std::string& text) {
@@ -8779,7 +8779,7 @@ int MainWindow::probeRealMouse()
             shoot("uzun-is-ozet");
 
             // AND OUT, as a GeoPackage: counted, then stopped half way.
-            const QString folder = QDir::tempPath() + QStringLiteral("/kentos-uzun-is");
+            const QString folder = QDir::tempPath() + QStringLiteral("/piricad-uzun-is");
             QDir(folder).removeRecursively();
             (void)QDir().mkpath(folder);
             const QString gpkg = folder + QStringLiteral("/ada.gpkg");
@@ -9329,7 +9329,7 @@ QString MainWindow::blockEditLine(bool save) const
 {
     if (!blockEdit_) return {};
     const core::Document& doc = controller_->document();
-    QString line              = QStringLiteral("BLOKDÜZENLE islem=%1")
+    QString line = QStringLiteral("BLOKDÜZENLE islem=%1")
                        .arg(save ? QStringLiteral("kaydet") : QStringLiteral("vazgec"));
     if (blockEdit_->reference != 0)
         line += QStringLiteral(" nesne=%1").arg(blockEdit_->reference);
@@ -9394,10 +9394,10 @@ QImage MainWindow::probePicture()
 
 int MainWindow::probeOsClicks()
 {
-    const QString into = QString::fromLocal8Bit(qgetenv("KENTOS_OSCLICK_PROBE"));
+    const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_OSCLICK_PROBE"));
     QDir().mkpath(into);
     bool given  = false;
-    int seconds = qEnvironmentVariableIntValue("KENTOS_OSCLICK_SECONDS", &given);
+    int seconds = qEnvironmentVariableIntValue("PIRICAD_OSCLICK_SECONDS", &given);
     if (!given || seconds <= 0) seconds = 60;
 
     const auto say = [](const QString& line) {
@@ -9499,8 +9499,8 @@ int MainWindow::probeOsClicks()
                 if (e->type() != QEvent::Enter) {
                     const auto* m = static_cast<QMouseEvent*>(e);
                     where         = QStringLiteral(" @%1,%2")
-                                .arg(qRound(m->globalPosition().x()))
-                                .arg(qRound(m->globalPosition().y()));
+                                        .arg(qRound(m->globalPosition().x()))
+                                        .arg(qRound(m->globalPosition().y()));
                 }
                 say(QStringLiteral("olay %1 %2%3").arg(QLatin1String(what), who, where));
             }
@@ -9577,14 +9577,14 @@ int MainWindow::probeOsClicks()
 
         QWidget* popup = QApplication::activePopupWidget();
         QWidget* card =
-            popup != nullptr && popup->property("kentos.rows").isValid() ? popup : nullptr;
+            popup != nullptr && popup->property("piricad.rows").isValid() ? popup : nullptr;
         if (card != nullptr && card != card_before) {
-            const QPoint first = card->mapToGlobal(card->property("kentos.rowCentre").toPoint());
+            const QPoint first = card->mapToGlobal(card->property("piricad.rowCentre").toPoint());
             say(QStringLiteral("kart %1 satır, ilk %2 %3, adım %4")
-                    .arg(card->property("kentos.rows").toInt())
+                    .arg(card->property("piricad.rows").toInt())
                     .arg(first.x())
                     .arg(first.y())
-                    .arg(card->property("kentos.rowPitch").toInt()));
+                    .arg(card->property("piricad.rowPitch").toInt()));
         }
         card_before = card;
     }
@@ -9764,7 +9764,7 @@ int MainWindow::probeAccessible()
 
 int MainWindow::probeFlyouts()
 {
-    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_FLYOUT_PROBE"));
+    const QString into  = QString::fromLocal8Bit(qgetenv("PIRICAD_FLYOUT_PROBE"));
     const bool shooting = into.size() > 1;
     if (shooting) QDir().mkpath(into);
 
@@ -9842,7 +9842,7 @@ int MainWindow::probeAnswerable()
     // A DIRECTORY MEANS PHOTOGRAPH IT. What a user sees when a tool asks for a
     // name is the whole point of this probe, and a pass/fail line does not show
     // it: the frame does.
-    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_ANSWER_PROBE"));
+    const QString into  = QString::fromLocal8Bit(qgetenv("PIRICAD_ANSWER_PROBE"));
     const bool shooting = into.size() > 1;
     if (shooting) QDir().mkpath(into);
 
@@ -10104,7 +10104,7 @@ int MainWindow::probeReach()
 
 int MainWindow::probeMenus()
 {
-    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_MENU_PROBE"));
+    const QString into  = QString::fromLocal8Bit(qgetenv("PIRICAD_MENU_PROBE"));
     const bool shooting = into.size() > 1;
     if (shooting) QDir().mkpath(into);
 
@@ -10117,7 +10117,7 @@ int MainWindow::probeMenus()
     }
     // THE THEME, when asked for one (`koyu` or `acik`): the window's own state
     // for the length of the probe; the preference file is not written.
-    if (const QByteArray asked = qgetenv("KENTOS_PROBE_THEME"); !asked.isEmpty()) {
+    if (const QByteArray asked = qgetenv("PIRICAD_PROBE_THEME"); !asked.isEmpty()) {
         theme_ = asked == "acik" ? ThemeMode::Light : ThemeMode::Dark;
         applyTheme();
         QCoreApplication::processEvents();
@@ -10170,12 +10170,12 @@ int MainWindow::probeMenus()
         QCoreApplication::processEvents();
     };
 
-    // ---- the application button: KentOS CAD, and quit at its foot ------------
+    // ---- the application button: PiriCAD CAD, and quit at its foot ------------
     if (auto* app = qobject_cast<QToolButton*>(bar->applicationButton());
         app != nullptr && appMenu_ != nullptr) {
         ++index;
         const QString title = app->text();
-        if (title != QStringLiteral("KentOS CAD")) {
+        if (title != QStringLiteral("PiriCAD CAD")) {
             (void)std::fprintf(stderr, "[menü] BAŞARISIZ: ana menü düğmesi \"%s\" diyor\n",
                                title.toUtf8().constData());
             ++failures;
@@ -10356,16 +10356,16 @@ void MainWindow::probeDialogs()
         (void)std::fflush(stdout);
     };
 
-    const QString dir = QString::fromLocal8Bit(qgetenv("KENTOS_DIALOG_PROBE"));
+    const QString dir = QString::fromLocal8Bit(qgetenv("PIRICAD_DIALOG_PROBE"));
     if (dir.isEmpty() || dir == QLatin1String("1")) {
-        say(QStringLiteral("KENTOS_DIALOG_PROBE bir dizin olmalı"));
+        say(QStringLiteral("PIRICAD_DIALOG_PROBE bir dizin olmalı"));
         return;
     }
     QDir().mkpath(dir);
 
     // THE THEME THE MOCKUPS ARE DRAWN IN, unless asked otherwise. The window's own
     // state for the length of the probe; the preference file is not written.
-    theme_ = qgetenv("KENTOS_PROBE_THEME") == "acik" ? ThemeMode::Light : ThemeMode::Dark;
+    theme_ = qgetenv("PIRICAD_PROBE_THEME") == "acik" ? ThemeMode::Light : ThemeMode::Dark;
     applyTheme();
 
     seedProbeDrawing();
@@ -10434,7 +10434,7 @@ void MainWindow::probeDialogs()
         // The About window, and a message box with Qt's own standard buttons —
         // `Kaydet`, `Kaydetme`, `İptal` must read in Turkish, from Qt's catalogue.
         AboutFacts facts;
-        facts.version = QStringLiteral(KENTOS_VERSION);
+        facts.version = QStringLiteral(PIRICAD_VERSION);
         facts.qt      = QString::fromLatin1(qVersion());
         facts.backend = canvas_->backendName();
         facts.platform =
@@ -10475,7 +10475,7 @@ void MainWindow::probeDialogs()
             shoot(&d, name);
         }
 
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
         // AND THE LISTENER PAGE AGAIN WITH SOMETHING IN IT. An empty table and
         // a full one are different pictures and both can be wrong; the empty
         // one was — three headings elided to "İstem…", "Çağ…", "Son görül…".
@@ -10539,10 +10539,10 @@ void MainWindow::probeDialogs()
         ImportWizard d(*controller_, theme_, this);
         shoot(&d, "ice-aktar");
 
-        // With a file named in `KENTOS_PROBE_IMPORT`, the two pages a read fills
+        // With a file named in `PIRICAD_PROBE_IMPORT`, the two pages a read fills
         // as well: the layers and the fields. A wizard photographed only on its
         // first page is a wizard nobody checked.
-        const QString sample = QString::fromLocal8Bit(qgetenv("KENTOS_PROBE_IMPORT"));
+        const QString sample = QString::fromLocal8Bit(qgetenv("PIRICAD_PROBE_IMPORT"));
         if (!sample.isEmpty()) {
             d.beginWith(sample);
             if (d.probeSettle(1)) shoot(&d, "ice-aktar-katmanlar");
@@ -10640,7 +10640,7 @@ void MainWindow::onEcho(const QString& text)
     // every answer the program gives into a widget nobody is looking at, so a
     // refusal — an export with no CRS, a layer name that matched nothing — was
     // indistinguishable from success from outside the process.
-    static const bool echo_out = qEnvironmentVariableIsSet("KENTOS_ECHO_STDOUT");
+    static const bool echo_out = qEnvironmentVariableIsSet("PIRICAD_ECHO_STDOUT");
     if (echo_out) {
         (void)std::fprintf(stdout, "[echo] %s\n", qPrintable(text));
         // Flushed line by line: a probe run ends by being killed, and a block
@@ -10934,12 +10934,12 @@ void MainWindow::refreshPointTab()
         // for objects — it would offer a screen reader no press to find it by.
         const command::Session* live = controller_->session();
         const bool asks_point        = live != nullptr && live->waiting() &&
-                                (live->prompt().kind == command::ParamKind::Point ||
-                                 live->prompt().kind == command::ParamKind::PointList);
-        const bool draws = !asks_point || command::takes_draw_layer(live->spec());
+                                       (live->prompt().kind == command::ParamKind::Point ||
+                                        live->prompt().kind == command::ParamKind::PointList);
+        const bool draws             = !asks_point || command::takes_draw_layer(live->spec());
         promptLayerPick_->setEnabled(draws);
         promptLayerPick_->setProperty(
-            "kentos.unavailable",
+            "piricad.unavailable",
             draws ? QVariant()
                   : QVariant(tr("Bu komut kendi katmanına çizmiyor; katman= almıyor.")));
     }
@@ -11045,8 +11045,8 @@ void MainWindow::onPromptChanged(const QString& prompt)
     if (live != nullptr && live->waiting()) {
         const command::Prompt& asked = live->prompt();
         const bool typed             = asked.kind == command::ParamKind::Text ||
-                           asked.kind == command::ParamKind::Number ||
-                           asked.kind == command::ParamKind::Integer;
+                                       asked.kind == command::ParamKind::Number ||
+                                       asked.kind == command::ParamKind::Integer;
         // UNLESS THE WORDS ARE ALREADY BEING TYPED WHERE THEY GO: the box over
         // a caption opened for this question (`MapCanvas::editTextAt`) keeps
         // the keyboard.
@@ -11372,9 +11372,9 @@ void MainWindow::refreshWindowTitle()
 {
     const QString file = controller_->currentFile();
     const QString name = file.isEmpty() ? tr("adsız") : QFileInfo(file).fileName();
-    // `design.md` §7: `<document> — KentOSCad <version>`, in the system's own
+    // `design.md` §7: `<document> — PiriCAD <version>`, in the system's own
     // caption now that the ribbon is the only bar under it.
-    setWindowTitle(tr("%1 — KentOSCad %2").arg(name, QStringLiteral(KENTOS_VERSION)));
+    setWindowTitle(tr("%1 — PiriCAD %2").arg(name, QStringLiteral(PIRICAD_VERSION)));
 }
 
 bool MainWindow::confirmDiscard(const QString& question)
@@ -11425,7 +11425,7 @@ void MainWindow::openProject()
     if (!settleBlockEdit(tr("Başka bir proje açılmadan önce"))) return;
     const QString path = QFileDialog::getOpenFileName(
         this, tr("Proje aç"), QFileInfo(controller_->currentFile()).absolutePath(),
-        tr("KentOSCad projesi (*.pcad);;Tüm dosyalar (*)"));
+        tr("PiriCAD projesi (*.pcad);;Tüm dosyalar (*)"));
     if (path.isEmpty()) return;
 
     controller_->runLine(QStringLiteral("AÇ \"%1\"").arg(path), command::Origin::Gui);
@@ -11454,7 +11454,7 @@ void MainWindow::saveProjectAs()
 {
     if (!settleBlockEdit(tr("Proje kaydedilmeden önce"))) return;
     QString path = QFileDialog::getSaveFileName(
-        this, tr("Farklı kaydet"), controller_->currentFile(), tr("KentOSCad projesi (*.pcad)"));
+        this, tr("Farklı kaydet"), controller_->currentFile(), tr("PiriCAD projesi (*.pcad)"));
     if (path.isEmpty()) return;
     if (QFileInfo(path).suffix().isEmpty()) path += QStringLiteral(".pcad");
 
@@ -12116,14 +12116,14 @@ void MainWindow::openScript()
 {
     runScriptFile(QFileDialog::getOpenFileName(this, tr("Betik seç"),
                                                QStringLiteral("tests/journal"),
-                                               tr("KentOSCad betiği (*.json);;Tüm dosyalar (*)")));
+                                               tr("PiriCAD betiği (*.json);;Tüm dosyalar (*)")));
 }
 
 void MainWindow::openScriptPreview()
 {
     const QString path = QFileDialog::getOpenFileName(
         this, tr("Önizlenecek betiği seç"), QStringLiteral("tests/journal"),
-        tr("KentOSCad betiği (*.json);;Tüm dosyalar (*)"));
+        tr("PiriCAD betiği (*.json);;Tüm dosyalar (*)"));
     if (path.isEmpty()) return;
     controller_->runLine(QStringLiteral("BETİK \"%1\" onizle=evet").arg(path),
                          command::Origin::Gui);
@@ -12135,7 +12135,7 @@ void MainWindow::showAbout()
     // written down: the version it was built as, the Qt under it, the backend
     // the canvas actually got, and how much of the registry is there.
     AboutFacts facts;
-    facts.version = QStringLiteral(KENTOS_VERSION);
+    facts.version = QStringLiteral(PIRICAD_VERSION);
     facts.qt      = QString::fromLatin1(qVersion());
     facts.backend = canvas_->backendName();
     facts.platform =
@@ -12149,7 +12149,7 @@ void MainWindow::showAbout()
 }
 
 // =============================================================================
-// KENTOS_TOOL_PROBE — the tool column, pressed
+// PIRICAD_TOOL_PROBE — the tool column, pressed
 // =============================================================================
 
 namespace {
@@ -12197,7 +12197,7 @@ ai::ProviderProfile keyedProbeProfile(const char* mark)
     profile.base_url    = "http://127.0.0.1:1";
     profile.path        = "/chat/completions";
     profile.model       = "sinama-1";
-    profile.key_ref     = std::string("kentos-sinama-boyle-bir-kayit-yok-") + mark;
+    profile.key_ref     = std::string("piricad-sinama-boyle-bir-kayit-yok-") + mark;
     profile.auth_header = "Authorization";
     profile.auth_scheme = "Bearer";
     return profile;
@@ -12932,7 +12932,7 @@ void MainWindow::probeTools()
 }
 
 // =============================================================================
-// KENTOS_HAND_PROBE — the six modify tools, driven by a hand
+// PIRICAD_HAND_PROBE — the six modify tools, driven by a hand
 // =============================================================================
 
 void MainWindow::probeLayerPanel()
@@ -13046,7 +13046,7 @@ void MainWindow::probeToolsByHand()
     // WHERE THE FRAMES GO. A probe that reads the transcript proves a command
     // ran; it proves nothing about what the user is looking at while it runs, and
     // "ekrana bakarsan görürsün" is exactly the gap between those two.
-    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_HAND_PROBE"));
+    const QString into  = QString::fromLocal8Bit(qgetenv("PIRICAD_HAND_PROBE"));
     const bool shooting = into.size() > 1;
     if (shooting) QDir().mkpath(into);
 
@@ -13152,7 +13152,7 @@ void MainWindow::probeToolsByHand()
         const auto say  = [&](const char* when) {
             const command::Session* live = controller_->session();
             (void)std::fprintf(stdout, "[el] %-7s %-12s yanan=%-22s sorulan=\"%s\"\n", step.tool,
-                                when, qPrintable(lit()),
+                               when, qPrintable(lit()),
                                live != nullptr ? live->prompt().message.c_str() : "(yok)");
         };
 
@@ -13393,4 +13393,4 @@ void MainWindow::probeToolsByHand()
     }
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the main window's ribbon (`.claude/ui.md` R46–R50).
+// PiriCAD — app: the main window's ribbon (`.claude/ui.md` R46–R50).
 //
 // EVERYTHING THE SHELL LAYS OUT ON THE RIBBON, in one file: the application
 // menu, the quick access row, the tabs and their panels, the boxes that read
@@ -12,37 +12,37 @@
 // tools and a grid of the rest, the edit verbs in a 3 × 4 grid, text and
 // dimension, the layer list and the colours in hand. Every other tab is the long
 // form of one of its panels.
-#include "kentos_cad/app/main_window.hpp"
+#include "piricad/app/main_window.hpp"
 
-#include "kentos_cad/app/app_menu.hpp"
-#include "kentos_cad/app/command_line.hpp"
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/panels.hpp"
-#include "kentos_cad/app/print_service.hpp"
-#include "kentos_cad/app/ribbon.hpp"
-#include "kentos_cad/app/shell_chrome.hpp"
-#include "kentos_cad/app/swatch_row.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/tools_panel.hpp"
-#include "kentos_cad/app/widgets.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/colour.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/parser.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/select_modes.hpp"
-#include "kentos_cad/command/targets.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/processing/tool.hpp"
+#include "piricad/app/app_menu.hpp"
+#include "piricad/app/command_line.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/panels.hpp"
+#include "piricad/app/print_service.hpp"
+#include "piricad/app/ribbon.hpp"
+#include "piricad/app/shell_chrome.hpp"
+#include "piricad/app/swatch_row.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/tools_panel.hpp"
+#include "piricad/app/widgets.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/colour.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/parser.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/select_modes.hpp"
+#include "piricad/command/targets.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/processing/tool.hpp"
 
 #include <QAction>
 #include <QActionGroup>
@@ -74,14 +74,14 @@
 #include <optional>
 #include <utility>
 
-namespace kentos::app {
+namespace piricad::app {
 
 namespace {
 
 constexpr const char* kToolCommand = kToolCommandProperty;
 
 /// The catalogue pattern an action stands for, on the hatch galleries.
-constexpr const char* kPatternProperty = "kentos.ribbon.pattern";
+constexpr const char* kPatternProperty = "piricad.ribbon.pattern";
 
 /// The mark a generated menu entry wears: its category's, because a generated
 /// entry has no drawing of its own and a wrong picture is worse than a generic
@@ -191,7 +191,7 @@ void MainWindow::buildRibbon()
     bar->setObjectName(QStringLiteral("shellRibbon"));
     bar->setRibbonStyle(SARibbonBar::RibbonStyleCompactThreeRow);
     // The window's icon belongs to the system's caption, which already shows
-    // it; a second one in the tab row pushed `KentOS CAD` off the left edge.
+    // it; a second one in the tab row pushed `PiriCAD CAD` off the left edge.
     bar->setTitleIconVisible(false);
     // Office's own sizes: a 32 px picture on a large button, 16 px on a small one.
     constexpr int kLargeIcon = 32;
@@ -300,15 +300,15 @@ void MainWindow::buildRibbon()
 
     // ---- the application button and its menu ------------------------------
     //
-    // `KentOS CAD`, where Office writes `Dosya`: what is in it is what a drawing
+    // `PiriCAD CAD`, where Office writes `Dosya`: what is in it is what a drawing
     // is done to as a FILE — new, open, save, import, export, print, the
     // project's settings, the program's — and the one way out. AutoCAD's
     // application menu (`app_menu.hpp`) and not a backstage page over the whole
     // window: a CAD user opens this to save and goes straight back to a drawing
     // that should never have been covered to do it.
-    auto* appButton = new RibbonAppButton(tr("KentOS CAD"), bar);
+    auto* appButton = new RibbonAppButton(tr("PiriCAD CAD"), bar);
     appButton->setObjectName(QStringLiteral("ribbonApplicationButton"));
-    appButton->setAccessibleName(tr("KentOS CAD ana menüsü"));
+    appButton->setAccessibleName(tr("PiriCAD CAD ana menüsü"));
     appButton->setAccessibleDescription(
         tr("Yeni, aç, kaydet, içe ve dışa aktar, yazdır, ayarlar ve çıkış"));
     appButton->setToolTip(tr("Ana menü — dosya, yazdırma, son belgeler, ayarlar ve çıkış"));
@@ -338,14 +338,14 @@ void MainWindow::buildRibbon()
             [this] { controller_->runLine(QStringLiteral("YARDIM"), command::Origin::Gui); });
     addAction(reference); // F1 works with the menu closed
     auto* about = new QAction(tr("Hakkında"), this);
-    about->setObjectName(QStringLiteral("aboutKentos"));
+    about->setObjectName(QStringLiteral("aboutPiricad"));
     about->setToolTip(tr("Sürüm, lisans ve kaynak kodu"));
     about->setData(static_cast<int>(Glyph::Info));
     connect(about, &QAction::triggered, this, &MainWindow::showAbout);
     auto* appRest = new QMenu(tr("Diğer Komutlar"), this);
     appRest->setObjectName(QStringLiteral("applicationMenuRest"));
     appRest->menuAction()->setData(static_cast<int>(Glyph::More));
-    actQuit_->setToolTip(tr("KentOS CAD'i kapatır; kaydedilmemiş değişiklik varsa sorar"));
+    actQuit_->setToolTip(tr("PiriCAD CAD'i kapatır; kaydedilmemiş değişiklik varsa sorar"));
     appMenu_->setFooter(reference, about, actSettings_, actQuit_);
 
     // ---- quick access and the corner ---------------------------------------
@@ -438,19 +438,19 @@ void MainWindow::buildRibbon()
     auto* circleThree    = methodTool(Glyph::CircleThreePoint, tr("Daire — üç nokta"),
                                       QStringLiteral("DAİRE yontem=3n"),
                                       tr("Çevrel çember: üç noktanın hepsi çemberin üzerinde"));
-    auto* circleTangent  = methodTool(Glyph::CircleTangent, tr("Daire — iki doğruya teğet"),
-                                      QStringLiteral("DAİRE yontem=ttr"),
-                                      tr("İki doğru, yarıçap ve dairenin geleceği köşe gösterilir"));
-    auto* ellipseAxis    = methodTool(Glyph::EllipseAxis, tr("Elips — eksenin iki ucu"),
-                                      QStringLiteral("ELİPS yontem=eksen"),
-                                      tr("Merkez iki ucun ortasıdır; üçüncü nokta ikinci ekseni "
-                                            "verir"));
+    auto* circleTangent = methodTool(Glyph::CircleTangent, tr("Daire — iki doğruya teğet"),
+                                     QStringLiteral("DAİRE yontem=ttr"),
+                                     tr("İki doğru, yarıçap ve dairenin geleceği köşe gösterilir"));
+    auto* ellipseAxis   = methodTool(Glyph::EllipseAxis, tr("Elips — eksenin iki ucu"),
+                                     QStringLiteral("ELİPS yontem=eksen"),
+                                     tr("Merkez iki ucun ortasıdır; üçüncü nokta ikinci ekseni "
+                                        "verir"));
     auto* arcThree =
         methodTool(Glyph::ArcThreePoint, tr("Yay — üç nokta"), QStringLiteral("YAY yontem=3n"),
                    tr("Başlangıç, üzerinden geçtiği nokta ve bitiş"));
-    auto* arcAngle = methodTool(Glyph::ArcCentreAngle, tr("Yay — başlangıç, merkez, açı"),
-                                QStringLiteral("YAY yontem=bma"),
-                                tr("Süpürme açısı oturumun birim ve kuralıyla okunur"));
+    auto* arcAngle  = methodTool(Glyph::ArcCentreAngle, tr("Yay — başlangıç, merkez, açı"),
+                                 QStringLiteral("YAY yontem=bma"),
+                                 tr("Süpürme açısı oturumun birim ve kuralıyla okunur"));
     auto* arcRadius = methodTool(Glyph::ArcEndsRadius, tr("Yay — başlangıç, bitiş, yarıçap"),
                                  QStringLiteral("YAY yontem=bby"),
                                  tr("İki çözüm vardır; yon=sol|sag hangisi olduğunu söyler"));
@@ -1018,14 +1018,14 @@ void MainWindow::buildRibbon()
     actMcp_->setStatusTip(tr("Yapay zeka ajanlarının bağlanacağı yerel sunucuyu açar"));
     actMcp_->setProperty(kToolCommand, QStringLiteral("MCPSUNUCU"));
     connect(actMcp_, &QAction::triggered, this, [this] {
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
         const bool up =
             controller_->mcpService() != nullptr && controller_->mcpService()->listening();
         controller_->runLine(up ? QStringLiteral("MCPSUNUCU islem=durdur")
                                 : QStringLiteral("MCPSUNUCU islem=baslat"),
                              command::Origin::Gui);
 #else
-        onEcho(tr("Bu yapıda MCP sunucusu yok (KENTOS_WITH_MCP kapalı)."));
+        onEcho(tr("Bu yapıda MCP sunucusu yok (PIRICAD_WITH_MCP kapalı)."));
 #endif
     });
     small(agents, actMcp_);
@@ -1489,8 +1489,8 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
             a->setCheckable(true);
             a->setObjectName(QStringLiteral("ribbonAnchor.") + word);
             a->setToolTip(tr("%1 — YAZIDÜZENLE hizalama=%2").arg(tr(kAnchorNames[row][col]), word));
-            a->setProperty("kentos.anchor.col", col);
-            a->setProperty("kentos.anchor.row", row);
+            a->setProperty("piricad.anchor.col", col);
+            a->setProperty("piricad.anchor.row", row);
             anchors->addAction(a);
             connect(a, &QAction::triggered, this, [onSelection, word] {
                 onSelection(QStringLiteral("YAZIDÜZENLE hizalama=%1").arg(word));
@@ -2502,7 +2502,7 @@ void MainWindow::refreshContextTabs()
             if (!ribbonLive_->hatchScale->hasFocus()) {
                 const QSignalBlocker hold = quiet(ribbonLive_->hatchScale);
                 const double k            = h.scale.den != 0 ? static_cast<double>(h.scale.num) /
-                                                        static_cast<double>(h.scale.den)
+                                                                   static_cast<double>(h.scale.den)
                                                              : 1.0;
                 ribbonLive_->hatchScale->setEditText(metresText(k, k < 10.0 ? 2 : 0));
             }
@@ -2519,7 +2519,7 @@ void MainWindow::refreshContextTabs()
 namespace {
 
 /// Why a greyed tool is greyed, as the tip under it says it.
-constexpr const char* kUnavailable = "kentos.unavailable";
+constexpr const char* kUnavailable = "piricad.unavailable";
 
 } // namespace
 
@@ -2617,8 +2617,8 @@ void MainWindow::refreshRibbonPictures()
         }
     for (QAction* a : std::as_const(ribbonLive_->textAnchors))
         if (a != nullptr)
-            a->setIcon(anchor_icon(a->property("kentos.anchor.col").toInt(),
-                                   a->property("kentos.anchor.row").toInt(), t.iconInk,
+            a->setIcon(anchor_icon(a->property("piricad.anchor.col").toInt(),
+                                   a->property("piricad.anchor.row").toInt(), t.iconInk,
                                    t.iconNote));
     // THE SNAP SWITCHES WEAR THE CANVAS'S OWN MARKERS, in the note ink.
     for (QAction* a : std::as_const(promptSnaps_))
@@ -2800,7 +2800,7 @@ QList<QToolButton*> MainWindow::ribbonButtons() const
 
 int MainWindow::probeRibbonSheet()
 {
-    const QString into = QString::fromLocal8Bit(qgetenv("KENTOS_RIBBON_SHEET"));
+    const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_RIBBON_SHEET"));
     QDir().mkpath(into);
     SARibbonBar* bar = ribbonBar();
     if (bar == nullptr) return 1;
@@ -3070,4 +3070,4 @@ void MainWindow::applyColour(bool fill, const QString& word)
             .arg(fill ? QStringLiteral("dolgu") : QStringLiteral("renk"), word));
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

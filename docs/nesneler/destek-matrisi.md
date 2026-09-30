@@ -1,5 +1,5 @@
 <!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->
-<!-- Kaynak: kentos_kapsam. Her hücre bir komut GERÇEKTEN çalıştırılarak ölçülür. -->
+<!-- Kaynak: piricad_kapsam. Her hücre bir komut GERÇEKTEN çalıştırılarak ölçülür. -->
 <!-- Yeniden üret: make kapsam -->
 
 # Destek Matrisi

@@ -13,7 +13,7 @@
 // not cost a hundred times a face one screen wide, and the marks that do land
 // must land exactly where they landed before — a clip that shifted the pattern
 // would make it crawl across the parcel as the user pans.
-#include "kentos_cad/render/symbology.hpp"
+#include "piricad/render/symbology.hpp"
 
 #include <doctest/doctest.h>
 
@@ -21,7 +21,7 @@
 #include <cmath>
 #include <vector>
 
-using namespace kentos;
+using namespace piricad;
 
 namespace {
 

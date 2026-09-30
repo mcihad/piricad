@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/attribute_table.hpp"
+#include "piricad/app/attribute_table.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/datagrid.hpp"
-#include "kentos_cad/app/export_dialog.hpp"
-#include "kentos_cad/app/expression_edit.hpp"
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/measure_text.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/widgets.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/parser.hpp"
-#include "kentos_cad/command/selection.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/datagrid.hpp"
+#include "piricad/app/export_dialog.hpp"
+#include "piricad/app/expression_edit.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/measure_text.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/widgets.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/parser.hpp"
+#include "piricad/command/selection.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/text.hpp"
 
 #include <QFrame>
 #include <QGridLayout>
@@ -35,7 +35,7 @@
 #include <cmath>
 #include <numeric>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 // `design.md` §9, measured off `öznitelik_tablosu.png`.
@@ -425,8 +425,8 @@ bool AttributeModel::setData(const QModelIndex& index, const QVariant& value, in
 
     const core::EntityKey key = keyAt(index.row());
     const QString mark        = QStringLiteral("%1:%2")
-                             .arg(static_cast<qulonglong>(key))
-                             .arg(static_cast<int>(columns_[index.column() - 1]));
+                                    .arg(static_cast<qulonglong>(key))
+                                    .arg(static_cast<int>(columns_[index.column() - 1]));
 
     // THROUGH THE BUS, like every other client. The table has no path into the
     // entity store and must not: a value edited here and the same value typed at
@@ -1392,4 +1392,4 @@ void AttributeTable::applyTheme(ThemeMode mode)
     refreshStatistics();
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

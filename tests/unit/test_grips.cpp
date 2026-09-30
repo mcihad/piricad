@@ -6,20 +6,20 @@
 // circle, an arc's end that end and the other one where it was, a spline's
 // handle a point the curve is drawn from. Each case below holds a kind to the
 // meaning `core/grips.hpp` states, by the numbers a surveyor can check.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/grips.hpp"
-#include "kentos_cad/core/spline.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/grips.hpp"
+#include "piricad/core/spline.hpp"
 
 #include <cmath>
 #include <vector>
 
-using namespace kentos::core;
+using namespace piricad::core;
 
 namespace {
 
@@ -124,7 +124,7 @@ TEST_CASE(
     def.knots_nano = uniform_clamped_knots(controls.size(), 3);
     auto made      = doc.add_kind(lyr, kSplineKind,
                                   std::vector{RingGeometry::RingInput{controls, RingRole::Open, 0},
-                                         RingGeometry::RingInput{fits, RingRole::Open, 0}},
+                                              RingGeometry::RingInput{fits, RingRole::Open, 0}},
                                   encode_spline(def), undo);
     REQUIRE(made.ok());
     const EntityId e = made.value();
@@ -160,14 +160,14 @@ TEST_CASE(
 // ESNET: what it passes over, by reason
 // =============================================================================
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/processing/registry.hpp"
 
 TEST_CASE("C-07: ESNET kilitli katmandaki nesneyi atlar ve sebebiyle söyler")
 {
-    using namespace kentos::command;
+    using namespace piricad::command;
     Document doc;
     Registry reg;
     Journal journal;
@@ -205,23 +205,23 @@ namespace {
 
 struct Rig
 {
-    kentos::command::Registry reg;
+    piricad::command::Registry reg;
     Document doc;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
     std::string said;
 
     Rig()
     {
-        kentos::command::register_builtin_commands(reg);
-        kentos::processing::register_processing_commands(reg);
+        piricad::command::register_builtin_commands(reg);
+        piricad::processing::register_processing_commands(reg);
         bus.on_echo = [this](std::string_view s) { said.append(s).append("\n"); };
     }
 
     void run(const std::string& line)
     {
-        auto r = bus.execute_line(line, kentos::command::Origin::Test);
+        auto r = bus.execute_line(line, piricad::command::Origin::Test);
         REQUIRE_MESSAGE(r.ok(), line << ": " << (r.ok() ? std::string() : r.error().message));
     }
 
@@ -242,7 +242,7 @@ struct Rig
 
 TEST_CASE("C-07: iki parselin ortak köşesi birlikte taşınır; ara açılmaz")
 {
-    using namespace kentos::command;
+    using namespace piricad::command;
     // Two parcels side by side sharing the edge x = 10.
     Rig r;
     r.run("ALAN 0,0 10,0 10,10 0,10");
@@ -269,7 +269,7 @@ TEST_CASE("C-07: iki parselin ortak köşesi birlikte taşınır; ara açılmaz"
 
 TEST_CASE("C-07: seçili parsellerde köşeye tıklamak ortak köşeyi taşır; yazılanla aynı günlük")
 {
-    using namespace kentos::command;
+    using namespace piricad::command;
     Rig clicked;
     clicked.run("ALAN 0,0 10,0 10,10 0,10");
     clicked.run("ALAN 10,0 20,0 20,10 10,10");
@@ -305,7 +305,7 @@ TEST_CASE("C-07: seçili parsellerde köşeye tıklamak ortak köşeyi taşır; 
 
 TEST_CASE("C-07: kilitli katmandaki seçili nesne ortak köşede atlanır ve söylenir")
 {
-    using namespace kentos::command;
+    using namespace piricad::command;
     Rig r;
     r.run("KATMAN ad=YENI");
     r.run("ALAN 0,0 10,0 10,10 0,10");
@@ -383,20 +383,20 @@ TEST_CASE("C-07: KÖŞESİL köşeyi siler; iki kenar tek kenar olur; en az kö�
     // A line keeps two corners, a face three: said, nothing written.
     r.run("ÇİZGİ 0,20 10,20");
     const std::uint64_t before = r.doc.content_hash();
-    auto two = r.bus.execute_line("KÖŞESİL nesne=2 kose=1", kentos::command::Origin::Test);
+    auto two = r.bus.execute_line("KÖŞESİL nesne=2 kose=1", piricad::command::Origin::Test);
     REQUIRE_FALSE(two.ok());
     CHECK(two.error().message.find("en az iki köşeyle") != std::string::npos);
     r.run("ALAN 0,30 10,30 10,40 0,40");
     r.run("KÖŞESİL nesne=3 kose=3");
     CHECK_EQ(r.ring(3).size(), 3u);
-    auto three = r.bus.execute_line("KÖŞESİL nesne=3 kose=1", kentos::command::Origin::Test);
+    auto three = r.bus.execute_line("KÖŞESİL nesne=3 kose=1", piricad::command::Origin::Test);
     REQUIRE_FALSE(three.ok());
     CHECK(three.error().message.find("en az üç köşeyle") != std::string::npos);
     CHECK_NE(r.doc.content_hash(), before);
 
     // A circle's handles are its definition, not corners.
     r.run("DAİRE merkez=50,50 cevre=55,50");
-    auto round = r.bus.execute_line("KÖŞESİL nesne=4 kose=2", kentos::command::Origin::Test);
+    auto round = r.bus.execute_line("KÖŞESİL nesne=4 kose=2", piricad::command::Origin::Test);
     REQUIRE_FALSE(round.ok());
     CHECK(round.error().message.find("tanımı köşelerinden oluşmuyor") != std::string::npos);
 }
@@ -489,14 +489,14 @@ TEST_CASE("C-07: KENARTÜRÜ parselin kenarını yaya çevirir; kimlik, öznitel
 
     // A point on the edge's line bends nothing, and says so.
     auto flat = r.bus.execute_line("KENARTÜRÜ nesne=1 kenar=1 tur=yay nokta=30,0",
-                                   kentos::command::Origin::Test);
+                                   piricad::command::Origin::Test);
     REQUIRE_FALSE(flat.ok());
     CHECK(flat.error().message.find("kenarın doğrultusunda") != std::string::npos);
 }
 
 TEST_CASE("C-07: KENARTÜRÜ tıklayarak: kenara tıklamak, yayın noktasını göstermek; yazılanla aynı")
 {
-    using namespace kentos::command;
+    using namespace piricad::command;
     Rig clicked;
     clicked.run("ÇOKLUÇİZGİ 0,0 20,0 20,10");
     auto started = clicked.bus.begin_interactive("KENARTÜRÜ", Origin::Gui);

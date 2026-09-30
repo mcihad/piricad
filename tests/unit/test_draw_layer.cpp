@@ -6,18 +6,18 @@
 // the active one where it was, and it may be given while the command waits —
 // typed, or by the `Nokta Girişi` tab's `Katmanı nesneden al` — with the same
 // journal line as if the first line had carried it.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/validation.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/validation.hpp"
+#include "piricad/core/document.hpp"
 
 #include <string>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 
 namespace {

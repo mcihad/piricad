@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: how an angle is written, read and turned into a direction.
+// PiriCAD — core: how an angle is written, read and turned into a direction.
 //
 // A surveyor and a mathematician disagree about what "45" means. The instrument
 // on the tripod reads a SEMT AÇISI — clockwise from north, in grad, a full circle
 // being 400 — and every Turkish traverse sheet, setting-out list and ölçü krokisi
-// is written that way (kentoscad.md §5.6, §13). The trigonometry underneath reads
+// is written that way (piricad.md §5.6, §13). The trigonometry underneath reads
 // the mathematical angle — counter-clockwise from east, in degrees or radians. A
 // program that lets the two meet without saying which is which puts a corner
 // ninety degrees from where the engineer meant it, mirrored about the 50-grad
@@ -27,13 +27,13 @@
 // millimetre, under the storage unit.
 #pragma once
 
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The unit an angle is typed and printed in.
 ///
@@ -217,4 +217,4 @@ std::string angle_text(double turns, AngleUnit unit);
 /// matematik. Turkish, because the reader is the engineer signing the sheet.
 const char* angle_rule_label(AngleRule rule) noexcept;
 
-} // namespace kentos::core
+} // namespace piricad::core

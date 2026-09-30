@@ -4,7 +4,7 @@
   "id": "ai-saglayicilar",
   "source": "Sağlayıcıların kendi API başvuru belgeleri; her kaydın 'belge' alanı kaynağını gösterir. 2026-09-19 tarihinde derlendi.",
   "published": "2026-09-19",
-  "licence": "Bu dosya KentOSCad'in kendi derlemesidir (GPL-3.0-or-later). Model ve marka adları sahiplerine aittir.",
+  "licence": "Bu dosya PiriCAD'in kendi derlemesidir (GPL-3.0-or-later). Model ve marka adları sahiplerine aittir.",
   "aciklama": "Model kimlikleri ve adresler hızla eskir. Bu dosya programın BİLDİĞİ listedir; uç noktanın o an SUNDUĞU liste 'Modelleri getir' ile alınır ve bunun yerine geçer.",
   "saglayicilar": [
     {
@@ -984,7 +984,7 @@
       "ek_basliklar": [
         {
           "ad": "X-Title",
-          "deger": "KentOSCad"
+          "deger": "PiriCAD"
         }
       ],
       "anahtar_ref": "openrouter",

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/audit.hpp"
+#include "piricad/ai/audit.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <cstdio>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 std::string format_id(std::uint64_t value)
@@ -80,7 +80,7 @@ AuditLog::AuditLog(Sink sink) : sink_(std::move(sink)) {}
 std::string AuditLog::next_id()
 {
     ++written_;
-    std::uint64_t h = core::fnv1a("kentos.ai.audit");
+    std::uint64_t h = core::fnv1a("piricad.ai.audit");
     h               = core::fnv1a_int(static_cast<std::int64_t>(written_), h);
     return format_id(h);
 }
@@ -128,4 +128,4 @@ std::string AuditLog::write_escalation_refusal(std::string requester, std::strin
     return write(std::move(record));
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

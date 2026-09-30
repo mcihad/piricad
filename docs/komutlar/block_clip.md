@@ -222,7 +222,7 @@ Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 - Sınırın içini gizleyip dışını göstermek (AutoCAD'in ters kırpması) yoktur.
 - Bir diziyle konmuş referansta (`sutun`, `satir`) sınır, üzerine çizildiği **ilk
   kopyanın** yerinden tanıma taşınır ve her kopyayı aynı yerinden kırpar.
-- Kırpılmış referans taşıyan bir proje dosyası bu sürümden eski KentOSCad'lerde açılmaz;
+- Kırpılmış referans taşıyan bir proje dosyası bu sürümden eski PiriCAD'lerde açılmaz;
   eski sürüm bunu "daha yeni bir okuyucu istiyor" diye söyler
   ([Proje dosyası](../veri/proje-dosyasi.md)).
 

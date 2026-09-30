@@ -10,22 +10,22 @@
 // pointed at. Letting them place it freely would let them draw a sheared shape
 // that is not an ellipse at all — and the record would then hold two axes that no
 // ellipse has, which nothing downstream could draw.
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/core/text.hpp"
 #include <optional>
 #include <string>
 
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <span>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -168,7 +168,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(ellipse_draw)
+PIRICAD_COMMAND(ellipse_draw)
 {
     return CommandSpec{
         .id       = "core.ellipse_draw",
@@ -205,4 +205,4 @@ KENTOS_COMMAND(ellipse_draw)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

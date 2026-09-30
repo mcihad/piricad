@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the one export window.
+// PiriCAD — app: the one export window.
 //
 // EVERYTHING THAT LEAVES THE PROGRAM LEAVES THROUGH HERE, and through here means
 // through a COMMAND. The drawing goes out as `DIŞAAKTAR`, an object's corners as
@@ -21,7 +21,7 @@
 // whole truth of what will happen, and it is true by construction.
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
+#include "piricad/app/dialog_chrome.hpp"
 
 #include <QString>
 #include <QStringList>
@@ -31,7 +31,7 @@
 
 class QLabel;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -108,4 +108,4 @@ private:
     Button* go_{nullptr};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

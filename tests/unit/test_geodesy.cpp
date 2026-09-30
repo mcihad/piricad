@@ -1,47 +1,47 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// kentoscad.md §11, Phase 0 asks for a comparison of PROJ's TUREF accuracy against
+// piricad.md §11, Phase 0 asks for a comparison of PROJ's TUREF accuracy against
 // TKGM reference data — comparing PROJ's TUREF accuracy against TKGM
 // reference data — and §12's opening requirement.
 //
 // The thing being tested is not PROJ's mathematics — PROJ is correct and has been
 // for thirty years. What is tested is the wrapper's ONE job: axis order. EPSG:5254
-// declares northing first; KentOSCad stores easting first. A wrapper that gets this
+// declares northing first; PiriCAD stores easting first. A wrapper that gets this
 // wrong returns a coordinate that is plausible and wrong, which is the worst
 // failure this product has (.claude/model.md R37a).
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/command/registry.hpp"
 
-#include "kentos_cad/command/bus.hpp"
+#include "piricad/command/bus.hpp"
 
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/geodesy/crs_service.hpp"
-#include "kentos_cad/domain/geodesy/helmert.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/geodesy/crs_service.hpp"
+#include "piricad/domain/geodesy/helmert.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/script/json_runner.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/domain/geodesy/crs_catalog.hpp"
-#include "kentos_cad/domain/geodesy/transform.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/domain/geodesy/crs_catalog.hpp"
+#include "piricad/domain/geodesy/transform.hpp"
 
 #include <cmath>
 #include <filesystem>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::domain::geodesy;
-using kentos::core::Point2;
+using namespace piricad;
+using namespace piricad::domain::geodesy;
+using piricad::core::Point2;
 
 namespace {
 
-/// A parcel corner in the 30th zone. Easting first, as KentOSCad stores it.
+/// A parcel corner in the 30th zone. Easting first, as PiriCAD stores it.
 constexpr Point2 kUsak{485320150, 4310220400};
 
 bool near_deg(double a, double b, double tolerance = 1e-6)
@@ -53,7 +53,7 @@ bool near_deg(double a, double b, double tolerance = 1e-6)
 
 TEST_CASE("KATALOG: TM 3 derece dilimleri veriden okunuyor")
 {
-    auto loaded = CrsCatalog::load(KENTOS_DATA_DIR "/crs");
+    auto loaded = CrsCatalog::load(PIRICAD_DATA_DIR "/crs");
     CHECK(loaded.ok());
     if (!loaded.ok()) return;
 
@@ -78,7 +78,7 @@ TEST_CASE("KATALOG: TM 3 derece dilimleri veriden okunuyor")
 
 TEST_CASE("KATALOG: dilim boylamdan, EPSG'den ve addan bulunuyor")
 {
-    auto loaded = CrsCatalog::load(KENTOS_DATA_DIR "/crs");
+    auto loaded = CrsCatalog::load(PIRICAD_DATA_DIR "/crs");
     CHECK(loaded.ok());
     if (!loaded.ok()) return;
     const CrsCatalog& cat = loaded.value();
@@ -222,7 +222,7 @@ TEST_CASE("DÖNÜŞÜM: PROJ yokken sessizce birim dönüşüm yapmıyor")
     if (!Transform::available()) {
         auto any = Transform::between("EPSG:5254", "EPSG:4326");
         CHECK(!any.ok());
-        if (!any.ok()) CHECK(any.error().message.find("KENTOS_WITH_PROJ") != std::string::npos);
+        if (!any.ok()) CHECK(any.error().message.find("PIRICAD_WITH_PROJ") != std::string::npos);
     }
 }
 
@@ -236,7 +236,7 @@ TEST_CASE("CRS: kimlik çözülür ve belge tek doğruyu taşır")
     // constructed default forever. A drawing therefore reported one CRS to the
     // exporter and another to its own file — which is the field blunder model.md
     // R36 is written against.
-    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
     REQUIRE(catalogue.ok());
 
     core::Document doc;
@@ -289,7 +289,7 @@ TEST_CASE("CRS: sistemin neyi saydığı sorulur; metre saymayan sistem çizime 
     // accepted, typed coordinates went on being read as metres, and a drawing
     // "in" WGS 84 held millidegrees printed as metres — 0,001° is a hundred
     // metres on the ground. OTURT would have fitted a survey onto one.
-    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
     REQUIRE(catalogue.ok());
 
     core::Document doc;
@@ -369,7 +369,7 @@ TEST_CASE("CRS: YENİ çizimin varsayılan sistemini de çözer (F-03)")
     // made with YENİ did not. It named TUREF/TM36 and knew nothing about it:
     // "çözümlenmedi" in the status bar, an export refused for a drawing that had
     // done nothing wrong, and no answer to whether its numbers count metres.
-    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
     REQUIRE(catalogue.ok());
     core::Document doc;
     command::Registry reg;
@@ -392,11 +392,11 @@ TEST_CASE("CRS: metre saymayan sistemle kaydedilmiş çizim açılır ama uyarı
     // still open — locking a surveyor out of their own file is not a fix — and
     // it must say, on the way in, that its numbers are not metres.
     if (!Transform::available()) PENDING("PROJ kapalı: bir sistemin neyi saydığı sorulamıyor.");
-    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
     REQUIRE(catalogue.ok());
 
     const std::filesystem::path dir =
-        std::filesystem::temp_directory_path() / "kentoscad-geodesy-crs-unit";
+        std::filesystem::temp_directory_path() / "piricad-geodesy-crs-unit";
     std::filesystem::create_directories(dir);
     const std::string path = (dir / "derece.pcad").string();
 
@@ -443,7 +443,7 @@ TEST_CASE("CRS: metre saymayan sistemle kaydedilmiş çizim açılır ama uyarı
 
 TEST_CASE("HELMERT: iki nokta tam çözüm verir, artık bırakmaz")
 {
-    using namespace kentos::domain::geodesy;
+    using namespace piricad::domain::geodesy;
 
     // A local survey rotated a quarter turn and moved onto TUREF/TM36.
     std::vector<ControlPoint> control{
@@ -466,7 +466,7 @@ TEST_CASE("HELMERT: iki nokta tam çözüm verir, artık bırakmaz")
 
 TEST_CASE("HELMERT: ölçeği bulur")
 {
-    using namespace kentos::domain::geodesy;
+    using namespace piricad::domain::geodesy;
 
     // The same shape at twice the size, no rotation.
     std::vector<ControlPoint> control{
@@ -489,7 +489,7 @@ TEST_CASE("HELMERT: ölçeği bulur")
 
 TEST_CASE("HELMERT: üç noktada artıkları ve RMS'i raporlar")
 {
-    using namespace kentos::domain::geodesy;
+    using namespace piricad::domain::geodesy;
 
     // Three points that cannot all be satisfied: the third is 20 mm off the line
     // the first two define. A similarity cannot absorb that, and must not
@@ -511,7 +511,7 @@ TEST_CASE("HELMERT: üç noktada artıkları ve RMS'i raporlar")
 
 TEST_CASE("HELMERT: bir nokta ve çakışık noktalar gerekçesiyle reddedilir")
 {
-    using namespace kentos::domain::geodesy;
+    using namespace piricad::domain::geodesy;
 
     std::vector<ControlPoint> one{{{0, 0}, {100, 100}}};
     CHECK(!fit_helmert(one, false).ok());
@@ -525,7 +525,7 @@ TEST_CASE("HELMERT: bir nokta ve çakışık noktalar gerekçesiyle reddedilir")
 
 TEST_CASE("HELMERT: dönüşüm her noktayı kontrolüne taşır")
 {
-    using namespace kentos::domain::geodesy;
+    using namespace piricad::domain::geodesy;
 
     std::vector<ControlPoint> control{
         {{0, 0}, {485300000, 4310200000}},
@@ -536,7 +536,7 @@ TEST_CASE("HELMERT: dönüşüm her noktayı kontrolüne taşır")
     REQUIRE(fit.ok());
 
     for (const ControlPoint& p : control) {
-        const kentos::core::Point2 landed = fit.value().apply(p.local);
+        const piricad::core::Point2 landed = fit.value().apply(p.local);
         CHECK(landed.x == p.map.x);
         CHECK(landed.y == p.map.y);
     }
@@ -546,15 +546,15 @@ TEST_CASE("OTURT: yerel çizimi kontrol noktalarıyla haritaya taşır")
 {
     // A survey measured from a station the crew called 0,0. Two published points
     // put it on TUREF/TM36 — the job this command exists for.
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
 
@@ -569,7 +569,7 @@ TEST_CASE("OTURT: yerel çizimi kontrol noktalarıyla haritaya taşır")
     // Nothing was added or removed — the drawing MOVED.
     CHECK(doc.live_entity_count() == before);
 
-    const kentos::core::Box2 box = doc.extent();
+    const piricad::core::Box2 box = doc.extent();
     CHECK(box.min_x == 485300000);
     CHECK(box.min_y == 4310200000);
     CHECK(doc.crs().id() == "TUREF/TM36");
@@ -577,15 +577,15 @@ TEST_CASE("OTURT: yerel çizimi kontrol noktalarıyla haritaya taşır")
 
 TEST_CASE("OTURT tek geri alma adımıdır: ya hepsi taşınır ya hiçbiri")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
     REQUIRE(bus.execute_line("ÇİZGİ noktalar=0,0 5,5", Origin::Test).ok());
@@ -608,25 +608,25 @@ TEST_CASE("OTURT: dönük ya da ölçekli bir oturtma daireyi ve yayı bozmadan 
     // due east of its centre and the kind said so — in a sentence about the
     // handle. Each object now moves the way its kind moves (`transform_entity`),
     // a circle round, its radius scaled with the fit.
-    const auto rig = [](kentos::core::Document& doc, kentos::command::Registry& reg,
-                        kentos::command::Bus& bus) {
-        kentos::command::register_builtin_commands(reg);
-        kentos::domain::geodesy::register_geodesy_commands(reg);
-        using kentos::command::Origin;
+    const auto rig = [](piricad::core::Document& doc, piricad::command::Registry& reg,
+                        piricad::command::Bus& bus) {
+        piricad::command::register_builtin_commands(reg);
+        piricad::domain::geodesy::register_geodesy_commands(reg);
+        using piricad::command::Origin;
         REQUIRE(bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());  // 1
         REQUIRE(bus.execute_line("DAİRE 10,0 12,0", Origin::Test).ok()); // 2: r = 2 m
         REQUIRE(bus.execute_line("YAY 0,0 5,0 0,5", Origin::Test).ok()); // 3: r = 5 m
         (void)doc;
     };
-    using kentos::command::Origin;
+    using piricad::command::Origin;
 
-    namespace core = kentos::core;
+    namespace core = piricad::core;
     {
         core::Document doc;
-        kentos::command::Registry reg;
-        kentos::command::Journal journal;
-        kentos::command::UndoStack undo;
-        kentos::command::Bus bus{doc, reg, journal, undo};
+        piricad::command::Registry reg;
+        piricad::command::Journal journal;
+        piricad::command::UndoStack undo;
+        piricad::command::Bus bus{doc, reg, journal, undo};
         rig(doc, reg, bus);
         // A quarter turn: local east becomes map north.
         auto fitted = bus.execute_line("OTURT noktalar=0,0 100,100 10,0 100,110", Origin::Test);
@@ -645,10 +645,10 @@ TEST_CASE("OTURT: dönük ya da ölçekli bir oturtma daireyi ve yayı bozmadan 
 
     {
         core::Document doc;
-        kentos::command::Registry reg;
-        kentos::command::Journal journal;
-        kentos::command::UndoStack undo;
-        kentos::command::Bus bus{doc, reg, journal, undo};
+        piricad::command::Registry reg;
+        piricad::command::Journal journal;
+        piricad::command::UndoStack undo;
+        piricad::command::Bus bus{doc, reg, journal, undo};
         rig(doc, reg, bus);
         // Twice the size and a quarter turn: the radius doubles with the sheet.
         auto fitted = bus.execute_line("OTURT noktalar=0,0 0,0 10,0 0,20", Origin::Test);
@@ -661,15 +661,15 @@ TEST_CASE("OTURT: dönük ya da ölçekli bir oturtma daireyi ve yayı bozmadan 
 
 TEST_CASE("OTURT: eksik ya da tek sayıda nokta gerekçesiyle reddedilir")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     std::string said;
     bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
 
@@ -685,15 +685,15 @@ TEST_CASE("OTURT: eksik ya da tek sayıda nokta gerekçesiyle reddedilir")
 
 TEST_CASE("OTURT ölçeği kilitlenebilir: saha ölçüsü yeniden ölçeklenmez")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(bus.execute_line("ÇİZGİ noktalar=0,0 100,0", Origin::Test).ok());
 
@@ -702,7 +702,7 @@ TEST_CASE("OTURT ölçeği kilitlenebilir: saha ölçüsü yeniden ölçeklenmez
     REQUIRE(bus.execute_line("OTURT noktalar=0,0 0,0 100,0 200,0 olcek_kilitli=evet", Origin::Test)
                 .ok());
 
-    const kentos::core::Box2 box = doc.extent();
+    const piricad::core::Box2 box = doc.extent();
     CHECK(box.max_x - box.min_x == 100000);
 }
 
@@ -712,18 +712,18 @@ TEST_CASE("OTURT ölçeği kilitlenebilir: saha ölçüsü yeniden ölçeklenmez
 
 TEST_CASE("APLİKASYON: azimut kuzeyden saat yönünde ölçülür")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
 
     std::string said;
     bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
     REQUIRE(bus.execute_line("NOKTA noktalar=0,100", Origin::Test).ok()); // due north
     REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok()); // due east
@@ -745,18 +745,18 @@ TEST_CASE("APLİKASYON: azimut kuzeyden saat yönünde ölçülür")
 
 TEST_CASE("APLİKASYON: bağlama verilince açılar ondan ölçülür")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
 
     std::string said;
     bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
     REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok()); // due east
 
@@ -771,18 +771,18 @@ TEST_CASE("APLİKASYON: bağlama verilince açılar ondan ölçülür")
 
 TEST_CASE("APLİKASYON: nokta numarasını listeye yazar")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
 
     std::string said;
     bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
     REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok());
     REQUIRE(bus.execute_line("SÜTUN kimlik=nokta_no tur=metin", Origin::Test).ok());
@@ -797,15 +797,15 @@ TEST_CASE("APLİKASYON: nokta numarasını listeye yazar")
 
 TEST_CASE("APLİKASYON çizimi değiştirmez")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
     REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok());
 
@@ -822,17 +822,17 @@ namespace {
 
 struct GeoRig
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
     std::string said;
 
     GeoRig()
     {
-        kentos::command::register_builtin_commands(reg);
-        kentos::domain::geodesy::register_geodesy_commands(reg);
+        piricad::command::register_builtin_commands(reg);
+        piricad::domain::geodesy::register_geodesy_commands(reg);
         bus.on_echo = [this](std::string_view t) { said += std::string(t); };
     }
 };
@@ -841,10 +841,10 @@ struct GeoRig
 
 TEST_CASE("DÖNÜŞTÜR: ED50 dilimi TUREF dilimine taşınır ve etiket onu izler")
 {
-    if (!kentos::domain::geodesy::Transform::available()) return; // PROJ off in this build
+    if (!piricad::domain::geodesy::Transform::available()) return; // PROJ off in this build
 
     GeoRig r;
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(r.bus
@@ -853,7 +853,7 @@ TEST_CASE("DÖNÜŞTÜR: ED50 dilimi TUREF dilimine taşınır ve etiket onu izl
                               Origin::Test)
                 .ok());
 
-    const kentos::core::Box2 before = r.doc.extent();
+    const piricad::core::Box2 before = r.doc.extent();
 
     // EPSG:5256 is TUREF / TM36; EPSG:5254 is TUREF / TM30. Same datum, a
     // different three-degree zone — the everyday case of a municipality whose
@@ -861,7 +861,7 @@ TEST_CASE("DÖNÜŞTÜR: ED50 dilimi TUREF dilimine taşınır ve etiket onu izl
     auto moved = r.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:5254", Origin::Test);
     if (!moved) FAIL_WITH("DÖNÜŞTÜR", moved.error().message);
 
-    const kentos::core::Box2 after = r.doc.extent();
+    const piricad::core::Box2 after = r.doc.extent();
 
     // The drawing moved — a zone change shifts the easting by hundreds of km —
     // and nothing was added or lost.
@@ -875,10 +875,10 @@ TEST_CASE("DÖNÜŞTÜR: ED50 dilimi TUREF dilimine taşınır ve etiket onu izl
 
 TEST_CASE("DÖNÜŞTÜR tek geri alma adımıdır")
 {
-    if (!kentos::domain::geodesy::Transform::available()) return;
+    if (!piricad::domain::geodesy::Transform::available()) return;
 
     GeoRig r;
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(r.bus
@@ -898,10 +898,10 @@ TEST_CASE("DÖNÜŞTÜR tek geri alma adımıdır")
 
 TEST_CASE("DÖNÜŞTÜR: coğrafi hedef gerekçesiyle reddedilir")
 {
-    if (!kentos::domain::geodesy::Transform::available()) return;
+    if (!piricad::domain::geodesy::Transform::available()) return;
 
     GeoRig r;
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(r.bus
@@ -923,10 +923,10 @@ TEST_CASE("DÖNÜŞTÜR: coğrafi hedef gerekçesiyle reddedilir")
 
 TEST_CASE("DÖNÜŞTÜR: aynı sistem istenirse hiçbir şey yapmaz")
 {
-    if (!kentos::domain::geodesy::Transform::available()) return;
+    if (!piricad::domain::geodesy::Transform::available()) return;
 
     GeoRig r;
-    using kentos::command::Origin;
+    using piricad::command::Origin;
     REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(r.bus
@@ -948,14 +948,14 @@ TEST_CASE("DÖNÜŞTÜR: aynı sistem istenirse hiçbir şey yapmaz")
 
 TEST_CASE("POLİGON: kapalı bir kare güzergâh hatasız kapanır")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
-    using kentos::command::Origin;
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+    using piricad::command::Origin;
 
     // A PERFECT SQUARE, so every number in the sheet is checkable by eye. The
     // crew stands at (0,0) with a backsight due north and walks four 100 m sides,
@@ -972,42 +972,42 @@ TEST_CASE("POLİGON: kapalı bir kare güzergâh hatasız kapanır")
 
     // Four stations: (100,0), (100,-100), (0,-100), (0,0).
     REQUIRE_EQ(doc.live_entity_count(), std::size_t{4});
-    const kentos::core::Point2 expected[4]{
+    const piricad::core::Point2 expected[4]{
         {100'000, 0}, {100'000, -100'000}, {0, -100'000}, {0, 0}};
     for (std::size_t i = 0; i < 4; ++i) {
         const auto span = doc.geometry().rings_of(doc.entities().slot[i]);
-        CHECK_EQ((kentos::core::Point2{doc.geometry().ring_xs(span.first)[0],
-                                       doc.geometry().ring_ys(span.first)[0]}),
+        CHECK_EQ((piricad::core::Point2{doc.geometry().ring_xs(span.first)[0],
+                                        doc.geometry().ring_ys(span.first)[0]}),
                  expected[i]);
     }
 
     // AND THE SHEET IS A SHEET (command.md R26): the class, the source, the
     // approval state and a row per station.
-    const kentos::core::Json& sheet = ran.value().report;
-    const kentos::core::Json* rows  = sheet.find("istasyonlar");
+    const piricad::core::Json& sheet = ran.value().report;
+    const piricad::core::Json* rows  = sheet.find("istasyonlar");
     REQUIRE(rows != nullptr);
     CHECK_EQ(rows->as_array().size(), std::size_t{4});
-    const kentos::core::Json* source = sheet.find("kaynak");
+    const piricad::core::Json* source = sheet.find("kaynak");
     REQUIRE(source != nullptr);
     CHECK(source->as_string().find("BÖHHBÜY") != std::string::npos);
 
     // The tolerance package is not signed yet, and the command says so rather
     // than letting an unsigned number look like a rule (CLAUDE.md 6.11).
-    const kentos::core::Json* approval = sheet.find("onay");
+    const piricad::core::Json* approval = sheet.find("onay");
     REQUIRE(approval != nullptr);
     CHECK_EQ(approval->as_string(), "BEKLİYOR");
 }
 
 TEST_CASE("POLİGON: kenar kapanma hatası dağıtılır ve bitiş noktasına oturur")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
-    using kentos::command::Origin;
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+    using piricad::command::Origin;
 
     REQUIRE(bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
 
@@ -1024,30 +1024,30 @@ TEST_CASE("POLİGON: kenar kapanma hatası dağıtılır ve bitiş noktasına ot
 
     REQUIRE_EQ(doc.live_entity_count(), std::size_t{4});
     const auto last = doc.geometry().rings_of(doc.entities().slot[3]);
-    CHECK_EQ((kentos::core::Point2{doc.geometry().ring_xs(last.first)[0],
-                                   doc.geometry().ring_ys(last.first)[0]}),
-             (kentos::core::Point2{20, 0}));
+    CHECK_EQ((piricad::core::Point2{doc.geometry().ring_xs(last.first)[0],
+                                    doc.geometry().ring_ys(last.first)[0]}),
+             (piricad::core::Point2{20, 0}));
 
     // AND THE SHARE GROWS ALONG THE RUN. With equal sides, Bowditch gives each
     // station a quarter more of the correction than the one before it.
     const auto first = doc.geometry().rings_of(doc.entities().slot[0]);
     CHECK_EQ(doc.geometry().ring_xs(first.first)[0], 100'005);
 
-    const kentos::core::Json* miss = ran.value().report.find("kenar_kapanma_mm");
+    const piricad::core::Json* miss = ran.value().report.find("kenar_kapanma_mm");
     REQUIRE(miss != nullptr);
     CHECK_EQ(miss->as_array()[0].as_int(), 20);
 }
 
 TEST_CASE("POLİGON: toleransı aşan kenar kapanması mevzuatı adıyla reddedilir")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
-    using kentos::command::Origin;
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+    using piricad::command::Origin;
 
     REQUIRE(bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
 
@@ -1073,14 +1073,14 @@ TEST_CASE("POLİGON: toleransı aşan kenar kapanması mevzuatı adıyla reddedi
 
 TEST_CASE("POLİGON: açı ve kenar sayısı eşit olmalı")
 {
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
-    using kentos::command::Origin;
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+    using piricad::command::Origin;
 
     const auto refused = bus.execute_line(
         "POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 aci=300", Origin::Test);
@@ -1105,15 +1105,15 @@ TEST_CASE("kayıt: bütün kayıtlar birlikte, her bildirilen ad çözülüyor")
     //
     // This registers everything the application registers and checks that every
     // declared name resolves to the command that declared it.
-    kentos::command::Registry reg;
-    kentos::command::register_builtin_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
+    piricad::command::Registry reg;
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
 
     std::size_t names = 0;
-    for (const kentos::command::CommandSpec& spec : reg.all())
+    for (const piricad::command::CommandSpec& spec : reg.all())
         for (const std::string& name : spec.names) {
             ++names;
-            const kentos::command::CommandSpec* found = reg.resolve(name);
+            const piricad::command::CommandSpec* found = reg.resolve(name);
             if (found == nullptr)
                 FAIL_CHECK("çözülemeyen ad: " << spec.id << " / " << name);
             else if (found->id != spec.id)
@@ -1125,7 +1125,7 @@ TEST_CASE("kayıt: bütün kayıtlar birlikte, her bildirilen ad çözülüyor")
     // tells you something changed, a name tells you what is missing.
     for (const char* id : {"core.fit", "core.stakeout", "core.reproject", "geodesy.traverse"}) {
         bool present = false;
-        for (const kentos::command::CommandSpec& spec : reg.all())
+        for (const piricad::command::CommandSpec& spec : reg.all())
             if (spec.id == id) present = true;
         if (!present) FAIL_CHECK("kayıtta yok: " << id);
     }
@@ -1139,22 +1139,22 @@ TEST_CASE("POLİGON: kesirli kenarlar günlükten kayıpsız oynatılır")
     // different traverse — with a different content hash and a signature on the
     // wrong drawing. A side length is measured to the millimetre and a journal
     // that keeps only its metres is not a journal.
-    const auto build = [](kentos::core::Document& doc, kentos::command::Registry& reg,
-                          kentos::command::Journal& journal, kentos::command::UndoStack& undo) {
-        kentos::command::register_builtin_commands(reg);
-        kentos::domain::geodesy::register_geodesy_commands(reg);
+    const auto build = [](piricad::core::Document& doc, piricad::command::Registry& reg,
+                          piricad::command::Journal& journal, piricad::command::UndoStack& undo) {
+        piricad::command::register_builtin_commands(reg);
+        piricad::domain::geodesy::register_geodesy_commands(reg);
         (void)doc;
         (void)journal;
         (void)undo;
     };
 
-    kentos::core::Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
     build(doc, reg, journal, undo);
-    using kentos::command::Origin;
+    using piricad::command::Origin;
 
     REQUIRE(bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
     REQUIRE(bus.execute_line("POLİGON baslangic=0,0 baglama=0,100 aci=312.4567 kenar=42.315 "
@@ -1165,16 +1165,16 @@ TEST_CASE("POLİGON: kesirli kenarlar günlükten kayıpsız oynatılır")
     CHECK_EQ(doc.live_entity_count(), std::size_t{2});
 
     // Replayed from the journal's own JSON, which is what a crash recovery does.
-    kentos::core::Document again_doc;
-    kentos::command::Registry again_reg;
-    kentos::command::Journal again_journal;
-    kentos::command::UndoStack again_undo;
-    kentos::command::Bus again{again_doc, again_reg, again_journal, again_undo};
+    piricad::core::Document again_doc;
+    piricad::command::Registry again_reg;
+    piricad::command::Journal again_journal;
+    piricad::command::UndoStack again_undo;
+    piricad::command::Bus again{again_doc, again_reg, again_journal, again_undo};
     build(again_doc, again_reg, again_journal, again_undo);
 
     for (const auto& e : journal.entries()) {
         const auto ran =
-            again.dispatch(kentos::command::Invocation{e.command_id, e.args, Origin::Batch});
+            again.dispatch(piricad::command::Invocation{e.command_id, e.args, Origin::Batch});
         REQUIRE(ran.ok());
     }
     CHECK_EQ(again_doc.content_hash(), golden);
@@ -1195,25 +1195,25 @@ TEST_CASE("PROOF: POLİGON gui, komut satırı ve betikten aynı belgeyi ve ayn�
     // keys, and a JSON script with two runs of numbers.
     struct Rig
     {
-        kentos::core::Document doc;
-        kentos::command::Registry reg;
-        kentos::command::Journal journal;
-        kentos::command::UndoStack undo;
-        kentos::command::Bus bus{doc, reg, journal, undo};
+        piricad::core::Document doc;
+        piricad::command::Registry reg;
+        piricad::command::Journal journal;
+        piricad::command::UndoStack undo;
+        piricad::command::Bus bus{doc, reg, journal, undo};
 
         Rig()
         {
-            kentos::command::register_builtin_commands(reg);
-            kentos::domain::geodesy::register_geodesy_commands(reg);
+            piricad::command::register_builtin_commands(reg);
+            piricad::domain::geodesy::register_geodesy_commands(reg);
         }
     };
 
-    using kentos::command::Origin;
-    using kentos::command::Value;
+    using piricad::command::Origin;
+    using piricad::command::Value;
 
     /// Every journalled line, command and arguments, in order — the bytes
     /// Article 6.4 compares.
-    const auto what_happened = [](const kentos::command::Journal& j) {
+    const auto what_happened = [](const piricad::command::Journal& j) {
         std::string out;
         for (const auto& e : j.entries())
             out += e.command_id + " " + e.args.to_json().dump() + "\n";
@@ -1228,8 +1228,8 @@ TEST_CASE("PROOF: POLİGON gui, komut satırı ve betikten aynı belgeyi ve ayn�
         auto& session = *started.value();
 
         REQUIRE(session.waiting());
-        CHECK(session.supply(Value::point(kentos::core::Point2{0, 0})).ok());
-        CHECK(session.supply(Value::point(kentos::core::Point2{0, 100'000})).ok());
+        CHECK(session.supply(Value::point(piricad::core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(piricad::core::Point2{0, 100'000})).ok());
         for (int leg = 0; leg < 4; ++leg) {
             CHECK(session.supply(Value::number(300.0)).ok());
             CHECK(session.supply(Value::number(100.0)).ok());
@@ -1255,7 +1255,7 @@ TEST_CASE("PROOF: POLİGON gui, komut satırı ve betikten aynı belgeyi ve ayn�
     Rig scr;
     {
         REQUIRE(scr.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
-        kentos::script::JsonRunner runner(scr.bus, kentos::script::Sandbox::Project);
+        piricad::script::JsonRunner runner(scr.bus, piricad::script::Sandbox::Project);
         auto r = runner.run_text(R"({
             "ad": "Poligon kanıtı",
             "komutlar": [ {"cmd": "geodesy.traverse", "args": {
@@ -1281,11 +1281,11 @@ TEST_CASE("PROOF: POLİGON gui, komut satırı ve betikten aynı belgeyi ve ayn�
     // same wrong answer. 300 grad from a northward backsight turns the leg east,
     // then south, then west, then north: (100,0), (100,-100), (0,-100), (0,0) in
     // metres.
-    const kentos::core::Point2 want[4]{{100'000, 0}, {100'000, -100'000}, {0, -100'000}, {0, 0}};
+    const piricad::core::Point2 want[4]{{100'000, 0}, {100'000, -100'000}, {0, -100'000}, {0, 0}};
     for (std::size_t i = 0; i < 4; ++i) {
         const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[i]);
-        CHECK_EQ((kentos::core::Point2{cli.doc.geometry().ring_xs(span.first)[0],
-                                       cli.doc.geometry().ring_ys(span.first)[0]}),
+        CHECK_EQ((piricad::core::Point2{cli.doc.geometry().ring_xs(span.first)[0],
+                                        cli.doc.geometry().ring_ys(span.first)[0]}),
                  want[i]);
     }
 
@@ -1304,21 +1304,21 @@ TEST_CASE("PROOF: POLİGON günlükten yeniden oynatılabilir")
 {
     struct Rig
     {
-        kentos::core::Document doc;
-        kentos::command::Registry reg;
-        kentos::command::Journal journal;
-        kentos::command::UndoStack undo;
-        kentos::command::Bus bus{doc, reg, journal, undo};
+        piricad::core::Document doc;
+        piricad::command::Registry reg;
+        piricad::command::Journal journal;
+        piricad::command::UndoStack undo;
+        piricad::command::Bus bus{doc, reg, journal, undo};
 
         Rig()
         {
-            kentos::command::register_builtin_commands(reg);
-            kentos::domain::geodesy::register_geodesy_commands(reg);
+            piricad::command::register_builtin_commands(reg);
+            piricad::domain::geodesy::register_geodesy_commands(reg);
         }
     };
 
-    using kentos::command::Invocation;
-    using kentos::command::Origin;
+    using piricad::command::Invocation;
+    using piricad::command::Origin;
 
     Rig first;
     REQUIRE(first.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
@@ -1347,20 +1347,20 @@ TEST_CASE("POLİGON istasyonlarını numaralar ve n(no) onlara ulaşır")
     // a dot a surveyor cannot refer to, and they had none.
     struct Rig
     {
-        kentos::core::Document doc;
-        kentos::command::Registry reg;
-        kentos::command::Journal journal;
-        kentos::command::UndoStack undo;
-        kentos::command::Bus bus{doc, reg, journal, undo};
+        piricad::core::Document doc;
+        piricad::command::Registry reg;
+        piricad::command::Journal journal;
+        piricad::command::UndoStack undo;
+        piricad::command::Bus bus{doc, reg, journal, undo};
 
         Rig()
         {
-            kentos::command::register_builtin_commands(reg);
-            kentos::domain::geodesy::register_geodesy_commands(reg);
+            piricad::command::register_builtin_commands(reg);
+            piricad::domain::geodesy::register_geodesy_commands(reg);
         }
     };
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
 
     Rig r;
     REQUIRE(r.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
@@ -1373,12 +1373,12 @@ TEST_CASE("POLİGON istasyonlarını numaralar ve n(no) onlara ulaşır")
 
     // The column is `nokta_no` — the one `NOKTALAR` reads and writes and the one
     // `n(…)` resolves through. Not a second column meaning the same thing.
-    const kentos::core::AttrId col = r.doc.attributes().find("nokta_no");
-    REQUIRE(col != kentos::core::kNoAttr);
+    const piricad::core::AttrId col = r.doc.attributes().find("nokta_no");
+    REQUIRE(col != piricad::core::kNoAttr);
 
     std::vector<std::string> numbers;
-    for (kentos::core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
-        if (!r.doc.alive(e) || r.doc.entities().kind[e] != kentos::core::kPointKind) continue;
+    for (piricad::core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e) || r.doc.entities().kind[e] != piricad::core::kPointKind) continue;
         const auto cell = r.doc.attribute(col, e);
         REQUIRE(cell.ok());
         REQUIRE(cell.value().present);
@@ -1389,27 +1389,27 @@ TEST_CASE("POLİGON istasyonlarını numaralar ve n(no) onlara ulaşır")
     // AND `n(…)` REACHES THEM, which is the whole point of the number.
     auto second = r.bus.resolve_context().named_point(2);
     REQUIRE(second.has_value());
-    CHECK_EQ(*second, (kentos::core::Point2{100'000, -100'000}));
+    CHECK_EQ(*second, (piricad::core::Point2{100'000, -100'000}));
 }
 
 TEST_CASE("POLİGON ikinci güzergâhı bir sonraki numaradan sürdürür")
 {
     struct Rig
     {
-        kentos::core::Document doc;
-        kentos::command::Registry reg;
-        kentos::command::Journal journal;
-        kentos::command::UndoStack undo;
-        kentos::command::Bus bus{doc, reg, journal, undo};
+        piricad::core::Document doc;
+        piricad::command::Registry reg;
+        piricad::command::Journal journal;
+        piricad::command::UndoStack undo;
+        piricad::command::Bus bus{doc, reg, journal, undo};
 
         Rig()
         {
-            kentos::command::register_builtin_commands(reg);
-            kentos::domain::geodesy::register_geodesy_commands(reg);
+            piricad::command::register_builtin_commands(reg);
+            piricad::domain::geodesy::register_geodesy_commands(reg);
         }
     };
 
-    using kentos::command::Origin;
+    using piricad::command::Origin;
 
     const char* kLeg = "POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 "
                        "aci=300 kenar=100 cizgi=hayır";
@@ -1421,11 +1421,11 @@ TEST_CASE("POLİGON ikinci güzergâhı bir sonraki numaradan sürdürür")
 
     // TWO STATIONS WITH ONE NAME is what restarting at 1 would give, and `n(2)`
     // would then mean whichever the search reached first.
-    const kentos::core::AttrId col = r.doc.attributes().find("nokta_no");
-    REQUIRE(col != kentos::core::kNoAttr);
+    const piricad::core::AttrId col = r.doc.attributes().find("nokta_no");
+    REQUIRE(col != piricad::core::kNoAttr);
     std::vector<std::string> numbers;
-    for (kentos::core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
-        if (!r.doc.alive(e) || r.doc.entities().kind[e] != kentos::core::kPointKind) continue;
+    for (piricad::core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e) || r.doc.entities().kind[e] != piricad::core::kPointKind) continue;
         const auto cell = r.doc.attribute(col, e);
         if (cell.ok() && cell.value().present) numbers.push_back(cell.value().text);
     }
@@ -1442,8 +1442,8 @@ TEST_CASE("POLİGON ikinci güzergâhı bir sonraki numaradan sürdürür")
     Rig named;
     REQUIRE(named.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
     REQUIRE(named.bus.execute_line(std::string(kLeg) + " ilk_no=1284", Origin::Test).ok());
-    const kentos::core::AttrId c2 = named.doc.attributes().find("nokta_no");
-    REQUIRE(c2 != kentos::core::kNoAttr);
+    const piricad::core::AttrId c2 = named.doc.attributes().find("nokta_no");
+    REQUIRE(c2 != piricad::core::kNoAttr);
     auto first = named.bus.resolve_context().named_point(1284);
     CHECK(first.has_value());
 }
@@ -1455,9 +1455,9 @@ TEST_CASE("DÖNÜŞTÜR: daire, yay ve blok içeren çizim dönüşür; her tür
     // sheet with one manhole circle could not change zones — and a block's
     // members, which stand in the definition's own frame, were carried as if
     // they stood on the map (and refused as uneditable).
-    if (!kentos::domain::geodesy::Transform::available()) return;
-    using kentos::command::Origin;
-    using kentos::core::Point2;
+    if (!piricad::domain::geodesy::Transform::available()) return;
+    using piricad::command::Origin;
+    using piricad::core::Point2;
 
     GeoRig r;
     const auto run = [&r](const std::string& line) {
@@ -1470,12 +1470,12 @@ TEST_CASE("DÖNÜŞTÜR: daire, yay ve blok içeren çizim dönüşür; her tür
     run("YAY merkez=485450,4310300 baslangic=485460,4310300 bitis=485450,4310310");
     run("DAİRE merkez=0,0 cevre=1,0");
     run("ÇİZGİ -1,0 1,0");
-    const std::string circle_key = std::to_string(kentos::core::raw(r.doc.key_of(3)));
-    const std::string line_key   = std::to_string(kentos::core::raw(r.doc.key_of(4)));
+    const std::string circle_key = std::to_string(piricad::core::raw(r.doc.key_of(3)));
+    const std::string line_key   = std::to_string(piricad::core::raw(r.doc.key_of(4)));
     run("BLOK ad=KAPAK taban=0,0 nesneler=" + circle_key + " nesneler=" + line_key);
     run("BLOKEKLE ad=KAPAK nokta=485500,4310300");
 
-    const auto vertices = [&r](kentos::core::EntityId e) {
+    const auto vertices = [&r](piricad::core::EntityId e) {
         std::vector<Point2> out;
         const auto span = r.doc.geometry().rings_of(r.doc.entities().slot[e]);
         for (std::uint32_t k = span.first; k < span.first + span.count; ++k)
@@ -1484,23 +1484,23 @@ TEST_CASE("DÖNÜŞTÜR: daire, yay ve blok içeren çizim dönüşür; her tür
                     Point2{r.doc.geometry().ring_xs(k)[v], r.doc.geometry().ring_ys(k)[v]});
         return out;
     };
-    const kentos::core::BlockId kapak = r.doc.blocks().find("KAPAK");
-    REQUIRE(kapak != kentos::core::kNoBlock);
+    const piricad::core::BlockId kapak = r.doc.blocks().find("KAPAK");
+    REQUIRE(kapak != piricad::core::kNoBlock);
     std::vector<std::vector<Point2>> members_before;
-    for (const kentos::core::EntityKey k : r.doc.blocks().at(kapak).members)
-        if (const auto m = r.doc.slot_of(k); m != kentos::core::kNoEntity && r.doc.alive(m))
+    for (const piricad::core::EntityKey k : r.doc.blocks().at(kapak).members)
+        if (const auto m = r.doc.slot_of(k); m != piricad::core::kNoEntity && r.doc.alive(m))
             members_before.push_back(vertices(m));
-    kentos::core::EntityId reference = kentos::core::kNoEntity;
-    for (kentos::core::EntityId e = 0; e < r.doc.entities().size(); ++e)
+    piricad::core::EntityId reference = piricad::core::kNoEntity;
+    for (piricad::core::EntityId e = 0; e < r.doc.entities().size(); ++e)
         if (r.doc.entities().standalone(e) &&
-            r.doc.entities().kind[e] == kentos::core::kBlockReferenceKind)
+            r.doc.entities().kind[e] == piricad::core::kBlockReferenceKind)
             reference = e;
-    REQUIRE(reference != kentos::core::kNoEntity);
+    REQUIRE(reference != piricad::core::kNoEntity);
 
     std::vector<Point2> parcel = vertices(0);
     std::vector<Point2> centre{Point2{485'400'000, 4'310'300'000}};
     std::vector<Point2> insertion{Point2{485'500'000, 4'310'300'000}};
-    auto proj = kentos::domain::geodesy::Transform::between("EPSG:5256", "EPSG:5254");
+    auto proj = piricad::domain::geodesy::Transform::between("EPSG:5256", "EPSG:5254");
     REQUIRE(proj.ok());
     REQUIRE(proj.value().forward(std::span<Point2>(parcel)).ok());
     REQUIRE(proj.value().forward(std::span<Point2>(centre)).ok());
@@ -1533,15 +1533,15 @@ TEST_CASE("DÖNÜŞTÜR: daire, yay ve blok içeren çizim dönüşür; her tür
     CHECK(std::abs(static_cast<double>(circle[1].x - circle[0].x) - 5'000.0 * scale) <= 2.0);
     // The block: its definition untouched, its reference carried and turned.
     std::vector<std::vector<Point2>> members_after;
-    for (const kentos::core::EntityKey k : r.doc.blocks().at(kapak).members)
-        if (const auto m = r.doc.slot_of(k); m != kentos::core::kNoEntity && r.doc.alive(m))
+    for (const piricad::core::EntityKey k : r.doc.blocks().at(kapak).members)
+        if (const auto m = r.doc.slot_of(k); m != piricad::core::kNoEntity && r.doc.alive(m))
             members_after.push_back(vertices(m));
     CHECK(members_after == members_before);
-    CHECK_EQ(
-        kentos::core::block_reference_insertion(r.doc.geometry(), r.doc.entities().slot[reference]),
-        insertion[0]);
+    CHECK_EQ(piricad::core::block_reference_insertion(r.doc.geometry(),
+                                                      r.doc.entities().slot[reference]),
+             insertion[0]);
     auto placed =
-        kentos::core::block_reference_of(r.doc.geometry(), r.doc.entities().slot[reference]);
+        piricad::core::block_reference_of(r.doc.geometry(), r.doc.entities().slot[reference]);
     REQUIRE(placed.ok());
     CHECK(placed.value().rotation_udeg != 0); // the zones' grids meet at an angle
 
@@ -1602,7 +1602,7 @@ TEST_CASE("F-03 KANIT: büyük koordinatta 1 mm her adımda korunur, ara hesap t
     // turn and back, a save and an open, a DXF and a GeoPackage out and in.
     // A reprojection rounds each coordinate to the millimetre on the way, so it
     // keeps each point within that and no more.
-    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
     REQUIRE(catalogue.ok());
     core::Document doc;
     command::Registry reg;
@@ -1659,7 +1659,7 @@ TEST_CASE("F-03 KANIT: büyük koordinatta 1 mm her adımda korunur, ara hesap t
 
     // Saved and opened, and out to the two exchange formats and back in.
     const std::filesystem::path dir =
-        std::filesystem::temp_directory_path() / "kentoscad-f03-milimetre";
+        std::filesystem::temp_directory_path() / "piricad-f03-milimetre";
     std::filesystem::create_directories(dir);
     run("FARKLIKAYDET \"" + (dir / "mm.pcad").string() + "\"");
     run("AÇ \"" + (dir / "mm.pcad").string() + "\"");

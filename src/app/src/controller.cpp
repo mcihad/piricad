@@ -1,26 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/controller.hpp"
+#include "piricad/app/controller.hpp"
 
-#include "kentos_cad/app/data_root.hpp"
+#include "piricad/app/data_root.hpp"
 
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/script/python_doc.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/script/python_doc.hpp"
 
-#include "kentos_cad/app/ai_transport.hpp"
+#include "piricad/app/ai_transport.hpp"
 
-#include "kentos_cad/ai/commands.hpp"
+#include "piricad/ai/commands.hpp"
 
-#include "kentos_cad/command/job.hpp"
+#include "piricad/command/job.hpp"
 
-#include "kentos_cad/command/log.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/command/log.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/command/parser.hpp"
+#include "piricad/command/parser.hpp"
 
-#include "kentos_cad/core/identity.hpp"
+#include "piricad/core/identity.hpp"
 
 #include <QClipboard>
 #include <QDir>
@@ -34,7 +34,7 @@
 
 #include <QThread>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The thread a hosted job runs on. It reads the job through the session and
@@ -62,7 +62,7 @@ Controller::Controller(QObject* parent)
     : QObject(parent), bus_(document_, registry_, journal_, undo_), files_(bus_), database_(bus_),
       prints_(bus_, document_, this), ai_(bus_, this), providers_(bus_, nullptr, this),
       templates_(bus_, this), runner_(bus_, script::Sandbox::Project)
-#if KENTOS_HAVE_PYTHON
+#if PIRICAD_HAVE_PYTHON
       ,
       python_runner_(bus_, script::Sandbox::Project)
 #endif
@@ -136,7 +136,7 @@ Controller::Controller(QObject* parent)
         if (auto st = document_.set_crs(crs_->resolve(document_.crs().id()), discard); !st)
             command::log_warn("başlangıç koordinat sistemi çözülemedi: " + st.error().message);
     }
-#if KENTOS_HAVE_PYTHON
+#if PIRICAD_HAVE_PYTHON
     // `proje` for both hosts, and the project directory is the working directory
     // until a document has a path of its own. A jail with no walls denies
     // everything (`.claude/script.md` P8), which is the safe direction to be wrong
@@ -200,7 +200,7 @@ Controller::Controller(QObject* parent)
     });
     providers_.announce();
 
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
     // THE LISTENER IS BUILT BUT NOT STARTED. A port that opens because the
     // program was installed is not something a user asked for (CLAUDE.md 2.10);
     // `core.mcp.otomatik` is off by default and the menu entry is the usual way
@@ -215,7 +215,7 @@ Controller::Controller(QObject* parent)
 #endif
 
     // The journal is written asynchronously on its own thread; the UI never waits
-    // on a disk flush (kentoscad.md §10.4).
+    // on a disk flush (piricad.md §10.4).
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(dir);
     const QString path = dir + "/oturum.jsonl";
@@ -357,7 +357,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
         return core::err(core::ErrorCode::InvalidArgument, "Komut satırı boş olamaz.");
 
     // A running interactive command gets the typed value first, unless the typed
-    // text names a transparent command such as ZOOM (kentoscad.md §3).
+    // text names a transparent command such as ZOOM (piricad.md §3).
     //
     // EVERY KIND OF ANSWER, not only a coordinate. This used to intercept a typed
     // point and nothing else, so a command waiting for a NUMBER could not be
@@ -1054,4 +1054,4 @@ QString Controller::activeLayerName() const
     return QStringLiteral("0");
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

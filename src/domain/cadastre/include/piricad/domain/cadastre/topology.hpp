@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — cadastre: the checks a sheet must pass before it is submitted.
+// PiriCAD — cadastre: the checks a sheet must pass before it is submitted.
 //
 // A cadastral drawing is a legal document, and the defects below are the ones
 // that make one unacceptable: a boundary that crosses itself, two parcels that
@@ -11,15 +11,15 @@
 // they can sign the result (6.11).
 #pragma once
 
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::domain::cadastre {
+namespace piricad::domain::cadastre {
 
 /// What kind of defect was found.
 enum class DefectKind : std::uint8_t {
@@ -78,4 +78,4 @@ std::string describe(const core::Document& doc, const Defect& d);
 /// decimal comma (`25,00 m²`).
 std::string square_metres(core::Mm2 area);
 
-} // namespace kentos::domain::cadastre
+} // namespace piricad::domain::cadastre

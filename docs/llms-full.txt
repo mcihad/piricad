@@ -1,6 +1,6 @@
 <!-- ÜRETİLMİŞ DOSYA — elle düzenlemeyin. Kaynak: komut kataloğu (Registry). Yeniden üretmek için: make reference -->
 
-# KentOSCad
+# PiriCAD
 
 > Türkiye odaklı CBS + CAD masaüstü programı: jeodezi, kadastro, imar ve yüzey işleri.
 > Programın durumunu değiştiren her şey bir KOMUTtur; arayüz, komut satırı, betik ve
@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 122 (106 tanesi onay ister)
-- Katalog parmak izi: `16953577254139571366`
+- Katalog parmak izi: `8154496810715726910`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 

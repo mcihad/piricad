@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/ai_service.hpp"
+#include "piricad/app/ai_service.hpp"
 
-#include "kentos_cad/ai/arguments.hpp"
+#include "piricad/ai/arguments.hpp"
 
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/ai/policy.hpp"
-#include "kentos_cad/ai/policy_path.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/ai/policy.hpp"
+#include "piricad/ai/policy_path.hpp"
 
-#include "kentos_cad/command/log.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
+#include "piricad/command/log.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
 
 #include <QDateTime>
 #include <QDir>
@@ -18,7 +18,7 @@
 #include <QStandardPaths>
 #include <QTextStream>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The month's audit file: one file per month keeps a long-lived installation's
@@ -47,7 +47,7 @@ AiService::AiService(command::Bus& bus, QObject* parent) : QObject(parent), bus_
         if (!file.open(QIODevice::Append | QIODevice::Text)) {
             if (trouble_.isEmpty())
                 trouble_ = tr("Denetim kaydı yazılamıyor: %1. Yapay zeka önerileri "
-                                                      "uygulanabilir ama kaydı tutulamaz.")
+                              "uygulanabilir ama kaydı tutulamaz.")
                                .arg(path);
             return;
         }
@@ -132,7 +132,7 @@ AiService::AiService(command::Bus& bus, QObject* parent) : QObject(parent), bus_
             // is better than a command that appears to work and opens no port.
             if (!server_)
                 co_return core::err(core::ErrorCode::Unsupported,
-                                    "Bu yapıda MCP sunucusu yok (KENTOS_WITH_MCP kapalı).");
+                                    "Bu yapıda MCP sunucusu yok (PIRICAD_WITH_MCP kapalı).");
             co_return server_(request);
         }
         co_return core::err(core::ErrorCode::Internal, "İşlenmemiş yapay zeka isteği.");
@@ -733,4 +733,4 @@ const ai::Catalog& AiService::catalog() const
     return catalog_;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

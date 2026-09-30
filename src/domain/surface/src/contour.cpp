@@ -1,41 +1,41 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/domain/surface/contour.hpp"
+#include "piricad/domain/surface/contour.hpp"
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <map>
 #include <utility>
 
-#if KENTOS_HAVE_CDT
+#if PIRICAD_HAVE_CDT
 #include "CDT.h"
 #endif
 
-namespace kentos::domain::surface {
+namespace piricad::domain::surface {
 
 bool available() noexcept
 {
-#if KENTOS_HAVE_CDT
+#if PIRICAD_HAVE_CDT
     return true;
 #else
     return false;
 #endif
 }
 
-#if !KENTOS_HAVE_CDT
+#if !PIRICAD_HAVE_CDT
 
 core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>&, core::Mm,
                                                   const command::JobControl&)
 {
     return core::err(core::ErrorCode::Unsupported,
                      "Üçgenleme bu yapıda yok; eş yükselti eğrisi çizilemez. "
-                     "KENTOS_WITH_CDT=ON ile derleyin.");
+                     "PIRICAD_WITH_CDT=ON ile derleyin.");
 }
 
 core::Result<Earthwork> earthwork(const std::vector<Level>&, core::Mm, const command::JobControl&)
 {
     return core::err(core::ErrorCode::Unsupported, "Üçgenleme bu yapıda yok; hacim hesaplanamaz. "
-                                                   "KENTOS_WITH_CDT=ON ile derleyin.");
+                                                   "PIRICAD_WITH_CDT=ON ile derleyin.");
 }
 
 #else
@@ -300,8 +300,8 @@ namespace {
 /// 6·10^17 and int64 would wrap on a site of any size (core.md R3).
 core::Mm2 triangle_area(core::Point2 a, core::Point2 b, core::Point2 c)
 {
-    const core::Int128 twice = static_cast<core::Int128>(b.x - a.x) * (c.y - a.y) -
-                               static_cast<core::Int128>(c.x - a.x) * (b.y - a.y);
+    const core::Int128 twice     = static_cast<core::Int128>(b.x - a.x) * (c.y - a.y) -
+                                   static_cast<core::Int128>(c.x - a.x) * (b.y - a.y);
     const core::Int128 abs_twice = twice < 0 ? -twice : twice;
     return static_cast<core::Mm2>(abs_twice / 2);
 }
@@ -451,4 +451,4 @@ core::Result<Earthwork> earthwork(const std::vector<Level>& points, core::Mm lev
 
 #endif
 
-} // namespace kentos::domain::surface
+} // namespace piricad::domain::surface

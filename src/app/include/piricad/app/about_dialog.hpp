@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the About window.
+// PiriCAD — app: the About window.
 //
 // What the program is, which build this is and whose work it is built on: the
 // name and its mark, the facts a bug report needs (version, Qt, the canvas's
@@ -12,13 +12,13 @@
 // a second copy here would be a second answer to that question.
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
+#include "piricad/app/dialog_chrome.hpp"
 
 #include <QString>
 
 class QStackedWidget;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The component set's segmented switch the three pages hang from (`widgets.hpp`).
 class Segment;
@@ -26,7 +26,7 @@ class Segment;
 /// The facts the window prints about this build, gathered by the shell.
 struct AboutFacts
 {
-    QString version;  ///< the program's own, `KENTOS_VERSION`
+    QString version;  ///< the program's own, `PIRICAD_VERSION`
     QString qt;       ///< the Qt the program is running on
     QString backend;  ///< the canvas's drawing backend, as the status strip names it
     QString platform; ///< the operating system and the processor architecture
@@ -56,4 +56,4 @@ private:
     QWidget* mark_{nullptr};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

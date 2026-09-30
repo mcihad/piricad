@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the ellipse, stored by its definition.
+// PiriCAD — core: the ellipse, stored by its definition.
 //
 // STORED AS WHAT IT IS, like the circle and the arc beside it: a centre and the
 // two axis endpoints, five numbers, from which the whole shape follows. The
@@ -19,15 +19,15 @@
 // no `sin`, and the same answer on every platform.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The centre of the ellipse in `slot`.
 Point2 ellipse_centre_of(const RingGeometry& geom, std::uint32_t slot);
@@ -88,4 +88,4 @@ std::optional<EllipseArc> ellipse_arc_of(const RingGeometry& geom, std::uint32_t
 void ellipse_arc_outline(Point2 centre, Point2 major, Point2 minor, std::int64_t start_udeg,
                          std::int64_t end_udeg, std::vector<Mm>& xs, std::vector<Mm>& ys);
 
-} // namespace kentos::core
+} // namespace piricad::core

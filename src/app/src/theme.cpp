@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/theme.hpp"
 
-#include "kentos_cad/app/data_root.hpp"
+#include "piricad/app/data_root.hpp"
 
 #include <QApplication>
 #include <QFile>
@@ -12,9 +12,9 @@
 
 #include <memory>
 
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/tokens.hpp"
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// A `Palette` built from a token set.
@@ -1260,4 +1260,4 @@ QString ribbonStyleSheet(ThemeMode mode)
     return ribbonSheet(mode == ThemeMode::Light ? lightTokens() : darkTokens());
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

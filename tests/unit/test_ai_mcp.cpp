@@ -16,25 +16,25 @@
 // `ai::Dispatcher`, so every status code this server can produce is reachable
 // from a doctest case (.claude/test.md: a protocol is proved by a function, not
 // by a socket).
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/arguments.hpp"
-#include "kentos_cad/ai/catalog.hpp"
-#include "kentos_cad/ai/clients.hpp"
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/ai/mcp.hpp"
-#include "kentos_cad/ai/policy_path.hpp"
+#include "piricad/ai/arguments.hpp"
+#include "piricad/ai/catalog.hpp"
+#include "piricad/ai/clients.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/ai/mcp.hpp"
+#include "piricad/ai/policy_path.hpp"
 
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/text.hpp"
 
 #include <cstdio>
 #include <optional>
 #include <string>
 #include <vector>
 
-using namespace kentos;
+using namespace piricad;
 
 namespace {
 
@@ -466,7 +466,7 @@ TEST_CASE("Belirteç yolda ve Bearer başlığında kabul edilir; yanlışı red
     CHECK_EQ(send("/mcp/yanlis", "Bearer gizli-anahtar").status, 401);
     CHECK_EQ(send("/mcp", "Bearer gizli-anahtar").header("WWW-Authenticate"), std::string_view(""));
     CHECK_EQ(send("/mcp", "Bearer yanlis").header("WWW-Authenticate"),
-             std::string_view("Bearer realm=\"KentOSCad\""));
+             std::string_view("Bearer realm=\"PiriCAD\""));
 
     // Some other path entirely is 404 and not 401: there is nothing here to
     // authenticate against.
@@ -731,7 +731,7 @@ TEST_CASE("server/discover zorunlu alanların tamamını döner")
     CHECK(text.find("her_degisiklikte") != std::string::npos);
     const Json* discovered = result.find("_meta");
     REQUIRE(discovered != nullptr);
-    const Json* policy = discovered->find("cad.kentos/policy");
+    const Json* policy = discovered->find("cad.piricad/policy");
     REQUIRE(policy != nullptr);
     CHECK_EQ(policy->find("onay")->as_string(), std::string("her_degisiklikte"));
 }
@@ -751,7 +751,7 @@ TEST_CASE("tools/list parmak izini ve her aracın dört annotation'ını taşır
 
     const Json* meta = result.find("_meta");
     REQUIRE(meta != nullptr);
-    const Json* fingerprint = meta->find("cad.kentos/fingerprint");
+    const Json* fingerprint = meta->find("cad.piricad/fingerprint");
     REQUIRE(fingerprint != nullptr);
     // A DECIMAL STRING, not an integer: the fingerprint is a uint64 and JSON's
     // integer is signed, so half of its range would arrive negative.
@@ -909,7 +909,7 @@ TEST_CASE("Yazma aracı ÇALIŞMAZ: öneri kimliği ve komut satırları döner"
 
     const Json* meta = result.find("_meta");
     REQUIRE(meta != nullptr);
-    CHECK_EQ(meta->find("cad.kentos/approval")->as_string(), std::string("user-required"));
+    CHECK_EQ(meta->find("cad.piricad/approval")->as_string(), std::string("user-required"));
     CHECK_EQ(meta->find(ai::kPlanMetaKey)->as_string(), plan_id);
 
     // And the plan holds the resolved arguments, not the handle string: the
@@ -1183,7 +1183,7 @@ TEST_CASE("Her kaynak okunur ve üretilmiş metni döner")
     CHECK(result_of(read(ai::kLlmsFullUri)).dump().size() >
           result_of(read(ai::kLlmsUri)).dump().size());
 
-    const ai::HttpOutcome unknown = read("kentoscad://boyle-bir-kaynak-yok.txt");
+    const ai::HttpOutcome unknown = read("piricad://boyle-bir-kaynak-yok.txt");
     CHECK_EQ(code_of(unknown), ai::rpc_error_code::kInvalidParams);
 }
 
@@ -1224,7 +1224,7 @@ TEST_CASE("subscriptions/listen akış olarak yanıtlanır ve açık kalır")
     const ai::SseFrame changed = ai::McpServer::tools_list_changed();
     CHECK(changed.render().find("notifications/tools/list_changed") != std::string::npos);
     CHECK(changed.render().find("data: ") != std::string::npos);
-    CHECK_EQ(ai::sse_comment("kentos"), std::string(": kentos\n\n"));
+    CHECK_EQ(ai::sse_comment("piricad"), std::string(": piricad\n\n"));
 
     // A subscription this server does not publish is refused rather than opened
     // and left silent for ever.
@@ -1340,15 +1340,15 @@ TEST_CASE("MCP: araç yüzeyi sohbetinkiyle aynı katalogdan gelir")
     // MCP by construction — and this is the test that says so out loud, because
     // "by construction" is a claim that stops being true the day somebody adds a
     // second list.
-    kentos::command::Registry reg;
-    kentos::command::register_builtin_commands(reg);
-    kentos::ai::register_ai_commands(reg);
+    piricad::command::Registry reg;
+    piricad::command::register_builtin_commands(reg);
+    piricad::ai::register_ai_commands(reg);
 
-    const kentos::ai::Catalog catalog = kentos::ai::build_catalog(reg);
+    const piricad::ai::Catalog catalog = piricad::ai::build_catalog(reg);
 
     const auto has_tool = [&](std::string_view id) {
         return std::any_of(catalog.tools.begin(), catalog.tools.end(),
-                           [&](const kentos::ai::ToolDef& t) { return t.command_id == id; });
+                           [&](const piricad::ai::ToolDef& t) { return t.command_id == id; });
     };
 
     // THE ONES A-02 OPENED, all four of them.
@@ -1369,7 +1369,7 @@ TEST_CASE("MCP: araç yüzeyi sohbetinkiyle aynı katalogdan gelir")
 
     // Every tool the catalogue carries names a command that exists: a surface
     // describing something the program does not have is worse than a smaller one.
-    for (const kentos::ai::ToolDef& one : catalog.tools)
+    for (const piricad::ai::ToolDef& one : catalog.tools)
         CHECK(reg.by_id(one.command_id) != nullptr);
 }
 
@@ -1447,18 +1447,18 @@ TEST_CASE("MCP: canlı kaynaklar aynı komutlardan besleniyor")
     // AND A URI NOBODY SERVES IS NAMED, WITH WHAT IS SERVED. A client that asked
     // for the wrong thing should not have to guess what the right thing is.
     Json params;
-    params.set("uri", Json::string("kentoscad://yok"));
+    params.set("uri", Json::string("piricad://yok"));
     Req bad;
     bad.mcp_method                = "resources/read";
-    bad.mcp_name                  = "kentoscad://yok";
+    bad.mcp_name                  = "piricad://yok";
     bad.body                      = rpc_body("resources/read", std::move(params));
     const ai::HttpOutcome refused = server.handle(bad.view());
     // `400` WITH `-32602`, which is what this revision says an invalid parameter
     // is — and the message names every URI that IS served, so a client that asked
     // for the wrong thing does not have to guess the right one.
     CHECK_EQ(refused.status, 400);
-    CHECK(refused.body.find("kentoscad://belge/ozet") != std::string::npos);
-    CHECK(refused.body.find("kentoscad://yerlesim/denetim") != std::string::npos);
+    CHECK(refused.body.find("piricad://belge/ozet") != std::string::npos);
+    CHECK(refused.body.find("piricad://yerlesim/denetim") != std::string::npos);
 }
 
 TEST_CASE("M-07: iki istemci birbirinin tutamağını kullanamaz")
@@ -1902,7 +1902,7 @@ TEST_CASE("A-03: otomatik politikada yazan çağrı UYGULANIR ve yanıt bunu sö
     CHECK_EQ(structured->find("karar_veren")->as_string(), std::string("politika:otomatik"));
     const Json* meta = result.find("_meta");
     REQUIRE(meta != nullptr);
-    CHECK_EQ(meta->find("cad.kentos/approval")->as_string(), std::string("policy-applied"));
+    CHECK_EQ(meta->find("cad.piricad/approval")->as_string(), std::string("policy-applied"));
 
     // THE AUDIT RECORD SAYS THE POLICY DECIDED, never a person (S-06).
     REQUIRE_EQ(f.disp.audit_lines.size(), 1u);
@@ -1923,7 +1923,7 @@ TEST_CASE("A-03: her değişiklikte politikasında yazan çağrı bekler ve sebe
     const std::string text = text_of(result);
     CHECK(text.find("Çizim değişmedi") != std::string::npos);
     CHECK(text.find("Onay bekleme sebebi: Her değişiklikte onay isteniyor.") != std::string::npos);
-    CHECK_EQ(result.find("_meta")->find("cad.kentos/approval")->as_string(),
+    CHECK_EQ(result.find("_meta")->find("cad.piricad/approval")->as_string(),
              std::string("user-required"));
     CHECK(f.disp.audit_lines.empty()); ///< nothing decided yet
 }

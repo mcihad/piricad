@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: hit testing.
+// PiriCAD — core: hit testing.
 //
 // What "picking" is, and what it is NOT. Picking answers "which entities did the
 // user aim at?". Its answer is a SELECTION, and .claude/model.md R43 puts
@@ -10,7 +10,7 @@
 // four bbox arrays — and only then looks at ring geometry, for the handful of
 // entities the index returned (model.md R6). A pick on a five-million-parcel
 // layer must cost what a frame costs, because it runs on every mouse move
-// (kentoscad.md §10.1).
+// (piricad.md §10.1).
 //
 // ARITHMETIC. Coordinates are int64 millimetres, so the classic reason to reach
 // for Shewchuk's adaptive predicates — floating-point input whose sign cannot be
@@ -28,15 +28,15 @@
 // values are bit-identical on x86 and Apple Silicon (CLAUDE.md 2.5).
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/units.hpp"
 
 #include <array>
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Forward-declared: picking searches a document, and core headers avoid
 /// including one another where a declaration will do.
@@ -293,4 +293,4 @@ void pick_through(const Document& doc, Point2 cursor, Mm radius, std::vector<Ent
 /// mod=İÇEREN`, and Netcad's nested-area list (217387890) from the command line.
 void pick_containing(const Document& doc, Point2 probe, std::vector<EntityId>& out);
 
-} // namespace kentos::core
+} // namespace piricad::core

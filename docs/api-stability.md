@@ -1,10 +1,10 @@
 # Sürüm ve Uyumluluk Politikası
 
-KentOSCad üzerine iş kuran, eklenti yazan veya çıktı biçimlerine bağımlı sistem geliştiren
+PiriCAD üzerine iş kuran, eklenti yazan veya çıktı biçimlerine bağımlı sistem geliştiren
 herkes için; bu sayfayı bitirdiğinizde neyin sabit kalacağını, neyin ne zaman
 değişebileceğini bileceksiniz.
 
-KentOSCad [Semantik Sürümleme](https://semver.org) kullanır: `BÜYÜK.KÜÇÜK.YAMA`.
+PiriCAD [Semantik Sürümleme](https://semver.org) kullanır: `BÜYÜK.KÜÇÜK.YAMA`.
 
 ## Neyin garantisi var
 
@@ -17,7 +17,7 @@ KentOSCad [Semantik Sürümleme](https://semver.org) kullanır: `BÜYÜK.KÜÇÜ
 | Komut günlüğü biçimi | İleriye uyumlu; bilinmeyen alanlar oynatmada yok sayılır | Yalnız büyük sürümde |
 | Proje dosyası biçimi | Sürümlenir; eski sürüm yeni dosyayı açarken açıklayıcı mesaj verir, çökmez | Yalnız büyük sürümde |
 | Betik API'si | Bir büyük sürüm içinde yalnız ekleme yapılır | Yalnız büyük sürümde |
-| C++ başlıkları (`kentos_cad/`) | İç kullanım. Küçük sürümler arasında garanti yoktur | Her sürümde |
+| C++ başlıkları (`piricad/`) | İç kullanım. Küçük sürümler arasında garanti yoktur | Her sürümde |
 
 ## Komut kimlikleri neden kalıcı
 

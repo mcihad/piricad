@@ -13,7 +13,7 @@
 #include <string>
 #include <string_view>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// A colour a user can name instead of spelling it in hex.
 struct NamedColour
@@ -45,4 +45,4 @@ std::string colour_hex(std::uint32_t rgba);
 /// The word of the named colour equal to `rgba`, or empty.
 std::string_view colour_word(std::uint32_t rgba) noexcept;
 
-} // namespace kentos::command
+} // namespace piricad::command

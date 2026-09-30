@@ -1,6 +1,6 @@
 # Netcad NCZ Çizimleri
 
-Netcad'de hazırlanmış bir çizimi (`.ncz`) KentOSCad'e almak ya da altlık olarak bağlamak isteyen
+Netcad'de hazırlanmış bir çizimi (`.ncz`) PiriCAD'e almak ya da altlık olarak bağlamak isteyen
 kullanıcı için; bu sayfayı bitirdiğinizde dosyayı nasıl açacağınızı, hangi Netcad nesnesinin
 çizimde neye dönüştüğünü, koordinat sistemi konusunda programın neyi karşılaştırıp neyi
 karşılaştırmadığını ve neyin okunmadığını bileceksiniz.
@@ -10,7 +10,7 @@ biçimler ve `.prj` dosyası: [Dış veri biçimleri](dis-formatlar.md).
 
 ## Kısaca
 
-- **NCZ, Netcad'in kendi ikili çizim biçimidir** ve KentOSCad onu doğrudan okur: Netcad'in
+- **NCZ, Netcad'in kendi ikili çizim biçimidir** ve PiriCAD onu doğrudan okur: Netcad'in
   kurulu olması ya da dosyanın önce başka bir biçime çevrilmesi gerekmez. Okuma bir
   kütüphaneye dayanmaz; komut satırı ve betik her yapıda NCZ okur. Yalnız paftaların gerçek
   çerçevesini kurmak GDAL ister ([Pafta çerçeveleri](#pafta-çerçeveleri)).
@@ -76,7 +76,7 @@ reddedilir: dosyayı diske indirip öyle açın.
 
 ### Arayüz
 
-**KentOS CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** İçe Aktar
+**PiriCAD CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** İçe Aktar
 penceresini açar. **Gözat…** penceresinin süzgecinde **Netcad çizimi** satırı vardır;
 **Desteklenen tüm dosyalar** satırı da `.ncz` dosyalarını gösterir; dosyayı pencereye
 sürükleyip bırakmak da olur. Pencere öteki biçimlerdekiyle aynıdır
@@ -189,7 +189,7 @@ TM33 karışıklığı sessizdir; rapordaki bildirimi çizimin sistemiyle kendin
   not: Dosyanın bildirdiği sistem: ITRF, 3° dilim, orta meridyen 39° (TILED_XML: SRS=5257). Koordinatlar dönüştürülmeden çizimin sistemi EPSG:5257 içinde okundu.
   atlandı: 2 kayıt bu okuyucunun tanımadığı NCZ geometri türlerinde (8, 14); okunmadı.
   not: 31 nesnenin çizgi kalınlığı okundu (0,10–0,70 mm); ekranda görmek için durum çubuğunda KALINLIK açık olmalı.
-  not: 12 değer milimetrenin altında ayrıntı taşıyordu; KentOSCad milimetre çözünürlükte saklar ve bunları en çok 0,50 mm kaydırarak yuvarladı. Milimetreden küçük bir ayrıntı bu çözünürlükte kaybolur.
+  not: 12 değer milimetrenin altında ayrıntı taşıyordu; PiriCAD milimetre çözünürlükte saklar ve bunları en çok 0,50 mm kaydırarak yuvarladı. Milimetreden küçük bir ayrıntı bu çözünürlükte kaybolur.
   not: Okunan türler: Line 512, Text 301, Point 244, Polyline 96, Polygon 41, Circle 10; atlanan: NCZ türü 14 1, NCZ türü 8 1
 ```
 
@@ -203,7 +203,7 @@ Aynı dosya çizimin varsayılan diliminde (TUREF/TM36) açılsaydı ilk `not:` 
 Derece sayan bir dosya reddedilir; çizimde hiçbir şey değişmez:
 
 ```text
-Dosya coğrafi koordinatlarda (WGS-84, coğrafi (enlem, boylam)) ve bütün koordinatları derece aralığında. KentOSCad metre sayan bir sistemde milimetre saklar; çizimi Netcad'de bir TM ya da UTM dilimine dönüştürüp yeniden aktarın.
+Dosya coğrafi koordinatlarda (WGS-84, coğrafi (enlem, boylam)) ve bütün koordinatları derece aralığında. PiriCAD metre sayan bir sistemde milimetre saklar; çizimi Netcad'de bir TM ya da UTM dilimine dönüştürüp yeniden aktarın.
 ```
 
 Sebebi şudur: çizim koordinatları milimetre tam sayı olarak saklar ve bir dereceyi metre saymak
@@ -261,7 +261,7 @@ içinde çakışıyorsa çizgi kapalı sayılır ve alan olur. Beş ve daha çok
 değmese de aralarındaki açıklık ilk ve son kenardan kısasının beşte birini (en az 5 cm) aşmıyorsa
 aynı şey olur. Bir çizgi neden alan oldu diye sorarsanız cevap budur.
 
-**Yaylar.** Netcad yayı merkez, yarıçap ve iki açıyla saklar; KentOSCad onu saat yönünün
+**Yaylar.** Netcad yayı merkez, yarıçap ve iki açıyla saklar; PiriCAD onu saat yönünün
 tersine ilk uçtan ikinci uca süpürür. Açılar dosyada radyan ya da derece olabilir: ikisi de tam
 turun (2π) biraz üstünü aşmıyorsa radyan, aşıyorsa derece sayılır. Bitiş açısı başlangıçtan
 küçükse 360° eklenir. Bir tam turu aşan yay **daire** olarak okunur (`düşürme:`); başı sonuna
@@ -285,7 +285,7 @@ orta meridyenden uzaklaştıkça eksenlere paralel bir dikdörtgen değil, biraz
 dörtgen** olur ve saklanan kutu onu kuşatan dikdörtgendir. Kutu olduğu gibi çizilseydi komşu
 paftalar birkaç metre üst üste biner ve yana kayardı.
 
-Bu yüzden KentOSCad paftanın **gerçek çerçevesini** kurar: dosyanın kendi bildirdiği sistemde
+Bu yüzden PiriCAD paftanın **gerçek çerçevesini** kurar: dosyanın kendi bildirdiği sistemde
 (MPROJ: datum ve 3° ya da 6° dilim; GDAL/PROJ ile) kutunun hangi enlem-boylam hücresinden
 geldiğini bulur ve hücrenin dört köşesini alan olarak çizer. Komşu paftalar köşe köşe buluşur.
 Koordinatlar yine dönüştürülmez: köşeler dosyanın kendi sisteminde, dosyadaki sayılarla aynı
@@ -301,7 +301,7 @@ söyler, şu durumlarda:
 | `dosyanın datumu tanınmıyor` | Datum WGS-84, ITRF ya da ED50 değil | Aynı |
 | `dosyanın dilim bilgisi bir meridyen vermiyor` | Dilim baytı geçerli bir orta meridyene çevrilemiyor | Aynı |
 | `dosyanın dilimi bir projeksiyona çevrilemedi` | PROJ dosyanın dilimini kuramadı | GDAL ve PROJ kurulumunu denetleyin (`make doctor`) |
-| `bu yapıda GDAL yok (KENTOS_WITH_GDAL=OFF)` | Bu yapı GDAL'sız derlenmiş | GDAL'lı bir yapı kullanın |
+| `bu yapıda GDAL yok (PIRICAD_WITH_GDAL=OFF)` | Bu yapı GDAL'sız derlenmiş | GDAL'lı bir yapı kullanın |
 | `kutusu bir enlem-boylam paftasına oturmuyor (yerel bir pafta olabilir)` | Kutu bir enlem-boylam hücresinin kutusuyla bir santimetre içinde örtüşmüyor ya da paftanın ölçeğinin ızgarasına oturmuyor | Bir şey yanlış değil: yerel bir paftanın çerçevesi zaten dikdörtgendir |
 
 Netcad'in pafta indeksi katmanları genellikle `PINDEX_1000` gibi (ölçek paydasıyla) adlanır;
@@ -390,7 +390,7 @@ adımı bu on yedi alanı ilk değerleriyle listeler. Sütunlar **Öznitelikler*
 Netcad 8'in Planet modülü plana yerleşim, yapılaşma, yol genişliği, plan notu ve fonksiyon adı
 sembolleri koyar. Dosya bu sembollerin **resmini değil özelliklerini** saklar (`nizam=AYRIK`,
 `kat=3`, `taks=0.4`…); sembolü Netcad ekranda özelliklerinden çizer. Netcad bunlara **akıllı
-nesne** der. KentOSCad sembolü aynı özelliklerden yeniden çizer ve değerlerini nesnenin
+nesne** der. PiriCAD sembolü aynı özelliklerden yeniden çizer ve değerlerini nesnenin
 sütunlarına yazar.
 
 | Sınıf | Çizimde |
@@ -493,11 +493,11 @@ Bunlardan biri çıkarsa çizim içe aktarmadan önceki hâlinde kalır.
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `'…' sanal dosya sistemi yolu. KentOSCad bir veri dosyasının ağdan ya da arşivin içinden okunmasına izin vermez; dosyayı diske alıp yeniden deneyin.` | Yol `/vsi…` ile başlıyor | Dosyayı diske indirip yolunu verin |
+| `'…' sanal dosya sistemi yolu. PiriCAD bir veri dosyasının ağdan ya da arşivin içinden okunmasına izin vermez; dosyayı diske alıp yeniden deneyin.` | Yol `/vsi…` ile başlıyor | Dosyayı diske indirip yolunu verin |
 | `İçe aktarma durduruldu; çizim değişmedi.` | **Durdur**'a ya da **Esc**'e basıldı | Hata değildir; hazır olunca yeniden çalıştırın |
 | `'…' koordinatları çizimin sisteminde okunur ama çizimin koordinat sistemi yok. AYAR koordinat_sistemi ile kurun ve yeniden aktarın.` | Çizimin koordinat sistemi boşaltılmış | `AYAR koordinat_sistemi EPSG:5257` gibi bir sistem kurun |
 | `'…' okunamadı: '…' açılamadı: … Yolu ve okuma iznini denetleyin.` | Dosya yok ya da okuma izni yok; işletim sisteminin nedeni iletide yazar | Yolu ve izinleri denetleyin |
-| `'…' okunamadı: '…' boş; KentOSCad proje dosyası değil.` | Dosya 0 bayt: kopyalama ya da indirme yarım kalmış | Dosyayı yeniden alın. İletinin son sözü genel bir ifadedir, NCZ için de aynıdır |
+| `'…' okunamadı: '…' boş; PiriCAD proje dosyası değil.` | Dosya 0 bayt: kopyalama ya da indirme yarım kalmış | Dosyayı yeniden alın. İletinin son sözü genel bir ifadedir, NCZ için de aynıdır |
 | `'…' okunamadı: '…' sıradan bir dosya değil; proje dosyası bekleniyordu.` | Verilen yol bir klasör ya da özel dosya (macOS ve Linux) | Dosyanın yolunu verin |
 | `'…' okunamadı: '…' belleğe eşlenemedi: …` | İşletim sistemi dosyayı belleğe eşleyemedi (`boyutu okunamadı`, Windows'ta `görünümü açılamadı` da olabilir); iletinin devamı nedeni söyler | Dosyayı yerel bir diske kopyalayıp yeniden deneyin |
 | `Dosya coğrafi koordinatlarda (…) ve bütün koordinatları derece aralığında. …` | Dosya coğrafi sistem bildiriyor ve sayıları derece | Netcad'de bir TM ya da UTM dilimine dönüştürüp yeniden kaydedin |
@@ -537,7 +537,7 @@ olmayan ya da bozuk bir dosya çoğu zaman `okunabilir geometri içermiyor` der.
 | `not:` `N nesnenin çizgi kalınlığı okundu (… mm); ekranda görmek için durum çubuğunda KALINLIK açık olmalı.` | Kalınlıklar nesnelere yazıldı | **KALINLIK** anahtarını açın |
 | `not:` `N ızgara işareti (katman 0'daki S0 sembolü) akıllı nesnenin kendisi çizdiği için ayrıca okunmadı.` | Akıllı nesne içeren çizimde ızgara işaretleri | Bir şey gerekmez |
 | `not:` `N pafta çerçevesi, dosyanın bildirdiği … sisteminde gerçek biçimiyle, dönük dörtgen olarak çizildi: dosya bir paftanın yalnız sınırlayıcı kutusunu saklar.` | Paftaların gerçek çerçevesi kuruldu | [Pafta çerçeveleri](#pafta-çerçeveleri) |
-| `not:` `N değer milimetrenin altında ayrıntı taşıyordu; KentOSCad milimetre çözünürlükte saklar ve bunları en çok … mm kaydırarak yuvarladı. …` | Dosyadaki sayılar milimetreden ince | Bir şey gerekmez |
+| `not:` `N değer milimetrenin altında ayrıntı taşıyordu; PiriCAD milimetre çözünürlükte saklar ve bunları en çok … mm kaydırarak yuvarladı. …` | Dosyadaki sayılar milimetreden ince | Bir şey gerekmez |
 | `not:` `Okunan türler: …; parçalanan: …; atlanan: …` | Netcad türü başına sayım | Bilgi |
 | `not:` `'…' bloğu çizimde zaten vardı; çizimdeki tanım kullanıldı, gelen tanımın üyeleri alınmadı.` | Aynı adlı sembol bloğu çizimde var (aynı dosyayı yeniden aktarmak gibi) | Bir şey gerekmez |
 | `not:` `'…' sütunu çizimde başka türde; dosyadaki değerler atlandı.` | Çizimde aynı kimlikli ama başka türde bir sütun var | Yukarıdaki `düşürme:` satırının çözümü |
@@ -572,7 +572,7 @@ aynıdır. Farklar:
 
 ## Kaynak
 
-KentOSCad'in NCZ okuyucusunun ayrıştırıcısı, Erdinç Örsan ÜNAL'ın QGIS eklentisi *NCZ Reader*'ın
+PiriCAD'in NCZ okuyucusunun ayrıştırıcısı, Erdinç Örsan ÜNAL'ın QGIS eklentisi *NCZ Reader*'ın
 (sürüm 1.4.3, `ncz_pure.py`) C++'a taşınmış hâlidir. Eklenti GPL-2.0-or-later ile yayımlanmıştır
 ve burada GPL-3.0-or-later koşullarıyla kullanılır; proje adresi
 [github.com/erdincunal/Jeomatik-NCZ-Reader](https://github.com/erdincunal/Jeomatik-NCZ-Reader).

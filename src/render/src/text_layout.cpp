@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/render/text_layout.hpp"
+#include "piricad/render/text_layout.hpp"
 
-#include "kentos_cad/core/text_metrics.hpp"
+#include "piricad/core/text_metrics.hpp"
 
-namespace kentos::render {
+namespace piricad::render {
 
 float drawing_measure(std::string_view run) noexcept
 {
@@ -34,8 +34,8 @@ void lay_out_text(std::string_view text, float height_px, core::TextAnchor ancho
     // ---- the stack: the pitch, and the row the anchor names ----
     const float pitch = static_cast<float>(core::kTextLinePitch) *
                         (static_cast<float>(spacing) / 1000.0f) * height_px;
-    const auto n = static_cast<float>(out.size());
-    float first  = 0.0f; // the first line's baseline, from the anchor, down
+    const auto n      = static_cast<float>(out.size());
+    float first       = 0.0f; // the first line's baseline, from the anchor, down
     switch (core::text_anchor_row(anchor)) {
     case 2: first = height_px; break; // the capital tops of the first line
     case 1: {                         // halfway between those and the last baseline
@@ -58,4 +58,4 @@ void lay_out_text(std::string_view text, float height_px, core::TextAnchor ancho
     }
 }
 
-} // namespace kentos::render
+} // namespace piricad::render

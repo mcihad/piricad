@@ -9,7 +9,7 @@ sonucunu ayrı bir katmana yazmayı ve süren bir işlemi durdurmayı bileceksin
 ## İşlem aracı nedir
 
 Bir **işlem aracı**, kapsamındaki bütün nesnelere aynı işi uygulayan komuttur. QGIS'in
-"Processing" araçlarının KentOSCad'deki karşılığıdır, ama bu programın kuralı geçerlidir:
+"Processing" araçlarının PiriCAD'deki karşılığıdır, ama bu programın kuralı geçerlidir:
 **her araç bir komuttur.** Parametreleri bir kere bildirilir ve komut sisteminin
 doğrulamasından geçer; panelden basmak, komut satırına yazmak, betikten çağırmak ve
 yapay zekânın önermesi aynı yoldan gider ve aynı komut günlüğü satırını üretir.

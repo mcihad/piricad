@@ -12,14 +12,14 @@
 //
 // What a clip hides is not drawn, not snapped to and not picked — the three
 // read the same cropped expansion (`core::expand_block_definition`).
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/outline.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/outline.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// How many corners a boundary may have: the payload's own bound.
@@ -387,7 +387,7 @@ Task<void> run_block_clip(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(block_clip)
+PIRICAD_COMMAND(block_clip)
 {
     return CommandSpec{
         .id       = "core.block_clip",
@@ -418,8 +418,8 @@ KENTOS_COMMAND(block_clip)
                       "Sınır olacak kapalı nesne: kapalı çizgi, alan, daire ya da elips"}
                     .en("boundary"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir blok referansını ya da dış referansı bir sınırla kırpar: içi çizilir, "
                    "dışı çizilmez ve yakalanmaz; tanım değişmez, kırpma kaldırılınca hepsi "
                    "görünür.",
@@ -428,4 +428,4 @@ KENTOS_COMMAND(block_clip)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

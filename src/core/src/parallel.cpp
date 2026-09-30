@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/parallel.hpp"
-#include "kentos_cad/core/precision.hpp"
+#include "piricad/core/parallel.hpp"
+#include "piricad/core/precision.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/spline.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/spline.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -19,7 +19,7 @@
 #include <string>
 #include <utility>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// What an object IS, for the purpose of a parallel.
@@ -905,4 +905,4 @@ Result<ParallelPreview> decode_parallel_preview(std::span<const std::uint8_t> by
     return preview;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

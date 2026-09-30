@@ -11,9 +11,9 @@ rounded corners and the size macOS's icon grid gives an app (824 of 1024).
 Writes, from that one master:
 
     packaging/icon/piricad-1024.png   the master; also the window icon at run time
-    packaging/macos/KentOSCad.icns    the bundle's icon
-    packaging/windows/kentoscad.ico   16 … 256, for the executable's resource
-    packaging/linux/kentoscad.png     512, for the desktop entry
+    packaging/macos/PiriCAD.icns    the bundle's icon
+    packaging/windows/piricad.ico   16 … 256, for the executable's resource
+    packaging/linux/piricad.png     512, for the desktop entry
 
 Run it again only when the logo changes; the outputs are committed. Needs
 Python 3 and Pillow. Deterministic: the same logo gives the same bytes.
@@ -83,9 +83,9 @@ def main() -> int:
 
     out = {
         "master": ROOT / "packaging" / "icon" / "piricad-1024.png",
-        "icns": ROOT / "packaging" / "macos" / "KentOSCad.icns",
-        "ico": ROOT / "packaging" / "windows" / "kentoscad.ico",
-        "png": ROOT / "packaging" / "linux" / "kentoscad.png",
+        "icns": ROOT / "packaging" / "macos" / "PiriCAD.icns",
+        "ico": ROOT / "packaging" / "windows" / "piricad.ico",
+        "png": ROOT / "packaging" / "linux" / "piricad.png",
     }
     for path in out.values():
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/processing/tool.hpp"
+#include "piricad/processing/tool.hpp"
 
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/core/document.hpp"
 
 #include <utility>
 
-namespace kentos::processing {
+namespace piricad::processing {
 
 namespace {
 
@@ -265,4 +265,4 @@ core::Error cancelled()
     return core::err(core::ErrorCode::Cancelled, "İşlem durduruldu; çizim değişmedi.");
 }
 
-} // namespace kentos::processing
+} // namespace piricad::processing

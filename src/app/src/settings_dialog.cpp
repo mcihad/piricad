@@ -1,27 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/settings_dialog.hpp"
+#include "piricad/app/settings_dialog.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
-#include "kentos_cad/app/datagrid.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/print_service.hpp"
-#include "kentos_cad/app/provider_dialog.hpp"
-#include "kentos_cad/app/provider_service.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/datagrid.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/print_service.hpp"
+#include "piricad/app/provider_dialog.hpp"
+#include "piricad/app/provider_service.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/ai/provider.hpp"
+#include "piricad/ai/provider.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/schema_page.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/schema_page.hpp"
 
-#include "kentos_cad/command/bus.hpp"
+#include "piricad/command/bus.hpp"
 
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
 // AGPL, and included only where the listener exists. A build without it has no
 // `McpService` to ask, and the block says so rather than pretending.
-#include "kentos_cad/app/mcp_service.hpp"
+#include "piricad/app/mcp_service.hpp"
 #endif
 
 #include <QClipboard>
@@ -50,7 +50,7 @@
 #include <algorithm>
 #include <string>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 using core::SettingScope;
@@ -308,10 +308,10 @@ SettingsDialog::SettingsDialog(Controller& controller, Mode mode, QWidget* paren
         section.group     = declared.title;
         section.title     = QString::fromStdString(declared.title);
         section.first_row = rows_.size();
-        section.page      = declared.phase.empty() ? buildGroup(declared.title, section.title)
-                                                   : buildPending(QString::fromStdString(declared.phase),
-                                                                  QString::fromStdString(declared.note));
-        section.end_row   = rows_.size();
+        section.page = declared.phase.empty() ? buildGroup(declared.title, section.title)
+                                              : buildPending(QString::fromStdString(declared.phase),
+                                                             QString::fromStdString(declared.note));
+        section.end_row = rows_.size();
         pages_->addWidget(section.page);
         sections_->addSection(group_glyph(section_group(declared.title)), section.title);
         order_.push_back(section);
@@ -780,7 +780,7 @@ QWidget* SettingsDialog::buildAgentServer()
     // three all run `MCPSUNUCU`, so the listener has exactly one road in and a
     // script can take it (Article 1.2, CLAUDE.md 5.15).
     connect(mcp_toggle_, &QPushButton::clicked, this, [this] {
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
         const McpService* server = controller_.mcpService();
         controller_.runLine(server != nullptr && server->listening()
                                 ? QStringLiteral("MCPSUNUCU islem=durdur")
@@ -898,7 +898,7 @@ QWidget* SettingsDialog::buildAgentServer()
         refreshAgentClients();
     });
 
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
     if (McpService* server = controller_.mcpService(); server != nullptr) {
         connect(server, &McpService::stateChanged, this, &SettingsDialog::refreshAgentServer);
         connect(server, &McpService::stateChanged, this, &SettingsDialog::refreshAgentClients);
@@ -915,7 +915,7 @@ void SettingsDialog::refreshAgentClients()
 {
     if (mcp_clients_model_ == nullptr) return;
 
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
     McpService* server = controller_.mcpService();
     if (server == nullptr) {
         mcp_clients_model_->removeRows(0, mcp_clients_model_->rowCount());
@@ -1012,14 +1012,14 @@ void SettingsDialog::refreshAgentServer()
 {
     if (mcp_state_ == nullptr) return;
 
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
     McpService* server = controller_.mcpService();
     if (server == nullptr) {
         mcp_state_->setText(tr("Bu yapıda MCP sunucusu yok."));
         mcp_address_->setValue(QString());
         for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_, mcp_probe_})
             b->setEnabled(false);
-        mcp_note_->setText(tr("Sunucu KENTOS_WITH_MCP seçeneğiyle derlenir."));
+        mcp_note_->setText(tr("Sunucu PIRICAD_WITH_MCP seçeneğiyle derlenir."));
         return;
     }
 
@@ -1065,7 +1065,7 @@ void SettingsDialog::refreshAgentServer()
     mcp_address_->setValue(QString());
     for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_, mcp_probe_})
         b->setEnabled(false);
-    mcp_note_->setText(tr("Sunucu KENTOS_WITH_MCP seçeneğiyle derlenir."));
+    mcp_note_->setText(tr("Sunucu PIRICAD_WITH_MCP seçeneğiyle derlenir."));
 #endif
 }
 
@@ -1727,4 +1727,4 @@ void SettingsDialog::applyFilter()
     }
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

@@ -1,6 +1,6 @@
 # TERCİH — Uygulama Tercihleri
 
-KentOSCad'i kendi çalışma alışkanlığına göre ayarlayan herkes için; bu sayfayı
+PiriCAD'i kendi çalışma alışkanlığına göre ayarlayan herkes için; bu sayfayı
 bitirdiğinizde tema, dil, otomatik kayıt ve tuval rengi gibi **kullanıcıya ait**
 tercihleri listelemeyi, okumayı ve değiştirmeyi bileceksiniz.
 
@@ -220,7 +220,7 @@ Komutu pencerenin altındaki **komut satırına** yazın; sonuç **Transkript** 
 görünür. Arayüzün ayrıcalığı yoktur: şeritten yapılan da, komut satırından yazılan da aynı
 komuttur.
 
-**Seçenekler** penceresi (**KentOS CAD ▸ Seçenekler…**, kısayolu **Ctrl+,**) bildirilen her
+**Seçenekler** penceresi (**PiriCAD CAD ▸ Seçenekler…**, kısayolu **Ctrl+,**) bildirilen her
 ayarı gösterir. Pencerenin tamamı ayar kataloğundan **üretilir**: satırın adı ayarın
 kendi birincil adı, alanı bildirilen tipinden, sınırları bildirilen aralığından,
 üzerine gelince çıkan açıklaması bildirilen özetinden gelir. Kataloğa eklenen bir ayar
@@ -233,7 +233,7 @@ hangi kapsamda olduğunu söyler; karışıksa onu da söyler.
 
 ## Proje Ayarları penceresi
 
-`Seçenekler` "bu program nasıl davransın" sorusunu cevaplar. **KentOS CAD ▸ Proje
+`Seçenekler` "bu program nasıl davransın" sorusunu cevaplar. **PiriCAD CAD ▸ Proje
 Ayarları…** ise başka bir soruyu: **"bu dosyanın içinde ne var"**. Ayrı bir
 penceredir, çünkü ikinci soruyu soran biri genellikle dosyayı birine vermek
 üzeredir — ve ikisi çoğu zaman aynı anda açık durur.

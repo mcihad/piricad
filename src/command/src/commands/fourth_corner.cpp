@@ -24,24 +24,24 @@
 // the three through this command derives the same fourth, and a journal that
 // held four could later have one of them moved and describe a face this command
 // never draws (Article 1.4).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/polygon.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/polygon.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <array>
 #include <span>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The angle between two arms at their vertex as whole micro-degrees in
@@ -184,7 +184,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(fourth_corner)
+PIRICAD_COMMAND(fourth_corner)
 {
     return CommandSpec{
         .id       = "core.fourth_corner",
@@ -204,13 +204,13 @@ KENTOS_COMMAND(fourth_corner)
                     .en("right_angle"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Üç köşeden dördüncü köşeyi hesaplar ve dört köşeli kapalı bir alan çizer; "
                    "dik=evet üçüncü köşeyi dik açıya çeker ve sapmayı söyler.",
-        .run    = &run,
-        .effect = Effect::DocumentEdit,
+        .run     = &run,
+        .effect  = Effect::DocumentEdit,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

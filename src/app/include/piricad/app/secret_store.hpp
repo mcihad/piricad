@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: where a credential actually lives, and it is not in our files.
+// PiriCAD — app: where a credential actually lives, and it is not in our files.
 //
 // THE RULE THIS CLASS EXISTS TO MAKE STRUCTURAL. CLAUDE.md 5.21: an API key, a
 // bearer token or a database password may never be in a `SettingSpec` value, a
@@ -12,7 +12,7 @@
 //
 // TWO ROADS, AND BOTH ARE DELIBERATE.
 //
-//   1. THE SYSTEM KEY STORE, behind `KENTOS_WITH_KEYCHAIN`: the macOS keychain
+//   1. THE SYSTEM KEY STORE, behind `PIRICAD_WITH_KEYCHAIN`: the macOS keychain
 //      through the Security framework, the Secret Service through libsecret on
 //      Linux, the Windows credential store through wincred. All three are system
 //      APIs — nothing is added to `/vcpkg.json` and nothing to `/NOTICE`.
@@ -25,20 +25,20 @@
 //      already has with `~/.pgpass`: the credential is somewhere the operating
 //      system owns, and this program knows only where to ask.
 //
-// A BUILD WITH NEITHER SAYS SO. With `KENTOS_WITH_KEYCHAIN=OFF` the store reads
+// A BUILD WITH NEITHER SAYS SO. With `PIRICAD_WITH_KEYCHAIN=OFF` the store reads
 // the environment and stores NOTHING, and `write()` refuses with a sentence
 // naming the variable to set rather than pretending a key was saved. A store that
 // silently forgot a key would send unauthenticated requests and report the
 // provider's 401 as if the endpoint were wrong.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <QString>
 
 #include <optional>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// Reads, writes and removes one named secret, through whatever the platform has.
 ///
@@ -50,7 +50,7 @@ class SecretStore
 public:
     /// The key store's service (macOS) / label prefix (Linux, Windows) — one
     /// name, so an entry written by one version is found by the next.
-    static constexpr const char* kService = "KentOSCad";
+    static constexpr const char* kService = "PiriCAD";
 
     /// Nothing to build: the platform store is opened per call, which is what
     /// all three system APIs are designed for and what keeps a locked keychain a
@@ -95,4 +95,4 @@ public:
     static QString describe();
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

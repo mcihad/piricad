@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/about_dialog.hpp"
+#include "piricad/app/about_dialog.hpp"
 
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/widgets.hpp"
 
 #include <QClipboard>
 #include <QFile>
@@ -19,7 +19,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 constexpr int kWindowWidth  = 640;
@@ -284,4 +284,4 @@ QString AboutDialog::factsText() const
         .arg(facts_.tools);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

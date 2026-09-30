@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — tests: YAPAYZEKAMODELİ (ai/commands/provider_command.cpp).
+// PiriCAD — tests: YAPAYZEKAMODELİ (ai/commands/provider_command.cpp).
 //
 // What is proven here is the COMMAND, not the file and not the socket: the
 // declared words a client is told it may send, the `ekle` semantics, the
@@ -18,27 +18,27 @@
 // application's own file and key store in `app::ProviderService` — this suite
 // links no Qt, so the engine here is a double, exactly as `test_print.cpp` does
 // with the print engine.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/ai/provider.hpp"
-#include "kentos_cad/ai/provider_catalog.hpp"
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/ai/provider.hpp"
+#include "piricad/ai/provider_catalog.hpp"
+#include "piricad/ai/redact.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/document.hpp"
 
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/script/json_runner.hpp"
 #include <fstream>
 #include <iterator>
 
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -499,7 +499,7 @@ TEST_CASE("Sağlayıcı kataloğu: paket okunur ve her kayıt tutarlıdır")
     // are the fastest-rotting facts in the program and they are DATA precisely so
     // they can be corrected without a rebuild — which is worth nothing if nothing
     // checks that the corrected file still parses (`ai/provider_catalog.hpp`).
-    const std::string path = std::string(KENTOS_DATA_DIR) + "/catalogs/ai/saglayicilar.json";
+    const std::string path = std::string(PIRICAD_DATA_DIR) + "/catalogs/ai/saglayicilar.json";
     std::ifstream in(path, std::ios::binary);
     REQUIRE(in.good());
     const std::string text{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};

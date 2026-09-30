@@ -8,24 +8,24 @@
 // hand found by eye. An angle is asked for vertex first, the way a hand measures
 // one. A radius line aims at its figure. And every client — the canvas, the
 // command line, a script, a journal replay — ends with the same drawing.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/render/scene.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::DimensionDef;
 using core::DimensionType;
 using core::Point2;

@@ -63,7 +63,7 @@ olmayan nesne (daire, yay, yazı) atlanır ve sayılır.
 
 Hesap `atan2` ya da başka bir trigonometri çağrısı kullanmaz — yalnız birim
 vektörler ve `sqrt`. Sebebi taşınabilirliktir: libm'in trigonometri işlevleri
-platformlar arası bit bit aynı sonucu vermez, KentOSCad ise verir (§7.3).
+platformlar arası bit bit aynı sonucu vermez, PiriCAD ise verir (§7.3).
 
 ## Adlar
 

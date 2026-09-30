@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — tests: the processing tools (processing.md).
+// PiriCAD — tests: the processing tools (processing.md).
 //
 // What is proven here: a tool is a command with the four shared parameters;
 // its scope resolves to the objects it applies to and no others; its output
 // lands on the layer asked for as ordinary objects; a stop leaves the drawing
 // untouched; and the three clients produce one document and one journal.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/planar.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/planar.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -28,8 +28,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -377,8 +377,8 @@ TEST_CASE("İŞLEM KANIT: komut satırı ve betik aynı belgeyi ve günlüğü �
 // ALANDÜZENLE — a face brought to a wanted area
 // ============================================================================
 
-#include "kentos_cad/core/area_edit.hpp"
-#include "kentos_cad/core/offset.hpp"
+#include "piricad/core/area_edit.hpp"
+#include "piricad/core/offset.hpp"
 
 namespace {
 
@@ -892,7 +892,7 @@ TEST_CASE("TAMPON: yuvarlak köşe ve uç gerçek yay — disk yuvarlak alan, ba
     // THE KERNEL'S ROAD (TODOS O-3): with round corners and ends — the
     // defaults — every rounded edge of a buffer is a true arc, where the
     // polygon road left a fan of short edges.
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     const auto arcs_of = [](const core::Document& doc, core::EntityId e) {
         std::vector<core::PathPiece> out;
         if (const auto p = core::path_of(doc, e))
@@ -1045,7 +1045,7 @@ TEST_CASE("TAMPON KANIT: komut satırı ve betik aynı belgeyi ve günlüğü ü
 namespace {
 
 #define NEEDS_NETWORK()                                                                            \
-    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; ALANÜRET sınanamıyor.")
+    if (!core::network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; ALANÜRET sınanamıyor.")
 
 /// The kind of every object on `layer`.
 std::vector<core::KindId> kinds_on(const core::Document& doc, const std::string& layer)

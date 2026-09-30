@@ -1,7 +1,7 @@
 # AI evaluation set
 
 `senaryolar.json` holds real Turkish requests paired with the command sequence a
-model is expected to produce (kentoscad.md §5.6, §14; `.claude/ai.md` R21 asks for
+model is expected to produce (piricad.md §5.6, §14; `.claude/ai.md` R21 asks for
 200–300).
 
 The set answers two questions and does not confuse them.

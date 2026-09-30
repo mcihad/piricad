@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/bus.hpp"
+#include "piricad/command/bus.hpp"
 
 #include <cmath>
 
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/command/log.hpp"
-#include "kentos_cad/command/parser.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/command/log.hpp"
+#include "piricad/command/parser.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <chrono>
 
-namespace kentos::command {
+namespace piricad::command {
 
 core::Settings* Bus::store_for(std::string_view id) noexcept
 {
@@ -160,7 +160,7 @@ std::int64_t now_ms()
 
 /// Folds the token stream of one command line into the command's declared
 /// parameters. The CLI, macro playback and the script engine share this, because
-/// they share the grammar (kentoscad.md §3).
+/// they share the grammar (piricad.md §3).
 core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>& tokens,
                                const ResolveContext& ctx)
 {
@@ -1277,4 +1277,4 @@ void Bus::abort_batch()
     if (moved && on_document_changed) on_document_changed();
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -5,28 +5,28 @@
 // `Alan hesabı` is the legal output of this product (§12), so the numbers below are
 // asserted as exact integers in square millimetres. A tolerance here would be a
 // tolerance on a cadastral area, and there is no such thing.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/transform.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/transform.hpp"
+#include "piricad/core/trig.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/polygon.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/polygon.hpp"
 
 #include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
 
-#include "kentos_cad/core/offset.hpp"
+#include "piricad/core/offset.hpp"
 
 #include <algorithm>
 #include <array>
 
-using namespace kentos::core;
+using namespace piricad::core;
 
 namespace {
 
@@ -859,7 +859,7 @@ TEST_CASE("clear boşaltır, sonraki append sıfırdan başlar")
 
 TEST_CASE("sin_cos_udeg: eksen açıları tam çıkar")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     // The whole reason the reduction is integer: an axis angle must come out as
     // exactly 0 and exactly 1, not 6.1e-17 and 0.99999999. A right angle that is
@@ -881,7 +881,7 @@ TEST_CASE("sin_cos_udeg: eksen açıları tam çıkar")
 
 TEST_CASE("sin_cos_udeg: ara açılar doğru")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     const SinCos t45 = sin_cos_udeg(45 * kUDegPerDegree);
     CHECK(std::abs(t45.sin - 0.70710678118654752) < 1e-15);
@@ -894,7 +894,7 @@ TEST_CASE("sin_cos_udeg: ara açılar doğru")
     CHECK(std::abs(t60.cos - 0.5) < 1e-15);
 
     // The identity has to hold everywhere, which catches a bad octant swap.
-    for (kentos::core::UDeg a = 0; a < 360 * kUDegPerDegree; a += 7 * kUDegPerDegree) {
+    for (piricad::core::UDeg a = 0; a < 360 * kUDegPerDegree; a += 7 * kUDegPerDegree) {
         const SinCos t = sin_cos_udeg(a);
         CHECK(std::abs(t.sin * t.sin + t.cos * t.cos - 1.0) < 1e-14);
     }
@@ -902,7 +902,7 @@ TEST_CASE("sin_cos_udeg: ara açılar doğru")
 
 TEST_CASE("döndürme: dik açı köşeyi tam yerine koyar")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     const Point2 base{0, 0};
     const Point2 p{10000, 0};
@@ -925,7 +925,7 @@ TEST_CASE("döndürme: dik açı köşeyi tam yerine koyar")
 
 TEST_CASE("aynalama: yatay ve düşey eksen tam, eğik eksen doğru")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     // A horizontal axis is an integer negation and must not round.
     CHECK_EQ(mirrored_in_line(Point2{3000, 5000}, Point2{0, 1000}, Point2{9999, 1000}).y,
@@ -944,7 +944,7 @@ TEST_CASE("aynalama: yatay ve düşey eksen tam, eğik eksen doğru")
 
 TEST_CASE("ölçekleme: taban noktası yerinde kalır")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     const Point2 base{5000, 5000};
     CHECK_EQ(scaled_about(base, base, 3.0).x, base.x);
@@ -1149,7 +1149,7 @@ TEST_CASE("simplify_ring: kapalı halkada dikiş de sadeleşir")
 
 TEST_CASE("Düzgün çokgen: üç yöntem tek çevrel yarıçapa iner")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     // A HEXAGON'S SIDE EQUALS ITS CIRCUMRADIUS. The one identity a regular
     // polygon has that needs no trigonometry to state, so it is the case that
@@ -1180,7 +1180,7 @@ TEST_CASE("Düzgün çokgen: üç yöntem tek çevrel yarıçapa iner")
 
 TEST_CASE("Düzgün çokgen: köşeler ve dönüş yönü")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     // A SQUARE AT ZERO under semt: the four axes are integer-exact in
     // `sin_cos_udeg`, so nothing here is within a millimetre of right — it is
@@ -1216,7 +1216,7 @@ TEST_CASE("Düzgün çokgen: köşeler ve dönüş yönü")
 
 TEST_CASE("Kenar üzerine dikdörtgen: üçüncü nokta yüksekliği verir")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     // The edge runs east along y = 0; the third point is 3 m north of it and
     // well past its end, because what it gives is the DEPTH and not a corner.
@@ -1242,7 +1242,7 @@ TEST_CASE("Kenar üzerine dikdörtgen: üçüncü nokta yüksekliği verir")
 
 TEST_CASE("Dördüncü köşe: üç köşenin paralelkenarı, a + c − b")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     // THE PLAN'S CASE (N-13): (0,0), (10,0), (10,6) — the fourth is (0,6).
     CHECK_EQ(fourth_corner(Point2{0, 0}, Point2{10'000, 0}, Point2{10'000, 6'000}),
@@ -1267,7 +1267,7 @@ TEST_CASE("Dördüncü köşe: üç köşenin paralelkenarı, a + c − b")
 
 TEST_CASE("Derinlikle dikdörtgen: sağ pozitif, sol negatif, dik() ile aynı işaret")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     // The edge runs EAST. Its right is south, so a positive depth goes south.
     std::array<Point2, 4> four{};
@@ -1309,7 +1309,7 @@ TEST_CASE("Derinlikle dikdörtgen: sağ pozitif, sol negatif, dik() ile aynı i�
 
 TEST_CASE("Ölçülü kutu: en doğuya, boy kuzeye; dönüş açıların arttığı yönde")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     // UNTURNED, under either rule: the width runs east and the length north, the
     // ring counter-clockwise from the corner it stands on.
@@ -1352,7 +1352,7 @@ TEST_CASE("Ölçülü kutu: en doğuya, boy kuzeye; dönüş açıların arttı�
 
 TEST_CASE("Çokgen kılavuzu: yük gidip geliyor")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     const PolygonGuide guide{.sides       = 7,
                              .fit         = PolygonFit::Circumscribed,
@@ -1396,7 +1396,7 @@ TEST_CASE("Çokgen kılavuzu: yük gidip geliyor")
 
 TEST_CASE("Daire: iki doğruya teğet çemberin merkezi, işaret edilen köşeye göre")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     // The axes as the two lines, and a radius of 5 m. The four centres are then
     // (±5, ±5) — one in each quadrant — and which one is wanted is the one
@@ -1431,7 +1431,7 @@ TEST_CASE("Daire: iki doğruya teğet çemberin merkezi, işaret edilen köşeye
 
 TEST_CASE("Daire kılavuzu: dört yapı ve reddedilen hâlleri")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     Point2 centre{};
     Mm radius = 0;
@@ -1484,7 +1484,7 @@ TEST_CASE("Daire kılavuzu: dört yapı ve reddedilen hâlleri")
 
 TEST_CASE("Daire kılavuzu: yük gidip geliyor")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     const CircleGuide guide{.build = CircleBuild::Tangent, .radius = 7'500};
     const std::vector<std::uint8_t> bytes = encode_circle_guide(guide);
@@ -1506,7 +1506,7 @@ TEST_CASE("Daire kılavuzu: yük gidip geliyor")
 
 TEST_CASE("Yay: üç noktadan, teğet devamdan ve yarıçaptan")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     Point2 centre{};
     Mm radius = 0;
@@ -1570,7 +1570,7 @@ TEST_CASE("Yay: üç noktadan, teğet devamdan ve yarıçaptan")
 
 TEST_CASE("Yay kılavuzu: yük gidip geliyor")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     const ArcGuide guide{.build = ArcBuild::Radius, .radius = 12'000};
     const std::vector<std::uint8_t> bytes = encode_arc_guide(guide);
@@ -1597,7 +1597,7 @@ TEST_CASE("Yay kılavuzu: yük gidip geliyor")
 
 TEST_CASE("Dönüşüm: dört tür tek fonksiyondan uygulanıyor")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     const Point2 p{10'000, 0};
 
@@ -1631,7 +1631,7 @@ TEST_CASE("Dönüşüm: dört tür tek fonksiyondan uygulanıyor")
 
 TEST_CASE("Hayalet: imleç dönüşüme çevriliyor")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     const Point2 base{0, 0};
 
@@ -1666,7 +1666,7 @@ TEST_CASE("Hayalet: imleç dönüşüme çevriliyor")
 
 TEST_CASE("Hayalet yükü: gidip geliyor")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     const GhostSpec spec{.kind = GhostKind::Rotate, .copies = 3};
     const std::vector<std::uint8_t> bytes = encode_ghost_spec(spec);

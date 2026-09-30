@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/lineage.hpp"
+#include "piricad/core/lineage.hpp"
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <cstring>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 // A NEW seed, carrying the program's present name (CLAUDE.md 0.5a froze only
 // the seeds already folded into fixtures).
-constexpr std::uint64_t kLineageSeed = fnv1a("kentos.core.lineage");
+constexpr std::uint64_t kLineageSeed = fnv1a("piricad.core.lineage");
 
 /// The layout byte an encoded origin starts with: a history origin's, and a
 /// result's, which carries its revisions after its sources.
@@ -277,4 +277,4 @@ Result<Lineage> decode_lineage(std::span<const std::uint8_t> bytes)
     return out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

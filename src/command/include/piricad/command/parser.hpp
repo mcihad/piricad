@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: THE grammar.
+// PiriCAD — command: THE grammar.
 //
-// kentoscad.md §3, implementation note: the command-line parser and the script
+// piricad.md §3, implementation note: the command-line parser and the script
 // engine's parser must be the SAME grammar. Two parsers guarantee behavioural
 // drift. There is exactly one of these in the project.
 //
@@ -30,11 +30,11 @@
 //   text                          "yol kenarı"
 #pragma once
 
-#include "kentos_cad/command/value.hpp"
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/command/value.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <functional>
 #include <optional>
@@ -42,7 +42,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// One lexical unit of a command line.
 ///
@@ -228,4 +228,4 @@ bool is_coordinate(const Token& t);
 /// Human-readable token rendering, for error messages and the transcript.
 std::string describe(const Token& t);
 
-} // namespace kentos::command
+} // namespace piricad::command

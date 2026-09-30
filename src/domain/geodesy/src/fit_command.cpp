@@ -15,25 +15,25 @@
 // drawing IS — a reviewer has to be able to see the points, the residuals and the
 // scale that was accepted — so the fit is reported in full and the parameters go
 // into the journal with the command.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/command/transform_edit.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/command/transform_edit.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
 
-#include "kentos_cad/core/crs.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/units.hpp"
-#include "kentos_cad/domain/geodesy/helmert.hpp"
+#include "piricad/core/crs.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/units.hpp"
+#include "piricad/domain/geodesy/helmert.hpp"
 
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 std::string mm_text(core::Mm v)
@@ -180,7 +180,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(fit)
+PIRICAD_COMMAND(fit)
 {
     return CommandSpec{
         .id       = "core.fit",
@@ -199,34 +199,34 @@ KENTOS_COMMAND(fit)
                             "Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36")
                     .en("crs"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).",
-        .run = &run,
+        .run     = &run,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command
 
-namespace kentos::command {
+namespace piricad::command {
 /// Declared here because its body lives in `stakeout_command.cpp`; the registrar
 /// below is the one place this module's commands are named.
-KENTOS_COMMAND(stakeout);
-KENTOS_COMMAND(reproject);
-KENTOS_COMMAND(traverse);
-} // namespace kentos::command
+PIRICAD_COMMAND(stakeout);
+PIRICAD_COMMAND(reproject);
+PIRICAD_COMMAND(traverse);
+} // namespace piricad::command
 
-namespace kentos::domain::geodesy {
+namespace piricad::domain::geodesy {
 
-void register_geodesy_commands(kentos::command::Registry& r)
+void register_geodesy_commands(piricad::command::Registry& r)
 {
     // One entry today. It sits here rather than in the builtin X-macro list
     // because that list lives in `/src/command`, which may not depend on a domain
     // module (CLAUDE.md Article 3.2).
-    (void)r.add(kentos::command::kentos_command_fit());
-    (void)r.add(kentos::command::kentos_command_stakeout());
-    (void)r.add(kentos::command::kentos_command_reproject());
-    (void)r.add(kentos::command::kentos_command_traverse());
+    (void)r.add(piricad::command::piricad_command_fit());
+    (void)r.add(piricad::command::piricad_command_stakeout());
+    (void)r.add(piricad::command::piricad_command_reproject());
+    (void)r.add(piricad::command::piricad_command_traverse());
 }
 
-} // namespace kentos::domain::geodesy
+} // namespace piricad::domain::geodesy

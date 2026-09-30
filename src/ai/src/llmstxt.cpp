@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/llmstxt.hpp"
+#include "piricad/ai/llmstxt.hpp"
 
-#include "kentos_cad/ai/catalog.hpp"
+#include "piricad/ai/catalog.hpp"
 
 #include <string>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 /// The part that is prose rather than data: the rules of the house.
@@ -16,7 +16,7 @@ namespace {
 /// (CLAUDE.md 2.6).
 std::string preamble()
 {
-    return R"(# KentOSCad
+    return R"(# PiriCAD
 
 > Türkiye odaklı CBS + CAD masaüstü programı: jeodezi, kadastro, imar ve yüzey işleri.
 > Programın durumunu değiştiren her şey bir KOMUTtur; arayüz, komut satırı, betik ve
@@ -169,4 +169,4 @@ std::string llms_full_txt(const command::Registry& registry)
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

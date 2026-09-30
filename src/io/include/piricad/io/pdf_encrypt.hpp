@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: PDF encryption.
+// PiriCAD — io: PDF encryption.
 //
 // The PDF a plot produces is written by Qt (`QPdfWriter`), which knows nothing
 // of passwords. Encrypting it — AES-256, the one password scheme the PDF
 // specification still endorses — is qpdf's job (Apache-2.0, CLAUDE.md 2.7): it
 // reads the finished file and writes it back encrypted with the permissions
-// asked for. Behind `KENTOS_WITH_QPDF`; without it the function says so and
+// asked for. Behind `PIRICAD_WITH_QPDF`; without it the function says so and
 // the print dialog's password fields say so too.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <string>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// What the reader may do, with which passwords, and who wrote it.
 struct PdfEncryption
@@ -45,4 +45,4 @@ core::Status pdf_encrypt(const std::string& in, const std::string& out,
 /// report. An error when the file is not a PDF this build can read.
 core::Result<bool> pdf_is_encrypted(const std::string& path);
 
-} // namespace kentos::io
+} // namespace piricad::io

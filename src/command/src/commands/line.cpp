@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// core.line — ÇİZGİ. The reference implementation of kentoscad.md §2.4.
+// core.line — ÇİZGİ. The reference implementation of piricad.md §2.4.
 //
 // The body below is the entire command. It contains no branch on where its input
 // comes from: a mouse click, a typed coordinate, the next element of a script's
 // point list and an AI-produced point all arrive through the same co_await.
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
 #include <array>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -66,7 +66,7 @@ Task<void> run(Context& ctx)
     }
 
     // Record the run exactly as it happened, so replaying the journal from any
-    // client reproduces it vertex for vertex (kentoscad.md §2.2).
+    // client reproduces it vertex for vertex (piricad.md §2.2).
     if (drawn.size() < 2) co_return; // ESC after the first point: nothing drawn
     const std::size_t segments = drawn.size() - 1;
     ctx.record("noktalar", Value::points(std::move(drawn)));
@@ -85,7 +85,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(line)
+PIRICAD_COMMAND(line)
 {
     return CommandSpec{
         .id       = "core.line",
@@ -106,4 +106,4 @@ KENTOS_COMMAND(line)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

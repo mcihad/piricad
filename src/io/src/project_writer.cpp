@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: writing the native project file.
+// PiriCAD — io: writing the native project file.
 //
 // The writer is deliberately dull. It walks the document's columns in row order
 // and streams them out; there is no reordering of rows and no cleverness, because
@@ -37,11 +37,11 @@
 //                                    and of its fingerprint. App and Session
 //                                    scopes are per user and per run and MUST NOT
 //                                    reach the file.
-#include "kentos_cad/io/project.hpp"
+#include "piricad/io/project.hpp"
 
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/io/format.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/io/format.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -54,7 +54,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 using core::err;
@@ -1189,4 +1189,4 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     return report;
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

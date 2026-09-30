@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the card a person reads before anything is drawn, and THE ONE
+// PiriCAD — app: the card a person reads before anything is drawn, and THE ONE
 // PLACE IN THE PROGRAM WHERE A DECISION IS MADE.
 //
 // WHY THIS FILE IS SPECIAL. `ai::Gate::apply` demands an `ai::Approval`, and an
@@ -24,17 +24,17 @@
 // appear to give (§5.2.4).
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <QString>
 #include <QWidget>
 
 #include <cstdint>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The plan store, the gate and the audit log; see ai_service.hpp.
 class AiService;
@@ -45,7 +45,7 @@ class Button;
 class SuggestionCard : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the card for `planId`. A plan that is not pending is shown in its
@@ -61,7 +61,7 @@ public:
     /// Presses `Uygula` as a person would. FOR THE PROBE AND THE TESTS ONLY, and
     /// it is deliberately not a way round the rule: it goes through the same
     /// `decide()` this widget's own button does, so what it proves is what a
-    /// click would do (`KENTOS_MCP_PROBE`, `tests/unit/test_ai_tools.cpp`).
+    /// click would do (`PIRICAD_MCP_PROBE`, `tests/unit/test_ai_tools.cpp`).
     core::Status probeApply();
 
     /// Presses `Reddet` as a person would — the same `decide()` the button
@@ -118,4 +118,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

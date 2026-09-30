@@ -1,6 +1,6 @@
 # MPYY Plan Gösterimleri Veri Paketi
 
-Şehir plancısı ve harita mühendisi için; bu sayfayı bitirdiğinizde KentOSCad'in Mekânsal
+Şehir plancısı ve harita mühendisi için; bu sayfayı bitirdiğinizde PiriCAD'in Mekânsal
 Planlar Yapım Yönetmeliği gösterimlerini nereden okuduğunu, paketin hangi Resmî Gazete
 sürümüne dayandığını, neyin çıkarıldığını, neyin **bilerek eksik** bırakıldığını ve
 paketi kaynağından nasıl yeniden üreteceğinizi bileceksiniz.
@@ -23,7 +23,7 @@ paketi kaynağından nasıl yeniden üreteceğinizi bileceksiniz.
 `detay-katalogu.schema.json`, `asgari-standartlar.schema.json`.
 
 Bu değerlerin **hiçbiri programın içine gömülü değildir**. Yönetmelik değiştiğinde
-KentOSCad yeniden derlenmez; yalnız bu dosyalar değişir.
+PiriCAD yeniden derlenmez; yalnız bu dosyalar değişir.
 
 ## Hangi sürüm yürürlükte
 
@@ -219,7 +219,7 @@ EK-2 bir gösterim tablosu değil, **asgari alan standardı** tablosudur: TAKS/K
 komşusu mevzuat değerleri. Ayrı bir katalogdadır.
 
 m²/kişi değerleri **binde tam sayı** olarak saklanır: `0.5` → `500`, `10,00` →
-`10000`, `1.25` → `1250`. Kayan nokta saklanmaz — KentOSCad'de kayan nokta bir ara
+`10000`, `1.25` → `1250`. Kayan nokta saklanmaz — PiriCAD'de kayan nokta bir ara
 değerdir, saklanan biçim değildir. Her değerin yanında kaynak hücrenin metni de
 durur (`m2_kisi_metin`), böylece çeviri denetlenebilir.
 
@@ -255,7 +255,7 @@ python3 scripts/mpyy-cikar.py --kaynak /yol/.mpyy-kaynak
    karşılaştırır:
 
 ```bash
-KENTOS_MPYY_KAYNAK=/yol/.mpyy-kaynak bash scripts/ci-gate-mpyy.sh
+PIRICAD_MPYY_KAYNAK=/yol/.mpyy-kaynak bash scripts/ci-gate-mpyy.sh
 ```
 
 Betik yalnız Python 3 standart kütüphanesini kullanır; kurulacak bir şey yoktur.
@@ -265,7 +265,7 @@ Katalog içeriği değiştiyse önce farkı okuyun, sonra golden özetini yenile
 `CHANGELOG.md`'ye değişikliğe sebep olan yönetmelik veya genelgeyi yazın:
 
 ```bash
-KENTOS_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh
+PIRICAD_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh
 ```
 
 ## Paketi kullanmak

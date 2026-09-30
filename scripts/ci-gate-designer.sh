@@ -60,8 +60,8 @@ if ! grep -q '"alan"' "$declares_alan"; then
     fail=1
 fi
 
-if ! grep -q 'bindings' "$root/src/core/include/kentos_cad/core/style.hpp"; then
-    echo "designer: SymbolLayer no longer carries bindings -> src/core/include/kentos_cad/core/style.hpp:1" >&2
+if ! grep -q 'bindings' "$root/src/core/include/piricad/core/style.hpp"; then
+    echo "designer: SymbolLayer no longer carries bindings -> src/core/include/piricad/core/style.hpp:1" >&2
     fail=1
 fi
 

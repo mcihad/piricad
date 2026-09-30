@@ -20,25 +20,25 @@
 // and an arc, and to draw a closed shape's arc into the ring as sixteen chords
 // with a sentence about how far they strayed — "you add points", the user
 // said, "a rounded corner should be an arc".
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/command/path_edit.hpp"
-#include "kentos_cad/core/corner.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/fillet.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/command/path_edit.hpp"
+#include "piricad/core/corner.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/fillet.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// Millimetres as the metres a user reads, three decimals, Turkish comma.
@@ -333,11 +333,11 @@ Task<void> run_every(Context& ctx, bool fillet, const std::vector<std::int64_t>&
     guide.rubber_shape   = RubberShape::Corner;
     guide.rubber_payload = core::encode_corner_preview(shown);
     guide.pick_distance  = true;
-    auto size            = co_await ctx.number(fillet ? "yaricap" : "mesafe",
+    auto size = co_await ctx.number(fillet ? "yaricap" : "mesafe",
                                     fillet ? "Bütün köşeler için yarıçap (metre) — yazın ya da "
-                                                        "gösterin"
-                                                      : "Bütün köşeler için mesafe (metre) — yazın ya da "
-                                                        "gösterin",
+                                             "gösterin"
+                                           : "Bütün köşeler için mesafe (metre) — yazın ya da "
+                                             "gösterin",
                                     std::move(guide));
     if (!size) co_return;
     const core::Mm want = core::mm_round(*size * static_cast<double>(core::kMmPerMetre));
@@ -579,10 +579,10 @@ Task<void> run_vertex(Context& ctx, bool fillet, Value given, std::optional<core
         .fillet = fillet,
     });
     guide.pick_distance  = true;
-    auto size            = co_await ctx.number(fillet ? "yaricap" : "mesafe",
+    auto size = co_await ctx.number(fillet ? "yaricap" : "mesafe",
                                     fillet ? "Yuvarlatma yarıçapı (metre) — yazın ya da gösterin"
-                                                      : "Köşeden kesilecek mesafe (metre) — yazın ya da "
-                                                        "gösterin",
+                                           : "Köşeden kesilecek mesafe (metre) — yazın ya da "
+                                             "gösterin",
                                     std::move(guide));
     if (!size) co_return;
 
@@ -628,7 +628,7 @@ Task<void> run_fillet(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(chamfer)
+PIRICAD_COMMAND(chamfer)
 {
     return CommandSpec{
         .id       = "core.chamfer",
@@ -674,7 +674,7 @@ KENTOS_COMMAND(chamfer)
     };
 }
 
-KENTOS_COMMAND(fillet)
+PIRICAD_COMMAND(fillet)
 {
     return CommandSpec{
         .id       = "core.fillet",
@@ -706,8 +706,8 @@ KENTOS_COMMAND(fillet)
                                "atlanır")
                     .en("every_corner"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir köşeyi ya da iki nesne (çizgi, yay) arasındaki köşeyi verilen yarıçapta "
                    "yayla yuvarlatır; 0 yarıçap keskin köşe kurar.",
         .run     = &run_fillet,
@@ -715,4 +715,4 @@ KENTOS_COMMAND(fillet)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

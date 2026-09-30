@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the two drawing catalogues under /data/catalogs/dxf.
+// PiriCAD — command: the two drawing catalogues under /data/catalogs/dxf.
 //
 // A hatch PATTERN (ANSI31, NET, …) and a dimension STYLE (ISO-25, STANDARD, …)
 // are data, not code (CLAUDE.md 5.13, data.md R1): the angle of a hatch line and
@@ -13,17 +13,17 @@
 // (`data/catalogs/dxf/...`) and resolved by `resolve_catalog_path`.
 #pragma once
 
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/style.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/style.hpp"
 
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// One named pattern: its line families at scale 1, in pattern micrometres.
 struct HatchPattern
@@ -54,9 +54,9 @@ struct DimensionStyle
     std::int32_t extension_offset_um{625}; ///< gap between a point and its extension line
     std::int32_t text_gap_um{625};         ///< between the dimension line and the text
     std::int32_t text_height_um{2500};     ///< the caption's height
-    std::int32_t baseline_spacing_um{0}; ///< between stacked BAZÖLÇÜ lines; 0: 1,5 × text height
-    std::uint8_t precision{2};           ///< decimals in the text
-    char decimal_separator{','};         ///< `,` or `.`
+    std::int32_t baseline_spacing_um{0};   ///< between stacked BAZÖLÇÜ lines; 0: 1,5 × text height
+    std::uint8_t precision{2};             ///< decimals in the text
+    char decimal_separator{','};           ///< `,` or `.`
 };
 
 /// The dimension style catalogue.
@@ -74,7 +74,7 @@ inline constexpr const char* kDefaultHatchPatternPath   = "data/catalogs/dxf/tar
 inline constexpr const char* kDefaultDimensionStylePath = "data/catalogs/dxf/olcu-stili.json";
 
 /// Where a catalogue path points on this machine: the path as given when it
-/// exists; else under `$KENTOS_DATA` (with the leading `data/` dropped); else
+/// exists; else under `$PIRICAD_DATA` (with the leading `data/` dropped); else
 /// under the source tree this build was configured from. Empty when none holds
 /// the file, so the caller can say which path it looked for.
 std::string resolve_catalog_path(std::string_view configured);
@@ -105,4 +105,4 @@ core::Result<DimensionStyleCatalog> load_dimension_styles(const std::string& pat
 /// Dash sequences are not drawn in this version and the caller says so.
 core::Symbol hatch_symbol(const core::HatchDef& def, std::uint32_t ink_rgba);
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -1,6 +1,6 @@
 # MCP Sunucusu
 
-Bir yapay zeka ajanını çalışan KentOSCad oturumuna bağlamak isteyen harita mühendisi
+Bir yapay zeka ajanını çalışan PiriCAD oturumuna bağlamak isteyen harita mühendisi
 için; bu sayfayı bitirdiğinizde sunucuyu açmayı, istemciye hangi adresi vereceğinizi,
 protokol sürümünün neden tek olduğunu, bir ajanın neyi doğrudan çalıştırıp neyi
 önereceğini ve bağlanamayan bir istemcinin hatasını okumayı bileceksiniz.
@@ -13,7 +13,7 @@ protokol sürümünün neden tek olduğunu, bir ajanın neyi doğrudan çalışt
 ## MCP nedir
 
 **MCP** (Model Context Protocol), bir yapay zeka modelinin ya da ajanının bir programın
-yeteneklerine **araç** olarak erişmesi için kullanılan açık protokoldür. KentOSCad bu
+yeteneklerine **araç** olarak erişmesi için kullanılan açık protokoldür. PiriCAD bu
 protokolü konuşan bir sunucu **gömer**: program açıkken, aynı makinedeki bir ajan
 çizime soru sorabilir ve çizimde yapılmasını istediği işi önerebilir.
 
@@ -72,7 +72,7 @@ http://127.0.0.1:<port>/mcp        (Authorization: Bearer <belirteç>)
 
 **Başlık biçimi tercih edilendir.** Belirtecin adres içinde taşınması, protokolün kendi
 önerisine aykırıdır — bir adres vekil sunucu günlüklerine, tarayıcı geçmişine ve
-`Referer` başlığına düşer. KentOSCad yine de kabul eder, çünkü uç nokta yerel
+`Referer` başlığına düşer. PiriCAD yine de kabul eder, çünkü uç nokta yerel
 döngüdedir ve birçok MCP istemcisine bir adres verilebilirken bir başlık
 öğretilemez. Belirteç, hangi biçimde gelirse gelsin, **hiçbir günlüğe ve hiçbir denetim
 kaydına yazılmaz**; kayda yalnız sekiz haneli bir parmak izi girer, iki istemciyi
@@ -132,7 +132,7 @@ olmalıdır.
 | `server/discover` | Sunucunun kim olduğunu, sürümünü, yeteneklerini ve **Türkçe kullanım yönergesini** döndürür |
 | `tools/list` | Bütün araçları şemalarıyla listeler |
 | `tools/call` | Bir aracı çağırır: okuyan araç çalışır, yazan araç öneri açar |
-| `resources/list` | İki kaynağı listeler: `kentoscad://llms.txt` ve `kentoscad://llms-full.txt` |
+| `resources/list` | İki kaynağı listeler: `piricad://llms.txt` ve `piricad://llms-full.txt` |
 | `resources/read` | O iki kaynağın metnini döndürür |
 | `subscriptions/listen` | Araç yüzeyi değişirse haber veren akışı açık tutar |
 
@@ -171,7 +171,7 @@ Onay bekleme sebebi: Her değişiklikte onay isteniyor.
 
 Kullanıcı `otomatik` seçtiyse öneri hemen uygulanır ve cevap bunu açıkça söyler —
 `BU SATIRLAR UYGULANDI`, `durum: uygulandi`, `_meta` içinde
-`cad.kentos/approval: policy-applied` — ve yine ekler: **uygulayan sen değilsin.**
+`cad.piricad/approval: policy-applied` — ve yine ekler: **uygulayan sen değilsin.**
 İstemci hiçbir hâlde kendisi uygulamaz. `_meta.plan` ile uzatılmak istenen öneri zaten
 uygulanmışsa yeni adım yeni bir öneri olarak açılır ve cevap bunu söyler; çok adımlı bir
 iş böylece ikinci çağrıda kırılmaz.
@@ -181,7 +181,7 @@ istemcisinin kapsamında değildir; çağrı sebebiyle reddedilir ve karta hiç 
 
 **Kuralları sunucu söyler.** `server/discover` cevabının `instructions` alanı, sabit
 kuralların ardından kullanıcının seçtiği onay, soru ve üzerine yazma kurallarını — sohbetteki
-modele söylenen sözlerle — taşır; `_meta` içindeki `cad.kentos/policy` aynı üçünü değer
+modele söylenen sözlerle — taşır; `_meta` içindeki `cad.piricad/policy` aynı üçünü değer
 adlarıyla verir (`onay`, `soru`, `uzerine_yazma`).
 
 **Varsayımlarınızı yazın.** Yazan her aracın şemasında isteğe bağlı bir `varsayimlar`
@@ -255,7 +255,7 @@ reddedilen ya da uygulanamayan bir önerinin durumunda yoktur.
 Bir istemci birkaç adımı **tek bir öneride** toplayabilir: ikinci ve sonraki çağrılarda
 `_meta` içindeki `plan` alanına bekleyen önerinin kimliğini yazar. Adımlar o öneriye
 eklenir ve hepsi tek onayla, tek işlem olarak uygulanır. `_meta` anahtarının iki yazımı
-da okunur: kısa `plan` ve protokolün istediği ön ekli biçim `cad.kentos/plan`.
+da okunur: kısa `plan` ve protokolün istediği ön ekli biçim `cad.piricad/plan`.
 
 ### Aynı isteği iki kez göndermek
 
@@ -274,7 +274,7 @@ Bunun için istemci `_meta` içinde kendi isteğine bir ad verir:
 
 Aynı ad ikinci kez gelirse **yeni öneri açılmaz**: ekrandaki önerinin kimliği döner ve
 cevap "zaten açıktı — aynı istek" der. Kısa `idempotency` ve ön ekli
-`cad.kentos/idempotency` yazımlarının ikisi de okunur.
+`cad.piricad/idempotency` yazımlarının ikisi de okunur.
 
 Anahtar **istemciye özeldir**: iki ajan aynı sözcüğü iki ayrı iş için kullanabilir, ve
 hiçbiri bir anahtarı tahmin ederek bir başkasının önerisine ulaşamaz.
@@ -307,7 +307,7 @@ anlatır.
 
 Bir adrese birden çok ajan bağlanabilir — örneğin bir kod düzenleyicideki ajan ile
 program içindeki sohbet. **Her biri kendi alanında çalışır.** İstemciyi ayıran ad,
-`_meta` içindeki `cad.kentos/client` alanı ile belirtecin sekiz haneli parmak izidir;
+`_meta` içindeki `cad.piricad/client` alanı ile belirtecin sekiz haneli parmak izidir;
 denetim kaydına giren de budur.
 
 | Ne | Kim erişir |

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the spatial index.
+// PiriCAD — core: the spatial index.
 //
-// kentoscad.md §10.5: "Bulk-load STR R-tree — tek tek insert değil." Inserting five
+// piricad.md §10.5: "Bulk-load STR R-tree — tek tek insert değil." Inserting five
 // million parcels one at a time builds a badly balanced tree slowly; packing them
 // bottom-up builds a tight one in a single pass.
 //
@@ -14,14 +14,14 @@
 // traversal reads only the four box arrays — never the geometry.
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Forward-declared: the index is built from the entity columns.
 class EntityTable;
@@ -95,4 +95,4 @@ private:
     std::size_t depth_{0};
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

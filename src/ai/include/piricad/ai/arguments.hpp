@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: a tool call's JSON arguments, compiled into a command's `Args`.
+// PiriCAD — ai: a tool call's JSON arguments, compiled into a command's `Args`.
 //
 // ONE COMPILER FOR EVERY AGENT ROAD. The MCP server and the in-app chat used to
 // compile arguments two ways: the server resolved a handle into the points it
@@ -23,16 +23,16 @@
 // exists (ai.md R10).
 #pragma once
 
-#include "kentos_cad/ai/handles.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/command/value.hpp"
-#include "kentos_cad/core/json.hpp"
+#include "piricad/ai/handles.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/command/value.hpp"
+#include "piricad/core/json.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// What compiling one call's arguments produced.
 struct CompiledArguments
@@ -78,4 +78,4 @@ CompiledArguments compile_arguments(const command::CommandSpec& spec, const core
 /// engineer cannot read is a suggestion they cannot be responsible for.
 std::string render_line(const command::CommandSpec& spec, const command::Args& args);
 
-} // namespace kentos::ai
+} // namespace piricad::ai

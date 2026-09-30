@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/core/text.hpp"
 
 #include <QHBoxLayout>
 #include <QIcon>
@@ -12,7 +12,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 // `design.md` §8–§10, measured off `stil.png` and `seçenekler.png`.
@@ -338,4 +338,4 @@ void ToggleSwitch::paintEvent(QPaintEvent*)
     }
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the component set, and the only place a control is made.
+// PiriCAD — app: the component set, and the only place a control is made.
 //
 // WHY THIS FILE EXISTS. `Screenshots/bileşen_standardı.png` is the component
 // standard: six kinds of button in one hierarchy, an input with seven states
@@ -30,8 +30,8 @@
 // `theme.cpp` styles. Either way there is one palette (design.md §2, §12).
 #pragma once
 
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -54,7 +54,7 @@ class QSlider;
 class QTimer;
 class QVBoxLayout;
 
-namespace kentos::app {
+namespace piricad::app {
 
 // =============================================================================
 // Sizes and tones — the two vocabularies every component shares
@@ -121,7 +121,7 @@ enum class ButtonRole : std::uint8_t {
 class Button : public QPushButton, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// A labelled button. `glyph` is optional and sits before the text, 16 px.
@@ -192,7 +192,7 @@ private:
 class CheckBox : public QAbstractButton, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds a box with `text` at its right. Three states through `setCheckState`;
@@ -230,7 +230,7 @@ private:
 class RadioButton : public QAbstractButton, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds a radio with `text` at its right; exclusive among its siblings, as Qt's is.
@@ -262,7 +262,7 @@ private:
 class Segment : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty control. `addOption` fills it; the first option added is lit.
@@ -313,7 +313,7 @@ private:
 class ComboBox : public QComboBox, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty list at the standard's regular height.
@@ -350,7 +350,7 @@ private:
 class Slider : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds a 0–100 slider with its readout at the right.
@@ -391,7 +391,7 @@ private:
 class Chip : public QAbstractButton, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds a pill reading `text`, inked and washed from `colour`. `setCheckable(true)`
@@ -433,7 +433,7 @@ private:
 class Badge : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds a 14 px badge reading `text` in `tone`.
@@ -477,7 +477,7 @@ private:
 class Banner : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds a banner in `tone`: a coloured left edge, the tone's glyph, `title` in
@@ -515,7 +515,7 @@ private:
 class ProgressStrip : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds a stopped strip: 2 px high, as wide as its owner makes it.
@@ -563,7 +563,7 @@ private:
 class FormRow : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Takes ownership of `editor` and places it under `label`.
@@ -604,7 +604,7 @@ private:
 class FormSection : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the heading: `title` in small caps, a rule to the right edge, `note` at
@@ -661,7 +661,7 @@ enum class Speaker : std::uint8_t {
 class ThinkingDot : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds stopped dots; they start when the widget is shown.
@@ -714,7 +714,7 @@ private:
 class MessageBubble : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty bubble for `speaker`. A `Model` bubble carries the `ÖNERİ`
@@ -790,7 +790,7 @@ private:
 class Transcript : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty transcript showing its placeholder.
@@ -846,7 +846,7 @@ private:
 class AttachmentChip : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// `name` is the file's own name and `bytes` its size; `media` is its media
@@ -897,7 +897,7 @@ private:
 class ContextMeter : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds a meter reading zero of an unknown window.
@@ -938,7 +938,7 @@ QString formatByteCount(qint64 bytes);
 /// Builds a window showing every component in every state, laid out as
 /// `bileşen_standardı.png` is.
 ///
-/// It is the standard made runnable: `KENTOS_WIDGETS_PROBE` opens it, prints an
+/// It is the standard made runnable: `PIRICAD_WIDGETS_PROBE` opens it, prints an
 /// inventory the gate reads, and photographs it when given a directory — which
 /// is how the picture in `docs/baslangic/bilesenler.md` is regenerated
 /// (docs.md R15) and how a change to a component is seen before it is shipped.
@@ -947,4 +947,4 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent = nullptr);
 /// One line per component on the sheet — kind, state, height — for the gate.
 QStringList componentSheetInventory(QWidget* sheet);
 
-} // namespace kentos::app
+} // namespace piricad::app

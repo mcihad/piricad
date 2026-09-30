@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Test suites. kentoscad.md §9.11 / §14 name six kinds; Phase 0 ships unit + journal.
+# Test suites. piricad.md §9.11 / §14 name six kinds; Phase 0 ships unit + journal.
 #
 #   unit     logic
 #   golden   bit-identical cross-platform reference output   (Phase 1)
@@ -8,7 +8,7 @@
 #   journal  recorded real sessions, replayed nightly        (seeded here)
 #   ai-eval  200-300 Turkish requests -> expected commands   (Phase 3)
 
-add_executable(kentos_tests
+add_executable(piricad_tests
     unit/main.cpp
     unit/test_core.cpp
     unit/test_command.cpp
@@ -81,42 +81,42 @@ add_executable(kentos_tests
 
 # The manual's examples are executed straight out of the Markdown, so there is no
 # second copy of them to drift (.claude/docs.md R10).
-target_compile_definitions(kentos_tests PRIVATE
-    KENTOS_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs"
-    KENTOS_JOURNAL_DIR="${CMAKE_SOURCE_DIR}/tests/journal"
-    KENTOS_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/tests/golden"
-    KENTOS_DATA_DIR="${CMAKE_SOURCE_DIR}/data"
-    KENTOS_FUZZ_DIR="${CMAKE_SOURCE_DIR}/tests/fuzz"
-    KENTOS_EVAL_DIR="${CMAKE_SOURCE_DIR}/tests/ai-eval"
+target_compile_definitions(piricad_tests PRIVATE
+    PIRICAD_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs"
+    PIRICAD_JOURNAL_DIR="${CMAKE_SOURCE_DIR}/tests/journal"
+    PIRICAD_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/tests/golden"
+    PIRICAD_DATA_DIR="${CMAKE_SOURCE_DIR}/data"
+    PIRICAD_FUZZ_DIR="${CMAKE_SOURCE_DIR}/tests/fuzz"
+    PIRICAD_EVAL_DIR="${CMAKE_SOURCE_DIR}/tests/ai-eval"
 )
 
-if(KENTOS_WITH_DWG)
+if(PIRICAD_WITH_DWG)
     # io.md R14 wants DWG coverage measured against REAL files. LibreDWG ships
     # ten of its own, spanning r13 to 2018, and they are GPLv3 like the library —
     # so they can be read here without a licence question. They are not a
     # substitute for R14's fifty-file corpus of Turkish cadastral drawings; they
     # are what makes the reader testable before that corpus exists.
-    target_compile_definitions(kentos_tests PRIVATE
-        KENTOS_DWG_SAMPLES="${libredwg_SOURCE_DIR}/test/test-data")
+    target_compile_definitions(piricad_tests PRIVATE
+        PIRICAD_DWG_SAMPLES="${libredwg_SOURCE_DIR}/test/test-data")
 endif()
 
-target_include_directories(kentos_tests PRIVATE support)
-target_link_libraries(kentos_tests PRIVATE
+target_include_directories(piricad_tests PRIVATE support)
+target_link_libraries(piricad_tests PRIVATE
     doctest::doctest
-    kentos_core
-    kentos_command
-    kentos_io
-    kentos_processing
-    kentos_ai
-    kentos_domain_geodesy
-    kentos_domain_cadastre
-    kentos_domain_surface
-    kentos_render
-    kentos_script
-    kentos_flags
+    piricad_core
+    piricad_command
+    piricad_io
+    piricad_processing
+    piricad_ai
+    piricad_domain_geodesy
+    piricad_domain_cadastre
+    piricad_domain_surface
+    piricad_render
+    piricad_script
+    piricad_flags
 )
 
-set_target_properties(kentos_tests PROPERTIES
+set_target_properties(piricad_tests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
@@ -125,7 +125,7 @@ set_target_properties(kentos_tests PROPERTIES
 # manual writes catalogue paths the way a user types them — relative to the project
 # root that holds /data. Running them from elsewhere would test a working directory
 # rather than the example.
-add_test(NAME unit COMMAND kentos_tests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+add_test(NAME unit COMMAND piricad_tests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 # ------------------------------------------------------------- shell start-up --
 # The application must REACH its first frame. Nothing else in the suite runs the
@@ -138,28 +138,28 @@ add_test(NAME unit COMMAND kentos_tests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 # `--version` IS NOT ENOUGH, and that is not a guess: it was the first version of
 # this test and it passed while `make run` segfaulted. QCommandLineParser answers
 # --version and exits before `MainWindow` is ever constructed, so the test proved
-# only that the parser worked. `KENTOS_FRAME_DUMP` builds the whole shell, paints
+# only that the parser worked. `PIRICAD_FRAME_DUMP` builds the whole shell, paints
 # one frame and exits — which is the thing that has to keep working.
-if(TARGET kentos_cad)
+if(TARGET piricad)
     add_test(NAME shell-starts
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                "KENTOS_FRAME_DUMP=${CMAKE_CURRENT_BINARY_DIR}/shell-starts.png"
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                "PIRICAD_FRAME_DUMP=${CMAKE_CURRENT_BINARY_DIR}/shell-starts.png"
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(shell-starts PROPERTIES TIMEOUT 120)
 
     # And every WINDOW, not only the shell. A dialog that crashes the moment it
     # opens passed `shell-starts` twice — once when a null was connected to, and
     # once when a theme walk recursed into itself — because nothing in the suite
-    # had ever constructed one. `KENTOS_SMOKE` opens the style designer, the
+    # had ever constructed one. `PIRICAD_SMOKE` opens the style designer, the
     # attribute table, the settings window and the command palette in turn.
     add_test(NAME windows-open
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_SMOKE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_SMOKE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(windows-open PROPERTIES TIMEOUT 120)
 
     # And the MOUSE, not only the windows. `unit` links no Qt, so it proves that
@@ -172,9 +172,9 @@ if(TARGET kentos_cad)
     add_test(NAME canvas-edits
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_EDIT_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_EDIT_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(canvas-edits PROPERTIES TIMEOUT 120)
 
     # HOW MUCH OF THE PROGRAM A HAND CAN REACH, and it has to be all of it.
@@ -186,9 +186,9 @@ if(TARGET kentos_cad)
     add_test(NAME tool-reach
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_REACH_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_REACH_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(tool-reach PROPERTIES TIMEOUT 120)
 
     # THE STATUS STRIP UNDER A LONG MESSAGE, in pixels. Its right end holds three
@@ -202,9 +202,9 @@ if(TARGET kentos_cad)
     add_test(NAME status-strip
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_STRIP_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_STRIP_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(status-strip PROPERTIES TIMEOUT 120)
 
     # THE WINDOW ON A LAPTOP. The tool column was a vertical box whose full
@@ -217,9 +217,9 @@ if(TARGET kentos_cad)
     add_test(NAME window-fits
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_FIT_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_FIT_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(window-fits PROPERTIES TIMEOUT 120)
 
     # DRAWING, THE WAY A REAL MOUSE ARRIVES. Every other probe sends its events
@@ -233,9 +233,9 @@ if(TARGET kentos_cad)
     add_test(NAME real-mouse
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_REALMOUSE_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_REALMOUSE_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(real-mouse PROPERTIES TIMEOUT 180)
 
     # AND THE TOOL FAMILIES, opened with a real mouse. Eleven tools live only
@@ -247,9 +247,9 @@ if(TARGET kentos_cad)
     add_test(NAME tool-flyouts
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_FLYOUT_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_FLYOUT_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(tool-flyouts PROPERTIES TIMEOUT 180)
 
     # AND WHETHER A HAND CAN ANSWER what a pressed tool asks. Reachability says
@@ -265,9 +265,9 @@ if(TARGET kentos_cad)
     add_test(NAME os-clipboard
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_CLIP_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_CLIP_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(os-clipboard PROPERTIES TIMEOUT 120)
 
     # AND THE ROAD A SCREEN READER TAKES. `tool-reach` walks the actions,
@@ -282,17 +282,17 @@ if(TARGET kentos_cad)
     add_test(NAME tool-accessible
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_ACCESS_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_ACCESS_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(tool-accessible PROPERTIES TIMEOUT 180)
 
     add_test(NAME tool-answerable
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_ANSWER_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_ANSWER_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(tool-answerable PROPERTIES TIMEOUT 120)
 
     # AND THE MENUS THEMSELVES, opened. A menu is not in the window until it is
@@ -302,9 +302,9 @@ if(TARGET kentos_cad)
     add_test(NAME menu-bar
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_MENU_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_MENU_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(menu-bar PROPERTIES TIMEOUT 120)
 
     # AND YARDIM → KOMUT LİSTESİ. The answer used to be the whole generated
@@ -316,9 +316,9 @@ if(TARGET kentos_cad)
     add_test(NAME help-page
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_HELP_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_HELP_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(help-page PROPERTIES TIMEOUT 120)
 
     # AND THE LAST COMMAND AGAIN (`TERCİH son_komut`). The keys are the feature —
@@ -328,9 +328,9 @@ if(TARGET kentos_cad)
     add_test(NAME repeat-last
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_REPEAT_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_REPEAT_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(repeat-last PROPERTIES TIMEOUT 120)
 
     # AND THE VIEW HISTORY (`YAKINLAŞ ÖNCEKİ`, `SONRAKİ`). The rule is held by
@@ -340,9 +340,9 @@ if(TARGET kentos_cad)
     add_test(NAME view-history
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_VIEW_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_VIEW_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(view-history PROPERTIES TIMEOUT 120)
 
     # AND A COMMAND'S OFFER (`command::Offer`): the banner over the canvas, the
@@ -350,9 +350,9 @@ if(TARGET kentos_cad)
     add_test(NAME offer-banner
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_OFFER_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_OFFER_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(offer-banner PROPERTIES TIMEOUT 120)
 
     # AND THE PROMPT TABS (`.claude/ui.md` R48a): the Seçim tab while a command
@@ -361,9 +361,9 @@ if(TARGET kentos_cad)
     add_test(NAME prompt-tabs
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_PROMPT_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_PROMPT_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(prompt-tabs PROPERTIES TIMEOUT 120)
 
     # AND THE PLOT. A PDF is written by Qt, so `unit` cannot see one: this runs
@@ -375,9 +375,9 @@ if(TARGET kentos_cad)
     add_test(NAME print-pdf
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                "KENTOS_PRINT_PROBE=${CMAKE_CURRENT_BINARY_DIR}/yazdirma-denemesi"
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                "PIRICAD_PRINT_PROBE=${CMAKE_CURRENT_BINARY_DIR}/yazdirma-denemesi"
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(print-pdf PROPERTIES TIMEOUT 120)
 
     # AND THE AGENT LISTENER, over a real socket. `unit` proves every conformance
@@ -388,9 +388,9 @@ if(TARGET kentos_cad)
     add_test(NAME mcp-server
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_MCP_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_MCP_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(mcp-server PROPERTIES TIMEOUT 120)
 
     # AND THE CHAT DOCK, driven by a recorded stream. `test_ai_chat.cpp` proves
@@ -408,17 +408,17 @@ if(TARGET kentos_cad)
     add_test(NAME layout-designer
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                "KENTOS_LAYOUT_PROBE=${CMAKE_CURRENT_BINARY_DIR}/yerlesim-denemesi"
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                "PIRICAD_LAYOUT_PROBE=${CMAKE_CURRENT_BINARY_DIR}/yerlesim-denemesi"
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(layout-designer PROPERTIES TIMEOUT 120)
 
     add_test(NAME chat
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_CHAT_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_CHAT_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(chat PROPERTIES TIMEOUT 120)
 
     # The Python prompt's completion and signature hint, driven by real key
@@ -427,18 +427,18 @@ if(TARGET kentos_cad)
     add_test(NAME python-editor
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                KENTOS_PYTHON_PROBE=1
-                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
-                $<TARGET_FILE:kentos_cad>)
+                PIRICAD_PYTHON_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
     set_tests_properties(python-editor PROPERTIES TIMEOUT 120)
 endif()
 
 # Every gate script runs as a test, so a violation fails `ctest`, not only CI.
 # Discovered rather than listed: a new gate is picked up by re-running CMake, and
 # there is no second list to keep in sync (CLAUDE.md 5.10, in spirit).
-file(GLOB KENTOS_GATES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/ci-gate-*.sh")
-file(GLOB KENTOS_GATES_PY CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/ci-gate-*.py")
-foreach(_gate IN LISTS KENTOS_GATES)
+file(GLOB PIRICAD_GATES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/ci-gate-*.sh")
+file(GLOB PIRICAD_GATES_PY CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/ci-gate-*.py")
+foreach(_gate IN LISTS PIRICAD_GATES)
     get_filename_component(_name "${_gate}" NAME_WE)
     add_test(NAME ${_name}
         COMMAND "${CMAKE_COMMAND}" -E env bash "${_gate}"
@@ -447,24 +447,24 @@ endforeach()
 
 # A gate that has to read a catalogue is written in Python rather than bent into
 # shell. It runs the same way and fails the same way; only the interpreter differs.
-foreach(_gate IN LISTS KENTOS_GATES_PY)
+foreach(_gate IN LISTS PIRICAD_GATES_PY)
     get_filename_component(_name "${_gate}" NAME_WE)
     add_test(NAME ${_name}
         COMMAND "${CMAKE_COMMAND}" -E env python3 "${_gate}"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 endforeach()
-list(APPEND KENTOS_GATES ${KENTOS_GATES_PY})
+list(APPEND PIRICAD_GATES ${PIRICAD_GATES_PY})
 
-if(NOT KENTOS_GATES)
+if(NOT PIRICAD_GATES)
     message(FATAL_ERROR "No CI gate scripts found in ${CMAKE_SOURCE_DIR}/scripts")
 endif()
 
 # ---------------------------------------------------------------- benchmarks --
-# kentoscad.md §10.1 budgets as gates. Kept out of `ctest` by default because the
+# piricad.md §10.1 budgets as gates. Kept out of `ctest` by default because the
 # 5M-parcel fixture takes seconds and a baseline is machine-specific; CI runs it
 # as its own job. `make bench` is the local entry point.
 
-add_executable(kentos_bench
+add_executable(piricad_bench
     bench/main.cpp
     bench/support.cpp
     bench/bench_command.cpp
@@ -475,30 +475,30 @@ add_executable(kentos_bench
     bench/bench_snap.cpp
 )
 
-target_include_directories(kentos_bench PRIVATE support bench)
-target_compile_definitions(kentos_bench PRIVATE
-    KENTOS_BENCH_DIR="${CMAKE_SOURCE_DIR}/tests/bench"
+target_include_directories(piricad_bench PRIVATE support bench)
+target_compile_definitions(piricad_bench PRIVATE
+    PIRICAD_BENCH_DIR="${CMAKE_SOURCE_DIR}/tests/bench"
 )
-target_link_libraries(kentos_bench PRIVATE
+target_link_libraries(piricad_bench PRIVATE
     benchmark::benchmark
-    kentos_core
-    kentos_command
-    kentos_domain_cadastre
-    kentos_io
-    kentos_render
-    kentos_script
-    kentos_flags
+    piricad_core
+    piricad_command
+    piricad_domain_cadastre
+    piricad_io
+    piricad_render
+    piricad_script
+    piricad_flags
 )
-set_target_properties(kentos_bench PROPERTIES
+set_target_properties(piricad_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
-if(KENTOS_BUILD_BENCH)
-    add_test(NAME bench COMMAND kentos_bench)
+if(PIRICAD_BUILD_BENCH)
+    add_test(NAME bench COMMAND piricad_bench)
 endif()
 
 # ------------------------------------------------------------------- fuzz ----
 # .claude/io.md R19: every parser has a libFuzzer target. Off by default and
-# Clang-only; the seed corpora are replayed by kentos_tests regardless, so they
+# Clang-only; the seed corpora are replayed by piricad_tests regardless, so they
 # defend the reader on every build (tests/unit/test_io.cpp).
 add_subdirectory(fuzz)

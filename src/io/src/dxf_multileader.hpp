@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: a DXF's MULTILEADERs, which libdxfrw does not read (TODOS C-12).
+// PiriCAD — io: a DXF's MULTILEADERs, which libdxfrw does not read (TODOS C-12).
 //
 // GDAL'S DXF DRIVER READS THEM (CLAUDE.md 5.16): a leader's lines and its
 // landing, its arrowhead as a filled outline, its words with their anchor,
@@ -9,12 +9,12 @@
 // does not have.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// A point as the file writes it, in the file's own units.
 struct DxfXY
@@ -45,4 +45,4 @@ bool dxf_multileaders_supported() noexcept;
 /// file's code page says, as a DXF 2007 or later always is.
 core::Result<std::vector<DxfMultiLeader>> read_dxf_multileaders(const std::string& path, bool utf8);
 
-} // namespace kentos::io
+} // namespace piricad::io

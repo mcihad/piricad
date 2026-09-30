@@ -1,4 +1,4 @@
-# KentOSCad - Türkiye Odaklı CBS + CAD Harita Yazılımı — Teknik Referans ve Yol Haritası
+# PiriCAD - Türkiye Odaklı CBS + CAD Harita Yazılımı — Teknik Referans ve Yol Haritası
 
 **Sürüm 2** · Ağustos 2026
 

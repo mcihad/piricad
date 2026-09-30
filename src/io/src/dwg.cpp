@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/io/dwg.hpp"
+#include "piricad/io/dwg.hpp"
 
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/core/units.hpp"
 
 #include "dxf_units.hpp"
 
-#ifdef KENTOS_HAVE_DWG
+#ifdef PIRICAD_HAVE_DWG
 // io.md R2: the format library's headers never leave this translation unit.
 // LibreDWG is C, and `dwg.h` is a 12 000-line header that defines `restrict`
 // and a hundred BITCODE_* macros; letting it into a public header would put all
@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 using core::ErrorCode;
@@ -41,7 +41,7 @@ constexpr const char* kErrNoBackend = "io.no_dwg";
 
 bool dwg_backend_available()
 {
-#ifdef KENTOS_HAVE_DWG
+#ifdef PIRICAD_HAVE_DWG
     return true;
 #else
     return false;
@@ -50,15 +50,15 @@ bool dwg_backend_available()
 
 std::string dwg_backend_status()
 {
-#ifdef KENTOS_HAVE_DWG
+#ifdef PIRICAD_HAVE_DWG
     return {};
 #else
     return "Bu yapı LibreDWG ile derlenmedi; DWG okunamaz. "
-           "-DKENTOS_WITH_DWG=ON ile yeniden yapılandırın.";
+           "-DPIRICAD_WITH_DWG=ON ile yeniden yapılandırın.";
 #endif
 }
 
-#ifndef KENTOS_HAVE_DWG
+#ifndef PIRICAD_HAVE_DWG
 
 command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std::string path,
                                                   ImportOptions options, std::stop_token stop)
@@ -420,4 +420,4 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
 
 #endif
 
-} // namespace kentos::io
+} // namespace piricad::io

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: find a word in the drawing's captions, see, then change.
+// PiriCAD — app: find a word in the drawing's captions, see, then change.
 //
 // THE DIALOG IS A FACE ON BULDEĞİŞTİR (TODOS C-12). It never reads a caption
 // itself and never writes one: "Tümünü Bul" sends the command without a
@@ -15,7 +15,7 @@
 // window makes.
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
+#include "piricad/app/dialog_chrome.hpp"
 
 #include <QString>
 
@@ -24,7 +24,7 @@
 class QLabel;
 class QTableWidget;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -89,4 +89,4 @@ private:
     QString previewed_; ///< the preview line the table shows, empty when none
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

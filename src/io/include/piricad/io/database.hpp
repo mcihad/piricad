@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: the database engine, plugged into the command bus.
+// PiriCAD — io: the database engine, plugged into the command bus.
 //
 // The same seam `FileService` uses, for the same reason: Article 3.2 makes
 // `io -> command` one-way, but the registry that generates the CLI help, the AI
@@ -9,20 +9,20 @@
 // through `Bus::on_database_request`, which this class installs.
 //
 // A client that never installs a DatabaseService — or a build configured without
-// `KENTOS_WITH_POSTGIS` — gets a clear "Veritabanı motoru bağlı değil." from the
+// `PIRICAD_WITH_POSTGIS` — gets a clear "Veritabanı motoru bağlı değil." from the
 // command rather than a crash. That is deliberate: this header compiles and this
 // class constructs in BOTH configurations, so nothing downstream needs an `#ifdef`
 // around its existence (build.md's rule about optional dependencies staying
 // invisible to their callers).
 #pragma once
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/result.hpp"
 
 #include <memory>
 #include <string>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// Owns one database connection for exactly one `Bus`, and therefore for exactly
 /// one document.
@@ -65,4 +65,4 @@ private:
     std::string target_;
 };
 
-} // namespace kentos::io
+} // namespace piricad::io

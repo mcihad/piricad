@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/command_palette.hpp"
+#include "piricad/app/command_palette.hpp"
 
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/text.hpp"
 
 #include <QAbstractItemView>
 #include <QHBoxLayout>
@@ -20,7 +20,7 @@
 
 #include <algorithm>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 // WIDER AND TALLER THAN IT WAS, because the summaries are sentences. At 560 px
@@ -590,4 +590,4 @@ void CommandPalette::paintEvent(QPaintEvent*)
     p.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), kRadius, kRadius);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

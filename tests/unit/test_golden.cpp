@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// kentoscad.md §7.3 / §10.5: golden output must be identical, bit for bit, on
+// piricad.md §7.3 / §10.5: golden output must be identical, bit for bit, on
 // Linux, Windows and macOS in the same CI run. A cadastral area is a legal figure
 // and may not depend on the machine that produced it.
 //
@@ -8,16 +8,16 @@
 // deterministic text dump, which is diffed against the stored fixture. The dump
 // is readable on purpose: when a platform disagrees, the diff must say which
 // vertex moved, not merely that a hash changed.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -26,8 +26,8 @@
 #include <sstream>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -150,7 +150,7 @@ std::string dump_document(const core::Document& doc)
 /// machine's checkout, so it is the same file on every machine.
 const std::string& seeds_dir()
 {
-    static const std::string dir = std::string(KENTOS_FUZZ_DIR) + "/tohum";
+    static const std::string dir = std::string(PIRICAD_FUZZ_DIR) + "/tohum";
     return dir;
 }
 
@@ -273,7 +273,7 @@ bool run_into(Rig& rig, const fs::path& scenario, std::string& error)
 std::vector<fs::path> scenarios()
 {
     std::vector<fs::path> out;
-    const fs::path dir{KENTOS_GOLDEN_DIR "/senaryolar"};
+    const fs::path dir{PIRICAD_GOLDEN_DIR "/senaryolar"};
     if (!fs::exists(dir)) return out;
 
     for (const auto& entry : fs::directory_iterator(dir)) {
@@ -288,8 +288,8 @@ std::vector<fs::path> scenarios()
 
 TEST_CASE("GOLDEN: her senaryo kayıtlı çıktısıyla bit-birebir eşleşir")
 {
-    const bool update = std::getenv("KENTOS_GOLDEN_UPDATE") != nullptr;
-    const fs::path expected_dir{KENTOS_GOLDEN_DIR "/beklenen"};
+    const bool update = std::getenv("PIRICAD_GOLDEN_UPDATE") != nullptr;
+    const fs::path expected_dir{PIRICAD_GOLDEN_DIR "/beklenen"};
     fs::create_directories(expected_dir);
 
     const auto files = scenarios();
@@ -315,7 +315,7 @@ TEST_CASE("GOLDEN: her senaryo kayıtlı çıktısıyla bit-birebir eşleşir")
         if (!fs::exists(expected_path)) {
             FAIL_WITH(scenario.filename().string().c_str(),
                       "kayıtlı çıktı yok: " + expected_path.string() +
-                          "  (KENTOS_GOLDEN_UPDATE=1 ile üretin)");
+                          "  (PIRICAD_GOLDEN_UPDATE=1 ile üretin)");
             continue;
         }
 

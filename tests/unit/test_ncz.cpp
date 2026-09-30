@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — tests: the Netcad NCZ reader (io/ncz.hpp).
+// PiriCAD — tests: the Netcad NCZ reader (io/ncz.hpp).
 //
 // The seeds are synthetic drawings written by scripts/ncz-tohum.py; a real plan
-// is read only when KENTOS_TEST_NCZ names one, because a user's NCZ is their
+// is read only when PIRICAD_TEST_NCZ names one, because a user's NCZ is their
 // municipality's data and never enters the repository.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/domain/geodesy/crs_catalog.hpp"
-#include "kentos_cad/domain/geodesy/crs_service.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/io/vector.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/domain/geodesy/crs_catalog.hpp"
+#include "piricad/domain/geodesy/crs_service.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/io/vector.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -23,8 +23,8 @@
 #include <utility>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 namespace fs = std::filesystem;
 
 namespace {
@@ -53,7 +53,7 @@ struct Rig
 
 std::string seed(const char* name)
 {
-    return (fs::path(KENTOS_FUZZ_DIR) / "tohum" / "ncz" / name).string();
+    return (fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "ncz" / name).string();
 }
 
 using Corner = std::pair<core::Mm, core::Mm>; ///< easting, northing
@@ -302,8 +302,8 @@ TEST_CASE("NCZ: sistem bildirmeyen dosyada pafta sakladığı kutuyla çizilir v
 
 TEST_CASE("NCZ: gerçek bir planın pafta indeksi boşluksuz ve bindirmesiz döşenir")
 {
-    const char* real = std::getenv("KENTOS_TEST_NCZ");
-    if (real == nullptr) PENDING("KENTOS_TEST_NCZ bir .ncz dosyası göstermiyor.");
+    const char* real = std::getenv("PIRICAD_TEST_NCZ");
+    if (real == nullptr) PENDING("PIRICAD_TEST_NCZ bir .ncz dosyası göstermiyor.");
     if (!io::vector_backend_available())
         PENDING("GDAL kapalı; paftanın gerçek çerçevesi bu yapıda kurulamaz.");
     Rig rig;
@@ -467,7 +467,7 @@ TEST_CASE("NCZ: Netcad 8 akıllı nesneleri sembol bloğu olarak çizilir, değe
 
 TEST_CASE("NCZ: dosyanın dilimi çizimin diliminden farklıysa dönüştürülmeden okunur ve söylenir")
 {
-    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
     REQUIRE(catalogue.ok());
     Rig rig;
     domain::geodesy::CrsService service(rig.bus, std::move(catalogue.value()));

@@ -13,15 +13,15 @@
 // parallel, and re-writes the figure to the new length — at that command's
 // commit, in its one undo step. The rule that places it here is the rule that
 // re-places it then; there is one of them, in core.
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 
-namespace kentos::processing {
+namespace piricad::processing {
 namespace {
 
 core::DrawingUnit unit_named(const std::string& word)
@@ -132,10 +132,10 @@ public:
 
 private:
     const ToolSpec spec_{
-        .id     = "islem.uzunluk_yaz",
-        .python = "label_length",
-        .names  = {"UZUNLUKYAZ", "UZUNLUKYAZ", "LABELLENGTH", "UZY"},
-        .title  = "Kenar uzunluklarını yaz",
+        .id      = "islem.uzunluk_yaz",
+        .python  = "label_length",
+        .names   = {"UZUNLUKYAZ", "UZUNLUKYAZ", "LABELLENGTH", "UZY"},
+        .title   = "Kenar uzunluklarını yaz",
         .summary = "Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir "
                    "yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.",
         .group   = "Etiketleme",
@@ -180,10 +180,10 @@ private:
 
 } // namespace
 
-KENTOS_PROCESSING_TOOL(label_length)
+PIRICAD_PROCESSING_TOOL(label_length)
 {
     static const LabelLength tool;
     return tool;
 }
 
-} // namespace kentos::processing
+} // namespace piricad::processing

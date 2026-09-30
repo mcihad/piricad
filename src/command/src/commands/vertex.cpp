@@ -18,28 +18,28 @@
 // off the same drawing the program numbered, and a surveyor counting corners on a
 // parsel starts at one. Ring-and-offset is what this converts to internally, and
 // it never reaches a command line or a journal line.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/command/path_edit.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/grips.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/spline.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/command/path_edit.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/grips.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/spline.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// Millimetres as the metres a user reads, three decimals, Turkish comma.
@@ -1097,7 +1097,7 @@ Task<void> run_edge_kind(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(vertex_move)
+PIRICAD_COMMAND(vertex_move)
 {
     return CommandSpec{
         .id       = "core.vertex_move",
@@ -1132,7 +1132,7 @@ KENTOS_COMMAND(vertex_move)
     };
 }
 
-KENTOS_COMMAND(vertex_delete)
+PIRICAD_COMMAND(vertex_delete)
 {
     return CommandSpec{
         .id       = "core.vertex_delete",
@@ -1158,8 +1158,8 @@ KENTOS_COMMAND(vertex_delete)
                       "silinir"}
                     .en("shared_point"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir çizginin, alanın, yaylı çoklu çizginin ya da spline'ın köşesini siler; "
                    "iki kenar tek kenar olur.",
         .run     = &run_delete,
@@ -1167,7 +1167,7 @@ KENTOS_COMMAND(vertex_delete)
     };
 }
 
-KENTOS_COMMAND(edge_kind)
+PIRICAD_COMMAND(edge_kind)
 {
     return CommandSpec{
         .id       = "core.edge_kind",
@@ -1194,8 +1194,8 @@ KENTOS_COMMAND(edge_kind)
                       "tur=yay için yayın geçeceği nokta"}
                     .en("point"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir kenarın türünü değiştirir: düz kenarı bir noktadan geçen yaya, yayı düz "
                    "kenara çevirir; nesnenin kimliği korunur.",
         .run     = &run_edge_kind,
@@ -1203,7 +1203,7 @@ KENTOS_COMMAND(edge_kind)
     };
 }
 
-KENTOS_COMMAND(vertex_insert)
+PIRICAD_COMMAND(vertex_insert)
 {
     return CommandSpec{
         .id       = "core.vertex_insert",
@@ -1232,4 +1232,4 @@ KENTOS_COMMAND(vertex_insert)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

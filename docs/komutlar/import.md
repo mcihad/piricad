@@ -15,7 +15,7 @@ varsa nesneler ona konur.
 eklenen her şey geri alınır ve çiziminiz içe aktarmadan önceki hâlinde kalır.
 Yarım aktarılmış bir veri kümesi bırakılmaz.
 
-Bir KentOSCad proje dosyası (`.pcad`) içe aktarılmaz, **açılır**:
+Bir PiriCAD proje dosyası (`.pcad`) içe aktarılmaz, **açılır**:
 [AÇ](open.md) kullanın.
 
 Hangi biçimlerin okunduğu ve neyin taşındığı:
@@ -109,7 +109,7 @@ Katman adında virgül bulunamaz (AutoCAD de izin vermez), bu yüzden ayıraç
 belirsiz değildir.
 
 **DXF ve koordinat sistemi.** DXF biçiminin koordinat sistemi için yeri yoktur.
-KentOSCad önce aynı adlı `.prj` dosyasını arar; bulamazsa **çizimin kendi
+PiriCAD önce aynı adlı `.prj` dosyasını arar; bulamazsa **çizimin kendi
 sistemini varsayar ve bunu transkriptte açıkça söyler**:
 
 ```text
@@ -239,7 +239,7 @@ Nesne eşlemesi, akıllı nesneler, pafta çerçeveleri, koordinat sistemi ve ra
 
 ### Arayüz
 
-**KentOS CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** **İçe Aktar
+**PiriCAD CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** **İçe Aktar
 penceresini** açar. Pencere tek sayfadır: üstte dosya, ortada dosyanın çizimi, sağda katmanlar
 ve alanlar, altta pencerenin çalıştıracağı komut satırı.
 
@@ -361,7 +361,7 @@ satırından, betikten ya da yapay zekâ önerisinden gelmiş olması fark etmez
 | `'...' okunabilir çizgi ya da alan içermiyor` | Dosyada çizgi, alan, nokta ya da yazı yok; ya da hepsi kâğıt alanında | Dosyayı bir CAD programında açıp model alanında ne olduğuna bakın |
 | `'...' içindeki N. öğe okunamadı: ...` | Geometri doğrulamayı geçemedi | Mesajın devamı sebebi söyler; kaynak veriyi düzeltin |
 | `'...' sanal dosya sistemi yolu.` | `/vsi...` ile başlayan yol | Dosyayı diske alıp yeniden deneyin |
-| `'...' bir KentOSCad proje dosyası. Proje dosyası açılır, içe aktarılmaz: AÇ komutunu kullanın.` | `.pcad` içe aktarılmaya çalışıldı | [AÇ](open.md) kullanın |
+| `'...' bir PiriCAD proje dosyası. Proje dosyası açılır, içe aktarılmaz: AÇ komutunu kullanın.` | `.pcad` içe aktarılmaya çalışıldı | [AÇ](open.md) kullanın |
 | `'...' katmanı kilitli.` | Hedef katman kilitli | Katmanın kilidini açın |
 | `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortam | Uygulama içinden çalıştırın |
 | `Dosya coğrafi koordinatlarda (…) ve bütün koordinatları derece aralığında. …` | Bir Netcad NCZ dosyası derece sayan coğrafi bir sistem bildiriyor | Netcad'de bir TM ya da UTM dilimine dönüştürüp yeniden kaydedin ([Netcad NCZ](../veri/netcad-ncz.md#koordinat-sistemi)) |

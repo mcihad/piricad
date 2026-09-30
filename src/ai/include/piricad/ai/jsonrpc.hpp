@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// KentOSCad — ai: JSON-RPC 2.0, as much of it as MCP 2026-07-28 uses.
+// PiriCAD — ai: JSON-RPC 2.0, as much of it as MCP 2026-07-28 uses.
 //
 // WHY THIS FILE IS AGPL WHEN THE REST OF THE TREE IS GPL-3.0-or-later. CLAUDE.md
 // Article 2.1 rules "GPLv3-or-later; AGPLv3 for server/web components", and this
@@ -15,12 +15,12 @@
 // reachable from a doctest case because of this split.
 #pragma once
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/result.hpp"
 
 #include <string>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// The JSON-RPC error codes this server answers with.
 namespace rpc_error_code {
@@ -122,4 +122,4 @@ core::Json rpc_error(const core::Json& id, int code, std::string message,
 /// which is what makes it unanswerable and therefore free to send on a stream.
 core::Json rpc_notification(std::string method, core::Json params);
 
-} // namespace kentos::ai
+} // namespace piricad::ai

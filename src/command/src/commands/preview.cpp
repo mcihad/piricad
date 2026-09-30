@@ -7,17 +7,17 @@
 // command line, so the command line, a script and an agent can ask "what would
 // this do" as the card does (Article 1.2). It changes nothing — the steps are
 // run and taken back — so an agent may call it the way it calls a read tool.
-#include "kentos_cad/command/preview.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/preview.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The command lines a parameter holds, one or many.
@@ -63,7 +63,7 @@ Task<void> run_preview(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(preview)
+PIRICAD_COMMAND(preview)
 {
     return CommandSpec{
         .id       = "core.preview",
@@ -81,14 +81,14 @@ KENTOS_COMMAND(preview)
                                "taslakları (noktaları) da girsin mi; varsayılan hayır")
                     .en("outlines"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly |
-                 Flags::NoEffect,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly |
+                   Flags::NoEffect,
         .summary = "Komut satırlarının çizimde ne değiştireceğini, çizime dokunmadan söyler: "
                    "çalıştırır, sayar ve bütünüyle geri alır.",
-        .run    = &run_preview,
-        .effect = Effect::Query,
+        .run     = &run_preview,
+        .effect  = Effect::Query,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: a caption's words filled from the object it names.
+// PiriCAD — core: a caption's words filled from the object it names.
 //
 // ONE SUBSTITUTION, SHARED (TODOS C-12). ETİKET has always filled `{sutun}` with
 // a column's value; a caption that FOLLOWS its object (core/attach.hpp,
@@ -19,15 +19,15 @@
 // (TODOS C-13), and the renderer sits below the command layer.
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// How a measured figure is written.
 struct FieldFormat
@@ -51,4 +51,4 @@ bool has_fields(std::string_view format);
 /// column — in the order first named, each once.
 std::vector<std::string> field_names(std::string_view format);
 
-} // namespace kentos::core
+} // namespace piricad::core

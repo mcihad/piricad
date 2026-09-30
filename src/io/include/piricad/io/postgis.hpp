@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: the PostGIS store.
+// PiriCAD — io: the PostGIS store.
 //
 // CLAUDE.md Article 2.9: **PostGIS is a first-class store, not an export target.**
 // Turkish municipalities and TKGM run their corporate data on it, and a program
@@ -29,15 +29,15 @@
 // a place a hand-rolled version leaks a connection or lets a quote through.
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// One entity's geometry as EWKB in `srid`, or empty when it has none to write.
 ///
@@ -141,7 +141,7 @@ public:
 
     /// Removes one stored project.
     ///
-    /// Touches ONLY KentOSCad's own catalogue table. There is deliberately no verb
+    /// Touches ONLY PiriCAD's own catalogue table. There is deliberately no verb
     /// anywhere in this class that drops an arbitrary table: a program holding a
     /// municipality's live connection must not be one typo away from deleting
     /// their cadastre, and a GIS user already has tools for that.
@@ -160,4 +160,4 @@ private:
     std::string postgis_;
 };
 
-} // namespace kentos::io
+} // namespace piricad::io

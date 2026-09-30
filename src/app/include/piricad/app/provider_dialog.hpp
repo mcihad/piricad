@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the window that defines one model endpoint.
+// PiriCAD — app: the window that defines one model endpoint.
 //
 // WHY A WINDOW AND NOT A ROW. The settings page used to add a profile from five
 // fields on one line at the foot of the table, which could express a name, a
@@ -24,18 +24,18 @@
 // the key store, because a command's arguments are journalled (CLAUDE.md 5.21).
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/ai/provider.hpp"
-#include "kentos_cad/ai/provider_catalog.hpp"
+#include "piricad/ai/provider.hpp"
+#include "piricad/ai/provider_catalog.hpp"
 
 #include <QString>
 
 #include <memory>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The AI layer's door to the document; see ai_service.hpp.
 class AiService;
@@ -145,4 +145,4 @@ private:
     std::unique_ptr<Listing> listing_;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

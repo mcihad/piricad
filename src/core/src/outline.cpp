@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/outline.hpp"
+#include "piricad/core/outline.hpp"
 
-#include "kentos_cad/core/block_reference.hpp"
+#include "piricad/core/block_reference.hpp"
 
-namespace kentos::core {
+namespace piricad::core {
 
 bool curve_entity_outline(const Document& doc, EntityId e, EmitBuffer& into)
 {
@@ -18,4 +18,4 @@ bool curve_entity_outline(const Document& doc, EntityId e, EmitBuffer& into)
     return curve_outline(entities.kind[e], doc.geometry(), entities.slot[e], into);
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

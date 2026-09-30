@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/offset.hpp"
+#include "piricad/core/offset.hpp"
 
 #include "clipper2/clipper.h"
 
@@ -9,7 +9,7 @@
 #include <string>
 #include <utility>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 Clipper2Lib::JoinType join_of(JoinStyle j)
@@ -609,4 +609,4 @@ Result<std::vector<Polygon>> buffer(const BufferSource& source, Mm distance, Joi
     return out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

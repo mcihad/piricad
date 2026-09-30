@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/policy.hpp"
+#include "piricad/ai/policy.hpp"
 
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/core/text.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 using command::Effect;
 using command::has_effect;
@@ -140,8 +140,8 @@ PolicyDecision decide(Effect effect, const PolicyPreferences& prefs, const Clien
         has_effect(effect, Effect::ExternalWrite) || has_effect(effect, Effect::SettingsChange);
     if (!changes_something) {
         out.verdict = Verdict::Allow;
-        out.reason = has_effect(effect, Effect::ViewChange) ? "Görünümü değiştirir, belgeyi değil."
-                                                            : "Yalnız okur.";
+        out.reason  = has_effect(effect, Effect::ViewChange) ? "Görünümü değiştirir, belgeyi değil."
+                                                             : "Yalnız okur.";
         return out;
     }
 
@@ -304,4 +304,4 @@ bool escalates(const command::CommandSpec& spec, const command::Args& args)
     return !escalation_refusal(spec, args).empty();
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

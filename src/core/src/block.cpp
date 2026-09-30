@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/block.hpp"
+#include "piricad/core/block.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <limits>
 
-namespace kentos::core {
+namespace piricad::core {
 
 Result<BlockId> BlockTable::add(std::string_view name, std::string_view description, Point2 base)
 {
@@ -141,4 +141,4 @@ std::uint64_t BlockTable::fold(std::uint64_t seed) const
     return h;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

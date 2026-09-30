@@ -6,22 +6,22 @@
 // a catalogue, so adding a setting adds a SettingSpec and nothing else — no menu
 // entry to hand-write, no CLI table to sync, no docs table to forget
 // (CLAUDE.md 5.10, model.md R38).
-#include "kentos_cad/command/bus.hpp"
+#include "piricad/command/bus.hpp"
 
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/core/crs.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/core/crs.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/document.hpp"
 
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/core/text.hpp"
 
 #include <optional>
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 using core::Settings;
@@ -284,7 +284,7 @@ Task<void> run_mode(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(setting)
+PIRICAD_COMMAND(setting)
 {
     return CommandSpec{
         .id       = "core.setting",
@@ -303,7 +303,7 @@ KENTOS_COMMAND(setting)
         .undo = UndoPolicy::SingleTransaction,
         // Deliberately NOT AiAccessible: changing the project CRS reinterprets every
         // coordinate in the document, and .claude/ai.md keeps that out of reach of a
-        // suggestion. A licensed engineer sets it (kentoscad.md §5.1).
+        // suggestion. A licensed engineer sets it (piricad.md §5.1).
         .flags   = Flags::Scriptable,
         .summary = "Proje ayarlarını listeler, okur ve değiştirir.",
         .run     = &run_setting,
@@ -315,7 +315,7 @@ KENTOS_COMMAND(setting)
 // one the session settings were declared and unreachable: the snap modes, ortho,
 // polar step and snap-to-grid had no store and no way in from any client. A
 // setting nobody can write is not a setting.
-KENTOS_COMMAND(mode)
+PIRICAD_COMMAND(mode)
 {
     return CommandSpec{
         .id       = "core.mode",
@@ -348,7 +348,7 @@ KENTOS_COMMAND(mode)
     };
 }
 
-KENTOS_COMMAND(preference)
+PIRICAD_COMMAND(preference)
 {
     return CommandSpec{
         .id       = "core.preference",
@@ -373,4 +373,4 @@ KENTOS_COMMAND(preference)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

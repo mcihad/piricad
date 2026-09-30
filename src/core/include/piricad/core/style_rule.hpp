@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the declarative style catalogue and its rule evaluator.
+// PiriCAD — core: the declarative style catalogue and its rule evaluator.
 //
 // .claude/model.md R13–R19 settled where style lives; this is the piece that
 // decides WHICH appearance an entity gets:
@@ -13,7 +13,7 @@
 // (core.md P9) and it never runs on the frame path (model.md P7).
 //
 // THE RULES ARE DATA, NOT A LANGUAGE. CLAUDE.md 5.11 allows the project exactly
-// one grammar, `kentos_cad/command/parser.hpp`, so a rule here is a fixed, closed
+// one grammar, `piricad/command/parser.hpp`, so a rule here is a fixed, closed
 // set of tests over one named field:
 //
 //   equality        alan = "konut"
@@ -41,16 +41,16 @@
 // R14 makes, and it is the opposite of what a per-frame style engine is built
 // for. OGC SLD/SE 1.1 is a wire format rather than an engine, and belongs at the
 // import/export boundary, converted into this table on the way in. What is NOT
-// hand-written here: the JSON is parsed by kentos_cad/core/json.hpp, and the hatch
+// hand-written here: the JSON is parsed by piricad/core/json.hpp, and the hatch
 // clipping the renderer will need is Clipper2's job, not this file's.
 #pragma once
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/dash_store.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/layer.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/style.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/dash_store.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/layer.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/style.hpp"
 
 #include <cstdint>
 #include <string>
@@ -58,7 +58,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The band of map scales a catalogue row applies to, in denominators (1:value).
 ///
@@ -374,4 +374,4 @@ Appearance apply_entry(const StyleEntry& entry, const Appearance& base);
 /// banned on this codebase outright (CLAUDE.md 5.6).
 Result<std::uint32_t> parse_rgba(std::string_view text);
 
-} // namespace kentos::core
+} // namespace piricad::core

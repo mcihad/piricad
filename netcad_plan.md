@@ -1,7 +1,7 @@
-# KentOSCad — Netcad planı
+# PiriCAD — Netcad planı
 
-> Plan tarihi: **28 Eylül 2026**. Bu belge Netcad araştırmasını KentOSCad işine çevirir: Netcad'deki
-> hangi aracın bizde olduğu, hangisinin eksik ya da yarım olduğu ve eksikleri **KentOSCad'in kendi
+> Plan tarihi: **28 Eylül 2026**. Bu belge Netcad araştırmasını PiriCAD işine çevirir: Netcad'deki
+> hangi aracın bizde olduğu, hangisinin eksik ya da yarım olduğu ve eksikleri **PiriCAD'in kendi
 > yoluyla** — daha sade, daha zarif, komut merkezli ve 3B'ye evrilebilir biçimde — nasıl yapacağımız.
 > Uygulanmış özellik iddiası değildir; işaretsiz her madde yapılacak iştir. Biçim `TODOS.md` ile
 > aynıdır: `[ ]` yapılacak, `[x]` bitti, `[!]` karar bekliyor.
@@ -15,7 +15,7 @@ zarif ve hoş biçimde yapacağız.
 | Taraf | Kaynak | Kural |
 |---|---|---|
 | Netcad | Resmî yardım sitesi `wiki.netcad.com.tr` sayfaları (Confluence REST dökümleri; bağlantı biçimi `https://wiki.netcad.com.tr/pages/viewpage.action?pageId=<id>`), sayfa ağaçları (şerit, temel, CBS, Hesap/Netçap/Netmap, NC6, yardım) ve önceki alt ajan raporu | Tablodaki her satırın `pageId`'si okunmuş ham sayfadır. Önceki raporun ekran görüntüsüne dayanan görsel iddiaları (renk kodları, piksel boyları, 8.6 sekme sırası) ve açık menü içerikleri doğrulanmadı; plan onlara dayanmaz (§10) |
-| KentOSCad | `docs/komutlar/referans.md` (komut kaydından üretilmiş, **139 komut**), `src/app/src/main_window_ribbon.cpp` (şerit), `docs/baslangic/arayuz.md`, `docs/nesneler/destek-matrisi.md`, `docs/islem/README.md`, `docs/llms.txt`, `TODOS.md`, `TODOS-CAD.md`, `CLAUDE.md` ve `.claude/*.md` | Bir şey ancak referansta komut olarak ya da şerit kodunda/arayüz belgesinde panel olarak varsa "var" sayıldı |
+| PiriCAD | `docs/komutlar/referans.md` (komut kaydından üretilmiş, **139 komut**), `src/app/src/main_window_ribbon.cpp` (şerit), `docs/baslangic/arayuz.md`, `docs/nesneler/destek-matrisi.md`, `docs/islem/README.md`, `docs/llms.txt`, `TODOS.md`, `TODOS-CAD.md`, `CLAUDE.md` ve `.claude/*.md` | Bir şey ancak referansta komut olarak ya da şerit kodunda/arayüz belgesinde panel olarak varsa "var" sayıldı |
 
 **TODOS ile ilişki.** Bu plan `TODOS.md`'deki hiçbir maddeyi yinelemez. Yeni işler **N-01…N-29** kimliğini
 alır (§3). Zaten `TODOS.md`'de olan bir işe Netcad araştırmasının eklediği somut şeyler §4'te o maddenin
@@ -34,17 +34,17 @@ domain.md R1).
 ### "Netcad gibi, daha zarif" ne demek
 
 1. **Harita önce, çizgi sonra.** Netcad'de iş ölçü noktasından başlar: adı, kodu, kotu olan nokta, ona bağlı
-   çizgiler, noktanın adıyla çizim. KentOSCad'de nokta bugün yalnız bir yerdir; ad ve kot öznitelikte durur.
+   çizgiler, noktanın adıyla çizim. PiriCAD'de nokta bugün yalnız bir yerdir; ad ve kot öznitelikte durur.
    Nokta ve kot birinci sınıf olacak (N-05, S-01).
 2. **Her nokta isteminde hesap.** Netcad'in "Koordinat Hesap Makinası" bizde zaten tek gramerde yaşıyor
    (nokta fonksiyonları: `n()`, `dik()`, `kes()`, `ara()`…); eksik olan onun **eli**: istem sürerken beliren
    bir bağlam sekmesi, her düğmenin komut satırına yazdığı satır (N-04).
 3. **Kroki ve pafta.** Röleve, cephe, koordinat yazımı, karelaj, pafta indeksi. Netcad bunları düz yazı
-   olarak bırakır; KentOSCad'de hepsi **kaynağına bağlıdır** — kaynak değişince izler ya da "güncel değil"
+   olarak bırakır; PiriCAD'de hepsi **kaynağına bağlıdır** — kaynak değişince izler ya da "güncel değil"
    der (bağlar ve sonuçlar, TODOS F-04).
 4. **Arazi bir nesnedir.** Netsurf'ün üçgen modeli, eğrileri, hacmi ve kesitleri bizde kalıcı bir yüzeyin
    **sonuçları** olacak (T-01…T-03); kotlu geometri için önce veri modeli (N-05).
-5. **Düzenleme tek yüzeyde.** Netcad'in "Düzenle" çarkı → KentOSCad'in tutamakları, nesne sekmeleri ve istem
+5. **Düzenleme tek yüzeyde.** Netcad'in "Düzenle" çarkı → PiriCAD'in tutamakları, nesne sekmeleri ve istem
    seçenekleri; modal pencere yok (N-09).
 6. **Zarafet somut kurallardır** (§6): diyalog yerine tek satır ve tek kart; renk yalnız anlam; önizleme =
    sonuç; sessiz dönüştürme yok; her tıklamanın yazılı karşılığı; varsayılanlar pafta ölçeğinden; yönetmelik
@@ -95,12 +95,12 @@ N-08 alan işlemleri. Önerilen sıra ve kilometre taşları §8'de.
 ## 2. Eşleme tablosu
 
 Her satır bir Netcad aracıdır (ya da `·` ile ayrılmış kardeş araçlar); sütunlar: Netcad'deki adı, resmî
-yardım sayfasının `pageId`'si, KentOSCad'deki karşılığı (komut kimliği ve Türkçe adı ya da panel), durum,
+yardım sayfasının `pageId`'si, PiriCAD'deki karşılığı (komut kimliği ve Türkçe adı ya da panel), durum,
 kısa not ve işin nereye gittiği (N-xx §3'te, harf-rakam kimlikler `TODOS.md`'de).
 
 | İşaret | Anlamı |
 |---|---|
-| ✓ | KentOSCad'de aynı işi gören komut ya da panel var (`docs/komutlar/referans.md` ya da şerit kodu) |
+| ✓ | PiriCAD'de aynı işi gören komut ya da panel var (`docs/komutlar/referans.md` ya da şerit kodu) |
 | ◐ | Var, ama Netcad'in önemli bir seçeneği ya da yolu eksik |
 | ✗ | Yok |
 | — | Kapsam dışı ya da bilerek yok (sebebi notta) |
@@ -110,7 +110,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.1 Pencere, uygulama menüsü, paneller
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Yeni (şablon galerisi, favoriler) | 217387999 | `core.new` YENİ | ◐ | Boş çizim açar; proje şablonu ve galeri yok → U-06 |
 | Aç (NCZ, DWG/DXF/DGN, SHP/KML/MDB/SQLite/XLS, GML, NCN/XYZ, LAS/LAZ, raster, GPX/NMEA, ZIP, NCY) | 217387997 | `core.open` AÇ (.pcad), `core.import` İÇEAKTAR | ◐ | DXF, GPKG, SHP (okuma), NCZ (okuma; pafta indeksi gerçek biçimiyle — 29 Eylül), DWG (derlemeye bağlı); ötekiler yok → I-01, I-02 |
@@ -156,10 +156,10 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.2 Nokta girişi ve seçim (Netcad "Genel Özellikler")
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | "Nokta Seçim Araçları" bağlam sekmesi | 217386613 | komut satırı + yakalama modları | ◐ | Bağlam sekmesi yok → N-04 |
-| Nokta Yakalama (Nokta, Son Nokta, Kesişim, Orta, Uygulama Noktası, En Yakın, Karelaj, Eksene Dik, Otomatik) | 217387852 | `core.mode` MOD yakalama modları, F3/F8/F9/F10 | ✓ | KentOSCad'inki daha geniş (teğet, çeyrek, uzantı, paralel, izleme) |
+| Nokta Yakalama (Nokta, Son Nokta, Kesişim, Orta, Uygulama Noktası, En Yakın, Karelaj, Eksene Dik, Otomatik) | 217387852 | `core.mode` MOD yakalama modları, F3/F8/F9/F10 | ✓ | PiriCAD'inki daha geniş (teğet, çeyrek, uzantı, paralel, izleme) |
 | KHM › Koordinat (K) | 217386679 | mutlak ve göreli koordinat yazımı | ✓ | |
 | KHM › Nokta Adı (süzgeçle, sıralı, atlama adımlı) | 217386679 | `n(nokta_no)` | ◐ | Tek nokta; ad aralığıyla nokta dizisi yok → N-04 |
 | KHM › Nokta Bulutu | 217386679 | — | ✗ | → T-05 |
@@ -190,7 +190,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.3 Giriş sekmesi
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Çizgi (Ctrl+L) | 217385138 | `core.line` ÇİZGİ | ✓ | |
 | Paralel Çizgi (eksenin sağına/soluna genişlik) | 217385136 | `core.offset` OFSET `taraf=iki` (sonradan) | ◐ | Çizerken iki yan yok → N-11 |
@@ -247,7 +247,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.4 Düzenle sekmesi
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Toplu Obje Değiştir (ortak özellikler; uzunluk/yarıçapta aritmetik) | 217385435 | `KATMANAT`, `RENK`, `STİL`; panelde SEÇİM özeti | ◐ | → U-04 katkısı |
 | Tabaka Değiştir (+ Kopyalama Modu) | 217385432 | `core.set_layer` KATMANAT, şeritteki katman kutusu | ✓ | Kopyalayarak başka katmana yok |
@@ -273,7 +273,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.5 Analiz sekmesi
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Overlay | 217385482 | — | ✗ | → G-10 |
 | Çevreleyenden Bilgi Al (ilk değer, sayı, toplam, ortalama; tampon) | 217385480 | — | ✗ | → G-10 |
@@ -286,7 +286,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.6 Araçlar sekmesi
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Topoloji › Birleştir (ortak özelliğe göre, yakınlıkla) | 217385491 | — | ✗ | Dissolve → G-10 |
 | Topoloji › Çizgileri Basitleştir | 217385489 | `ÇİZGİDÜZENLE islem=sadelestir` | ◐ | Nesne başına; ortak sınırı koruyan toplu hâli yok → G-05 |
@@ -315,7 +315,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.7 Detaylar sekmesi
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Kartezyen Dizi | 217385833 | `core.array` DİZİ | ✓ | |
 | Obje Üzerinde Dizi (aralık, başlama, sapma; `??KM`/`??U`/`??X`/`??Y`/`??N`) | 217385830 | `DİZİ mod=YOL`, `core.divide` BÖLÜMLE | ◐ | Eksenden sapma ve km/mesafe yazısı yok → N-18 |
@@ -342,7 +342,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.8 Görünüm sekmesi
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | 2 Pencere Aç (farklı ölçekte iki görünüm) | 217385050 | — | ✗ | → N-24 |
 | Ekran Sakla (resim / pano) | 217385050 | — | ✗ | → N-24 |
@@ -360,7 +360,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.9 Hesap modülü
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Nokta Editörü (süzgeç, F3/F4/F5, sırala, çift ayıkla, adlandır, sıralı no, kolon işlemleri, modelden kot, ondalık yuvarla, bağlı çizgiler) | 217389312 | öznitelik tablosu (F6), `core.points` NOKTALAR | ◐ | → S-01 katkısı, N-07 |
 | Pafta Editörü (ülke/mevzi indeksi, tek tek ve otomatik paftala, `.PAF`) | 217389338 | — | ✗ | → N-17 [M] adlandırma kuralı |
@@ -388,7 +388,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.10 Eski Komutlar ve Gps
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | 4.Köşeyi Oluştur | 217385354 | — | ✗ | → N-13 |
 | Bina Oluştur (iki köşe + derinlik) | 217385353 | `DİKDÖRTGEN yontem=3n` | ◐ | Sayısal derinlik yok → N-13 |
@@ -397,7 +397,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.11 Netsurf modülü
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Şev Tara (bozuk, dere içi, normal, tümsek; höyük; kokurdan) | 217385372 | — | ✗ | → N-19 [M] aralıklar |
 | 2 Doğru Arasını Tara | 217385376 | — | ✗ | → N-19 |
@@ -417,7 +417,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.12 Netmap, Netçap, Netkamu, Nettop (Alanları Basitleştir dışında hepsi [M])
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Yeni Proje · Proje Parametreleri · Tapu Sözel Verileri · Veritabanı Düzenle | 217385905, 217385864, 217385881, 217386112 | — | ✗ | [M] → S-03 |
 | Ada · Parsel · Parsel Köşe Noktası · Yapı · Mahalle · İrtifak Hakkı · Yer Kontrol Noktası | 217385845, 217385856, 217385846, 217385870, 217385871, 217385910, 217385904 | `core.area` ALAN + öznitelik | ◐ | Anlamlı sınıf kalemi yok → G-04 [M] |
@@ -438,7 +438,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 
 ### 2.13 Planet, Netpro, 3D+ ve öteki modüller
 
-| Netcad aracı | pageId | KentOSCad karşılığı | Durum | Not |
+| Netcad aracı | pageId | PiriCAD karşılığı | Durum | Not |
 |---|---|---|---|---|
 | Yol Çiz (Aksis / Paralel) · Yaya Yolu · Bisiklet Yolu · Kalınlık Ver | 320014438, 320018799 | — | ✗ | Geometri → N-27; genişlik ve kalınlık [M] |
 | Kavşak Oluştur · Ada/Kaldırım Köşesi · Köşe Düzelt · Refüj Kapat · Yol Yuvarlat | 320014486, 320015541, 320015550, 320015556, 320015562 | `core.fillet` YUVARLA, `core.chamfer` PAH | ◐ | Yol ağına toplu araç yok → N-27 [M] |
@@ -453,7 +453,7 @@ KHM = Koordinat Hesap Makinası (Netcad'in nokta istemi paleti, 217386679).
 ## 3. İş paketleri
 
 Her paket bir commit'lik iş olacak biçimde kesildi; sıra, her paketin öncekinin üstüne kurulduğu sıradır
-(§8). Her pakette CLAUDE.md'nin ortak şartları geçerlidir ve bir daha yazılmaz: komut `KENTOS_COMMAND` ile
+(§8). Her pakette CLAUDE.md'nin ortak şartları geçerlidir ve bir daha yazılmaz: komut `PIRICAD_COMMAND` ile
 bir kez bildirilir, adlar R7 sırasında (Türkçe, ASCII, İngilizce, kısaltma) ve çapraz kayıt çakışma
 kapısından geçer; her parametrenin İngilizce adı (`Param::en`, 6.15); `docs/komutlar/<slug>.md` sekiz
 bölümüyle ve `docs/README.md`'den bağlı (5.17, docs.md R7–R8); arayüz = komut satırı = JSON betik eşitlik
@@ -496,7 +496,7 @@ yönetmelik değeri yalnız `/data`'da (5.13); `tr()` ve iki `.ts` dosyası (6.9
 - [x] **N-04 · P0 — Bağlam sekmeleri: "Nokta Girişi" ve "Seçim" (Koordinat Hesap Makinası ve Seçim Süzgeci'nin karşılığı).**
   **Durum (29 Eylül 2026):** dört dilime bölündü. **N-04a yapıldı:** `SEÇ DAİRE | DIŞINDA | GEÇEN` (`core::pick_in_circle`, `pick_outside_box`, `pick_through`; DIŞINDA kutuyu yüzünde taşıyan alanı dışarıda saymaz, GEÇEN yüzü saymaz). **N-04b yapıldı:** `boyunca(nesne(k),mesafe[,sapma])` (`core::point_along`: çift duyarlıkta, tek yuvarlama; `Bus::object_path`, `ResolveContext::object_path`), fuzz tohumu ve koşumu. **N-04c yapıldı:** Seçim sekmesi (`kPromptSelectContextId`), düğmeler `command::select_modes()` tablosundan (SEÇ'in kip çözümleyicisi de aynı tablodan; `LAST`'in `NESNE`'ye düşmesi düzeldi); tıklama isteyen kipler **satır kurma** ile (`CommandLine::beginCompose`: tuval tıklaması satıra koordinat, `nesne(` sonrasında kimlik yazar; ui.md R48a); sekme öne gelmez (öne gelmesi çizim sekmesini elden alırdı). **N-04d yapıldı:** Nokta Girişi sekmesi (`kPromptPointContextId`): yakalama anahtarları motorun bitlerinden, hesap paleti `command::point_functions()`'tan (`kForms`'a `label` alanı); kurulan satırın noktaları tuvalde iz (`MapCanvas::setComposeTrace`); Gönder açık parantezleri kapatır. Yan düzeltme: `MOD` şeffaf — F3 ve yakalama anahtarları çalışan komutu kapatıyordu. **Ertelenen:** "Katmanı nesneden al" — çizim komutlarında `katman=` yok, önce karar (Açık soru 19); "İçine tıkla" gerekmedi, bölge komutları noktayı doğrudan alıyor. Eski sıra notu: N-04d Nokta Girişi sekmesi — hesap paleti fonksiyon tablosundan üretilir (5.10), "Katmanı nesneden al"ın bugün komutu yok (çizim komutlarında `katman=` yok), önce karar.
   **Netcad:** Bir işlem nokta isteyince "Nokta Seçim Araçları" sekmesi açılır: yakalama modları; Koordinat Hesap Makinası (Koordinat, Nokta Adı, Mesafe–Açı/Eğim, dX–dY, Tabaka, Çizgi/Obje İzle, Kesişim, 2 Noktalı Kesişim, Dik-çık, Dik Düş, Teğet, Dik-abs, Paralel Nokta, Hat Üzerinde a/b, Obje Üzerinde, GPS, KM); Çizim Hesap Araçları 217386613, 217387852, 217386679, 217386622. Nesne isteyince "Seçim Süzgeci": Pencere/Alan/Daire; Kesenler/İçindekiler/Üzerindekiler/Dışındakiler; Doğruyu Kesenler, Noktayı İçerenler, Noktadan Geçenler; Tümü, Son Seçilenler; Bölgeden Kırp, Tersine, Grup; nesne tipleri 217387890.
-  **Tasarım (KentOSCad yolu):** İki bağlam kategorisi, **yalnız istem sürerken** görünür ve istem bitince kaybolur (ui.md R48'e ek: bugün istem sürerken hiçbir düzenleyici sekmesi görünmüyor). **Her düğme bir satır yazar**, kendi yetkisi yoktur:
+  **Tasarım (PiriCAD yolu):** İki bağlam kategorisi, **yalnız istem sürerken** görünür ve istem bitince kaybolur (ui.md R48'e ek: bugün istem sürerken hiçbir düzenleyici sekmesi görünmüyor). **Her düğme bir satır yazar**, kendi yetkisi yoktur:
   - *Nokta Girişi:* yakalama anahtarları (`MOD yakalama_modları`); **hesap paleti** — her düğme bir nokta fonksiyonunu adım adım kurar ve komut satırına yazar (`dik(` → A'ya tıkla → B'ye tıkla → ayak ve boy yaz → `)`): `n()`, `orta()`, `dik()`, `kes()` (üç biçim), `ara()`, `uzanti()`, `semt()`, `xy()`. Yeni fonksiyonlar: `boyunca(nesne(<kimlik>), mesafe, sapma)` (Netcad Obje Üzerinde ve Paralel Nokta; çizgi, yay, daire ve yaylı çizgi boyunca, C-01 eğri sorgusuyla) ve nesne başvurusu `nesne(<kimlik>)` (çözümleme `n()` gibi çağıranın verdiği aramayla, command.md R17a); "İçine tıkla" (N-03); "Katmanı nesneden al" (komutun `katman=` parametresini tıklanan nesnenin katmanıyla doldurur; etkin katman değişmez; parametresi olmayan komutta soluk).
   - *Seçim:* `SEÇ` kiplerinin düğmeleri ve yeni kipler `DAİRE` (merkez + çevre), `DIŞINDA` (pencerenin dışı), `GEÇEN` (noktadan geçen), `İÇEREN` (N-03); tür çipleri (`tur=`); `islem=TERSİNE`. Bölgeden kırp ve grup bu pakette yok (grup kavramı yok; kırpma G-10).
   **Şerit:** iki bağlam kategorisi; renk bloğu yok, yalnız 3 px vurgu başlığı (design.md §2); 1440 px'e sığar; Tab zinciri; her düğmenin ipucu yazacağı satırı gösterir.
@@ -746,7 +746,7 @@ kullanıcısı için nokta her işin başıdır.
 | **T-02** eş yükselti | 217385338, 217385356, 217385370, 217387758, 217385043 | Eğri Geçir: Zmin/Zmax/aralık, süzgeçle tek eğri, basitleştir, "25 metreleri ayır" (ana/ara eğri katmanları), kota göre renk; **Eğrilere Kot Yaz** (periyodik ya da bir çizginin kestiği yerde; artan eğim yönünde okunur); Eğri Temizle (oto); Eğri Alanı Hesapla; **Hızlı Eğri** (kaydedilmeyen, hata bulmaya yarayan dinamik eğri) |
 | **T-03** boykesit, enkesit, hacim | 217392988, 217393227, 217389314 | Hacim: enkesitten (TCK, ortalama alan, prizmoidal, DSİ — zorunlu olanlar [M]), iki yüzey arası prizmatik, tabana göre (bölgede, kazı/dolgu ayrı model); Enkesit Al (aralık, örnekleme, genişlik; detay noktalarında, modelin kesildiği yerde, kırık izdüşümlerinde, ekseni kesen çizgilerde; sabit kotlu ya da katmandan yüzey ekle); Profil (yatay/düşey ölçek, kıyas kotu, çok model); Hızlı Profil; enkesitten kübaj/plankote; enkesit tablosu (km, eksene mesafe: sol −, sağ +, kot, kod) |
 | **T-04** güzergah ve koridor | 217385340, 217386679, 217385513, 217386111 | Güzergah Tanımla (elemanlar: doğru, yay, klotoid; someler), km yakalama (km + sapma: sağ +, sol −), doğrusal referans (başlangıca mesafe + sapma ile nokta ve çizgi), Netpro'nun dinamik projesi (yatay/düşey, enkesit, kübaj, kavşak; biri değişince bağlılar güncellenir — bizde bağ ve SONUÇ ilkesi) |
-| **T-05** nokta bulutu | 217391838, 217391842, 217386679 | XYZ ve Alan Sor (sınıf, RGB, en yüksek/düşük/ortalama/ortanca kot, arama yarıçapı); nokta bulutu üzerinde sayısallaştırma (eksen profilleri, görünüşü kilitle, min/max/ortalama/ortanca kottan yakalama); kitaplıklar kentoscad.md §9.10 (PDAL, laz-perf) |
+| **T-05** nokta bulutu | 217391838, 217391842, 217386679 | XYZ ve Alan Sor (sınıf, RGB, en yüksek/düşük/ortalama/ortanca kot, arama yarıçapı); nokta bulutu üzerinde sayısallaştırma (eksen profilleri, görünüşü kilitle, min/max/ortalama/ortanca kottan yakalama); kitaplıklar piricad.md §9.10 (PDAL, laz-perf) |
 | **C-16** 2.5B CAD | 217385395, 217385090, 217385404 | N-05'teki Z kullanım listesi; OFSET ve ÇİFTÇİZGİ'de kotları yüzeyden alma; alan işlemlerinde "kot koru / kesenden al"; 3B'de paralel yönü (X/Y/Z) ve en/boy/yükseklik ölçekleme — belge 2.5B kalır, katı modelleme ayrı kapsamdır |
 | **L-01** yerleşimi doğrula | 217385081, 217385079, 217385078 | Grid (çerçeve, kenar yazıları, iki sistemde grid); Lejant (kapalı katmanları göster, yalnız görünenler, genişleme yönü, şablon kaydet/yükle; MPYY 2014 UİP/NİP/MSP/ÇDP şablonları [M]); ölçek çubuğu (bölüm sayısı, ilk bölümü ikiye böl) |
 | **L-02** veri güdümlü yerleşim | 217388073, 217385179 | Kullanıcı tanımlı proje değişkenleri (yer tutucu olarak); tablolu ve resimli zengin metin öğesi |
@@ -763,7 +763,7 @@ ve Türkçe terimler.
 
 ### 5.1 Sekme eşlemesi
 
-| Netcad sekmesi (grupları) | KentOSCad bugün | Öneri |
+| Netcad sekmesi (grupları) | PiriCAD bugün | Öneri |
 |---|---|---|
 | **Giriş** (Çizim · Sorgu · Düzenleme · Görüntü) 217385142 | **Giriş** (Seçim · Çizim · Değiştir · Açıklama · Katmanlar · Özellikler · Pano) | Sorgu ve Görüntü gruplarını ekle; Pano'yu Değiştir sekmesine taşı (Ctrl+C/V/X her yerde çalışıyor) |
 | **Düzenle** (Düzenleme · Dönüşüm) 217385414 | **Değiştir** (Dönüştür · Dizi ve Ofset · Kes ve Uzat · Köşe · Birleştir · Sil ve Temizle) | İçerik uyumlu; Birleştir paneline Alan ▾ (N-08), yeni Kot grubu (N-05); sekme adı Açık soru 4 |
@@ -825,7 +825,7 @@ aramada bulunurlar (`CommandSpec::known_as`, f154275); Netcad'in `KAYDIR`'ı da 
 
 ### 5.4 Çakışmalar — karar gerekir
 
-| Terim | Netcad'de | KentOSCad'de | Risk | Öneri |
+| Terim | Netcad'de | PiriCAD'de | Risk | Öneri |
 |---|---|---|---|---|
 | **KES** | budama (trim) 217385423 | `core.cut`: seçimi panoya alır ve **siler** | Netcad eli budamak isterken seçili nesneler silinir (geri alınır, ama şaşırtıcı ve tehlikeli) | En önemli çakışma. (a) KES kalır, istemde ve aramada uyarı; (b) `core.cut`'ın birincil adı `PANOYAKES` olur, `KES` ne pano ne budama olarak kullanılmaz (geçiş süresi boyunca uyarıyla) — Açık soru 4 |
 | **KAYDIR** | nesneyi taşı 217385158 | `core.pan`: görünümü kaydırır | Zararsız ama şaşırtıcı | Ad kalır; aramada TAŞI "bilinen adı: Kaydır" diye üstte |
@@ -833,13 +833,13 @@ aramada bulunurlar (`CommandSpec::known_as`, f154275); Netcad'in `KAYDIR`'ı da 
 | **BİRLEŞTİR** | uçları birleştir / tek obje yap 217385394 | `core.combine`: alan birleşimi + değen çizgileri tek çizgi | Kısmen örtüşür | Kalır; `combine.md`'de UÇUCA ve YUVARLA r=0 ile yan yana anlatılır |
 | **Düzenle** | sekme adı ve "Düzenle (Edit)" çarkı | "Değiştir" sekmesi; bağlam sekmelerinde "Düzenle" paneli; `ÇİZGİDÜZENLE` | Ad karışıklığı | Açık soru 4 |
 | **Ctrl+C / Ctrl+N / Ctrl+A** | Çoklu Doğru / Nokta / Alan Sor 217385133, 217385088, 217385205 | Kopyala / Yeni / Tümünü seç | İşletim sistemi kısayolları | İşletim sistemi kısayolları korunur; isteğe bağlı bir "Netcad kısayol profili" — Açık soru 5 |
-| **F tuşları** | yakalama anahtarları; yardım metni F4'ü (nokta yakala) doğruluyor 217387852, öteki atamalar doğrulanamadı | F3 yakalama, F8 dik, F9 ızgaraya yakala, F10 yüzey normali | Netcad eli F tuşlarında başka iş bekler | KentOSCad düzeni kalır; profil Açık soru 5'in parçası |
+| **F tuşları** | yakalama anahtarları; yardım metni F4'ü (nokta yakala) doğruluyor 217387852, öteki atamalar doğrulanamadı | F3 yakalama, F8 dik, F9 ızgaraya yakala, F10 yüzey normali | Netcad eli F tuşlarında başka iş bekler | PiriCAD düzeni kalır; profil Açık soru 5'in parçası |
 | **Alt+Z · Alt+C** | pencere büyüt · önceki pencere | atanmamış görünüyor (doğrulanmalı) | — | N-01'e atanır |
 | **G · T · `*`** | Görünüm sekmesi · katman yöneticisi · yeniden çiz | tek harfli genel kısayol **bilerek** yok | — | Alınmaz: komut satırına yazılan harf komuta kaçmamalı (arayuz.md) |
 
 ### 5.5 Terimler
 
-| Netcad terimi | KentOSCad terimi | Not |
+| Netcad terimi | PiriCAD terimi | Not |
 |---|---|---|
 | obje | nesne | Kılavuz "nesne" der; aramada "obje" de bulunur |
 | tabaka / katman | katman | Netcad CAD katmanına "tabaka", referansa "katman" der; bizde tek kavram, `TABAKA` eş ad |
@@ -859,10 +859,10 @@ aramada bulunurlar (`CommandSpec::known_as`, f154275); Netcad'in `KAYDIR`'ı da 
 
 ## 6. Estetik ve kullanım ilkeleri
 
-Her ilke denetlenebilir yazıldı. "Netcad'de" sütunu araştırmada gözlenen davranıştır; "KentOSCad'in yolu"
+Her ilke denetlenebilir yazıldı. "Netcad'de" sütunu araştırmada gözlenen davranıştır; "PiriCAD'in yolu"
 bilinçli olarak farklılaştığımız yeri söyler.
 
-| # | İlke | Netcad'de | KentOSCad'in yolu | Nasıl denetlenir |
+| # | İlke | Netcad'de | PiriCAD'in yolu | Nasıl denetlenir |
 |---|---|---|---|---|
 | 1 | **Diyalog değil satır** | Her araç bir özellik penceresiyle açılır (Paralel, Alan Düzeltme, Karelaj, analizler) | Değerler komut satırında ya da Araçlar kartında; kart göndereceği satırı gösterir (processing.md R13) | Yeni araçta ham `QDialog` yok; `ci-gate-bilesenler.sh` |
 | 2 | **"Değişiklikleri Uygula" yok** | Obje Özellikleri ve Toplu Obje Değiştir değişikliği topluca uygular 217385175 | Her hücre bir komut; Enter onaylar, başka yere tıklamak da (arayuz.md) | Panel probu |
@@ -880,16 +880,16 @@ bilinçli olarak farklılaştığımız yeri söyler.
 | 14 | **Sağ tık ve Esc bırakır** | Nokta seçimini sağ tuş ya da Esc bitirir 217386629 | Zaten kural (ui.md R52); yeni araçlarda korunur | R52 probları |
 | 15 | **Sayı yazınca komut satırı** | Rakama basınca küçük bir giriş kutusu açılır 217386622 | Odak komut satırında (ui.md R53); değer tek yerde | İstem probu |
 | 16 | **Birim değerin yanında** | Pencerelerde birim etikette | Birim değerin yanında ve parametre açıklamasında (`llms.txt` kuralı) | Docs kapısı |
-| 17 | **Sığma** | Şerit geniş; modül sekmeleri çoğalır | Her sekme 1440 px, şerit ≤ 134 px (U-07) | `KENTOS_FIT_PROBE` |
-| 18 | **Klavye ve ekran okuyucu** | — | Her düğme Tab zincirinde, `accessibleName` (ui.md R21–R22, 6.9) | `KENTOS_ACCESS_PROBE` |
+| 17 | **Sığma** | Şerit geniş; modül sekmeleri çoğalır | Her sekme 1440 px, şerit ≤ 134 px (U-07) | `PIRICAD_FIT_PROBE` |
+| 18 | **Klavye ve ekran okuyucu** | — | Her düğme Tab zincirinde, `accessibleName` (ui.md R21–R22, 6.9) | `PIRICAD_ACCESS_PROBE` |
 | 19 | **Varsayılana dönüş görünür** | Çizim Hesap Araçları ayarlarında "Varsayılanları Geri Yükle" ve "Varsayılan Yap" 217387846; Mimar'da "Varsayılanları Geri Sil" 217385530 | Araçlar kartı son değerleri günlükten getirir; karta Ghost rolünde "Varsayılanlar" düğmesi | Kart probu |
 | 20 | **Bulguya gidilir** | Geometri Kontrol hataları Mesajlar'da, "Yaklaş" ile 217385444 | Bulgular paneli; satır → yakınlaş ve seç (N-21) | TOPOLOJİ probu |
 
 ## 7. 3B'ye evrim
 
-### 7.1 Netcad'in 3B ve arazi yetenekleri → KentOSCad işi
+### 7.1 Netcad'in 3B ve arazi yetenekleri → PiriCAD işi
 
-| Netcad | KentOSCad işi | Önce gereken veri |
+| Netcad | PiriCAD işi | Önce gereken veri |
 |---|---|---|
 | Nokta seçiminde Z'nin modelden okunması 217385088 | Nokta istemi yüzeyden kot alır — yalnız nişanlanan noktada (command.md R9a), yazılan noktada değil | N-05 + T-01 |
 | Kotları Modelden Al (Paralel), Kot Değerlerini Koru (Alan) 217385395, 217385090 | OFSET, ÇİFTÇİZGİ, alan işlemlerinde `kot=yuzey`, `kot=kaynak` ya da `kot=kesen` | N-05 (+ T-01) |
@@ -902,7 +902,7 @@ bilinçli olarak farklılaştığımız yeri söyler.
 | Şev taraması, platform ekle 217385372, 229905076 | N-19 (plan), T-01 kırık hat, T-04 şev | N-05 |
 | Nokta bulutu sorgu ve sayısallaştırma 217391838, 217386679 | T-05 (PDAL, laz-perf) | Ayrı depo; belgeye kopyalanmaz, referanstır |
 | 3D+ görüntüleme, doku, simülasyon 217389385, 320016527 | N-29 | N-05, T-01, G-08 |
-| Bina kütleleri (kalınlık = yükseklik) 229905076 | Ekstrüzyon görüntüsü (OCCT); CityGML sonra (libcitygml, kentoscad.md §9.10) | `yukseklik` özniteliği; katı model belgeye girmez |
+| Bina kütleleri (kalınlık = yükseklik) 229905076 | Ekstrüzyon görüntüsü (OCCT); CityGML sonra (libcitygml, piricad.md §9.10) | `yukseklik` özniteliği; katı model belgeye girmez |
 
 ### 7.2 Veri modelinin önce ihtiyaç duydukları (sırayla)
 
@@ -952,7 +952,7 @@ etmeden başlamaz.
 3. **Dik boy işaret kuralı.** Netcad yardımı dört ayrı sayfada **sağ pozitif, sol negatif** diyor: Yan Nokta
    Hesabı ("dik boy sol tarafta kalıyorsa değeri eksi girilmelidir", 217389335), Bina Oluştur ("+ sağa, −
    sola", 217385353), Enkesit Editörü ("sol taraf negatif, sağ taraf pozitif", 217389314), KM yakalama
-   (217386679). KentOSCad'de `dik()` ve `DİKAYAK` **sol pozitif** ve `docs/komutlar/komut-satiri.md`
+   (217386679). PiriCAD'de `dik()` ve `DİKAYAK` **sol pozitif** ve `docs/komutlar/komut-satiri.md`
    ("Dik ayak ve dik boy — işaret kuralı") ile `TODOS-CAD.md` P1a-6 bunu "Netcad'deki kuralın aynısı"
    diye yazıyor — araştırma bunu doğrulamıyor. Seçenekler: (a) Netcad kuralına geçmek, (b) kuralı koruyup
    belgeyi düzeltmek, (c) proje ayarı. Günlük çözülmüş noktayı tuttuğu için eski günlükler etkilenmez;
@@ -1018,6 +1018,6 @@ etmeden başlamaz.
   tuşlarının varsayılanları (yalnız F4 yardım metninde geçiyor); Dronet, EPlanet, Yapınet, Water, Atıksu,
   Mine sekmelerinin içeriği; NETPRO, NETÇAP, NETKAMU ve NETTOP'un alt sayfaları (yalnız dizin sayfaları
   okundu); Karo Oluşturucu ve Katalog'un ayrıntıları. Plan bunlara dayanmaz.
-- **KentOSCad'de bulunan iki belge tutarsızlığı** (874ce64'te, 28 Eylül 2026'da düzeltildi): `docs/komutlar/komut-satiri.md`
+- **PiriCAD'de bulunan iki belge tutarsızlığı** (874ce64'te, 28 Eylül 2026'da düzeltildi): `docs/komutlar/komut-satiri.md`
   işaret kuralı bölümü Netcad'in kuralını yanlış aktarıyordu (Açık soru 3; kural 29 Eylül'de Netcad'inkine
   geçti) ve aynı bölüm "Aynı işin fareyle yapılan hâli P1b'de `DİKAYAK` komutu olarak gelecek" diyordu.

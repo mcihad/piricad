@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — kentos_yazi_olcusu: the drawing face's advances, written into the
-// core as constant data (TODOS C-18, kentos_cad/core/text_metrics.hpp).
+// PiriCAD — piricad_yazi_olcusu: the drawing face's advances, written into the
+// core as constant data (TODOS C-18, piricad/core/text_metrics.hpp).
 //
-//   kentos_yazi_olcusu <font directory> <output .cpp>
+//   piricad_yazi_olcusu <font directory> <output .cpp>
 //
 // EVERY UNICODE SCALAR, SHAPED ALONE, by the atlas's own shaper in the spacing a
 // drawing's text is set in (`render::Spacing::Technical`) — not read off the
@@ -15,7 +15,7 @@
 // AT THE TOP OF THE GRAPH like every generator (Article 3.2a): it links the
 // atlas and nothing links it, and it includes no Qt — it runs in CI with no
 // display. Its output is held to the face by scripts/ci-gate-yazi-olcusu.sh.
-#include "kentos_cad/render/text_atlas.hpp"
+#include "piricad/render/text_atlas.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -27,9 +27,9 @@
 
 namespace {
 
-using kentos::render::Face;
-using kentos::render::Spacing;
-using kentos::render::TextAtlas;
+using piricad::render::Face;
+using piricad::render::Spacing;
+using piricad::render::TextAtlas;
 
 /// The face a drawing's text is set in, and the file it ships as.
 constexpr Face kFace               = Face::Sans;
@@ -74,12 +74,12 @@ std::string hex(char32_t c)
 int main(int argc, char** argv)
 {
     if (argc != 3) {
-        std::fprintf(stderr, "usage: kentos_yazi_olcusu <font directory> <output .cpp>\n");
+        std::fprintf(stderr, "usage: piricad_yazi_olcusu <font directory> <output .cpp>\n");
         return 2;
     }
     auto opened = TextAtlas::open(argv[1]);
     if (!opened) {
-        std::fprintf(stderr, "kentos_yazi_olcusu: %s\n", opened.error().message.c_str());
+        std::fprintf(stderr, "piricad_yazi_olcusu: %s\n", opened.error().message.c_str());
         return 1;
     }
     TextAtlas& atlas = *opened.value();
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
 
     // ---- the table ----
     std::ostringstream out;
-    out << "// GENERATED FILE - do not edit: run `make yazi-olcusu` (kentos_yazi_olcusu).\n"
+    out << "// GENERATED FILE - do not edit: run `make yazi-olcusu` (piricad_yazi_olcusu).\n"
            "// SPDX-License-Identifier: GPL-3.0-or-later\n"
            "//\n"
            "// The drawing face's advance for every Unicode scalar, in font units, as the\n"
@@ -115,13 +115,13 @@ int main(int argc, char** argv)
         << kFaceFile
         << ",\n"
            "// SIL Open Font License 1.1 (data/fonts/LICENCE.txt). What the numbers are for\n"
-           "// and why they are compiled in: kentos_cad/core/text_metrics.hpp.\n"
+           "// and why they are compiled in: piricad/core/text_metrics.hpp.\n"
            "#include \"text_metrics_table.hpp\"\n"
            "\n"
            "#include <array>\n"
            "\n"
            "// clang-format off\n"
-           "namespace kentos::core::text_table {\n"
+           "namespace piricad::core::text_table {\n"
            "namespace {\n"
            "\n"
            "/// U+0000 to U+017F, sixteen to a line.\n"
@@ -188,17 +188,17 @@ int main(int argc, char** argv)
            "    return kRuns;\n"
            "}\n"
            "\n"
-           "} // namespace kentos::core::text_table\n"
+           "} // namespace piricad::core::text_table\n"
            "\n"
            "// clang-format on\n";
 
     std::ofstream file(argv[2], std::ios::binary | std::ios::trunc);
     file << out.str();
     if (!file) {
-        std::fprintf(stderr, "kentos_yazi_olcusu: '%s' could not be written\n", argv[2]);
+        std::fprintf(stderr, "piricad_yazi_olcusu: '%s' could not be written\n", argv[2]);
         return 1;
     }
-    std::printf("kentos_yazi_olcusu: %zu runs, .notdef %d units, cap %d of %d\n", runs.size(),
+    std::printf("piricad_yazi_olcusu: %zu runs, .notdef %d units, cap %d of %d\n", runs.size(),
                 missing, atlas.cap_height_units(kFace), atlas.units_per_em(kFace));
     return 0;
 }

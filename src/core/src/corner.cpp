@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: cutting a corner off a run. See corner.hpp.
-#include "kentos_cad/core/corner.hpp"
+// PiriCAD — core: cutting a corner off a run. See corner.hpp.
+#include "piricad/core/corner.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/fillet.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/fillet.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -13,7 +13,7 @@
 #include <cstring>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 struct Dir
@@ -450,4 +450,4 @@ Result<CornerPreview> decode_corner_preview(std::span<const std::uint8_t> bytes)
     return preview;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

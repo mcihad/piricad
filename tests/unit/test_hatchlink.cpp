@@ -6,31 +6,31 @@
 // courtyard redrawn, an island drawn inside it, the parcel erased, the hatch
 // dragged away on its own, the boundary opened. The loops are asserted exactly,
 // because a hatch that spills into a courtyard is a wrong picture of a title.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/hatch_link.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/planar.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/render/drawlist.hpp"
-#include "kentos_cad/render/scene.hpp"
-#include "kentos_cad/render/view.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/hatch_link.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/planar.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/render/drawlist.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/render/view.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <array>
 #include <cmath>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 
 namespace {
@@ -537,7 +537,7 @@ TEST_CASE("TARAMA: kâğıtta desen, paftasının ölçeğinde kendi aralığın
 
 TEST_CASE("TARAMA yontem=ic: içine tıklanan bölge, adası delik, çizgilere bağsız")
 {
-    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
+    if (!core::network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; bölge sınanamıyor.");
     // FOUR LOOSE LINES round a 40 m × 30 m yard, and a closed 10 m square in it.
     Rig r;
     for (const char* line : {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0,30",
@@ -575,7 +575,7 @@ TEST_CASE("TARAMA yontem=ic: içine tıklanan bölge, adası delik, çizgilere b
 
 TEST_CASE("TARAMA yontem=ic: açık bölgeyi SINIR'ın sözüyle reddeder; tıklama yakalanmaz")
 {
-    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
+    if (!core::network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; bölge sınanamıyor.");
     // THREE SIDES AND A SHORT FOURTH: a 50 cm gap at the top left corner.
     Rig r;
     for (const char* line :
@@ -628,7 +628,7 @@ std::pair<core::Mm, core::Mm> caption_size(const Rig& r, std::int64_t key)
 
 TEST_CASE("TARAMA disarida=: gösterilen yazı boş kalır, pay deliği büyütür, sınıra bağlanmaz")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     // A 40 m × 30 m PARCEL with its number in the middle, left free as Netcad's
     // `Diğer Objeler Seç` leaves it (plan open question 18).
     Rig r;
@@ -666,7 +666,7 @@ TEST_CASE("TARAMA disarida=: gösterilen yazı boş kalır, pay deliği büyüt�
 TEST_CASE("TARAMA disarida=: nokta ve çizgi yalnız payla yer açar, yoksa söylenir; üst üste "
           "binenler tek delik")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ALAN 0,0 40,0 40,30 0,30"); ///< 1
     r.run("NOKTA 10,10");              ///< 2
@@ -710,7 +710,7 @@ TEST_CASE("TARAMA disarida=: nokta ve çizgi yalnız payla yer açar, yoksa söy
 
 TEST_CASE("TARAMA disarida=: her şeyi kaplayan, bagla=evet ve tek başına pay reddedilir")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ALAN 0,0 40,0 40,30 0,30");    ///< 1
     r.run("METİN 100,100 \"uzak\" 2000"); ///< 2, far outside the parcel
@@ -741,8 +741,8 @@ TEST_CASE("TARAMA disarida=: her şeyi kaplayan, bagla=evet ve tek başına pay 
 
 TEST_CASE("TARAMA yontem=ic disarida=: tıklanan bölgenin yazısı ve adası boş kalır")
 {
-    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; bölge sınanamıyor.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     for (const char* line : {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0,30",
                              "ÇİZGİ 0,30 0,0", "ALAN 5,5 15,5 15,15 5,15"})
@@ -758,7 +758,7 @@ TEST_CASE("TARAMA yontem=ic disarida=: tıklanan bölgenin yazısı ve adası bo
 TEST_CASE(
     "TARAMA disarida=: gösterilen daire daire olarak kesilir, kirişleri taramanın kirişleridir")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     // A TREE'S CIRCLE of two metres in a 40 m × 30 m parcel: the kernel cuts
     // the circle as a circle and the hatch takes it back in the chords a YAY
     // is drawn with — a little under π r², and the same hole a closed

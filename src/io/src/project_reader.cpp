@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: reading the native project file.
+// PiriCAD — io: reading the native project file.
 //
 // THE READER'S CONTRACT, in three sentences.
 //
@@ -25,10 +25,10 @@
 // default rather than dropping it in silence. Nothing in the running build can
 // produce such a file today, so the warning is a tripwire for the day the
 // mutators land, not a routine event.
-#include "kentos_cad/io/project.hpp"
+#include "piricad/io/project.hpp"
 
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/io/format.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/io/format.hpp"
 
 #include "block_view.hpp"
 #include "mapped_file.hpp"
@@ -43,7 +43,7 @@
 #include <system_error>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 using core::err;
@@ -172,34 +172,34 @@ struct Columns
 
 core::Status load_columns(const BlockView& view, const DocumentRecord& dr, Columns& c)
 {
-#define KENTOS_COLUMN(field, id, type, count, what)                                                \
+#define PIRICAD_COLUMN(field, id, type, count, what)                                               \
     do {                                                                                           \
         auto r = view.column<type>(id, count, what);                                               \
         if (!r) return r.error();                                                                  \
         c.field = r.value();                                                                       \
     } while (false)
 
-    KENTOS_COLUMN(min_x, kBlkEntityMinX, core::Mm, dr.entity_count, "en küçük X");
-    KENTOS_COLUMN(min_y, kBlkEntityMinY, core::Mm, dr.entity_count, "en küçük Y");
-    KENTOS_COLUMN(max_x, kBlkEntityMaxX, core::Mm, dr.entity_count, "en büyük X");
-    KENTOS_COLUMN(max_y, kBlkEntityMaxY, core::Mm, dr.entity_count, "en büyük Y");
-    KENTOS_COLUMN(flags, kBlkEntityFlags, std::uint8_t, dr.entity_count, "nesne bayrakları");
-    KENTOS_COLUMN(layer, kBlkEntityLayer, std::uint32_t, dr.entity_count, "nesne katmanı");
-    KENTOS_COLUMN(style, kBlkEntityStyle, std::uint32_t, dr.entity_count, "nesne stili");
-    KENTOS_COLUMN(kind, kBlkEntityKind, std::uint16_t, dr.entity_count, "nesne türü");
-    KENTOS_COLUMN(slot, kBlkEntitySlot, std::uint32_t, dr.entity_count, "nesne geometri yuvası");
-    KENTOS_COLUMN(key, kBlkEntityKey, std::uint64_t, dr.entity_count, "nesne anahtarları");
+    PIRICAD_COLUMN(min_x, kBlkEntityMinX, core::Mm, dr.entity_count, "en küçük X");
+    PIRICAD_COLUMN(min_y, kBlkEntityMinY, core::Mm, dr.entity_count, "en küçük Y");
+    PIRICAD_COLUMN(max_x, kBlkEntityMaxX, core::Mm, dr.entity_count, "en büyük X");
+    PIRICAD_COLUMN(max_y, kBlkEntityMaxY, core::Mm, dr.entity_count, "en büyük Y");
+    PIRICAD_COLUMN(flags, kBlkEntityFlags, std::uint8_t, dr.entity_count, "nesne bayrakları");
+    PIRICAD_COLUMN(layer, kBlkEntityLayer, std::uint32_t, dr.entity_count, "nesne katmanı");
+    PIRICAD_COLUMN(style, kBlkEntityStyle, std::uint32_t, dr.entity_count, "nesne stili");
+    PIRICAD_COLUMN(kind, kBlkEntityKind, std::uint16_t, dr.entity_count, "nesne türü");
+    PIRICAD_COLUMN(slot, kBlkEntitySlot, std::uint32_t, dr.entity_count, "nesne geometri yuvası");
+    PIRICAD_COLUMN(key, kBlkEntityKey, std::uint64_t, dr.entity_count, "nesne anahtarları");
 
-    KENTOS_COLUMN(ring_start, kBlkRingStart, std::uint32_t, dr.ring_count, "halka başlangıcı");
-    KENTOS_COLUMN(ring_count, kBlkRingCount, std::uint32_t, dr.ring_count, "halka uzunluğu");
-    KENTOS_COLUMN(ring_part, kBlkRingPart, std::uint16_t, dr.ring_count, "halka parçası");
-    KENTOS_COLUMN(ring_role, kBlkRingRole, std::uint8_t, dr.ring_count, "halka rolü");
-    KENTOS_COLUMN(first_ring, kBlkSlotFirstRing, std::uint32_t, dr.slot_count,
-                  "yuvanın ilk halkası");
-    KENTOS_COLUMN(ring_total, kBlkSlotRingTotal, std::uint32_t, dr.slot_count,
-                  "yuvanın halka sayısı");
-    KENTOS_COLUMN(xs, kBlkVertexX, core::Mm, dr.vertex_count, "tepe noktası X");
-    KENTOS_COLUMN(ys, kBlkVertexY, core::Mm, dr.vertex_count, "tepe noktası Y");
+    PIRICAD_COLUMN(ring_start, kBlkRingStart, std::uint32_t, dr.ring_count, "halka başlangıcı");
+    PIRICAD_COLUMN(ring_count, kBlkRingCount, std::uint32_t, dr.ring_count, "halka uzunluğu");
+    PIRICAD_COLUMN(ring_part, kBlkRingPart, std::uint16_t, dr.ring_count, "halka parçası");
+    PIRICAD_COLUMN(ring_role, kBlkRingRole, std::uint8_t, dr.ring_count, "halka rolü");
+    PIRICAD_COLUMN(first_ring, kBlkSlotFirstRing, std::uint32_t, dr.slot_count,
+                   "yuvanın ilk halkası");
+    PIRICAD_COLUMN(ring_total, kBlkSlotRingTotal, std::uint32_t, dr.slot_count,
+                   "yuvanın halka sayısı");
+    PIRICAD_COLUMN(xs, kBlkVertexX, core::Mm, dr.vertex_count, "tepe noktası X");
+    PIRICAD_COLUMN(ys, kBlkVertexY, core::Mm, dr.vertex_count, "tepe noktası Y");
 
     // OPTIONAL, and all four or none: a payload-free file writes none of them
     // (model.md R9a), and a file with some but not all is corrupt rather than
@@ -220,18 +220,18 @@ core::Status load_columns(const BlockView& view, const DocumentRecord& dr, Colum
                        std::string(kErrConsist) + ": tür yükü kayıt sütunları farklı uzunlukta (" +
                            std::to_string(records) + " / " +
                            std::to_string(view.count_of(kBlkPayloadBytes)) + "). Dosya bozuk.");
-        KENTOS_COLUMN(payload_ref, kBlkSlotPayloadRef, std::uint32_t, dr.slot_count,
-                      "yuvanın tür yükü başvurusu");
-        KENTOS_COLUMN(payload_start, kBlkPayloadStart, std::uint64_t, records,
-                      "tür yükü kaydının başlangıcı");
-        KENTOS_COLUMN(payload_bytes, kBlkPayloadBytes, std::uint32_t, records,
-                      "tür yükü kaydının uzunluğu");
-        KENTOS_COLUMN(payload, kBlkKindPayload, std::uint8_t, view.count_of(kBlkKindPayload),
-                      "tür yükü havuzu");
+        PIRICAD_COLUMN(payload_ref, kBlkSlotPayloadRef, std::uint32_t, dr.slot_count,
+                       "yuvanın tür yükü başvurusu");
+        PIRICAD_COLUMN(payload_start, kBlkPayloadStart, std::uint64_t, records,
+                       "tür yükü kaydının başlangıcı");
+        PIRICAD_COLUMN(payload_bytes, kBlkPayloadBytes, std::uint32_t, records,
+                       "tür yükü kaydının uzunluğu");
+        PIRICAD_COLUMN(payload, kBlkKindPayload, std::uint8_t, view.count_of(kBlkKindPayload),
+                       "tür yükü havuzu");
         c.has_payload = true;
     }
 
-#undef KENTOS_COLUMN
+#undef PIRICAD_COLUMN
     return core::ok();
 }
 
@@ -386,7 +386,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         report.warnings.push_back(
             Warning{"io.unknown_block",
                     "Dosyada bu sürümün tanımadığı " + std::to_string(view.unknown_blocks()) +
-                        " veri bloğu var; içerikleri korunmadı. Dosyayı yazan KentOSCad sürümüyle "
+                        " veri bloğu var; içerikleri korunmadı. Dosyayı yazan PiriCAD sürümüyle "
                         "açarsanız tamamını görürsünüz."});
 
     // ---- CRS. io.md R20: never a silent assumption. ----
@@ -1849,4 +1849,4 @@ command::Task<core::Result<ProjectReport>> read_project(command::Transaction& tx
     co_return load(tx, path, settings, stop);
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

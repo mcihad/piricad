@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the style designer.
+// PiriCAD — app: the style designer.
 //
 // WHAT WAS LOOKED AT. QGIS 4.2's `QgsSymbolSelectorDialog` and
 // `QgsStyleManagerDialog` were opened and read, not remembered. What they get
@@ -23,7 +23,7 @@
 // loads a provider registry and an SRS database into a program budgeted at a
 // two-second cold start (Article 7), and the round trip is lossy exactly where
 // this project differs on purpose — `QgsRasterFillSymbolLayer` names a FILE while
-// a KentOSCad raster fill carries the bytes and their provenance inside the
+// a PiriCAD raster fill carries the bytes and their provenance inside the
 // document. Licence is not the objection: QGIS is GPL-2.0-or-later.
 //
 // EVERY EDIT LEAVES AS A COMMAND. The dialog builds a `core::Symbol` and, on
@@ -32,13 +32,13 @@
 // what makes the designer teachable to the AI.
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/theme.hpp"
 
-#include "kentos_cad/app/symbol_preview.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/core/style_library.hpp"
+#include "piricad/app/symbol_preview.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/core/style_library.hpp"
 
-#include "kentos_cad/app/dialog_chrome.hpp"
+#include "piricad/app/dialog_chrome.hpp"
 
 #include <QDialog>
 #include <QString>
@@ -60,7 +60,7 @@ class QSpinBox;
 class QToolButton;
 class QTreeWidget;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -109,7 +109,7 @@ public:
     /// The symbol as the user left it.
     const core::Symbol& symbol() const noexcept { return symbol_; }
 
-    /// Drives the renderer the way a hand would, for `KENTOS_DESIGNER_PROBE`:
+    /// Drives the renderer the way a hand would, for `PIRICAD_DESIGNER_PROBE`:
     /// switches to the categorized renderer, classifies by `column`, applies, and
     /// reports every class with its count and how many styles the layer ended
     /// up with. It exists because a categorized style is a package file plus a
@@ -424,4 +424,4 @@ private:
     std::vector<std::pair<core::SymbolProperty, QToolButton*>> bindingMarks_;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

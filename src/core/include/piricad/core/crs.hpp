@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the coordinate reference system a document's numbers are in.
+// PiriCAD — core: the coordinate reference system a document's numbers are in.
 //
 // model.md R36 is explicit that a bare id string is NOT a CRS, and this type used
 // to be one anyway: an opaque `std::string` and nothing else. The consequences
@@ -20,7 +20,7 @@
 #include <string>
 #include <string_view>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// What one coordinate of a system COUNTS — the question that separates a map in
 /// metres from a globe in degrees (TODOS F-03).
@@ -180,4 +180,4 @@ std::string crs_metric_hint();
 // /data/crs/tm3-dilimleri.json and is loaded, never compiled in
 // (CLAUDE.md 5.13, .claude/data.md). The geodesy module owns the loader.
 
-} // namespace kentos::core
+} // namespace piricad::core

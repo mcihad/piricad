@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/gate.hpp"
+#include "piricad/ai/gate.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 Gate::Gate(PlanStore& plans, AuditLog& audit, Runner runner)
     : plans_(plans), audit_(audit), runner_(std::move(runner))
@@ -108,4 +108,4 @@ core::Status Gate::decide(const Approval& approval)
     return plans_.settle(plan->id, PlanState::Applied);
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

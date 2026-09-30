@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/tools_panel.hpp"
+#include "piricad/app/tools_panel.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/widgets.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/core/area_edit.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/widgets.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/core/area_edit.hpp"
+#include "piricad/processing/registry.hpp"
 
 #include <QFontDatabase>
 #include <QHBoxLayout>
@@ -22,7 +22,7 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 constexpr int kToolRole = Qt::UserRole + 1; ///< the tool's command id on a tree row
@@ -362,9 +362,9 @@ void ToolCard::run()
 void ToolCard::refresh()
 {
     const std::size_t n = controller_.bus().selection().size();
-    QString hint        = n == 0
-                              ? tr("Seçim boş: Seçili kapsamı tuvalden nesne seçtirir, sağ tık bitirir.")
-                              : tr("%1 nesne seçili.").arg(n);
+    QString hint = n == 0
+                       ? tr("Seçim boş: Seçili kapsamı tuvalden nesne seçtirir, sağ tık bitirir.")
+                       : tr("%1 nesne seçili.").arg(n);
     // The one selected face's area, because the tool that changes an area is
     // asked "to what?" and the answer starts from "from what".
     if (n == 1 && shown_ != nullptr &&
@@ -639,4 +639,4 @@ void ToolsPanel::applyTheme(ThemeMode mode)
     update();
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

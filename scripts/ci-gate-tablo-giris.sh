@@ -31,12 +31,12 @@ set -euo pipefail
 kok="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 exe=""
-for aday in build/dev/bin/kentos_cad build/release/bin/kentos_cad build/debug/bin/kentos_cad; do
+for aday in build/dev/bin/piricad build/release/bin/piricad build/debug/bin/piricad; do
     if [[ -x "$kok/$aday" ]]; then exe="$kok/$aday"; break; fi
 done
 
 if [[ -z "$exe" ]]; then
-    echo "tablo-giris: kentos_cad bulunamadı — ATLANDI (uygulama derlenmemiş)"
+    echo "tablo-giris: piricad bulunamadı — ATLANDI (uygulama derlenmemiş)"
     exit 0
 fi
 
@@ -55,7 +55,7 @@ gecici="$(mktemp -d)"
 trap 'rm -rf "$gecici"' EXIT
 
 set +e
-cikti="$(KENTOS_DATA="$kok/data" KENTOS_TABLE_PROBE="$gecici" "$exe" 2>/dev/null)"
+cikti="$(PIRICAD_DATA="$kok/data" PIRICAD_TABLE_PROBE="$gecici" "$exe" 2>/dev/null)"
 rc=$?
 set -e
 

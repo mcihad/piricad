@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/attach.hpp"
+#include "piricad/core/attach.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
+#include "piricad/core/curve_path.hpp"
 
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <numbers>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::uint64_t kAttachSeed = fnv1a("piricad.core.attach");
@@ -294,7 +294,7 @@ std::optional<AttachPlacement> attach_place(std::span<const Point2> ring, bool c
             static_cast<double>(out.centre.y - c.y) + (out_r.y * static_cast<double>(a.across));
         const double rad = static_cast<double>(out.turn_sense) * static_cast<double>(a.along) /
                            static_cast<double>(out.turn_radius);
-        const SinCos t = sin_cos_udeg(
+        const SinCos t   = sin_cos_udeg(
             mm_round(rad * (180.0 / std::numbers::pi) * static_cast<double>(kUDegPerDegree)));
         out.centre = Point2{
             c.x + mm_round((rx * t.cos) - (ry * t.sin)),
@@ -353,8 +353,8 @@ void attach_measure_offset(const AttachPlacement& rule, Point2 actual, Attachmen
         std::int64_t turn =
             atan2_udeg(static_cast<std::int64_t>(cross), static_cast<std::int64_t>(dot));
         if (turn > kUDegFullCircle / 2) turn -= kUDegFullCircle;
-        const double rad = static_cast<double>(turn) * (std::numbers::pi / 180.0) /
-                           static_cast<double>(kUDegPerDegree);
+        const double rad  = static_cast<double>(turn) * (std::numbers::pi / 180.0) /
+                            static_cast<double>(kUDegPerDegree);
         a.along           = mm_round(rad * static_cast<double>(rule.turn_radius) *
                                      static_cast<double>(rule.turn_sense));
         const SinCos back = sin_cos_udeg(-turn);
@@ -417,8 +417,8 @@ AttachSide attach_side_of(std::span<const Point2> ring, bool closed, std::uint32
     const Point2 p = ring[index];
     const Point2 q = ring[(index + 1) % n];
     // Which side of the walk `at` lies on: the sign of the cross product.
-    const Int128 cross = (static_cast<Int128>(q.x) - p.x) * (static_cast<Int128>(at.y) - p.y) -
-                         (static_cast<Int128>(q.y) - p.y) * (static_cast<Int128>(at.x) - p.x);
+    const Int128 cross      = (static_cast<Int128>(q.x) - p.x) * (static_cast<Int128>(at.y) - p.y) -
+                              (static_cast<Int128>(q.y) - p.y) * (static_cast<Int128>(at.x) - p.x);
     const bool left_of_walk = cross > 0;
     if (closed) {
         // The interior is on the left of a counter-clockwise walk.
@@ -602,4 +602,4 @@ std::uint64_t AttachTable::fold(std::uint64_t seed, std::span<const std::uint32_
     return h;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

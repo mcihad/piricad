@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The Python host (`.claude/script.md`). Compiled only when
-// `KENTOS_WITH_PYTHON=ON`; R6 requires the whole suite to build and pass with the
+// `PIRICAD_WITH_PYTHON=ON`; R6 requires the whole suite to build and pass with the
 // option off, so this file must be EMPTY in that build rather than skipped at
 // runtime.
 //
@@ -13,13 +13,13 @@
 //   R14    one script is one undo step, and a failure rolls the whole block back
 //   R9/P4  a read binding returns a value, and there is no write path but cad.run
 //   P8     `güvenli` has no binding filesystem; `proje` cannot escape the project
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#if KENTOS_HAVE_PYTHON
+#if PIRICAD_HAVE_PYTHON
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/script/python_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/script/python_runner.hpp"
 
 #include <cctype>
 #include <chrono>
@@ -28,8 +28,8 @@
 #include <set>
 #include <thread>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -93,10 +93,10 @@ TEST_CASE("PYTHON: the module is importable as well as pre-bound")
     // say where its names came from, and the pre-bound `cad` for a one-liner
     // typed at an evaluator.
     auto report = runner.run_text(R"(
-import kentos.cad
-from kentos import cad as also_cad
+import piricad.cad
+from piricad import cad as also_cad
 
-assert kentos.cad is cad, "import gave a different module"
+assert piricad.cad is cad, "import gave a different module"
 assert also_cad is cad, "from-import gave a different module"
 )",
                                   "import");
@@ -283,7 +283,7 @@ TEST_CASE("PYTHON: the binding filesystem obeys the level")
     // directory is a path inside it as text and outside it in fact.
     {
         const std::filesystem::path root =
-            std::filesystem::temp_directory_path() / "kentoscad-python-test";
+            std::filesystem::temp_directory_path() / "piricad-python-test";
         std::filesystem::create_directories(root);
         {
             std::ofstream(root / "içeride.txt") << "merhaba";
@@ -365,7 +365,7 @@ TEST_CASE("PYTHON: BETİK picks the host from the file extension")
     script::PythonRunner python(rig.bus, script::Sandbox::Project);
 
     const std::filesystem::path root =
-        std::filesystem::temp_directory_path() / "kentoscad-host-dispatch";
+        std::filesystem::temp_directory_path() / "piricad-host-dispatch";
     std::filesystem::create_directories(root);
     python.set_project_root(root.string());
 
@@ -465,7 +465,7 @@ TEST_CASE("PYTHON: every command is a callable, generated from the registry")
         if (spec.run != nullptr && has_flag(spec.flags, Flags::Scriptable)) ++scriptable;
     REQUIRE(scriptable > 80);
 
-    auto report = runner.run_text("import kentos.cad\n"
+    auto report = runner.run_text("import piricad.cad\n"
                                   "assert len(cad.__all__) == " +
                                       std::to_string(scriptable) +
                                       ", f'{len(cad.__all__)} callables'\n"
@@ -707,4 +707,4 @@ assert bbox.contains(cad.viewport.center())
     CHECK(report.ok());
 }
 
-#endif // KENTOS_HAVE_PYTHON
+#endif // PIRICAD_HAVE_PYTHON

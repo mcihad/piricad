@@ -17,10 +17,10 @@
 // nearest linework measured and marked on the canvas; a face it keeps from
 // closing is simply not made. Bridging is asked for by name (`bosluk=`), and
 // every bridge laid is said.
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/core/planar.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/planar.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <set>
@@ -28,7 +28,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::processing {
+namespace piricad::processing {
 namespace {
 
 /// Millimetres as the metres a user reads: "5 cm" below a metre, two decimals
@@ -217,10 +217,10 @@ public:
 
 private:
     const ToolSpec spec_{
-        .id     = "islem.alan_uret",
-        .python = "polygonize",
-        .names  = {"ALANÜRET", "ALANURET", "POLYGONIZE", "ALÜ"},
-        .title  = "Çizgilerden alan üret",
+        .id      = "islem.alan_uret",
+        .python  = "polygonize",
+        .names   = {"ALANÜRET", "ALANURET", "POLYGONIZE", "ALÜ"},
+        .title   = "Çizgilerden alan üret",
         .summary = "Kapsamdaki çizgilerin kapattığı her gözü ayrı bir alan olarak çizer; içerideki "
                    "adalar delik olur, açık uçlar sayılıp gösterilir ve hiçbiri kendiliğinden "
                    "kapanmaz.",
@@ -247,10 +247,10 @@ private:
 
 } // namespace
 
-KENTOS_PROCESSING_TOOL(polygonize)
+PIRICAD_PROCESSING_TOOL(polygonize)
 {
     static const Polygonize tool;
     return tool;
 }
 
-} // namespace kentos::processing
+} // namespace piricad::processing

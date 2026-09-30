@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the list of a drawing's layouts.
+// PiriCAD — app: the list of a drawing's layouts.
 //
 // WHY A LIST WINDOW EXISTS AT ALL. The designer edits ONE sheet. Everything
 // about the SET of them — how many there are, which to open, renaming one,
@@ -14,13 +14,13 @@
 // do by hand and says so in the journal (Article 1.2).
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
+#include "piricad/app/dialog_chrome.hpp"
 
 #include <QString>
 
 class QListWidget;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -61,4 +61,4 @@ private:
     Button* remove_{nullptr};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

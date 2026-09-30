@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the conversation, as data.
+// PiriCAD — ai: the conversation, as data.
 //
 // A MESSAGE IS BLOCKS, NOT A STRING. Every provider that can reason or call a
 // tool returns a turn made of parts — visible text, thinking, a tool call, and on
@@ -23,12 +23,12 @@
 // and ai.md R9/R10 made a parse failure rather than a policy check.
 #pragma once
 
-#include "kentos_cad/ai/dialect.hpp"
-#include "kentos_cad/ai/handles.hpp"
-#include "kentos_cad/ai/plan.hpp"
-#include "kentos_cad/ai/tool.hpp"
+#include "piricad/ai/dialect.hpp"
+#include "piricad/ai/handles.hpp"
+#include "piricad/ai/plan.hpp"
+#include "piricad/ai/tool.hpp"
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -37,11 +37,11 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 class Registry; ///< where a tool call finds the command it names
-} // namespace kentos::command
+} // namespace piricad::command
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// Who a message is from.
 enum class Role : std::uint8_t {
@@ -130,8 +130,8 @@ bool is_text_attachment(const Attachment& attachment);
 ///
 /// HAND-ROLLED, AND SAID OUT LOUD (CLAUDE.md 5.16, Article 9 step 3). Every
 /// mature base64 this program could reach is in a library this module may not
-/// link: Qt's is banned here by ai.md P10, and neither `kentos_core` nor
-/// `kentos_command` has one today. It is twenty lines of table lookup with a
+/// link: Qt's is banned here by ai.md P10, and neither `piricad_core` nor
+/// `piricad_command` has one today. It is twenty lines of table lookup with a
 /// round-trip test, which is the exception that rule allows and not a licence to
 /// hand-roll the next thing.
 std::string attachment_base64(const Attachment& attachment);
@@ -303,4 +303,4 @@ core::Result<PlanStep> plan_step_for(const Block& call, const Catalog& catalog,
 /// stop retrying the same call.
 Message tool_result_message(const Block& call, std::string_view output, bool failed);
 
-} // namespace kentos::ai
+} // namespace piricad::ai

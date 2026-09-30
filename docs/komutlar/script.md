@@ -78,8 +78,8 @@ BETİK tests/journal/ornek-parsel.json onizle=evet
 
 ### Arayüz
 
-**KentOS CAD ▸ Betik Çalıştır…** ya da **Ctrl+R** bir dosya seçme penceresi açar. Seçtiğiniz betik çalışır ve sonuç
-kendiliğinden görünüme sığdırılır. **KentOS CAD ▸ Betiği Önizle…** aynı pencereyi açar ama
+**PiriCAD CAD ▸ Betik Çalıştır…** ya da **Ctrl+R** bir dosya seçme penceresi açar. Seçtiğiniz betik çalışır ve sonuç
+kendiliğinden görünüme sığdırılır. **PiriCAD CAD ▸ Betiği Önizle…** aynı pencereyi açar ama
 betiği çalıştırmaz; ne değiştireceğini komut satırına yazar.
 
 ### Betik
@@ -87,7 +87,7 @@ betiği çalıştırmaz; ne değiştireceğini komut satırına yazar.
 Program açılırken betik çalıştırmak için komut satırı seçeneğini kullanın:
 
 ```bash
-./build/dev/bin/kentos_cad --betik tests/journal/ornek-parsel.json
+./build/dev/bin/piricad --betik tests/journal/ornek-parsel.json
 ```
 
 veya
@@ -153,7 +153,7 @@ Betiklerin dosya sistemine erişimi üç seviyeyle sınırlanır:
 | `proje` | Yalnız proje dizini |
 | `tam` | Kullanıcının açık onayı gerekir |
 
-KentOSCad uygulaması betikleri **`proje`** seviyesinde çalıştırır. `güvenli` seviyede bir
+PiriCAD uygulaması betikleri **`proje`** seviyesinde çalıştırır. `güvenli` seviyede bir
 betik dosyası açmaya çalışırsanız reddedilir.
 
 ### Bu sürümdeki betik dili
@@ -161,7 +161,7 @@ betik dosyası açmaya çalışırsanız reddedilir.
 Varsayılan yapıda betik motoru yalnız JSON komut dizisi anlar. İfade, döngü ve koşul
 yoktur.
 
-`KENTOS_WITH_PYTHON=ON` ile derlenen yapıda `.py` uzantılı bir dosya gömülü **Python**
+`PIRICAD_WITH_PYTHON=ON` ile derlenen yapıda `.py` uzantılı bir dosya gömülü **Python**
 motoruna gider: değişken, döngü, koşul ve fonksiyon. Aynı komut veri yolunu kullanır,
 dolayısıyla bu sayfadaki her kural orada da geçerlidir. Ayrıntı:
 [Python betikleri](../betik/python.md).

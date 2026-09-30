@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: a placed block.
+// PiriCAD — core: a placed block.
 //
 // A block definition (core/block.hpp) is drawn once; a REFERENCE places it — at a
 // point, scaled, turned, mirrored, and as a grid of copies. The reference's ring
@@ -14,19 +14,19 @@
 // machines place the same manhole cover on the same millimetre (§7.3).
 #pragma once
 
-#include "kentos_cad/core/block.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/block.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
 #include <string>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The document a reference draws its members from (document.hpp).
 class Document;
@@ -165,4 +165,4 @@ bool style_by_block(const Document& doc, StyleId style);
 Mm caption_height_along(const RingGeometry& geom, std::uint32_t slot, Point2 a, Point2 b,
                         Mm height);
 
-} // namespace kentos::core
+} // namespace piricad::core

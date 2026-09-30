@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: ring geometry.
+// PiriCAD — core: ring geometry.
 //
 // .claude/model.md R9–R12. A cadastral parcel is a ring, may have interior
 // rings, and may be multipart. `(start, count)` — a single open vertex run —
@@ -16,15 +16,15 @@
 // Interior rings (R11) — that ordering is part of the content hash.
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Square millimetres. A 100 km x 100 km area is 1e16 mm², well inside int64.
 using Mm2 = std::int64_t;
@@ -242,4 +242,4 @@ constexpr double mm2_to_m2(Mm2 v) noexcept
            (static_cast<double>(kMmPerMetre) * static_cast<double>(kMmPerMetre));
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

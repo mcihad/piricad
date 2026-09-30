@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "python_impl.hpp"
 
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/json.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/json.hpp"
 
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
@@ -14,7 +14,7 @@
 
 namespace py = pybind11;
 
-namespace kentos::script::detail {
+namespace piricad::script::detail {
 namespace {
 
 using core::ErrorCode;
@@ -141,7 +141,7 @@ void bind_types(py::object& cad)
     // sharing them is safe in a way sharing `cad.line` would not be.
     py::dict modules = py::module_::import("sys").attr("modules");
 
-    const char* home_name = "kentos._types";
+    const char* home_name = "piricad._types";
     if (modules.contains(home_name)) {
         const py::object home = modules[home_name];
         cad.attr("Point")     = home.attr("Point");
@@ -281,7 +281,7 @@ void bind_types(py::object& cad)
 void bind_viewport(Host& host, py::object& cad)
 {
     py::object module_type = py::module_::import("types").attr("ModuleType");
-    py::object viewport    = module_type("kentos.cad.viewport");
+    py::object viewport    = module_type("piricad.cad.viewport");
 
     const auto view = [&host]() -> command::ViewInfo {
         if (!host.bus.on_view_query)
@@ -329,8 +329,8 @@ void bind_viewport(Host& host, py::object& cad)
         py::name("crs"), py::scope(viewport),
         py::doc("The coordinate reference system the view's numbers are in."));
 
-    cad.attr("viewport")                                              = viewport;
-    py::module_::import("sys").attr("modules")["kentos.cad.viewport"] = viewport;
+    cad.attr("viewport")                                               = viewport;
+    py::module_::import("sys").attr("modules")["piricad.cad.viewport"] = viewport;
 }
 
 void bind_commands(Host& host, py::object& cad)
@@ -361,7 +361,7 @@ void bind_commands(Host& host, py::object& cad)
         if (py::hasattr(cad, fn.c_str()))
             host.fail(ErrorCode::Unsupported,
                       "'" + spec->id + "' komutunun Python adı '" + fn +
-                          "', ve o ad zaten kentos.cad üzerinde var. Komuta CommandSpec::python "
+                          "', ve o ad zaten piricad.cad üzerinde var. Komuta CommandSpec::python "
                           "ile başka bir ad verin.");
 
         cad.attr(fn.c_str()) = py::cpp_function(
@@ -420,4 +420,4 @@ void bind_commands(Host& host, py::object& cad)
     cad.attr("__all__") = py::tuple(exported);
 }
 
-} // namespace kentos::script::detail
+} // namespace piricad::script::detail

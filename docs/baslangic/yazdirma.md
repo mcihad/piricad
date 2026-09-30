@@ -104,7 +104,7 @@ taşır, bu yüzden şifre kutuları boşken kapalı durur.
 istemediği bir anda bir PDF'i yeniden yazardı. Şifreyi komut satırına yazarsanız o
 satır oturumun komut geçmişinde kalır; temiz yol önizleme penceresidir.
 
-> Şifreleme `qpdf` ile yapılır. `KENTOS_WITH_QPDF` kapalı derlenmiş bir yapıda şifre
+> Şifreleme `qpdf` ile yapılır. `PIRICAD_WITH_QPDF` kapalı derlenmiş bir yapıda şifre
 > kutuları "bu yapıda yok" der ve PDF şifresiz yazılır.
 
 ## Yazıcı

@@ -6,13 +6,13 @@
 // a 3-4-5 triangle, a 30-60-90 one — and is asserted to the millimetre, because
 // a trim that stops a millimetre off the boundary leaves a gap a topology check
 // then reports as a defect (§7.3).
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/trim_curve.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/trim_curve.hpp"
 
 #include <algorithm>
 #include <array>
@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-using namespace kentos::core;
+using namespace piricad::core;
 
 namespace {
 

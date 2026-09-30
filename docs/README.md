@@ -1,11 +1,11 @@
-# KentOSCad Kullanıcı Kılavuzu
+# PiriCAD Kullanıcı Kılavuzu
 
 Türkiye odaklı CBS + CAD harita yazılımının kullanıcı belgeleri. Harita mühendisi,
 şehir plancısı ve kadastro teknisyeni için yazıldı.
 
 ## Nereden başlamalı
 
-Daha önce KentOSCad kullanmadıysanız sırayla okuyun:
+Daha önce PiriCAD kullanmadıysanız sırayla okuyun:
 
 1. [Kurulum ve derleme](baslangic/kurulum.md) — programı çalışır hâle getirin
 2. [İlk adımlar](baslangic/ilk-adimlar.md) — on dakikada ilk çiziminiz
@@ -13,7 +13,7 @@ Daha önce KentOSCad kullanmadıysanız sırayla okuyun:
 4. [Bileşenler](baslangic/bilesenler.md) — düğmeler, girdiler ve seçim denetimleri; durumları ve klavyesi
 5. [Stil tasarımcısı](baslangic/stil-tasarimcisi.md) — bir katmanın nasıl çizileceğini tasarlayın
 6. [Yazdırma ve PDF](baslangic/yazdirma.md) — yazdırma alanını seçin, ölçeği verin, PDF alın
-6. [Komut sistemi](komutlar/README.md) — KentOSCad'in çalışma mantığı
+6. [Komut sistemi](komutlar/README.md) — PiriCAD'in çalışma mantığı
 
 ## Komutlar
 
@@ -216,11 +216,11 @@ Yapay zeka bu programda geometri üretmez, **komut üretir**; ürettiği her şe
 | [İşlem araçları](islem/README.md) | Araçlar paneli; kapsam, asenkron çalışma ve Durdur, çıktı katmanı; araç listesi |
 | [Bağlı nesneler](islem/bagli-nesneler.md) | Kaynağını izleyen yazılar: uzunluk ve köşe numarası nasıl taşınır, yenilenir, çözülür |
 | [Betik yazma](betik/README.md) | JSON betik biçimi, toplu işlem, kum havuzu |
-| [Python betikleri](betik/python.md) | Döngü, koşul ve hesapla betik yazma; `kentos.cad` API'si |
+| [Python betikleri](betik/python.md) | Döngü, koşul ve hesapla betik yazma; `piricad.cad` API'si |
 | [Python API referansı](python/referans.md) | Üretilmiş: her komutun Python imzası, İngilizce anahtar kelimeleri ve türleri |
 | [Komut günlüğü](mimari/gunluk.md) | Yaptığınız işi geri izleme, makro, oturum kaydı |
 | [Koordinat sistemleri](veri/koordinat-sistemleri.md) | TUREF/TM30, TM 3° dilimleri, milimetre depolama |
-| [KentOSCad proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |
+| [PiriCAD proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |
 | [Dış veri biçimleri](veri/dis-formatlar.md) | DXF, GeoPackage ve Netcad NCZ, koordinat sistemi, `.prj` dosyası |
 | [Netcad NCZ çizimleri](veri/netcad-ncz.md) | `.ncz` dosyasını içe alma ve altlık olarak bağlama: nesnelerin eşlemesi, katman ve renkler, akıllı nesneler, pafta çerçeveleri, koordinat sistemi uyarıları, raporun her satırı |
 | [Dışa Aktar penceresi](baslangic/disa-aktarma.md) | Çizimi, bir nesnenin köşelerini ya da bir stili tek pencereden yazma |
@@ -236,7 +236,7 @@ Yapay zeka bu programda geometri üretmez, **komut üretir**; ürettiği her şe
 
 | Sayfa | İçerik |
 |---|---|
-| [Sözlük](sozluk.md) | Haritacılık, imar ve KentOSCad terimleri |
+| [Sözlük](sozluk.md) | Haritacılık, imar ve PiriCAD terimleri |
 | [Sorun giderme](sorun-giderme.md) | Hata mesajları, sebepleri ve çözümleri |
 
 ## Bu kılavuz hakkında

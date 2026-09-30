@@ -11,25 +11,25 @@
 // undo gives the source back; that a result reshaped with its sources is still
 // current and one reshaped on its own is released; and that all of it goes
 // through a save and an open, and through every client alike.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/hatch_link.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/lineage.hpp"
-#include "kentos_cad/core/planar.hpp"
-#include "kentos_cad/core/ties.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/domain/surface/contour.hpp"
-#include "kentos_cad/io/format.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/hatch_link.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/lineage.hpp"
+#include "piricad/core/planar.hpp"
+#include "piricad/core/ties.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/domain/surface/contour.hpp"
+#include "piricad/io/format.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <array>
 #include <cstdlib>
@@ -40,8 +40,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -141,7 +141,7 @@ struct TempDir
     std::filesystem::path path;
 
     explicit TempDir(const char* name)
-        : path(std::filesystem::temp_directory_path() / (std::string("kentoscad-") + name))
+        : path(std::filesystem::temp_directory_path() / (std::string("piricad-") + name))
     {
         std::filesystem::remove_all(path);
         std::filesystem::create_directories(path);
@@ -340,7 +340,7 @@ TEST_CASE("SONUÇ: kaynağıyla birlikte taşınan tampon güncel kalır; kendi 
 TEST_CASE("SONUÇ: bir noktanın kotu değişince bir çalışmanın bütün eş yükselti eğrileri "
           "güncel değil olur; köken bir kez tutulur, dosyada da bir kez yazılır")
 {
-    if (!domain::surface::available()) PENDING("KENTOS_WITH_CDT=OFF; EŞYÜKSELTİ sınanamıyor.");
+    if (!domain::surface::available()) PENDING("PIRICAD_WITH_CDT=OFF; EŞYÜKSELTİ sınanamıyor.");
     TempDir tmp("sonuc-eslik");
     Rig r;
     levelled_points(r);
@@ -429,7 +429,7 @@ TEST_CASE("SONUÇ: bir kaynağın değişmesi yalnız ondan yapılan sonuçları
 
 TEST_CASE("SONUÇ: SINIR'ın bulduğu alan, çizgisi taşınınca güncel değil olur")
 {
-    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; SINIR sınanamıyor.");
+    if (!core::network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; SINIR sınanamıyor.");
     Rig r;
     r.run("ÇİZGİ 0,0 20,0");   // 1
     r.run("ÇİZGİ 20,0 20,10"); // 2
@@ -750,7 +750,7 @@ TEST_CASE(
     "YENİDEN HESAPLAMA: kotu değişen noktaların eş yükselti eğrileri yeniden izlenir; eskiler "
     "gider, yeniler güncel ve aynı katmanda")
 {
-    if (!domain::surface::available()) PENDING("KENTOS_WITH_CDT=OFF; EŞYÜKSELTİ sınanamıyor.");
+    if (!domain::surface::available()) PENDING("PIRICAD_WITH_CDT=OFF; EŞYÜKSELTİ sınanamıyor.");
     Rig r;
     levelled_points(r);
     r.run("EŞYÜKSELTİ aralik=500");
@@ -784,7 +784,7 @@ TEST_CASE(
 
 TEST_CASE("YENİDEN HESAPLAMA: SINIR'ın alanı çizgisi oynayınca yerinde yeniden bulunur")
 {
-    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; SINIR sınanamıyor.");
+    if (!core::network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; SINIR sınanamıyor.");
     Rig r;
     r.run("ÇİZGİ 0,0 20,0");   // 1
     r.run("ÇİZGİ 20,0 20,10"); // 2
@@ -805,7 +805,7 @@ TEST_CASE("YENİDEN HESAPLAMA: nasıl hesaplandığı kayıtlı olmayan sonuç y
 {
     // The first result format kept no arguments: its origins cannot be run again.
     namespace fs          = std::filesystem;
-    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
     const fs::path good   = corpus / "16-sonuc-kokenleri.pcad";
     if (!fs::exists(good)) PENDING("Sonuç kökeni tohumu yok.");
     Rig r;
@@ -947,14 +947,14 @@ TEST_CASE("SONUÇ: sonuç kökeni tohumları korpusta; bozuk satırlar uyarıyla
           "taşan köken adıyla reddedilir")
 {
     // CLAUDE.md 6.7, for the three result blocks (core/lineage.hpp, F-04):
-    // written under KENTOS_TOHUM_UPDATE — two wells and their buffers, one
+    // written under PIRICAD_TOHUM_UPDATE — two wells and their buffers, one
     // well moved after — and read back on every build.
     namespace fs          = std::filesystem;
-    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
     const fs::path good   = corpus / "16-sonuc-kokenleri.pcad";
     const fs::path row    = corpus / "17-sonuc-satiri-bozuk.pcad";
     const fs::path run    = corpus / "18-sonuc-kaynagi-tasan.pcad";
-    if (std::getenv("KENTOS_TOHUM_UPDATE") != nullptr) {
+    if (std::getenv("PIRICAD_TOHUM_UPDATE") != nullptr) {
         Rig w;
         for (const char* line :
              {"NOKTA 0,0", "NOKTA 100,0", "TAMPON nesneler=1 2 mesafe=5 birlestir=hayir katman=K",
@@ -975,15 +975,29 @@ TEST_CASE("SONUÇ: sonuç kökeni tohumları korpusta; bozuk satırlar uyarıyla
             std::memcpy(&v, bytes.data() + at, 8);
             return v;
         };
-        std::size_t origins = 0;
-        std::size_t rows    = 0;
+        std::size_t origins       = 0;
+        std::size_t rows          = 0;
+        std::uint64_t origin_rows = 0;
         for (std::uint32_t b = 0; b < u32(20); ++b) {
             const std::size_t entry = u64(24) + std::size_t{b} * 32;
-            if (u32(entry) == io::kBlkResultOrigins) origins = u64(entry + 8);
+            if (u32(entry) == io::kBlkResultOrigins) {
+                origins     = u64(entry + 8);
+                origin_rows = u64(entry + 24);
+            }
             if (u32(entry) == io::kBlkResultRows) rows = u64(entry + 8);
         }
         REQUIRE(origins != 0);
         REQUIRE(rows != 0);
+        // THE SAMPLE IS A LEGACY ONE. The first result format wrote zero in
+        // `arguments_string` (io/format.hpp), and the test below exists to prove
+        // such a file is refused rather than computed again — so the writer here
+        // must put every origin record back into that format rather than leave
+        // the arguments a current save records.
+        const std::uint32_t no_arguments = 0;
+        for (std::uint64_t r = 0; r < origin_rows; ++r)
+            std::memcpy(bytes.data() + origins + std::size_t{r} * 16 + 12, &no_arguments, 4);
+        std::ofstream(good, std::ios::binary)
+            .write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
         // A row naming an object the file does not hold, and one naming an
         // origin past the block.
         std::string broken_rows    = bytes;
@@ -1001,7 +1015,7 @@ TEST_CASE("SONUÇ: sonuç kökeni tohumları korpusta; bozuk satırlar uyarıyla
             .write(broken_run.data(), static_cast<std::streamsize>(broken_run.size()));
     }
     if (!fs::exists(good) || !fs::exists(row) || !fs::exists(run))
-        PENDING("Sonuç kökeni tohumları yok; KENTOS_TOHUM_UPDATE=1 ile yazılır.");
+        PENDING("Sonuç kökeni tohumları yok; PIRICAD_TOHUM_UPDATE=1 ile yazılır.");
 
     Rig a;
     a.run("AÇ \"" + good.string() + "\"");
@@ -1028,10 +1042,10 @@ TEST_CASE("YENİDEN HESAPLAMA: nasıl hesaplandığını taşıyan köken tohuml
 {
     // CLAUDE.md 6.7, for the arguments a result's origin keeps (TODOS F-04).
     namespace fs          = std::filesystem;
-    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
     const fs::path good   = corpus / "19-sonuc-argumanli.pcad";
     const fs::path bad    = corpus / "20-sonuc-argumani-tasan.pcad";
-    if (std::getenv("KENTOS_TOHUM_UPDATE") != nullptr) {
+    if (std::getenv("PIRICAD_TOHUM_UPDATE") != nullptr) {
         Rig w;
         for (const char* line : {"NOKTA 0,0", "TAMPON nesneler=1 mesafe=5 katman=K",
                                  "TAŞI nesneler=1 baslangic=0,0 bitis=2,0"})
@@ -1063,7 +1077,7 @@ TEST_CASE("YENİDEN HESAPLAMA: nasıl hesaplandığını taşıyan köken tohuml
             .write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
     }
     if (!fs::exists(good) || !fs::exists(bad))
-        PENDING("Argümanlı sonuç tohumları yok; KENTOS_TOHUM_UPDATE=1 ile yazılır.");
+        PENDING("Argümanlı sonuç tohumları yok; PIRICAD_TOHUM_UPDATE=1 ile yazılır.");
 
     // Read back, it can be computed again: the arguments travelled.
     Rig a;

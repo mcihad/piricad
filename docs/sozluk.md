@@ -1,6 +1,6 @@
 # Sözlük
 
-Kılavuzda geçen her alan terimini ve KentOSCad terimini arayan herkes için; kılavuzun geri
+Kılavuzda geçen her alan terimini ve PiriCAD terimini arayan herkes için; kılavuzun geri
 kalanı bu sayfadaki tanımları kullanır.
 
 ## Haritacılık ve kadastro terimleri
@@ -8,7 +8,7 @@ kalanı bu sayfadaki tanımları kullanır.
 **Aplikasyon** — Projede hesaplanmış bir noktanın veya sınırın araziye uygulanması, yani
 kâğıttaki koordinatın zeminde işaretlenmesi.
 
-**Azimut** — Bir doğrultunun kuzeyden saat yönünde ölçülen açısı. KentOSCad'de açının
+**Azimut** — Bir doğrultunun kuzeyden saat yönünde ölçülen açısı. PiriCAD'de açının
 varsayılan kuralıdır (`semt`): komut satırındaki `@mesafe<açı` böyle okunur, `ÖLÇ` ve
 `APLİKASYON` böyle yazar. Bkz. [Komut satırı](komutlar/komut-satiri.md).
 
@@ -16,7 +16,7 @@ varsayılan kuralıdır (`semt`): komut satırındaki `@mesafe<açı` böyle oku
 bağlama kuzey ise azimuttur. `APLİKASYON` bağlama noktası verildiğinde bunu yazar.
 
 **Grad** — Tam daireyi 400'e bölen açı birimi; dik açı 100 grad, 1 grad 0,9 derece.
-Türkiye'de nirengi, poligon ve aplikasyon hesaplarının birimi ve KentOSCad'in varsayılan
+Türkiye'de nirengi, poligon ve aplikasyon hesaplarının birimi ve PiriCAD'in varsayılan
 açı birimidir (`açı_birimi`).
 
 **Cins değişikliği** — Bir taşınmazın niteliğinin (arsa, tarla, bina vb.) tapu kütüğünde
@@ -98,7 +98,7 @@ paylaşımının ulusal çerçevesi.
 
 **PlanGML** — İmar planlarının sayısal değişimi için kullanılan GML tabanlı veri biçimi.
 
-**NCZ** — Netcad'in kendi ikili çizim biçimi (`.ncz`). KentOSCad onu okur, yazmaz.
+**NCZ** — Netcad'in kendi ikili çizim biçimi (`.ncz`). PiriCAD onu okur, yazmaz.
 Bkz. [Netcad NCZ çizimleri](veri/netcad-ncz.md).
 
 **e-Plan** — Mekânsal planların elektronik ortamda sunulduğu otomasyon sistemi.
@@ -133,7 +133,7 @@ yüksekliğinden ortometrik yüksekliğe geçmek için gerekir.
 
 Ayrıntı: [Koordinat sistemleri](veri/koordinat-sistemleri.md).
 
-## KentOSCad terimleri
+## PiriCAD terimleri
 
 **Yazdırma profili** — Adlandırılmış bir kâğıt: kâğıt boyu, yön (dikey/yatay),
 çözünürlük ve kenar boşluğu. Bir tanesi varsayılandır ve Yazdır düğmesi onu kullanır.
@@ -249,9 +249,9 @@ olmayan ayar: nesne yakalama, dik mod, kutupsal izleme, ızgaraya yakalama.
 **Kapsam** — Çizimdeki görünür nesnelerin tamamını çevreleyen dikdörtgen. `YAKINLAŞ
 KAPSAM` görünümü buna sığdırır.
 
-**Proje dosyası** — KentOSCad'in kendi kayıt biçimi, uzantısı `.pcad`. Çizimi kayıpsız
+**Proje dosyası** — PiriCAD'in kendi kayıt biçimi, uzantısı `.pcad`. Çizimi kayıpsız
 taşır: geometri, katman, stil, nesne anahtarları ve proje ayarları.
-Bkz. [KentOSCad proje dosyası](veri/proje-dosyasi.md).
+Bkz. [PiriCAD proje dosyası](veri/proje-dosyasi.md).
 
 **Nesne anahtarı** — Bir nesnenin kalıcı kimliği. Kaydetmeden, yeniden yüklemeden ve
 sıralamadan etkilenmez, silinse bile başka bir nesneye verilmez. "Bu parsel hangisiydi?"
@@ -264,7 +264,7 @@ ekrandaki çizimin yerine geçmemesidir. Bkz. [Dış veri alma](komutlar/import.
 aktarılmaz. Bkz. [Dış biçime yazma](komutlar/export.md).
 
 **Sürücü** — Bir dış veri biçimini okuyup yazan bileşen; `DXF` ve `GPKG` gibi bir adı
-vardır. KentOSCad yalnızca izin verilen sürücüleri açar.
+vardır. PiriCAD yalnızca izin verilen sürücüleri açar.
 Bkz. [Dış veri biçimleri](veri/dis-formatlar.md).
 
 **`.prj` dosyası** — Bir veri dosyasının koordinat sistemini yanında taşıyan metin
@@ -302,7 +302,7 @@ uzak bir görünümdür. Ölçeğe bağlı gösterimler bu sayıya göre seçili
 **Kâğıt mikrometresi** — Çizgi kalınlığının saklandığı birim; 1000 mikrometre paftada
 1 mm eder. Piksel değildir, çünkü piksel karşılığı ölçek ve ekran çözünürlüğüyle değişir.
 
-**Bileşen seti** — KentOSCad pencerelerinin kurulduğu ortak düğme, girdi ve seçim
+**Bileşen seti** — PiriCAD pencerelerinin kurulduğu ortak düğme, girdi ve seçim
 denetimleri ailesi. Her denetim 24, 30 ya da 36 piksel boyundadır ve aynı köşe, kenar ve
 renk kurallarıyla çizilir. Bkz. [Bileşenler](baslangic/bilesenler.md).
 
@@ -340,7 +340,7 @@ Girdi kutusunda `fx` işareti, etiketinde `HESAP` rozeti taşır.
 okuduğu bayt dizisi. Kısmi elips, yaylı çoklu çizgi, spline, tarama, blok referansı,
 ölçü ve kılavuz çizgi taşır; çoklu çizgi, daire, yay, nokta ve tam elips taşımaz.
 
-**Yabancı veri** — Başka bir programın nesneye bağladığı, KentOSCad'in okumadığı ama
+**Yabancı veri** — Başka bir programın nesneye bağladığı, PiriCAD'in okumadığı ama
 kaybetmediği baytlar; DXF'te XDATA. Panelde yalnız sayısı görünür.
 
 **Blok** — Bir kez çizilip çok kez yerleştirilen sembolün tanımı: rögar kapağı, kuzey oku,
@@ -354,7 +354,7 @@ antet. Tanımın nesneleri kendi başına çizilmez ve düzenlenmez.
 
 **Akıllı nesne** — Netcad 8'in Planet modülünün plana koyduğu, resmini değil özelliklerini
 (nizam, kat, TAKS, KAKS, yol genişliği…) dosyaya yazdığı sembol; Netcad onu ekranda
-özelliklerinden çizer. KentOSCad NCZ içe aktarırken onu blok referansı olarak çizer ve
+özelliklerinden çizer. PiriCAD NCZ içe aktarırken onu blok referansı olarak çizer ve
 değerlerini sütunlara yazar. Bkz.
 [Netcad 8 akıllı nesneleri](veri/netcad-ncz.md#netcad-8-akıllı-nesneleri).
 
@@ -395,7 +395,7 @@ araçlarını doğrudan çalıştırır; çizimi değiştiren bir araç çağrı
 bilgisayar başındaki mühendisi bekler. Bkz. [Yapay zeka ve ajanlar](yapay-zeka/README.md).
 
 **MCP** — Model Context Protocol: bir yapay zeka modelinin ya da ajanının bir programın
-yeteneklerine araç olarak erişmesi için kullanılan açık protokol. KentOSCad yalnız
+yeteneklerine araç olarak erişmesi için kullanılan açık protokol. PiriCAD yalnız
 yerel döngüyü dinleyen bir MCP sunucusu gömer. Bkz. [MCP sunucusu](yapay-zeka/mcp-sunucusu.md).
 
 **Öneri** — Bir yapay zeka istemcisinin çizimde yapılmasını istediği işin kaydı: bir
@@ -413,7 +413,7 @@ reddi — kullanıcı yapılandırma dizinine yazılan JSONL kaydı: ne istendi�
 hangi uç nokta, hangi komut satırları, kimin karar verdiği ve ne zaman. "Bu sınırı buraya
 kim koydu?" sorusunun cevabı budur. İçine hiçbir anahtar ya da belirteç yazılmaz.
 
-**Lehçe** — Bir model uç noktasının konuştuğu telli dil. KentOSCad dört tane konuşur:
+**Lehçe** — Bir model uç noktasının konuştuğu telli dil. PiriCAD dört tane konuşur:
 `openai_chat`, `openai_responses`, `anthropic_messages`, `ollama_native`. Yeni bir
 satıcı bunlardan birini konuşuyorsa eklenmesi bir kayıt yazmaktır.
 Bkz. [Model sağlayıcıları](yapay-zeka/modeller.md).

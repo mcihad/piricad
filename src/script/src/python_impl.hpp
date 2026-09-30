@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — script: what the Python host and its generated surface share.
+// PiriCAD — script: what the Python host and its generated surface share.
 //
 // A PRIVATE HEADER, under `src/` rather than `include/`: nothing outside this
 // module includes it, and it names pybind11 types, which `python_runner.hpp`
 // deliberately does not (CLAUDE.md Article 9).
 #pragma once
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/result.hpp"
 
 #include <pybind11/pybind11.h>
 
@@ -15,7 +15,7 @@
 #include <functional>
 #include <string>
 
-namespace kentos::script::detail {
+namespace piricad::script::detail {
 
 /// What a generated callable needs from the running host.
 struct Host
@@ -55,4 +55,4 @@ void bind_types(pybind11::object& cad);
 /// Registers `cad.viewport`.
 void bind_viewport(Host& host, pybind11::object& cad);
 
-} // namespace kentos::script::detail
+} // namespace piricad::script::detail

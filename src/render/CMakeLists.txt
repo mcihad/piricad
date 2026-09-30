@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# kentos_render — scene building and the backend interface.
+# piricad_render — scene building and the backend interface.
 #
-# The GPU canvas target is QRhiWidget (kentoscad.md §6.3). This target links no Qt,
+# The GPU canvas target is QRhiWidget (piricad.md §6.3). This target links no Qt,
 # so the shader packs, the QRhi implementation of render::Backend and the widget
 # that hosts them all live in src/app; what happens here is the define that tells
 # the interface and the canvas which surface the build has.
 
-add_library(kentos_render STATIC
+add_library(piricad_render STATIC
     src/backend.cpp
     src/drawlist.cpp
     src/scene.cpp
@@ -17,44 +17,44 @@ add_library(kentos_render STATIC
     src/view_history.cpp
 )
 
-target_include_directories(kentos_render PUBLIC include)
-target_link_libraries(kentos_render
-    PUBLIC  kentos_core
-    PRIVATE kentos_flags
+target_include_directories(piricad_render PUBLIC include)
+target_link_libraries(piricad_render
+    PUBLIC  piricad_core
+    PRIVATE piricad_flags
 )
 
-if(KENTOS_WITH_TEXT)
+if(PIRICAD_WITH_TEXT)
     # THE ATLAS IS QT-FREE, and that is what makes it testable: /tests links no Qt
     # (CLAUDE.md 3.4), so a suite that could not construct a backend can still
     # assert that `ğ` and the dotted `İ` come out of the shaper as their own
     # glyphs. What this target produces is PIXELS and NUMBERS; putting them on the
     # GPU is the backend's job, one layer up in /src/app.
-    target_sources(kentos_render PRIVATE src/text_atlas.cpp)
-    target_link_libraries(kentos_render PRIVATE
+    target_sources(piricad_render PRIVATE src/text_atlas.cpp)
+    target_link_libraries(piricad_render PRIVATE
         Freetype::Freetype
-        PkgConfig::KENTOS_HARFBUZZ
+        PkgConfig::PIRICAD_HARFBUZZ
         msdfgen::msdfgen-core
-        kentos_stb)
-    target_compile_definitions(kentos_render PUBLIC KENTOS_HAVE_TEXT=1)
+        piricad_stb)
+    target_compile_definitions(piricad_render PUBLIC PIRICAD_HAVE_TEXT=1)
 
     # The drawing face's advances, written into the core as constant data
     # (TODOS C-18, core/text_metrics.hpp): every scalar shaped by the atlas in
     # technical spacing. A generator sits at the top of the graph — it links the
     # atlas and nothing links it (Article 3.2a) — and `make yazi-olcusu` runs it.
-    add_executable(kentos_yazi_olcusu tools/yazi_olcusu.cpp)
-    target_link_libraries(kentos_yazi_olcusu PRIVATE kentos_render kentos_flags)
-    set_target_properties(kentos_yazi_olcusu PROPERTIES
+    add_executable(piricad_yazi_olcusu tools/yazi_olcusu.cpp)
+    target_link_libraries(piricad_yazi_olcusu PRIVATE piricad_render piricad_flags)
+    set_target_properties(piricad_yazi_olcusu PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
 endif()
 
-if(KENTOS_WITH_RHI)
+if(PIRICAD_WITH_RHI)
     # The tool and header checks live in src/app, because that is where the shader
     # packs are baked and where the GPU implementation of render::Backend is
     # compiled — this target links no Qt at all (CLAUDE.md 3.4, Article 8.5).
     # Here the option only turns the define on for everything that links render,
     # which is what `src/backend.cpp` and `map_canvas.hpp` read.
-    target_compile_definitions(kentos_render PUBLIC KENTOS_HAVE_RHI=1)
+    target_compile_definitions(piricad_render PUBLIC PIRICAD_HAVE_RHI=1)
 endif()
 
-add_library(KentOSCad::render ALIAS kentos_render)
+add_library(PiriCAD::render ALIAS piricad_render)

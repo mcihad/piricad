@@ -9,7 +9,7 @@
 # extension lines and the baseline a caption stands on all come from
 # `core::text_width` — and the core cannot open a font (core.md R1, P9), so the
 # drawing face's advances are CONSTANT DATA of the core library,
-# `src/core/src/text_metrics_table.cpp`, written by `kentos_yazi_olcusu` from
+# `src/core/src/text_metrics_table.cpp`, written by `piricad_yazi_olcusu` from
 # `data/fonts/IBMPlexSans-Regular.ttf` with the atlas's own shaper. A table
 # like that is only worth anything while it is the face's, so this regenerates
 # it and fails on any difference: a new font release changes the table in the
@@ -17,7 +17,7 @@
 #
 # A MISSING TOOL IS A FAILURE, not a skip. A freshness check that skips on a
 # cold tree has never run — `ci-gate-docs.sh` learned that about four
-# artefacts. The tool needs the text engine (KENTOS_WITH_TEXT), which every
+# artefacts. The tool needs the text engine (PIRICAD_WITH_TEXT), which every
 # sanctioned preset but `headless` turns on (Article 8.1); a headless tree has
 # no font engine to ask and says so.
 #
@@ -51,8 +51,8 @@ fi
 
 tool=""
 for candidate in dev release debug asan; do
-    if [[ -x "$root/build/$candidate/bin/kentos_yazi_olcusu" ]]; then
-        tool="$root/build/$candidate/bin/kentos_yazi_olcusu"
+    if [[ -x "$root/build/$candidate/bin/piricad_yazi_olcusu" ]]; then
+        tool="$root/build/$candidate/bin/piricad_yazi_olcusu"
         break
     fi
 done
@@ -62,7 +62,7 @@ if [[ -z "$tool" ]]; then
         echo "yazi-olcusu: yalnız headless ağaç var; yazı motoru derlenmediği için tablo doğrulanamadı (Article 8.1)."
         exit 0
     fi
-    echo "yazi-olcusu: kentos_yazi_olcusu derlenmemiş; yazı ölçüsü tablosu doğrulanamadı." >&2
+    echo "yazi-olcusu: piricad_yazi_olcusu derlenmemiş; yazı ölçüsü tablosu doğrulanamadı." >&2
     echo "yazi-olcusu:   Önce derleyin (make build). Atlayan bir tazelik denetimi hiç koşmamış demektir." >&2
     exit 1
 fi
@@ -70,7 +70,7 @@ fi
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
 if ! "$tool" "$root/data/fonts" "$scratch/tablo.cpp" >/dev/null 2>"$scratch/hata"; then
-    echo "yazi-olcusu: kentos_yazi_olcusu çalışmadı:" >&2
+    echo "yazi-olcusu: piricad_yazi_olcusu çalışmadı:" >&2
     cat "$scratch/hata" >&2
     exit 1
 fi

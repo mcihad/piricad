@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/document.hpp"
+#include "piricad/core/document.hpp"
 
-#include "kentos_cad/core/block_reference.hpp"
+#include "piricad/core/block_reference.hpp"
 
-#include "kentos_cad/core/pick.hpp"
+#include "piricad/core/pick.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/spatial_index.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/spatial_index.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <limits>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// The flag bits that are CONTENT. `FlagLayerHidden` is not one of them: it is
@@ -304,7 +304,7 @@ std::uint64_t Document::content_revision(EntityId e) const
 {
     // A NEW seed, carrying the program's present name (CLAUDE.md 0.5a froze
     // only the seeds already folded into fixtures).
-    static constexpr std::uint64_t kRevisionSeed = fnv1a("kentos.core.content_revision");
+    static constexpr std::uint64_t kRevisionSeed = fnv1a("piricad.core.content_revision");
     if (e >= entities_.size()) return kRevisionSeed;
     const std::uint32_t slot = entities_.slot[e];
     std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(entities_.kind[e]), kRevisionSeed);
@@ -2056,4 +2056,4 @@ Symbol drawn_symbol(const Document& doc, EntityId e)
     return stack;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

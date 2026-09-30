@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: cutting a corner off a run, straight (PAH) or round (YUVARLA).
+// PiriCAD — core: cutting a corner off a run, straight (PAH) or round (YUVARLA).
 //
 // ONE ANSWER FOR THE COMMAND AND THE PREVIEW. PAH and YUVARLA compute their
 // result here, and the canvas draws the cut under the cursor by calling the same
@@ -25,16 +25,16 @@
 // uses, so there is one answer to "the arc of this radius in this corner".
 #pragma once
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The vertex of `run` nearest `probe`, when it IS a corner — one with an edge
 /// on each side. Nothing when the nearest vertex is an end of an open run, which
@@ -98,4 +98,4 @@ std::vector<std::uint8_t> encode_corner_preview(const CornerPreview& preview);
 /// The preview back, refused when the bytes are not what the encoder writes.
 Result<CornerPreview> decode_corner_preview(std::span<const std::uint8_t> bytes);
 
-} // namespace kentos::core
+} // namespace piricad::core

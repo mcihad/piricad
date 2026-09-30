@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — tests: YAZDIR and YAZDIRMAPROFİLİ (commands/print.cpp).
+// PiriCAD — tests: YAZDIR and YAZDIRMAPROFİLİ (commands/print.cpp).
 //
 // What is proven here is the COMMAND, not the sheet: the engine seam, the
 // arguments the bus refuses, what the journal records — and, the point of it,
@@ -10,20 +10,20 @@
 // The sheet itself is proved twice elsewhere: `tests/unit/test_io.cpp` over the
 // profile store and the encryption, and the `print-pdf` ctest over a real PDF
 // written by the real binary — Qt writes the file and this suite links no Qt.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/io/print_profiles.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/io/print_profiles.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

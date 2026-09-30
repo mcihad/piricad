@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the numerical contract, in one place (TODOS F-03).
+// PiriCAD — core: the numerical contract, in one place (TODOS F-03).
 //
 // FIVE DIFFERENT QUANTITIES, and each has one home. They used to be literals
 // scattered through twenty files, and that is how a screen tolerance ended up
@@ -31,7 +31,7 @@
 // coordinate system COUNTS METRES (crs.hpp `CrsUnit`, model.md R36a).
 #pragma once
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// How far rounding moves a point at most: half a millimetre on each axis, so
 /// √2/2 mm. A stored vertex is within this of the point it stands for.
@@ -58,4 +58,4 @@ inline constexpr double kRoundedFitMm = 1.5;
 /// DXF bulge.
 inline constexpr double kStoredArcMm = 2.0;
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -12,14 +12,14 @@
 // separate because both intentions are real and neither is a special case of the
 // other — and because changing what `ÇİZGİ` produces would change every drawing
 // already made with it.
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -71,12 +71,12 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(polyline)
+PIRICAD_COMMAND(polyline)
 {
     return CommandSpec{
-        .id = "core.polyline",
+        .id    = "core.polyline",
         .names = {"ÇOKLUÇİZGİ", "COKLUCIZGI", "ÇOKLUDOĞRU", "COKLUDOGRU", "POLYLINE", "ÇÇ", "PL"},
-        .title    = "Çoklu Çizgi",
+        .title = "Çoklu Çizgi",
         .category = Category::Draw,
         .params =
             {
@@ -92,4 +92,4 @@ KENTOS_COMMAND(polyline)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

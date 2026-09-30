@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/render/view_history.hpp"
+#include "piricad/render/view_history.hpp"
 
-namespace kentos::render {
+namespace piricad::render {
 
 namespace {
 
@@ -53,4 +53,4 @@ void ViewHistory::clear()
     wheeling_ = false;
 }
 
-} // namespace kentos::render
+} // namespace piricad::render

@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/hatch_link.hpp"
+#include "piricad/core/hatch_link.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstring>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 // A NEW seed, carrying the program's present name (CLAUDE.md 0.5a froze only
 // the seeds already folded into fixtures).
-constexpr std::uint64_t kHatchLinkSeed = fnv1a("kentos.core.hatchlink");
+constexpr std::uint64_t kHatchLinkSeed = fnv1a("piricad.core.hatchlink");
 
 // The record as the undo op carries it: the key and the broken flag.
 constexpr std::size_t kSourceBytes = 8 + 1;
@@ -417,4 +417,4 @@ HatchBoundary nest_loops(std::vector<std::vector<Point2>> all, std::uint16_t sty
     return out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

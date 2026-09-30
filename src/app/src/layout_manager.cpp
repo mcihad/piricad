@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/layout_manager.hpp"
+#include "piricad/app/layout_manager.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/core/document.hpp"
+#include "piricad/core/document.hpp"
 
 #include <QHBoxLayout>
 #include <QInputDialog>
@@ -14,7 +14,7 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 QString quoted(const QString& raw)
@@ -246,4 +246,4 @@ void LayoutManager::applyTheme(ThemeMode mode)
     DialogFrame::applyTheme(mode);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

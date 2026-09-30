@@ -1,29 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: external vector formats, through GDAL/OGR.
+// PiriCAD — io: external vector formats, through GDAL/OGR.
 //
 // .claude/io.md R2/P2: no `gdal*.h`, `ogr*.h` or `cpl_*.h` appears in this header
 // or anywhere outside this module's .cpp files. Everything below is core and
 // command types.
 //
 // .claude/io.md R22 and CLAUDE.md Article 8.2: the backend sits behind
-// `KENTOS_WITH_GDAL`, which defaults OFF and hard-fails at configure time when
+// `PIRICAD_WITH_GDAL`, which defaults OFF and hard-fails at configure time when
 // switched ON without GDAL present. When it is OFF, every entry point here
 // returns an `Error` naming the option and the install command — it never
 // silently succeeds and never silently returns an empty layer.
 //
 // .claude/io.md P7: the driver set is an explicit allow-list held in
-// /cmake/KentOSCadGdalDrivers.cmake and handed to this module as a compile
+// /cmake/PiriCADGdalDrivers.cmake and handed to this module as a compile
 // definition. Adding a driver is an edit to that file, in the same change.
 #pragma once
 
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/io/diagnostics.hpp"
-#include "kentos_cad/io/options.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/io/diagnostics.hpp"
+#include "piricad/io/options.hpp"
 
 #include <cstdint>
 #include <stop_token>
@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// One allow-listed external format.
 struct VectorFormat
@@ -54,7 +54,7 @@ const VectorFormat* vector_format_for_path(const std::string& path);
 /// nullptr.
 const VectorFormat* vector_format_by_id(const std::string& id);
 
-/// True when this build was configured with `KENTOS_WITH_GDAL=ON`.
+/// True when this build was configured with `PIRICAD_WITH_GDAL=ON`.
 bool vector_backend_available();
 
 /// One Turkish line saying what the vector backend can do right now, and when it
@@ -154,4 +154,4 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
                                                         ExportOptions options,
                                                         command::JobControl control);
 
-} // namespace kentos::io
+} // namespace piricad::io

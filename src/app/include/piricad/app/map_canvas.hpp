@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the map canvas.
+// PiriCAD — app: the map canvas.
 //
-// Target (kentoscad.md §6.3): QRhiWidget with our own GPU pipeline.
+// Target (piricad.md §6.3): QRhiWidget with our own GPU pipeline.
 //
 // WHICH SURFACE THIS IS depends on one build option and nothing else. With
-// `KENTOS_WITH_RHI=ON` the canvas is a `QRhiWidget` and hands the backend a
+// `PIRICAD_WITH_RHI=ON` the canvas is a `QRhiWidget` and hands the backend a
 // command buffer; without it the canvas is a `QWidget` and hands the backend a
 // paint device — CLAUDE.md Article 8.1, the Phase-0 deviation. Everything between
-// those two lines is identical, because the scene is built by kentos_render in
+// those two lines is identical, because the scene is built by piricad_render in
 // exactly the form the GPU path needs: screen-space floats produced after the
 // origin offset (§10.3).
 //
@@ -16,29 +16,29 @@
 // frame handles are packed by `backend_factory.hpp`.
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/command/ghost.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/preview.hpp"
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/planar.hpp"
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/core/transform.hpp"
-#include "kentos_cad/core/trim_curve.hpp"
-#include "kentos_cad/render/backend.hpp"
-#include "kentos_cad/render/drawlist.hpp"
-#include "kentos_cad/render/scene.hpp"
-#include "kentos_cad/render/view.hpp"
-#include "kentos_cad/render/view_history.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/command/ghost.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/preview.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/planar.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/core/transform.hpp"
+#include "piricad/core/trim_curve.hpp"
+#include "piricad/render/backend.hpp"
+#include "piricad/render/drawlist.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/render/view.hpp"
+#include "piricad/render/view_history.hpp"
 
 #include <QCursor>
 #include <QElapsedTimer>
 #include <QImage>
 #include <QRectF>
 
-#if KENTOS_HAVE_RHI
+#if PIRICAD_HAVE_RHI
 #include <QRhiWidget>
 #else
 #include <QWidget>
@@ -54,26 +54,26 @@
 
 class QLineEdit;
 
-namespace kentos::core {
+namespace piricad::core {
 /// The setting store; declared here so the wheel helper below can name it without
 /// pulling `core/settings.hpp` into every translation unit that draws a canvas.
 class Settings;
-} // namespace kentos::core
+} // namespace piricad::core
 
-namespace kentos::core {
+namespace piricad::core {
 struct AreaGhost; ///< core/area_edit.hpp; the .cpp includes the definition
 /// Forward-declared on purpose: `entity_kind.hpp` names a member `emit`, which
 /// Qt's keyword macro would erase in any translation unit that includes Qt
 /// first. Only the .cpp includes the full definition.
 struct EmitBuffer;
-} // namespace kentos::core
+} // namespace piricad::core
 
-namespace kentos::command {
+namespace piricad::command {
 struct ViewMove;  ///< command/bus.hpp; the .cpp includes the definition
 struct ViewMoved; ///< command/bus.hpp
-} // namespace kentos::command
+} // namespace piricad::command
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -95,7 +95,7 @@ double wheel_zoom_factor(const core::Settings& store, double notches);
 
 /// The widget the canvas IS. See the header note: one build option, two surfaces,
 /// one set of event handlers above them.
-#if KENTOS_HAVE_RHI
+#if PIRICAD_HAVE_RHI
 using CanvasSurface = QRhiWidget;
 #else
 using CanvasSurface = QWidget;
@@ -104,7 +104,7 @@ using CanvasSurface = QWidget;
 class MapCanvas : public CanvasSurface, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the canvas over a controller. The controller outlives it — the main
@@ -152,7 +152,7 @@ public:
 
     /// Repaints `rounds` times and returns the frame costs, in microseconds.
     ///
-    /// Developer tooling, the same category as `KENTOS_FRAME_DUMP`: there is no
+    /// Developer tooling, the same category as `PIRICAD_FRAME_DUMP`: there is no
     /// user-facing feature here and so no `/docs` page (CLAUDE.md 5.17). It
     /// exists because "which backend is faster" and "does the QRhi one earn its
     /// keep" are questions that must be ANSWERED rather than argued, and the
@@ -196,7 +196,7 @@ public:
     /// emitted for, and where the badge belongs.
     core::Point2 lastPickPoint() const noexcept { return last_pick_point_; }
 
-    /// What the badge says now, for `KENTOS_PICK_PROBE`.
+    /// What the badge says now, for `PIRICAD_PICK_PROBE`.
     const std::string& pickBadgeForProbe() const noexcept { return pick_badge_; }
 
     /// Tells the canvas the document may have changed. The shell calls it after
@@ -374,7 +374,7 @@ public:
 
     bool capturing() const noexcept { return capture_.has_value(); }
 
-    /// The dynamic-input label the guide last carried, for `KENTOS_EDIT_PROBE`.
+    /// The dynamic-input label the guide last carried, for `PIRICAD_EDIT_PROBE`.
     /// Empty when nothing is being dragged or the reading is switched off.
     const std::string& guideLabelForProbe() const noexcept { return guide_label_; }
 
@@ -387,7 +387,7 @@ public:
     /// `QWidget::grab()` renders through the BACKING STORE, and a `QRhiWidget`'s
     /// frame is not there — it is on the GPU. So a window grab of a GPU build
     /// comes out with a hole exactly where the drawing is, which is what made
-    /// `KENTOS_FRAME_DUMP` report an empty canvas on a canvas that was drawing
+    /// `PIRICAD_FRAME_DUMP` report an empty canvas on a canvas that was drawing
     /// correctly, and what made `ci-gate-render-desen.py` unable to measure the
     /// GPU path at all.
     QImage grabCanvas();
@@ -460,7 +460,7 @@ protected:
     /// not document state — or feeds a point to the running command through the
     /// controller. None of them edits the document, because a mouse is a client
     /// like any other and gets no private road (Article 1.2, 5.9).
-#if KENTOS_HAVE_RHI
+#if PIRICAD_HAVE_RHI
     /// The GPU frame. `QRhiWidget` calls this with the frame's command buffer
     /// already open, which is exactly what the backend's `FrameContext::target`
     /// carries in this build. `paintEvent` belongs to the base class here and is
@@ -703,7 +703,7 @@ private:
 
     /// Publishes the view scale to the bus. The snap and pick tolerances are
     /// declared in screen pixels, and turning pixels into millimetres is the one
-    /// thing only the view knows (`kentos_cad/command/aids.hpp`).
+    /// thing only the view knows (`piricad/command/aids.hpp`).
     void publishViewScale();
 
     Controller& controller_;
@@ -1020,4 +1020,4 @@ private:
     bool debug_hud_{false};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

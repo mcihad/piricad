@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/provider_dialog.hpp"
+#include "piricad/app/provider_dialog.hpp"
 
-#include "kentos_cad/app/ai_transport.hpp"
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/provider_service.hpp"
-#include "kentos_cad/app/secret_store.hpp"
+#include "piricad/app/ai_transport.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/provider_service.hpp"
+#include "piricad/app/secret_store.hpp"
 
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/redact.hpp"
 
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -18,7 +18,7 @@
 #include <QStringList>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// A value the parser will read back as one token. The same helper the settings
@@ -397,7 +397,7 @@ void ProviderDialog::refreshModelsFromCatalog()
     ai::ProviderProfile probe;
     probe.base_url = url_->value().trimmed().toStdString();
     probe.dialect  = ai::dialect_from_id(dialect_->currentText().toStdString())
-                        .value_or(ai::Dialect::OpenAiChat);
+                         .value_or(ai::Dialect::OpenAiChat);
 
     const ai::ProviderCatalog& catalog = controller_.providerService().catalog();
     const ai::CatalogVendor* vendor    = catalog.for_profile(probe);
@@ -428,9 +428,9 @@ QString ProviderDialog::chosenModelId() const
 ai::ProviderProfile ProviderDialog::profile() const
 {
     ai::ProviderProfile p;
-    p.name    = name_->value().trimmed().toStdString();
-    p.dialect = ai::dialect_from_id(dialect_->currentText().toStdString())
-                    .value_or(ai::Dialect::OpenAiChat);
+    p.name          = name_->value().trimmed().toStdString();
+    p.dialect       = ai::dialect_from_id(dialect_->currentText().toStdString())
+                          .value_or(ai::Dialect::OpenAiChat);
     p.base_url      = url_->value().trimmed().toStdString();
     p.path          = path_->value().trimmed().toStdString();
     p.model         = chosenModelId().toStdString();
@@ -597,9 +597,9 @@ void ProviderDialog::save()
     // key_ref that looks like an actual key — and the refusal comes back as the
     // command's own message, so the window and the command line say the same
     // thing about the same mistake.
-    QString line = QStringLiteral("YAPAYZEKAMODELİ islem=ekle ad=%1 lehce=%2")
-                       .arg(quoted(QString::fromStdString(p.name)),
-                            QString::fromUtf8(ai::dialect_id(p.dialect)));
+    QString line   = QStringLiteral("YAPAYZEKAMODELİ islem=ekle ad=%1 lehce=%2")
+                         .arg(quoted(QString::fromStdString(p.name)),
+                              QString::fromUtf8(ai::dialect_id(p.dialect)));
     const auto add = [&line](const char* key, const QString& value) {
         if (!value.trimmed().isEmpty())
             line += QStringLiteral(" %1=%2").arg(QString::fromUtf8(key), quoted(value.trimmed()));
@@ -637,4 +637,4 @@ bool ProviderDialog::probeSave()
     return result() == QDialog::Accepted;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

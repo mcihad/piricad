@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: which class of object a document entity is, as a
+// PiriCAD — command: which class of object a document entity is, as a
 // command's `targets` names them (spec.hpp).
 //
 // ONE ANSWER FOR THE QUESTION A TOOL IS GREYED BY. The ribbon asks it of the
@@ -8,14 +8,14 @@
 // is an area, not a curve, whatever kind id holds it (model.md R9b).
 #pragma once
 
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/identity.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/identity.hpp"
 
 #include <cstddef>
 #include <span>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// The class of object `e` of `doc` is, or `Targets::None` for a dead slot and
 /// a kind this build does not know.
@@ -43,4 +43,4 @@ Held held_by(const core::Document& doc, std::span<const core::EntityKey> keys);
 /// selection is every tool's: the tool asks for its objects.
 bool acts_on_all(Targets targets, const Held& held);
 
-} // namespace kentos::command
+} // namespace piricad::command

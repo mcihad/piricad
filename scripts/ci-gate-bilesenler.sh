@@ -25,7 +25,7 @@
 #      is a button that looks like a different one; a height outside 24/30/36 is
 #      not a size, it is a mistake.
 #
-#   3. THE LIVING STANDARD OPENS AND MEASURES RIGHT. `KENTOS_WIDGETS_PROBE`
+#   3. THE LIVING STANDARD OPENS AND MEASURES RIGHT. `PIRICAD_WIDGETS_PROBE`
 #      builds every component in every state and prints each with its height;
 #      the lines below are the standard's own numbers.
 set -euo pipefail
@@ -80,10 +80,10 @@ done
 # height for a button: Qt turns a `min-height` into the widget's minimum size
 # with the border added, so a rule saying 30 made a button of 32 and silently
 # overrode the code's 30.
-hdr="$kok/src/app/include/kentos_cad/app/widgets.hpp"
+hdr="$kok/src/app/include/piricad/app/widgets.hpp"
 for pair in "Compact:24" "Regular:30" "Large:36"; do
     if ! grep -qE "${pair%%:*}\s*=\s*${pair##*:}\b" "$hdr"; then
-        echo "bilesenler: ControlSize::${pair%%:*} ${pair##*:} px değil (standart 24 / 30 / 36) -> src/app/include/kentos_cad/app/widgets.hpp:1" >&2
+        echo "bilesenler: ControlSize::${pair%%:*} ${pair##*:} px değil (standart 24 / 30 / 36) -> src/app/include/piricad/app/widgets.hpp:1" >&2
         fail=1
     fi
 done
@@ -100,18 +100,18 @@ fi
 
 # ---- 3. the living standard --------------------------------------------------
 exe=""
-for aday in build/dev/bin/kentos_cad build/release/bin/kentos_cad build/debug/bin/kentos_cad; do
+for aday in build/dev/bin/piricad build/release/bin/piricad build/debug/bin/piricad; do
     if [[ -x "$kok/$aday" ]]; then exe="$kok/$aday"; break; fi
 done
 
 if [[ -z "$exe" ]]; then
-    echo "bilesenler: kentos_cad bulunamadı — canlı standart denenmedi (uygulama derlenmemiş)"
+    echo "bilesenler: piricad bulunamadı — canlı standart denenmedi (uygulama derlenmemiş)"
 elif [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
     echo "bilesenler: BEKLEMEDE — ortamda ekran yok; canlı standart bir pencerede ölçülür."
 else
     cd "$kok"
     set +e
-    cikti="$(KENTOS_DATA="$kok/data" KENTOS_WIDGETS_PROBE=1 "$exe" 2>/dev/null)"
+    cikti="$(PIRICAD_DATA="$kok/data" PIRICAD_WIDGETS_PROBE=1 "$exe" 2>/dev/null)"
     rc=$?
     set -e
     if [[ $rc -ge 128 ]]; then

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // core.help — YARDIM, and core.script — BETİK.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/json.hpp"
+#include "piricad/core/json.hpp"
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run_help(Context& ctx)
@@ -80,7 +80,7 @@ Task<void> run_help(Context& ctx)
     // away and always was (`YARDIM komut=ÇİZGİ`).
     //
     // The listing is still generated from the registry — there is no second
-    // command list anywhere in the project (kentoscad.md §2.3).
+    // command list anywhere in the project (piricad.md §2.3).
     //
     // AND THE FULL SET STILL LEAVES, as data rather than as prose. An agent or a
     // script that wants every command with every alias and every summary reads
@@ -179,7 +179,7 @@ Task<void> run_python(Context& ctx)
         // who typed the command deserves the sentence that ends their search
         // rather than "not connected" (`.claude/script.md` R21).
         ctx.refuse(core::ErrorCode::Unsupported,
-                   "Bu yapıda Python yok. KENTOS_WITH_PYTHON=ON ile derleyin.");
+                   "Bu yapıda Python yok. PIRICAD_WITH_PYTHON=ON ile derleyin.");
         co_return;
     }
 
@@ -190,7 +190,7 @@ Task<void> run_python(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(python)
+PIRICAD_COMMAND(python)
 {
     return CommandSpec{
         .id    = "core.python",
@@ -218,7 +218,7 @@ KENTOS_COMMAND(python)
     };
 }
 
-KENTOS_COMMAND(help)
+PIRICAD_COMMAND(help)
 {
     return CommandSpec{
         .id       = "core.help",
@@ -235,7 +235,7 @@ KENTOS_COMMAND(help)
     };
 }
 
-KENTOS_COMMAND(script)
+PIRICAD_COMMAND(script)
 {
     return CommandSpec{
         .id       = "core.script",
@@ -267,4 +267,4 @@ KENTOS_COMMAND(script)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

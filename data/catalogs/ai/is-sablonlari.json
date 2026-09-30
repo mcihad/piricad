@@ -2,7 +2,7 @@
  "schema_version": 1,
  "package_version": "1.0.0",
  "id": "is-sablonlari",
- "source": "KentOSCad komut kılavuzu (docs/komutlar) — mevzuat değeri taşımaz; bu paket, programın kendi komutlarının önerilen sırasıdır",
+ "source": "PiriCAD komut kılavuzu (docs/komutlar) — mevzuat değeri taşımaz; bu paket, programın kendi komutlarının önerilen sırasıdır",
  "published": "2026-09-19",
  "licence": "GPL-3.0-or-later",
  "aciklama": "Bir ajanın ya da bir kullanıcının sık yaptığı işleri, komut satırları hâlinde ve sırasıyla. Hiçbir şey çalıştırmaz: adımlar sıradan komutlardır ve yazan her adım yine önizlemeli bir öneriye dönüşür (CLAUDE.md 5.7). Her adım canlı komut kütüğüne karşı sınanır (tests/unit/test_ai_tools.cpp): var olmayan bir komut ya da tanımsız bir argüman yapıyı kırar.",

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: an area as a face for cutting and joining. See
+// PiriCAD — command: an area as a face for cutting and joining. See
 // area_face.hpp.
-#include "kentos_cad/command/area_face.hpp"
+#include "piricad/command/area_face.hpp"
 
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
 
 #include <algorithm>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// A closed path of segments through `ring`.
@@ -161,4 +161,4 @@ core::Result<core::EntityId> add_face(Context& ctx, core::LayerId layer,
     return ctx.transaction().add_kind(layer, rec.kind, {&ring, 1}, rec.payload);
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

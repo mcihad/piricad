@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the print engine behind `YAZDIR` and `YAZDIRMAPROFİLİ`.
+// PiriCAD — app: the print engine behind `YAZDIR` and `YAZDIRMAPROFİLİ`.
 //
 // `/src/command` owns the two commands and knows nothing of Qt; this service
 // installs `Bus::on_print_request` and does the work the commands describe: it
@@ -10,9 +10,9 @@
 // sheet's resolution. Nothing here reaches the document except to read it.
 #pragma once
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/units.hpp"
-#include "kentos_cad/io/print_profiles.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/units.hpp"
+#include "piricad/io/print_profiles.hpp"
 
 #include <QImage>
 #include <QObject>
@@ -20,11 +20,11 @@
 
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 class Document; ///< read to draw the sheet; never written by this service
-} // namespace kentos::core
+} // namespace piricad::core
 
-namespace kentos::app {
+namespace piricad::app {
 
 class PrintService : public QObject
 {
@@ -109,4 +109,4 @@ private:
     std::string trouble_; ///< what `announce` has yet to say; empty when all is well
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

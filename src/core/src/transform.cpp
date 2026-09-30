@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/transform.hpp"
+#include "piricad/core/transform.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/identity.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/identity.hpp"
 
 #include <cmath>
 #include <cstring>
 #include <utility>
 
-namespace kentos::core {
+namespace piricad::core {
 Point2 rotated_about(Point2 p, Point2 base, SinCos t)
 {
     const auto dx = static_cast<double>(p.x - base.x);
@@ -448,4 +448,4 @@ Xform ghost_xform(GhostKind kind, Point2 base, Point2 cursor)
     return x;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

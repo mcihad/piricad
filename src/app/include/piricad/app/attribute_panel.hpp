@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the attributes panel, `design.md` §7.
+// PiriCAD — app: the attributes panel, `design.md` §7.
 //
 // A selected-object card over collapsible groups of key/value rows. The grid is
 // `112px | 1fr`: the field name on the left in the interface face, the value on
@@ -10,9 +10,9 @@
 // owns no path of its own into the entity store.
 #pragma once
 
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/core/layer.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/core/layer.hpp"
 
 #include <QHash>
 #include <QRect>
@@ -24,7 +24,7 @@
 #include <array>
 #include <cstdint>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -71,7 +71,7 @@ struct AttributeGroup
 class AttributePanel : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the panel over a controller, which outlives it.
@@ -97,7 +97,7 @@ public:
     void applyTheme(ThemeMode mode) override;
 
     /// Edits the row whose key is `key` to `value`, the way a user would, for
-    /// `KENTOS_EDIT_PROBE`. Returns false when no such editable row is shown.
+    /// `PIRICAD_EDIT_PROBE`. Returns false when no such editable row is shown.
     ///
     /// Exists because the panel is painted rather than laid out, so there is no
     /// child widget a test could find and drive — and a panel nothing exercises
@@ -215,4 +215,4 @@ private:
     ThemeMode theme_     = ThemeMode::Dark;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

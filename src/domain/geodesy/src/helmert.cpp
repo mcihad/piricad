@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/domain/geodesy/helmert.hpp"
+#include "piricad/domain/geodesy/helmert.hpp"
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 
-namespace kentos::domain::geodesy {
+namespace piricad::domain::geodesy {
 
 core::Xform Helmert2D::xform() const noexcept
 {
@@ -144,4 +144,4 @@ core::Result<Helmert2D> fit_helmert(const std::vector<ControlPoint>& points, boo
     return fit;
 }
 
-} // namespace kentos::domain::geodesy
+} // namespace piricad::domain::geodesy

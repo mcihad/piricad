@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "xref.hpp"
 
-#include "kentos_cad/command/external_ref.hpp"
-#include "kentos_cad/core/block.hpp"
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/io/dwg.hpp"
-#include "kentos_cad/io/dxf.hpp"
-#include "kentos_cad/io/ncz.hpp"
-#include "kentos_cad/io/options.hpp"
-#include "kentos_cad/io/vector.hpp"
+#include "piricad/command/external_ref.hpp"
+#include "piricad/core/block.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/io/dwg.hpp"
+#include "piricad/io/dxf.hpp"
+#include "piricad/io/ncz.hpp"
+#include "piricad/io/options.hpp"
+#include "piricad/io/vector.hpp"
 
 #include <filesystem>
 #include <string>
@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 using core::err;
@@ -217,7 +217,7 @@ command::Task<core::Result<XrefLoad>> load_external(command::Transaction& tx, co
     const std::string theirs_id = scratch.crs().id();
     const core::Crs& ours       = doc.crs();
     const bool carries_its_own  = !looks_like_dxf(out.found_at) && !looks_like_dwg(out.found_at) &&
-                                 !looks_like_ncz(out.found_at);
+                                  !looks_like_ncz(out.found_at);
     if (carries_its_own && !theirs_id.empty() && !ours.id().empty()) {
         const core::Crs theirs = host != nullptr && host->on_crs_resolve
                                      ? host->on_crs_resolve(theirs_id)
@@ -324,4 +324,4 @@ command::Task<std::vector<Warning>> load_externals(command::Transaction& tx, std
     co_return warnings;
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

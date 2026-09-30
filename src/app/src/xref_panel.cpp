@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/xref_panel.hpp"
+#include "piricad/app/xref_panel.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/widgets.hpp"
-#include "kentos_cad/command/external_ref.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/widgets.hpp"
+#include "piricad/command/external_ref.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/text.hpp"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -23,7 +23,7 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 constexpr int kRow    = 46;
@@ -227,7 +227,7 @@ XrefPanel::XrefPanel(Controller& controller, QWidget* parent)
     repath_ = step(tr("Yol…"), Glyph::Open, tr("Seçili dış referansı başka bir dosyaya bağla"));
     bind_   = step(tr("Bağla"), Glyph::BlockInsert,
                    tr("Seçili dış referansı çizime kat: sıradan blok olur, dosyası değişse de "
-                        "değişmez"));
+                      "değişmez"));
     detach_ = step(tr("Kaldır"), Glyph::Erase,
                    tr("Seçili dış referansı referanslarıyla birlikte çizimden kaldır; dosyasına "
                       "dokunulmaz"));
@@ -329,7 +329,7 @@ void XrefPanel::refresh()
         const QStringList layers = layersOf(name);
         for (const QString& l : layers) {
             const core::LayerId id = doc.find_layer(l.toStdString());
-            seen                   = seen ||
+            seen = seen ||
                    (id != core::kNoLayer && doc.layer(id) != nullptr && doc.layer(id)->visible);
         }
         // A reference whose file brought no layer of its own draws on layer 0
@@ -395,7 +395,7 @@ void XrefPanel::syncButtons()
 
 void XrefPanel::onFileChanged(const QString& path)
 {
-    // A save by renaming — what KentOSCad itself does — takes the file out of
+    // A save by renaming — what PiriCAD itself does — takes the file out of
     // the watch; it goes back in as soon as the new one is there.
     if (QFileInfo::exists(path) && !watcher_->files().contains(path)) watcher_->addPath(path);
     QStringList names;
@@ -597,4 +597,4 @@ bool XrefPanel::probeEye(const QString& name)
     return false;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — the policy engine's decisions, taken apart from any model.
+// PiriCAD — the policy engine's decisions, taken apart from any model.
 //
 // Every case here is a sentence out of TODOS §7.1: the user wrote what the three
 // approval modes must do, and these are those rows.
-#include "kentos_cad/ai/gate.hpp"
-#include "kentos_cad/ai/plan.hpp"
-#include "kentos_cad/ai/policy.hpp"
-#include "kentos_cad/ai/policy_path.hpp"
+#include "piricad/ai/gate.hpp"
+#include "piricad/ai/plan.hpp"
+#include "piricad/ai/policy.hpp"
+#include "piricad/ai/policy_path.hpp"
 
-#include "kentos_cad/core/settings.hpp"
+#include "piricad/core/settings.hpp"
 
 #include <doctest/doctest.h>
 
@@ -16,13 +16,13 @@
 #include <string>
 #include <vector>
 
-using kentos::ai::ApprovalPolicy;
-using kentos::ai::ClientScope;
-using kentos::ai::decide;
-using kentos::ai::OverwritePolicy;
-using kentos::ai::PolicyPreferences;
-using kentos::ai::Verdict;
-using kentos::command::Effect;
+using piricad::ai::ApprovalPolicy;
+using piricad::ai::ClientScope;
+using piricad::ai::decide;
+using piricad::ai::OverwritePolicy;
+using piricad::ai::PolicyPreferences;
+using piricad::ai::Verdict;
+using piricad::command::Effect;
 
 namespace {
 
@@ -151,17 +151,17 @@ TEST_CASE("Politika: tanınmayan ayar sözcüğü en dar davranışa düşer")
 {
     // A word nobody recognises means the stored value is from a newer build or
     // was edited by hand, and neither is a licence to widen anything.
-    using kentos::ai::approval_policy_from;
-    using kentos::ai::overwrite_policy_from;
-    using kentos::ai::question_policy_from;
+    using piricad::ai::approval_policy_from;
+    using piricad::ai::overwrite_policy_from;
+    using piricad::ai::question_policy_from;
     CHECK_EQ(approval_policy_from("zıpla"), ApprovalPolicy::EveryChange);
     CHECK_EQ(approval_policy_from(""), ApprovalPolicy::EveryChange);
     CHECK_EQ(approval_policy_from("otomatik"), ApprovalPolicy::Automatic);
     CHECK_EQ(overwrite_policy_from("zıpla"), OverwritePolicy::FreshName);
-    CHECK_EQ(question_policy_from("zıpla"), kentos::ai::QuestionPolicy::OnlyRequired);
+    CHECK_EQ(question_policy_from("zıpla"), piricad::ai::QuestionPolicy::OnlyRequired);
 
     // And the words round-trip, so the setting and the engine cannot drift.
-    using kentos::ai::approval_policy_name;
+    using piricad::ai::approval_policy_name;
     for (const ApprovalPolicy mode :
          {ApprovalPolicy::EveryChange, ApprovalPolicy::RiskyOnly, ApprovalPolicy::Automatic})
         CHECK_EQ(approval_policy_from(approval_policy_name(mode)), mode);
@@ -169,11 +169,11 @@ TEST_CASE("Politika: tanınmayan ayar sözcüğü en dar davranışa düşer")
 
 TEST_CASE("S-04: bir istemci kendi iznini genişletemez")
 {
-    using kentos::ai::escalates;
-    using kentos::ai::escalation_refusal;
-    using kentos::command::Args;
-    using kentos::command::CommandSpec;
-    using kentos::command::Value;
+    using piricad::ai::escalates;
+    using piricad::ai::escalation_refusal;
+    using piricad::command::Args;
+    using piricad::command::CommandSpec;
+    using piricad::command::Value;
 
     // THE FAILURE THIS GUARD EXISTS FOR, in TODOS S-04's own words: a model that
     // hits a refusal and, trying to be helpful, turns the approval policy to
@@ -256,7 +256,7 @@ TEST_CASE("S-04: bir istemci kendi iznini genişletemez")
     // `decide` answers "ask, allow or refuse"; a widening never becomes allowed
     // however the preferences are set. That is why the two are separate
     // functions and why `Deny` is not `ApprovalRequired`.
-    const kentos::ai::PolicyDecision automatic =
+    const piricad::ai::PolicyDecision automatic =
         decide(Effect::SettingsChange, with(ApprovalPolicy::Automatic), agent_scope());
     CHECK_EQ(automatic.verdict, Verdict::Deny);
 }
@@ -281,7 +281,7 @@ TEST_CASE("S-04: yeni bir yetki ayarı işaretsiz eklenemez")
         "core.ai.sorumlu",
     };
 
-    for (const kentos::core::SettingSpec& spec : kentos::core::builtin_settings().all()) {
+    for (const piricad::core::SettingSpec& spec : piricad::core::builtin_settings().all()) {
         const bool in_scope =
             spec.id.rfind("core.ai.", 0) == 0 || spec.id.rfind("core.mcp.", 0) == 0;
         if (!in_scope) continue;
@@ -309,15 +309,15 @@ TEST_CASE("S-05: yetkisiz uygulama yakalanır, yetkili uygulama reddedilmez")
     // nothing could act on it: `Gate::approve` had one caller. Now the policy
     // path may act — and only within the scope the person set, which no caller
     // can widen (`escalates`, CLAUDE.md 5.23).
-    using kentos::ai::escalates;
-    using kentos::command::Args;
-    using kentos::command::CommandSpec;
-    using kentos::command::Value;
+    using piricad::ai::escalates;
+    using piricad::command::Args;
+    using piricad::command::CommandSpec;
+    using piricad::command::Value;
 
     // ---- YETKİLİ: the user chose `otomatik` for themselves ------------------
     ClientScope mine;
     mine.client = "Ajan A";
-    const kentos::ai::PolicyDecision allowed =
+    const piricad::ai::PolicyDecision allowed =
         decide(Effect::DocumentEdit, with(ApprovalPolicy::Automatic), mine);
     CHECK_EQ(allowed.verdict, Verdict::Allow);
     CHECK_FALSE(allowed.reason.empty());
@@ -329,7 +329,7 @@ TEST_CASE("S-05: yetkisiz uygulama yakalanır, yetkili uygulama reddedilmez")
     ClientScope narrow;
     narrow.client            = "Ajan B";
     narrow.may_edit_document = false;
-    const kentos::ai::PolicyDecision denied =
+    const piricad::ai::PolicyDecision denied =
         decide(Effect::DocumentEdit, with(ApprovalPolicy::Automatic), narrow);
     CHECK_EQ(denied.verdict, Verdict::Deny);
 
@@ -350,7 +350,7 @@ TEST_CASE("S-05: yetkisiz uygulama yakalanır, yetkili uygulama reddedilmez")
     //
     // An upgrade must not loosen what was already in force: `her_degisiklikte`
     // is still the fallback and still sends every edit to a person.
-    const kentos::ai::PolicyDecision fallback =
+    const piricad::ai::PolicyDecision fallback =
         decide(Effect::DocumentEdit, with(ApprovalPolicy::EveryChange), mine);
     CHECK_EQ(fallback.verdict, Verdict::ApprovalRequired);
 }
@@ -365,20 +365,20 @@ namespace {
 /// and counts how often it was asked.
 struct Road
 {
-    kentos::ai::PlanStore plans;
+    piricad::ai::PlanStore plans;
     std::vector<std::string> lines;
-    kentos::ai::AuditLog audit{[this](const std::string& line) { lines.push_back(line); }};
+    piricad::ai::AuditLog audit{[this](const std::string& line) { lines.push_back(line); }};
     int runs{0};
-    kentos::ai::Gate gate{plans, audit, [this](const kentos::ai::Plan&) {
-                              ++runs;
-                              return kentos::core::ok();
-                          }};
+    piricad::ai::Gate gate{plans, audit, [this](const piricad::ai::Plan&) {
+                               ++runs;
+                               return piricad::core::ok();
+                           }};
 
     std::string file()
     {
-        kentos::ai::Plan plan;
+        piricad::ai::Plan plan;
         plan.requester = "sınama";
-        plan.steps.push_back(kentos::ai::PlanStep{"core.line", {}, "ÇİZGİ 0,0 10,10", {}, {}, {}});
+        plan.steps.push_back(piricad::ai::PlanStep{"core.line", {}, "ÇİZGİ 0,0 10,10", {}, {}, {}});
         return plans.add(std::move(plan));
     }
 };
@@ -387,20 +387,20 @@ struct Road
 
 TEST_CASE("A-03: politika yolu kararı ve sebebini döndürür; uygularsa politikayı yazar")
 {
-    using kentos::command::Effect;
+    using piricad::command::Effect;
     {
         // THE DEFAULT: a person decides, and the reason says so.
         Road road;
         const std::string id = road.file();
         PolicyPreferences prefs;
-        auto outcome = kentos::ai::decide_by_policy(road.gate, *road.plans.find(id), prefs,
-                                                    ClientScope{}, Effect::DocumentEdit, "kişi", 0);
+        auto outcome = piricad::ai::decide_by_policy(
+            road.gate, *road.plans.find(id), prefs, ClientScope{}, Effect::DocumentEdit, "kişi", 0);
         REQUIRE(outcome.ok());
         CHECK_FALSE(outcome.value().applied);
         CHECK(outcome.value().verdict == Verdict::ApprovalRequired);
         CHECK(outcome.value().reason == "Her değişiklikte onay isteniyor.");
         CHECK_EQ(road.runs, 0);
-        CHECK(road.plans.find(id)->state == kentos::ai::PlanState::Pending);
+        CHECK(road.plans.find(id)->state == piricad::ai::PlanState::Pending);
     }
     {
         // `otomatik`: applied once, and the record and the plan both name the
@@ -409,12 +409,12 @@ TEST_CASE("A-03: politika yolu kararı ve sebebini döndürür; uygularsa politi
         const std::string id = road.file();
         PolicyPreferences prefs;
         prefs.approval = ApprovalPolicy::Automatic;
-        auto outcome   = kentos::ai::decide_by_policy(road.gate, *road.plans.find(id), prefs,
-                                                      ClientScope{}, Effect::DocumentEdit, "kişi", 0);
+        auto outcome   = piricad::ai::decide_by_policy(
+            road.gate, *road.plans.find(id), prefs, ClientScope{}, Effect::DocumentEdit, "kişi", 0);
         REQUIRE(outcome.ok());
         CHECK(outcome.value().applied);
         CHECK_EQ(road.runs, 1);
-        CHECK(road.plans.find(id)->state == kentos::ai::PlanState::Applied);
+        CHECK(road.plans.find(id)->state == piricad::ai::PlanState::Applied);
         CHECK(road.plans.find(id)->decided_by == "politika:otomatik");
         REQUIRE_EQ(road.lines.size(), 1u);
         CHECK(road.lines.front().find("\"karar_veren\":\"politika:otomatik\"") !=
@@ -425,7 +425,7 @@ TEST_CASE("A-03: politika yolu kararı ve sebebini döndürür; uygularsa politi
         Road road;
         const std::string id = road.file();
         const auto approval =
-            road.gate.approve(id, "kişi", kentos::ai::Decision::Apply, 0, "her_degisiklikte",
+            road.gate.approve(id, "kişi", piricad::ai::Decision::Apply, 0, "her_degisiklikte",
                               road.plans.find(id)->content_fingerprint());
         REQUIRE(road.gate.decide(approval).ok());
         CHECK(road.plans.find(id)->decided_by == "insan");
@@ -438,9 +438,9 @@ TEST_CASE("A-03: politika yolu kararı ve sebebini döndürür; uygularsa politi
         PolicyPreferences prefs;
         prefs.approval  = ApprovalPolicy::Automatic;
         prefs.overwrite = OverwritePolicy::Ask;
-        auto outcome    = kentos::ai::decide_by_policy(road.gate, *road.plans.find(id), prefs,
-                                                       ClientScope{}, Effect::FileWrite, "kişi", 0,
-                                                       /*overwrites=*/true);
+        auto outcome    = piricad::ai::decide_by_policy(road.gate, *road.plans.find(id), prefs,
+                                                        ClientScope{}, Effect::FileWrite, "kişi", 0,
+                                                        /*overwrites=*/true);
         REQUIRE(outcome.ok());
         CHECK_FALSE(outcome.value().applied);
         CHECK(outcome.value().reason.find("üstüne yazar") != std::string::npos);
@@ -450,18 +450,18 @@ TEST_CASE("A-03: politika yolu kararı ve sebebini döndürür; uygularsa politi
 TEST_CASE("A-03: modele söylenen kurallar seçilen politikayı ve soru tercihini anlatır")
 {
     PolicyPreferences prefs;
-    std::string rules = kentos::ai::policy_rules(prefs);
+    std::string rules = piricad::ai::policy_rules(prefs);
     CHECK(rules.find("her_degisiklikte") != std::string::npos);
     CHECK(rules.find("yalniz_zorunlu") != std::string::npos);
     CHECK(rules.find("değiştiremezsin") != std::string::npos);
 
     prefs.approval  = ApprovalPolicy::Automatic;
-    prefs.questions = kentos::ai::QuestionPolicy::Assume;
-    rules           = kentos::ai::policy_rules(prefs);
+    prefs.questions = piricad::ai::QuestionPolicy::Assume;
+    rules           = piricad::ai::policy_rules(prefs);
     CHECK(rules.find("Onay bekleme") != std::string::npos);
     CHECK(rules.find("varsayimlar") != std::string::npos);
     CHECK(rules.find("UYDURMA") != std::string::npos); ///< what decides the result is not invented
 
-    prefs.questions = kentos::ai::QuestionPolicy::WhenItMatters;
-    CHECK(kentos::ai::policy_rules(prefs).find("işe başlamadan") != std::string::npos);
+    prefs.questions = piricad::ai::QuestionPolicy::WhenItMatters;
+    CHECK(piricad::ai::policy_rules(prefs).find("işe başlamadan") != std::string::npos);
 }

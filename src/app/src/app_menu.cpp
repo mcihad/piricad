@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/app_menu.hpp"
+#include "piricad/app/app_menu.hpp"
 
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/widgets.hpp"
 
 #include <QAbstractButton>
 #include <QAction>
@@ -22,7 +22,7 @@
 #include <functional>
 #include <utility>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 // The measures, on the design's 4 px grid.
@@ -288,7 +288,7 @@ ApplicationMenu::ApplicationMenu(QWidget* parent) : QWidget(parent, Qt::Popup)
 {
     setObjectName(QStringLiteral("applicationMenu"));
     setAttribute(Qt::WA_TranslucentBackground, true);
-    setAccessibleName(tr("KentOS CAD ana menüsü"));
+    setAccessibleName(tr("PiriCAD CAD ana menüsü"));
     setFixedWidth(kMenuWidth);
 
     auto* outer = new QVBoxLayout(this);
@@ -682,4 +682,4 @@ void ApplicationMenu::choose(QAction* action)
     if (action != nullptr && action->isEnabled()) action->trigger();
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: the native project format, on the wire.
+// PiriCAD — io: the native project format, on the wire.
 //
 // This header is the format specification in code. The user-facing description
 // of the same bytes is /docs/veri/proje-dosyasi.md, and the two must agree.
@@ -37,7 +37,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace kentos::io {
+namespace piricad::io {
 
 static_assert(std::endian::native == std::endian::little,
               "The native project format is little-endian and is mapped, not parsed "
@@ -110,7 +110,7 @@ inline constexpr std::uint32_t kMinReaderVersionAngledGuide = 2;
 /// source is — so the entity keys have gaps where they stood, and an older
 /// reader would refuse the gap as a corrupt key column and draw the reference
 /// as an empty block it thinks is complete. Raising the field makes the
-/// refusal say what it is: this file needs a newer KentOSCad.
+/// refusal say what it is: this file needs a newer PiriCAD.
 inline constexpr std::uint32_t kMinReaderVersionExternal = 4;
 
 /// What a drawing holding a CLIPPED block reference writes (`BLOKKIRP`), and
@@ -995,4 +995,4 @@ constexpr std::uint64_t align_up(std::uint64_t v) noexcept
     return (v + (kAlignment - 1)) & ~(kAlignment - 1);
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

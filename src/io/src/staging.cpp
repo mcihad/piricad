@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/io/staging.hpp"
+#include "piricad/io/staging.hpp"
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <system_error>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 namespace fs = std::filesystem;
 
 /// What every staging directory's name begins with.
-constexpr const char* kStagingPrefix = ".kentos-";
+constexpr const char* kStagingPrefix = ".piricad-";
 
 /// The directory `target` is in, or the working directory for a bare name.
 fs::path directory_of(const fs::path& target)
@@ -128,4 +128,4 @@ bool is_staging_name(const std::string& name) noexcept
     return name.starts_with(kStagingPrefix);
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

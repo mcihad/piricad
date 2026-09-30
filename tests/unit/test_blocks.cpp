@@ -9,23 +9,23 @@
 // and its member captions kept their size when the symbol was inserted twice as
 // big. Each case below is one of those, held down by the arithmetic that draws
 // the reference: `core::place_block_point`.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/render/scene.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/render/scene.hpp"
 
 #include <algorithm>
 #include <array>
@@ -36,8 +36,8 @@
 #include <utility>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 
 namespace {
@@ -779,8 +779,8 @@ TEST_CASE("C-13 BLOKDÜZENLE: vazgeç açılanı kaldırır; açık olmayan refe
     // A reference to the block being edited cannot go into it.
     r.run("BLOKEKLE ad=TEK nokta=5,5");
     const std::int64_t inside = r.last_reference();
-    const std::string loop    = r.refused("BLOKDÜZENLE islem=kaydet nesne=" + std::to_string(ref) +
-                                          " nesneler=" + keys + " nesneler=" + std::to_string(inside));
+    const std::string loop = r.refused("BLOKDÜZENLE islem=kaydet nesne=" + std::to_string(ref) +
+                                       " nesneler=" + keys + " nesneler=" + std::to_string(inside));
     CHECK(loop.find("Blok 'TEK' kaydedilemedi") != std::string::npos);
     CHECK_EQ(definition_of(r, "TEK"), was);
     r.run("SİL nesneler=" + std::to_string(inside));

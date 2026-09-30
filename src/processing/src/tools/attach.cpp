@@ -9,14 +9,14 @@
 // are its own or the edge's length. Nothing moves on attach: the caption stays
 // exactly where it is and the difference to the rule's place is recorded as the
 // hand's offset, so following begins from where the caption already stands.
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 
-namespace kentos::processing {
+namespace piricad::processing {
 namespace {
 
 core::DrawingUnit unit_named(const std::string& word)
@@ -240,10 +240,10 @@ private:
 
 } // namespace
 
-KENTOS_PROCESSING_TOOL(attach)
+PIRICAD_PROCESSING_TOOL(attach)
 {
     static const Attach tool;
     return tool;
 }
 
-} // namespace kentos::processing
+} // namespace piricad::processing

@@ -6,7 +6,7 @@
     "`Flags::AiAccessible` is a decision, and a decision has to be written down.",
     "",
     "`scripts/ci-gate-envanter.sh` reads the live registries through",
-    "`kentos_envanter` and compares them with this file. A newly closed command",
+    "`piricad_envanter` and compares them with this file. A newly closed command",
     "with no row here fails the build; opening one means deleting its row. The",
     "point is that the gap is COUNTED and ARGUED rather than assumed.",
     "",

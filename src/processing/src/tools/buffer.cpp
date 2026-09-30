@@ -26,13 +26,13 @@
 // sharp and bevelled corners and the flat and square ends, and for an object
 // the kernel does not take whole (an ellipse, a spline, a face with holes),
 // whose piece is then unioned with the rest by the kernel.
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/command/area_face.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/command/area_face.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -41,7 +41,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::processing {
+namespace piricad::processing {
 namespace {
 
 /// Millimetres as the metres a user reads, three decimals, Turkish comma; the
@@ -390,10 +390,10 @@ private:
 
 } // namespace
 
-KENTOS_PROCESSING_TOOL(buffer)
+PIRICAD_PROCESSING_TOOL(buffer)
 {
     static const Buffer tool;
     return tool;
 }
 
-} // namespace kentos::processing
+} // namespace piricad::processing

@@ -86,7 +86,7 @@ nesne 11 katman=SAGKENAR stil=0 halka=1
   alan_mm2 0  cevre_mm 42000
   koken core.double_line 10
 kapsam 0 -3000 23500 75000
-icerik-ozeti ced753babe16edb5
+icerik-ozeti 423b339a37a5a3d5
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"YOL"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
   {"seq":2,"cmd":"core.double_line","args":{"noktalar":[[0,0],[10000,0],[10000,10000]],"sol":2.0,"sag":3.0},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}

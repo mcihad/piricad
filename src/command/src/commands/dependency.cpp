@@ -15,17 +15,17 @@
 //
 // NOTHING IS STORED THAT SAYS "OUT OF DATE". The answer is computed from the
 // drawing, so an undo is always right, for every client alike.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/lineage.hpp"
-#include "kentos_cad/core/ties.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/lineage.hpp"
+#include "piricad/core/ties.hpp"
 
 #include <algorithm>
 #include <array>
@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// How many dependents the transcript names one by one; the report carries
@@ -549,7 +549,7 @@ Task<void> run_dependency(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(dependency)
+PIRICAD_COMMAND(dependency)
 {
     return CommandSpec{
         .id       = "core.dependency",
@@ -567,14 +567,14 @@ KENTOS_COMMAND(dependency)
                       "Sorulacak nesneler; verilmezse çizimdeki bütün bağlı nesneler ve sonuçlar"}
                     .en("objects"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bağlı yazı, ölçü, tarama ve türetilmiş sonuçların kaynaklarına göre güncel "
                    "olup olmadığını söyler; güncel olmayanı yetiştirir, kabul eder ya da "
                    "bağından çözer.",
-        .run    = &run_dependency,
-        .effect = Effect::Query | Effect::DocumentEdit,
+        .run     = &run_dependency,
+        .effect  = Effect::Query | Effect::DocumentEdit,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

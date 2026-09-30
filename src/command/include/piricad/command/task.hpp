@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the C++20 coroutine task type.
+// PiriCAD — command: the C++20 coroutine task type.
 //
-// kentoscad.md §7.1 lists coroutines as the single most critical C++20 feature in
+// piricad.md §7.1 lists coroutines as the single most critical C++20 feature in
 // this project, and §2.4 makes them mandatory for interactive commands: a CAD
 // command is an ask–wait–ask flow, and a hand-written state machine for it is
 // unreadable. §7.1 also says to write this type ourselves rather than depend on
@@ -19,7 +19,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace kentos::command {
+namespace piricad::command {
 
 namespace detail {
 
@@ -97,7 +97,7 @@ template<class T = void> class Task;
 /// with. The driver is the command bus: it resumes the task, the task suspends on
 /// each input it needs, and the bus resumes it again when the value arrives — from
 /// a mouse click, a typed coordinate, a script argument or an AI tool call, with
-/// the body unable to tell which (kentoscad.md §2.4).
+/// the body unable to tell which (piricad.md §2.4).
 template<class T> class Task
 {
 public:
@@ -379,4 +379,4 @@ private:
     std::coroutine_handle<promise_type> handle_{};
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: THE COMMAND BUS.
+// PiriCAD — command: THE COMMAND BUS.
 //
 //     GUI button ─┐
 //     Command line ┤
@@ -7,28 +7,28 @@
 //     AI ──────────┤                                    │
 //     Batch ───────┘                                    └──►  Journal
 //
-// kentoscad.md §2.1 — "Everything that mutates application state is a command.
+// piricad.md §2.1 — "Everything that mutates application state is a command.
 // The user interface is only one client of the command bus."
 // No client on that diagram has a privilege over any other.
 #pragma once
 
-#include "kentos_cad/command/aids.hpp"
-#include "kentos_cad/command/changes.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/parser.hpp"
-#include "kentos_cad/command/preview.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/selection.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/command/validation.hpp"
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/crs.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/core/style_library.hpp"
+#include "piricad/command/aids.hpp"
+#include "piricad/command/changes.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/parser.hpp"
+#include "piricad/command/preview.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/selection.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/command/validation.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/crs.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/core/style_library.hpp"
 
 #include <functional>
 #include <memory>
@@ -37,7 +37,7 @@
 #include <string>
 #include <string_view>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// One request to run one command: what, with which arguments, from whom.
 ///
@@ -56,7 +56,7 @@ struct Invocation
 /// The seam exists for the reason `on_run_script` exists: Article 3.2 lets io
 /// depend on command and never the reverse, but io.md R4 wants every import and
 /// export to be a registered command, and the registry — with the CLI help, the
-/// AI schema and `kentos_docgen` behind it — lives here. So the `CommandSpec`
+/// AI schema and `piricad_docgen` behind it — lives here. So the `CommandSpec`
 /// and the body live in `commands/file.cpp`, and the work arrives through
 /// `Bus::on_file_request`, which `io::FileService` installs. `Category::File` was
 /// reserved in `spec.hpp` from the start for exactly these commands.
@@ -1213,4 +1213,4 @@ private:
     core::Settings batch_settings_{core::builtin_settings(), core::SettingScopeMask::Project};
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

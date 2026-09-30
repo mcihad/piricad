@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: what a table item on a sheet says.
+// PiriCAD — core: what a table item on a sheet says.
 //
 // THE WORDS OF A TABLE, NOT ITS PICTURE. Which rows, which columns, and what
 // every cell reads — worked out here, where it can be tested without a painter,
@@ -8,14 +8,14 @@
 // the program's answer, and it must not depend on how a screen happens to draw.
 #pragma once
 
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 class Document; ///< the drawing a table reads
 
@@ -68,4 +68,4 @@ Result<TableText> table_text(const Document& doc, const LayoutItem& item);
 /// says ,15 or ,16.
 std::string format_fixed(std::int64_t scaled, int scale, int decimals, bool thousands, bool comma);
 
-} // namespace kentos::core
+} // namespace piricad::core

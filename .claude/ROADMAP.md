@@ -1,4 +1,4 @@
-# Roadmap — where KentOSCad stands
+# Roadmap — where PiriCAD stands
 
 > This is a HAND-OFF, not a rulebook. It records what is finished, what is
 > measured, what is written but unproven, and what is left — so the work can be
@@ -20,7 +20,7 @@ halves are still OFF by default.
 | Vector + raster symbology | **All eleven** symbol layer types of `/data/catalogs/mpyy-vektor` draw on the GPU |
 | Text | SDF atlas (msdfgen over FreeType outlines, shaped with HarfBuzz) — rulers, scale bar, north arrow, captions |
 | Frame budget (§10.1) | **Measured, and the GPU wins by 20×** — see below |
-| Defaults | **Both ON wherever the toolchain is found** — probed in `cmake/KentOSCadOptions.cmake` |
+| Defaults | **Both ON wherever the toolchain is found** — probed in `cmake/PiriCADOptions.cmake` |
 
 ### The measurement
 
@@ -36,15 +36,15 @@ same machine, median of 20 frames, backend share only:
 The §10.1 budget is 16 ms. Reproduce with:
 
 ```bash
-KENTOS_FRAME_TIMES=20 QT_QPA_PLATFORM=xcb ./build/dev/bin/kentos_cad --betik <yük.json>
+PIRICAD_FRAME_TIMES=20 QT_QPA_PLATFORM=xcb ./build/dev/bin/piricad --betik <yük.json>
 ```
 
-`KENTOS_BACKEND=dahili` selects the built-in painter on a non-RHI build.
+`PIRICAD_BACKEND=dahili` selects the built-in painter on a non-RHI build.
 
 ## What this machine needed
 
 None of these are in the repository; a fresh machine needs them before
-`KENTOS_WITH_RHI` or `KENTOS_WITH_TEXT` will configure.
+`PIRICAD_WITH_RHI` or `PIRICAD_WITH_TEXT` will configure.
 
 ```bash
 sudo apt install qt6-base-private-dev      # <rhi/qrhi.h> — Qt Gui's PRIVATE headers
@@ -53,13 +53,13 @@ sudo apt install libfreetype-dev libharfbuzz-dev
 ```
 
 pybind11, msdfgen and stb_rect_pack are fetched from pinned commits, so the
-first configure with `KENTOS_WITH_PYTHON=ON` or `KENTOS_WITH_TEXT=ON` needs the
+first configure with `PIRICAD_WITH_PYTHON=ON` or `PIRICAD_WITH_TEXT=ON` needs the
 network. CPython itself is FOUND, not fetched: install `python@3.14` /
 `python3.14-dev` first. `qsb` is NOT on `PATH` on any platform — `scripts/doctor.sh` asks Qt
 where its own tools live.
 
 ```bash
-cmake --preset dev -DKENTOS_WITH_RHI=ON -DKENTOS_WITH_TEXT=ON -DKENTOS_WITH_PYTHON=ON
+cmake --preset dev -DPIRICAD_WITH_RHI=ON -DPIRICAD_WITH_TEXT=ON -DPIRICAD_WITH_PYTHON=ON
 cmake --build --preset dev
 ```
 
@@ -124,7 +124,7 @@ Two behaviours worth knowing before changing them:
 
 > Pruned as items land. DONE and deleted from this list: `ÖTELE`/offset (Clipper2
 > is linked and `OFSET`, `BİRLEŞTİR` and `BÖL` all run on it), the GPU backend's
-> lone-vertex point marker, defaulting `KENTOS_WITH_RHI` and `KENTOS_WITH_TEXT`
+> lone-vertex point marker, defaulting `PIRICAD_WITH_RHI` and `PIRICAD_WITH_TEXT`
 > ON, every published point gösterim previewing (the last one was a WORD, and the
 > preview drew no captions), the style designer's two visible faults, and
 > `ci-gate-render-desen.py`, which now MEASURES the GPU path instead of
@@ -135,8 +135,8 @@ Two behaviours worth knowing before changing them:
 > is asserted too, by `scripts/ci-gate-butce.sh`.
 
 1. **The probes are the only thing that catches interaction defects.** Three now:
-   `KENTOS_EDIT_PROBE` (grip dragging), `KENTOS_TOOL_PROBE` (every column button,
-   two passes — select-then-press and press-then-select) and `KENTOS_HAND_PROBE`
+   `PIRICAD_EDIT_PROBE` (grip dragging), `PIRICAD_TOOL_PROBE` (every column button,
+   two passes — select-then-press and press-then-select) and `PIRICAD_HAND_PROBE`
    (real mouse and key events, which button is lit at each step, and a PNG of
    every step when given a directory). Every interaction bug in this session was
    found by one of them and none was findable by a unit test: the transcript said
@@ -144,7 +144,7 @@ Two behaviours worth knowing before changing them:
    the canvas by eye.
 2. **Renderer work Article 8.1 still owes — four subsystems, no defects.**
    R7 is DONE: the live draw-call count exists (`render::FrameStats`, counted
-   where the draws are submitted), `KENTOS_FRAME_TIMES` prints it beside the
+   where the draws are submitted), `PIRICAD_FRAME_TIMES` prints it beside the
    frame time, and `scripts/ci-gate-butce.sh` ASSERTS both budgets on the
    heaviest scene in the repository —
 
@@ -187,7 +187,7 @@ Two behaviours worth knowing before changing them:
   store and the frame is on the GPU. `MapCanvas::grabCanvas()` exists for this.
 - **A stale `ui/state` in QSettings survives a rebuild and looks exactly like a
   new bug.** `kLayoutVersion` is the way to decline one.
-- **`KENTOS_RHI_DEBUG` and `KENTOS_RHI_ONLY`** bisect a frame. A batch that
+- **`PIRICAD_RHI_DEBUG` and `PIRICAD_RHI_ONLY`** bisect a frame. A batch that
   never reached the buffer, a batch drawn off screen, and a pipeline that
   corrupts the state of the draws after it look identical in a screenshot.
 
@@ -195,5 +195,5 @@ Two behaviours worth knowing before changing them:
 
 - The machine is shared. Ask before building, and never start a full
   `make check` or a `FetchContent` download without being told to.
-- Screenshots come from the real binary: `KENTOS_FRAME_DUMP=<png>` for one
-  frame, `KENTOS_SHOT_DIR=<dir>` for every window.
+- Screenshots come from the real binary: `PIRICAD_FRAME_DUMP=<png>` for one
+  frame, `PIRICAD_SHOT_DIR=<dir>` for every window.

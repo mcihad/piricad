@@ -1,6 +1,6 @@
 # Sorun Giderme
 
-Bir hata mesajıyla karşılaşan herkes için; bu sayfa KentOSCad'in verebileceği mesajları
+Bir hata mesajıyla karşılaşan herkes için; bu sayfa PiriCAD'in verebileceği mesajları
 sebebi ve çözümüyle birlikte listeler.
 
 Mesajlar burada göründüğü gibi yazılır; değişken kısımlar örnek değerlerle gösterilmiştir.
@@ -42,7 +42,7 @@ parametreleri listeler.
 
 ### `'core.layer': bilinmeyen parametre 'renkler'. Tanımlı parametreler: ad, gorunur, kilitli, renk`
 
-**Sebep.** Parametre adı yanlış yazılmış. KentOSCad yazım hatasını sessizce yutmaz.
+**Sebep.** Parametre adı yanlış yazılmış. PiriCAD yazım hatasını sessizce yutmaz.
 
 **Çözüm.** Mesajın sonundaki tanımlı parametrelerden doğru olanı seçin.
 
@@ -409,7 +409,7 @@ panelindeki **Kapsam** grubu `boş çizim` yazar.
 
 **Sebep.** Kum havuzu seviyesi dosya okumaya izin vermiyor.
 
-**Çözüm.** Betiği KentOSCad uygulaması içinden çalıştırın; uygulama `proje` seviyesini
+**Çözüm.** Betiği PiriCAD uygulaması içinden çalıştırın; uygulama `proje` seviyesini
 kullanır.
 
 ### `'X' sütunu bir betiğin ya da toplu işin içinde silinmez: …`
@@ -476,7 +476,7 @@ okunur; bozuk bir satır varsa betik **hiç çalışmaz**, öncesindeki satırla
 
 **Sebep.** Betik motoru olmayan bir ortamda `BETİK` çağrılmış.
 
-**Çözüm.** Betiği KentOSCad uygulaması içinden çalıştırın.
+**Çözüm.** Betiği PiriCAD uygulaması içinden çalıştırın.
 
 ### Betik çalıştı ama çizim görünmüyor
 
@@ -503,21 +503,21 @@ yazılmaz, panel yine dolar.
 
 ## Kurulum ve derleme
 
-### `KENTOS_WITH_RHI=ON but qsb was not found.`
+### `PIRICAD_WITH_RHI=ON but qsb was not found.`
 
 **Sebep.** GPU çizim arka ucu istenmiş ama gölgelendirici derleyicisi kurulu değil.
 
-**Çözüm.** `qt6-shadertools` paketini kurun veya `-DKENTOS_WITH_RHI=OFF` ile
+**Çözüm.** `qt6-shadertools` paketini kurun veya `-DPIRICAD_WITH_RHI=OFF` ile
 yapılandırın. Bu sürümde GPU arka ucu zaten kapalıdır.
 
-### `KENTOS_WITH_PYTHON=ON but CPython 3.14 ... was not found`
+### `PIRICAD_WITH_PYTHON=ON but CPython 3.14 ... was not found`
 
 **Sebep.** Python betik motoru açılmış ama makinede CPython 3.14 ve geliştirme
 başlıkları yok.
 
 **Çözüm.** Yapılandırmanın yazdığı paketi kurun (`brew install python@3.14`,
 `apt install python3.14-dev`, `winget install Python.Python.3.14`) ya da
-`-DKENTOS_WITH_PYTHON=OFF` ile yapılandırın.
+`-DPIRICAD_WITH_PYTHON=OFF` ile yapılandırın.
 
 ### Qt bulunamıyor
 
@@ -535,9 +535,9 @@ dosya ve satır numarasıyla yazar.
 
 ## Dosya açma ve kaydetme
 
-### `io.not_a_project: '...' bir KentOSCad proje dosyası değil.`
+### `io.not_a_project: '...' bir PiriCAD proje dosyası değil.`
 
-**Sebep.** `AÇ` yalnızca KentOSCad proje dosyalarını (`.pcad`) açar; verdiğiniz dosya
+**Sebep.** `AÇ` yalnızca PiriCAD proje dosyalarını (`.pcad`) açar; verdiğiniz dosya
 başka bir biçim.
 
 **Çözüm.** DXF, GeoPackage, Netcad NCZ gibi dış biçimler için `İÇEAKTAR` kullanın.
@@ -545,16 +545,16 @@ Bkz. [Dış veri alma](komutlar/import.md).
 
 ### `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor`
 
-**Sebep.** Dosyayı, bu yapının okuyamayacağı daha yeni bir KentOSCad yazmış.
+**Sebep.** Dosyayı, bu yapının okuyamayacağı daha yeni bir PiriCAD yazmış.
 
-**Çözüm.** Mesajda adı geçen sürüme yükseltin. KentOSCad dosyayı yarım açmaz; yarım
+**Çözüm.** Mesajda adı geçen sürüme yükseltin. PiriCAD dosyayı yarım açmaz; yarım
 açılmış bir proje, açılmamış bir projeden tehlikelidir.
 
 ### `io.truncated: '...' N bayt olduğunu bildiriyor, ama M bayt.`
 
 **Sebep.** Dosya yarım kopyalanmış, aktarım kesilmiş ya da disk hatası olmuş.
 
-**Çözüm.** Yedeğinizden geri alın ve kopyalamayı yeniden yapın. KentOSCad bozuk bir
+**Çözüm.** Yedeğinizden geri alın ve kopyalamayı yeniden yapın. PiriCAD bozuk bir
 dosyayı kendiliğinden onarmaz; sessizce "düzeltilmiş" bir kadastro dosyası, bozuk
 olduğu bilinen bir dosyadan kötüdür.
 
@@ -564,29 +564,29 @@ olduğu bilinen bir dosyadan kötüdür.
 anahtarlarının sırası tutmuyor.
 
 **Çözüm.** Yedeğinizden geri alın. Bu üç mesajdan biri görünüyorsa dosya güvenilir
-değildir. Bkz. [KentOSCad proje dosyası](veri/proje-dosyasi.md).
+değildir. Bkz. [PiriCAD proje dosyası](veri/proje-dosyasi.md).
 
 ### `io.unknown_kind: ... 65535 numaralı türde; bu değer 'tür yok' anlamına ayrılmıştır`
 
-**Sebep.** Dosyanın tür sütununa ayrılmış değer yazılmış; hiçbir KentOSCad sürümü bunu
+**Sebep.** Dosyanın tür sütununa ayrılmış değer yazılmış; hiçbir PiriCAD sürümü bunu
 yazmaz. Bu sürümün tanımadığı gerçek bir tür bu hatayı **vermez**: nesne görünür ve
 korunur, yalnız düzenlenemez ("Bu yapının tanımadığı türdeki nesne düzenlenemez;
 olduğu gibi korunur.").
 
 **Çözüm.** Yedeğinizden geri alın. Düzenlenemeyen bir nesneyle karşılaşıyorsanız
-dosyayı yazan KentOSCad sürümüne yükseltin; nesne o sürümde tam anlamıyla açılır.
+dosyayı yazan PiriCAD sürümüne yükseltin; nesne o sürümde tam anlamıyla açılır.
 
 ### `Bu çizim henüz bir dosyaya bağlı değil. FARKLIKAYDET ile bir ad verin.`
 
 **Sebep.** `KAYDET` hiç kaydedilmemiş bir çizimde çalıştırıldı.
 
-**Çözüm.** `FARKLIKAYDET` ile bir ad verin. KentOSCad ad uydurmaz.
+**Çözüm.** `FARKLIKAYDET` ile bir ad verin. PiriCAD ad uydurmaz.
 
 ### `'...' yazılırken hata oluştu; disk dolu olabilir. Önceki dosya değiştirilmedi.`
 
 **Sebep.** Kaydetme sırasında disk doldu ya da yazma kesildi.
 
-**Çözüm.** Yer açıp yeniden kaydedin. Son cümle önemlidir: KentOSCad önce yanına
+**Çözüm.** Yer açıp yeniden kaydedin. Son cümle önemlidir: PiriCAD önce yanına
 geçici bir dosya yazıp ancak tamamlandığında yerine koyduğu için **bir önceki
 kaydınız yerinde durur**.
 
@@ -609,32 +609,32 @@ bir sonraki açılışta adıyla bulunur.
 ### `io.format_too_new: … en az 4. sürüm biçim okuyucusu istiyor`
 
 **Sebep.** Dosya bir [dış referans](komutlar/xref.md) taşıyor; dış referansın nesneleri
-dosyada değil kaynağındadır ve bunu ancak 4. sürüm biçimi okuyan bir KentOSCad bilir.
+dosyada değil kaynağındadır ve bunu ancak 4. sürüm biçimi okuyan bir PiriCAD bilir.
 
-**Çözüm.** KentOSCad'i güncelleyin. Dosyayı eski sürümde açmak gerekiyorsa, yeni sürümde
+**Çözüm.** PiriCAD'i güncelleyin. Dosyayı eski sürümde açmak gerekiyorsa, yeni sürümde
 `DIŞREFERANS islem=bagla` ile dış referansı çizime katıp kaydedin.
 
 ### `io.format_too_new: … en az 5. sürüm biçim okuyucusu istiyor`
 
 **Sebep.** Dosyada [BLOKKIRP](komutlar/block_clip.md) ile kırpılmış bir blok referansı ya
-da dış referans var; kırpma sınırını ancak 5. sürüm biçimi okuyan bir KentOSCad bilir.
+da dış referans var; kırpma sınırını ancak 5. sürüm biçimi okuyan bir PiriCAD bilir.
 
-**Çözüm.** KentOSCad'i güncelleyin. Dosyayı eski sürümde açmak gerekiyorsa, yeni sürümde
+**Çözüm.** PiriCAD'i güncelleyin. Dosyayı eski sürümde açmak gerekiyorsa, yeni sürümde
 kırpmaları `BLOKKIRP islem=kaldir` ile kaldırıp kaydedin.
 
 ## Dış veri biçimleri
 
 ### `io.no_driver: Dış biçim desteği KAPALI.`
 
-**Sebep.** Bu yapı `KENTOS_WITH_GDAL=OFF` ile derlenmiş.
+**Sebep.** Bu yapı `PIRICAD_WITH_GDAL=OFF` ile derlenmiş.
 
 **Çözüm.** Mesaj kurulum komutunu içerir: Debian/Ubuntu'da
-`sudo apt install libgdal-dev`, sonra `-DKENTOS_WITH_GDAL=ON` ile yapılandırın.
+`sudo apt install libgdal-dev`, sonra `-DPIRICAD_WITH_GDAL=ON` ile yapılandırın.
 `make doctor` durumu özetler.
 
 ### `io.no_driver: '...' için sürücü bulunamadı.`
 
-**Sebep.** Dosyanın uzantısı izin listesinde değil. KentOSCad, altındaki kütüphanenin
+**Sebep.** Dosyanın uzantısı izin listesinde değil. PiriCAD, altındaki kütüphanenin
 tanıdığı yüzden fazla biçimin yalnızca açıkça izin verilenlerini açar.
 
 **Çözüm.** `bicim` parametresiyle sürücüyü söyleyin ya da dosyayı desteklenen bir
@@ -645,7 +645,7 @@ biçime çevirin. Bkz. [Dış veri biçimleri](veri/dis-formatlar.md).
 **Sebep.** İçe aktarılan veri kümesi koordinat sistemini bildirmiyor. DXF biçiminin
 koordinat sistemi için yeri yoktur.
 
-**Çözüm.** Dosyanın yanına aynı adlı bir `.prj` dosyası koyun. KentOSCad "herhâlde
+**Çözüm.** Dosyanın yanına aynı adlı bir `.prj` dosyası koyun. PiriCAD "herhâlde
 TUREF/TM30'dur" varsayımı yapmaz: TM30 ile TM33 karışması sessizdir ve ancak tapuya
 gittiğinde ortaya çıkar.
 
@@ -716,8 +716,8 @@ komutu yineleyin; bütün takım yeniden, birlikte yazılır.
 Program bir çökme anında **yığın izini** standart hata akışına yazar:
 
 ```text
-[kentos] ÇÖKME. Aşağıdaki yığın izini hata bildirimine ekleyin.
-/.../kentos_cad(+0x103373) [0x5d75ec5c2373]
+[piricad] ÇÖKME. Aşağıdaki yığın izini hata bildirimine ekleyin.
+/.../piricad(+0x103373) [0x5d75ec5c2373]
 ...
 ```
 

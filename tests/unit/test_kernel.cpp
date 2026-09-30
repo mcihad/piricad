@@ -7,16 +7,16 @@
 // is a whole millimetre, so the same input gives the same numbers on every
 // platform. The expected values are integers worked out by hand: a platform
 // that disagreed would show a wrong number here, not a last-bit difference.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/kernel.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/kernel.hpp"
 
 #include <cmath>
 #include <cstddef>
 #include <vector>
 
-using namespace kentos;
+using namespace piricad;
 using core::CurvePath;
 using core::KernelFace;
 using core::PathPiece;
@@ -76,13 +76,13 @@ std::size_t arcs_in(const CurvePath& p)
 
 TEST_CASE("ÇEKİRDEK: OpenCASCADE bu yapıda var ve sürümünü söylüyor")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     CHECK(core::kernel_version().starts_with("OpenCASCADE 7."));
 }
 
 TEST_CASE("ÇEKİRDEK: yuvarlatılmış köşeli parsel kesilince yay, merkezi ve yarıçapıyla kalıyor")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     const std::vector<KernelFace> parcel{KernelFace{rounded_square(), {}}};
     const std::vector<KernelFace> right{KernelFace{box(5'000, -1'000, 12'000, 12'000), {}}};
 
@@ -117,7 +117,7 @@ TEST_CASE("ÇEKİRDEK: yuvarlatılmış köşeli parsel kesilince yay, merkezi v
 
 TEST_CASE("ÇEKİRDEK: kesilen iki parça birleşince parsel eski hâline dönüyor")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     const std::vector<KernelFace> parcel{KernelFace{rounded_square(), {}}};
     const std::vector<KernelFace> right{KernelFace{box(5'000, -1'000, 12'000, 12'000), {}}};
     auto a = core::kernel_boolean(parcel, right, core::BooleanOp::Intersection);
@@ -140,7 +140,7 @@ TEST_CASE("ÇEKİRDEK: kesilen iki parça birleşince parsel eski hâline dönü
 
 TEST_CASE("ÇEKİRDEK: delikli alan deliğiyle, delik saat yönünde geliyor")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     const std::vector<KernelFace> big{KernelFace{box(0, 0, 20'000, 20'000), {}}};
     const std::vector<KernelFace> yard{KernelFace{box(5'000, 5'000, 15'000, 15'000), {}}};
     auto holed = core::kernel_boolean(big, yard, core::BooleanOp::Difference);
@@ -155,7 +155,7 @@ TEST_CASE("ÇEKİRDEK: delikli alan deliğiyle, delik saat yönünde geliyor")
 
 TEST_CASE("ÇEKİRDEK: dışa ofsetin köşeleri gerçek yay, yuvarlak köşe büyüyor")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     auto grown = core::kernel_offset(rounded_square(), 1'000, core::OffsetCorner::Round,
                                      /*both_sides=*/false);
     REQUIRE(grown.ok());
@@ -176,7 +176,7 @@ TEST_CASE("ÇEKİRDEK: dışa ofsetin köşeleri gerçek yay, yuvarlak köşe b�
 
 TEST_CASE("ÇEKİRDEK: açık çizginin tamponu yuvarlak uçlu kapalı bant, tek yanı açık çizgi")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     CurvePath ell;
     ell.pieces = {segment(at(0, 0), at(10'000, 0)), segment(at(10'000, 0), at(10'000, 10'000))};
 
@@ -198,7 +198,7 @@ TEST_CASE("ÇEKİRDEK: açık çizginin tamponu yuvarlak uçlu kapalı bant, tek
 
 TEST_CASE("ÇEKİRDEK: aynı giriş her seferinde aynı parçalar")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     const std::vector<KernelFace> parcel{KernelFace{rounded_square(), {}}};
     const std::vector<KernelFace> cutter{KernelFace{box(-1'000, 3'000, 30'000, 7'000), {}}};
     auto first  = core::kernel_boolean(parcel, cutter, core::BooleanOp::Difference);
@@ -213,7 +213,7 @@ TEST_CASE("ÇEKİRDEK: aynı giriş her seferinde aynı parçalar")
 
 TEST_CASE("ÇEKİRDEK: spline kenarlı yol bu aşamada reddediliyor, sebebi söyleniyor")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     CurvePath odd      = box(0, 0, 10'000, 10'000);
     odd.pieces[1].kind = PathPiece::Kind::Spline;
     auto refused       = core::kernel_boolean(std::vector<KernelFace>{KernelFace{odd, {}}}, {},
@@ -237,7 +237,7 @@ TEST_CASE("ÇEKİRDEK: uçları kendi çemberinden milimetre kesri sapan yay da 
     // edge from centre and radius refused them, and with them the face and the
     // whole boolean ("command not done"): TEVHİT and BİRLEŞTİR both failed on
     // such a parcel. The edge is the circle through its ends and midpoint now.
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     CurvePath bent;
     bent.closed = true;
     // (0,0) → (20,0) bowed to (10,−3): centre (10, 15.1667), radius 18.1667 —

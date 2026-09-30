@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: print profiles, the sheets a drawing is put on.
+// PiriCAD — io: print profiles, the sheets a drawing is put on.
 //
 // A PROFILE is a named sheet: paper (or a custom size), orientation, resolution
 // and margin. The office keeps a handful — "A3 yatay 300 dpi" for the pafta,
@@ -12,8 +12,8 @@
 // JSON, so a test can prove the store without a window (io.md R3).
 #pragma once
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -22,7 +22,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// One named sheet. Dimensions are the PORTRAIT ones; `landscape` turns them
 /// when the sheet is used.
@@ -118,4 +118,4 @@ private:
     std::string default_;
 };
 
-} // namespace kentos::io
+} // namespace piricad::io

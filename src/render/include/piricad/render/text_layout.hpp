@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — render: where the lines of a caption go.
+// PiriCAD — render: where the lines of a caption go.
 //
 // ONE ANSWER FOR THE SCREEN AND THE PAPER (TODOS C-12). The GPU canvas and the
 // QPainter path — which is also the PDF and the printer — used to break, stack
@@ -23,7 +23,7 @@
 // in `drawing_measure`, the core's measure of the drawing face.
 #pragma once
 
-#include "kentos_cad/core/text_store.hpp"
+#include "piricad/core/text_store.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -31,7 +31,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::render {
+namespace piricad::render {
 
 /// One laid-out line, in the caption's own frame and in pixels: `u` along the
 /// baseline from the anchor, `v` across it, DOWN positive — the way text is set
@@ -61,4 +61,4 @@ float drawing_measure(std::string_view run) noexcept;
 void lay_out_text(std::string_view text, float height_px, core::TextAnchor anchor,
                   std::uint16_t spacing, const MeasureRun& measure, std::vector<TextLine>& out);
 
-} // namespace kentos::render
+} // namespace piricad::render

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io (internal): the Netcad NCZ drawing format, parsed.
+// PiriCAD — io (internal): the Netcad NCZ drawing format, parsed.
 //
 // Copyright (C) 2026 Erdinç Örsan ÜNAL
 //     The NCZ parser this file and ncz_format.cpp port: `ncz_pure.py` of his QGIS
 //     plugin "NCZ Reader", version 1.4.3,
 //     https://github.com/erdincunal/Jeomatik-NCZ-Reader — licensed GPL-2.0-or-later.
-// Copyright (C) 2026 KentOSCad contributors
+// Copyright (C) 2026 PiriCAD contributors
 //     The C++ port, 28 September 2026 (GPLv3 §5a: this is a modified version).
 //
 // This program is free software: you can redistribute it and/or modify it under
@@ -29,7 +29,7 @@
 //     entity over, already final, and forgets it (io.md R15: bounded working set).
 //   * THE SINE, COSINE AND ARCTANGENT ARE THIS PROGRAM'S (`core/trig.hpp`), not
 //     the platform's: a corner must land on the same millimetre on three
-//     operating systems (kentoscad.md §7.3). They agree with the reference to a
+//     operating systems (piricad.md §7.3). They agree with the reference to a
 //     few ulps.
 //   * THE COLLINEAR-VERTEX PASS a rectangle test runs is the same removal, in the
 //     same order, found in O(n log n) instead of rescanning the ring after every
@@ -71,7 +71,7 @@
 #include <variant>
 #include <vector>
 
-namespace kentos::io::ncz {
+namespace piricad::io::ncz {
 
 /// The entity kinds, in the reference parser's words — which are also the words
 /// the import report and the `entity_type` column use, so a user comparing this
@@ -308,4 +308,4 @@ Outcome read_header(std::span<const std::uint8_t> data, Header& header, std::sto
 std::optional<std::vector<AttributeTable>> attribute_tables(std::span<const std::uint8_t> data,
                                                             std::stop_token stop);
 
-} // namespace kentos::io::ncz
+} // namespace piricad::io::ncz

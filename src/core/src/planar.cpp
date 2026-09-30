@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/planar.hpp"
+#include "piricad/core/planar.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/parallel.hpp"
-#include "kentos_cad/core/spatial_index.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/parallel.hpp"
+#include "piricad/core/spatial_index.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <queue>
 #include <algorithm>
@@ -19,7 +19,7 @@
 #include <set>
 #include <utility>
 
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
 #include <CGAL/Arr_circle_segment_traits_2.h>
 #include <CGAL/Arr_consolidated_curve_data_traits_2.h>
 #include <CGAL/Arr_naive_point_location.h>
@@ -28,11 +28,11 @@
 #include <CGAL/version.h>
 #endif
 
-namespace kentos::core {
+namespace piricad::core {
 
 bool network_available() noexcept
 {
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
     return true;
 #else
     return false;
@@ -52,7 +52,7 @@ struct Prepared
 
 // ---- everything below, to `gather`, serves the arrangement alone: a build
 // without CGAL has no network to prepare pieces for.
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
 
 bool full_turn(const PathPiece& p) noexcept
 {
@@ -635,7 +635,7 @@ void add_bridges(std::vector<Prepared>& pieces, const std::vector<OpenEnd>& open
     pieces.insert(pieces.end(), added.begin(), added.end());
 }
 
-#endif // KENTOS_HAVE_CGAL
+#endif // PIRICAD_HAVE_CGAL
 
 /// Every entity whose box meets `box`, in slot order: the index and the tail it
 /// has not taken in yet, the way a pick gathers (pick.cpp).
@@ -678,7 +678,7 @@ Box2 path_box(const CurvePath& path)
     return b;
 }
 
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
 /// Turns a closed path so it starts at its lowest-left vertex: the same face
 /// reads the same whichever edge the arrangement happened to start it at.
 void start_lowest(FaceRing& ring)
@@ -691,7 +691,7 @@ void start_lowest(FaceRing& ring)
     std::ranges::rotate(pieces, pieces.begin() + static_cast<std::ptrdiff_t>(best));
     std::ranges::rotate(ring.sources, ring.sources.begin() + static_cast<std::ptrdiff_t>(best));
 }
-#endif // KENTOS_HAVE_CGAL
+#endif // PIRICAD_HAVE_CGAL
 
 } // namespace
 
@@ -912,7 +912,7 @@ std::vector<NetworkPiece> network_pieces(const Document& doc, EntityId e, std::u
 
 // -------------------------------------------------------------- network ----
 
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
 namespace {
 
 using Kernel      = CGAL::Exact_predicates_exact_constructions_kernel;
@@ -970,7 +970,7 @@ struct Network::Impl
     std::vector<Bridge> bridges;
     NodeSnaps snaps;
     mutable std::size_t collapsed{0};
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
     Traits traits;
     Arrangement arr{&traits};
 
@@ -1284,13 +1284,13 @@ Network::~Network()                             = default;
 
 Result<Network> Network::build(std::span<const NetworkPiece> pieces, Mm node_tolerance, Mm bridge)
 {
-#ifndef KENTOS_HAVE_CGAL
+#ifndef PIRICAD_HAVE_CGAL
     (void)pieces;
     (void)node_tolerance;
     (void)bridge;
     return err(ErrorCode::Unsupported,
                "Bu derleme CGAL olmadan yapıldı; kapalı bölge bulunamıyor. CGAL'ı kurup "
-               "KENTOS_WITH_CGAL=ON ile yeniden derleyin (brew install cgal · apt install "
+               "PIRICAD_WITH_CGAL=ON ile yeniden derleyin (brew install cgal · apt install "
                "libcgal-dev · vcpkg install cgal).");
 #else
     auto impl = std::make_unique<Impl>();
@@ -1320,7 +1320,7 @@ Result<Network> Network::build(std::span<const NetworkPiece> pieces, Mm node_tol
 std::optional<NetworkFace> Network::face_at(Point2 p, bool islands) const
 {
     impl_->collapsed = 0;
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
     const auto found = impl_->locate(p);
     if (const FaceHandle* f = located_face(found)) {
         if ((*f)->is_unbounded()) return std::nullopt;
@@ -1335,7 +1335,7 @@ std::optional<NetworkFace> Network::face_at(Point2 p, bool islands) const
 
 bool Network::on_linework(Point2 p) const
 {
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
     const auto found = impl_->locate(p);
     return located_face(found) == nullptr;
 #else
@@ -1348,7 +1348,7 @@ std::vector<NetworkFace> Network::faces(bool islands) const
 {
     impl_->collapsed = 0;
     std::vector<NetworkFace> out;
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
     for (auto f = impl_->arr.faces_begin(); f != impl_->arr.faces_end(); ++f) {
         if (f->is_unbounded()) continue;
         if (auto face = impl_->face_of(f, islands)) out.push_back(std::move(*face));
@@ -1371,7 +1371,7 @@ std::size_t Network::collapsed() const noexcept
 
 std::vector<OpenEnd> Network::open_ends() const
 {
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
     return measure_open_ends(impl_->edge_pieces(), impl_->free_points());
 #else
     return {};
@@ -1381,7 +1381,7 @@ std::vector<OpenEnd> Network::open_ends() const
 std::vector<std::vector<std::uint32_t>> Network::overlaps() const
 {
     std::set<std::vector<std::uint32_t>> groups;
-#ifdef KENTOS_HAVE_CGAL
+#ifdef PIRICAD_HAVE_CGAL
     for (auto e = impl_->arr.edges_begin(); e != impl_->arr.edges_end(); ++e) {
         std::vector<std::uint32_t> sources;
         for (const std::uint32_t i : e->curve().data())
@@ -1457,7 +1457,7 @@ Result<Region> region_at(const Document& doc, const RegionQuery& query)
     if (!network_available())
         return err(ErrorCode::Unsupported,
                    "Bu derleme CGAL olmadan yapıldı; kapalı bölge bulunamıyor. CGAL'ı kurup "
-                   "KENTOS_WITH_CGAL=ON ile yeniden derleyin.");
+                   "PIRICAD_WITH_CGAL=ON ile yeniden derleyin.");
     const EntityTable& ents = doc.entities();
     std::vector<char> allowed;
     if (!query.only.empty()) {
@@ -1480,7 +1480,7 @@ Result<Region> region_at(const Document& doc, const RegionQuery& query)
                        query.at.y + reach};
         const bool whole = box.min_x <= extent.min_x && box.min_y <= extent.min_y &&
                            box.max_x >= extent.max_x && box.max_y >= extent.max_y;
-        const bool last = whole || (query.max_reach > 0 && reach * 2 > query.max_reach);
+        const bool last  = whole || (query.max_reach > 0 && reach * 2 > query.max_reach);
         std::vector<NetworkPiece> pieces;
         for (const EntityId e : gather(doc, box)) {
             if (!ents.visible(e)) continue;
@@ -1538,4 +1538,4 @@ Result<Region> region_at(const Document& doc, const RegionQuery& query)
     }
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

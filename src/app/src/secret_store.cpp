@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/secret_store.hpp"
+#include "piricad/app/secret_store.hpp"
 
 #include <QByteArray>
 #include <QLatin1String>
 #include <QtGlobal>
 
-#if KENTOS_HAVE_KEYCHAIN
+#if PIRICAD_HAVE_KEYCHAIN
 #if defined(Q_OS_MACOS)
 #include <Security/Security.h>
 #elif defined(Q_OS_WIN)
@@ -15,12 +15,12 @@
 #include <windows.h>
 
 #include <wincred.h>
-#elif defined(KENTOS_KEYCHAIN_SECRET_SERVICE)
+#elif defined(PIRICAD_KEYCHAIN_SECRET_SERVICE)
 #include <libsecret/secret.h>
 #endif
 #endif
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The conventional environment variable for a short `key_ref`: upper case with
@@ -67,7 +67,7 @@ std::optional<QString> from_environment(const QString& name)
     return value;
 }
 
-#if KENTOS_HAVE_KEYCHAIN && defined(KENTOS_KEYCHAIN_SECRET_SERVICE)
+#if PIRICAD_HAVE_KEYCHAIN && defined(PIRICAD_KEYCHAIN_SECRET_SERVICE)
 
 /// The schema our entries are stored under in the Secret Service.
 ///
@@ -76,10 +76,10 @@ std::optional<QString> from_environment(const QString& name)
 /// lookup find the key a store wrote; the schema name is the reverse-DNS form
 /// the API expects and must not change, because an entry written under one name
 /// cannot be found under another.
-const SecretSchema* kentos_secret_schema()
+const SecretSchema* piricad_secret_schema()
 {
     static const SecretSchema schema = {
-        "org.kentoscad.Anahtar",
+        "org.piricad.Anahtar",
         SECRET_SCHEMA_NONE,
         {
             {"kayit", SECRET_SCHEMA_ATTRIBUTE_STRING},
@@ -99,7 +99,7 @@ const SecretSchema* kentos_secret_schema()
 
 #endif
 
-#if KENTOS_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
+#if PIRICAD_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
 
 /// A `CFStringRef` over a `QString`, released by the guard that owns it.
 ///
@@ -135,7 +135,7 @@ private:
 };
 
 /// The query that identifies one of our entries: a generic password under the
-/// `KentOSCad` service, with the profile's `key_ref` as the account.
+/// `PiriCAD` service, with the profile's `key_ref` as the account.
 CFMutableDictionaryRef entry_query(const CfString& service, const CfString& account)
 {
     CFMutableDictionaryRef query = CFDictionaryCreateMutable(
@@ -164,7 +164,7 @@ std::optional<QString> SecretStore::read(const QString& key_ref) const
     // `key_ref` and nothing should be looked up for them.
     if (key_ref.isEmpty()) return std::nullopt;
 
-#if KENTOS_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
+#if PIRICAD_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
     {
         const CfString service(QString::fromUtf8(kService));
         const CfString account(key_ref);
@@ -189,7 +189,7 @@ std::optional<QString> SecretStore::read(const QString& key_ref) const
         // no — falls through to the environment rather than failing here: the
         // two roads are alternatives, not a chain of precondition checks.
     }
-#elif KENTOS_HAVE_KEYCHAIN && defined(Q_OS_WIN)
+#elif PIRICAD_HAVE_KEYCHAIN && defined(Q_OS_WIN)
     {
         const QString target  = QString::fromUtf8(kService) + QLatin1Char(':') + key_ref;
         PCREDENTIALW found    = nullptr;
@@ -202,12 +202,12 @@ std::optional<QString> SecretStore::read(const QString& key_ref) const
             if (!secret.isEmpty()) return secret;
         }
     }
-#elif KENTOS_HAVE_KEYCHAIN && defined(KENTOS_KEYCHAIN_SECRET_SERVICE)
+#elif PIRICAD_HAVE_KEYCHAIN && defined(PIRICAD_KEYCHAIN_SECRET_SERVICE)
     {
         GError* error        = nullptr;
         const QByteArray ref = key_ref.toUtf8();
-        gchar* value = secret_password_lookup_sync(kentos_secret_schema(), nullptr, &error, "kayit",
-                                                   ref.constData(), nullptr);
+        gchar* value         = secret_password_lookup_sync(piricad_secret_schema(), nullptr, &error,
+                                                           "kayit", ref.constData(), nullptr);
         if (error != nullptr) g_error_free(error);
         if (value != nullptr) {
             const QString secret = QString::fromUtf8(value);
@@ -229,7 +229,7 @@ core::Status SecretStore::write(const QString& key_ref, const QString& secret)
                          "Anahtar kaydının adı boş; profile bir 'anahtar adı' yazın.");
     if (secret.isEmpty()) return erase(key_ref);
 
-#if KENTOS_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
+#if PIRICAD_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
     const CfString service(QString::fromUtf8(kService));
     const CfString account(key_ref);
     const QByteArray utf8 = secret.toUtf8();
@@ -261,7 +261,7 @@ core::Status SecretStore::write(const QString& key_ref, const QString& secret)
         return core::err(core::ErrorCode::IoFailure,
                          keychain_trouble("Anahtar Anahtar Zinciri'ne yazılamadı", status));
     return core::ok();
-#elif KENTOS_HAVE_KEYCHAIN && defined(Q_OS_WIN)
+#elif PIRICAD_HAVE_KEYCHAIN && defined(Q_OS_WIN)
     const QString target          = QString::fromUtf8(kService) + QLatin1Char(':') + key_ref;
     std::wstring wt               = target.toStdWString();
     std::wstring ws               = secret.toStdWString();
@@ -276,14 +276,14 @@ core::Status SecretStore::write(const QString& key_ref, const QString& secret)
                          "Anahtar Windows kimlik deposuna yazılamadı (hata " +
                              std::to_string(GetLastError()) + ").");
     return core::ok();
-#elif KENTOS_HAVE_KEYCHAIN && defined(KENTOS_KEYCHAIN_SECRET_SERVICE)
+#elif PIRICAD_HAVE_KEYCHAIN && defined(PIRICAD_KEYCHAIN_SECRET_SERVICE)
     GError* error         = nullptr;
     const QByteArray ref  = key_ref.toUtf8();
     const QByteArray utf8 = secret.toUtf8();
     const QByteArray label =
         (QString::fromUtf8(kService) + QStringLiteral(" — ") + key_ref).toUtf8();
     const gboolean ok = secret_password_store_sync(
-        kentos_secret_schema(), SECRET_COLLECTION_DEFAULT, label.constData(), utf8.constData(),
+        piricad_secret_schema(), SECRET_COLLECTION_DEFAULT, label.constData(), utf8.constData(),
         nullptr, &error, "kayit", ref.constData(), nullptr);
     if (error != nullptr) {
         const std::string why = error->message != nullptr ? error->message : "bilinmeyen sebep";
@@ -301,7 +301,7 @@ core::Status SecretStore::write(const QString& key_ref, const QString& secret)
     const QString variable = conventional_variable(key_ref);
     return core::err(
         core::ErrorCode::Unsupported,
-        "Bu yapıda sistem anahtar deposu yok (KENTOS_WITH_KEYCHAIN kapalı), bu "
+        "Bu yapıda sistem anahtar deposu yok (PIRICAD_WITH_KEYCHAIN kapalı), bu "
         "yüzden anahtar kaydedilemez. Anahtarı bir ortam değişkeninde tutun: " +
             key_ref.toStdString() +
             (variable.isEmpty() ? std::string() : (" ya da " + variable.toStdString())) +
@@ -313,7 +313,7 @@ core::Status SecretStore::erase(const QString& key_ref)
 {
     if (key_ref.isEmpty()) return core::ok();
 
-#if KENTOS_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
+#if PIRICAD_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
     const CfString service(QString::fromUtf8(kService));
     const CfString account(key_ref);
     CFMutableDictionaryRef query = entry_query(service, account);
@@ -323,7 +323,7 @@ core::Status SecretStore::erase(const QString& key_ref)
         return core::err(core::ErrorCode::IoFailure,
                          keychain_trouble("Anahtar Anahtar Zinciri'nden silinemedi", status));
     return core::ok();
-#elif KENTOS_HAVE_KEYCHAIN && defined(Q_OS_WIN)
+#elif PIRICAD_HAVE_KEYCHAIN && defined(Q_OS_WIN)
     const QString target  = QString::fromUtf8(kService) + QLatin1Char(':') + key_ref;
     const std::wstring wt = target.toStdWString();
     if (CredDeleteW(wt.c_str(), CRED_TYPE_GENERIC, 0) == FALSE && GetLastError() != ERROR_NOT_FOUND)
@@ -331,10 +331,10 @@ core::Status SecretStore::erase(const QString& key_ref)
                          "Anahtar Windows kimlik deposundan silinemedi (hata " +
                              std::to_string(GetLastError()) + ").");
     return core::ok();
-#elif KENTOS_HAVE_KEYCHAIN && defined(KENTOS_KEYCHAIN_SECRET_SERVICE)
+#elif PIRICAD_HAVE_KEYCHAIN && defined(PIRICAD_KEYCHAIN_SECRET_SERVICE)
     GError* error        = nullptr;
     const QByteArray ref = key_ref.toUtf8();
-    secret_password_clear_sync(kentos_secret_schema(), nullptr, &error, "kayit", ref.constData(),
+    secret_password_clear_sync(piricad_secret_schema(), nullptr, &error, "kayit", ref.constData(),
                                nullptr);
     if (error != nullptr) {
         const std::string why = error->message != nullptr ? error->message : "bilinmeyen sebep";
@@ -352,8 +352,8 @@ core::Status SecretStore::erase(const QString& key_ref)
 
 bool SecretStore::available() noexcept
 {
-#if KENTOS_HAVE_KEYCHAIN &&                                                                        \
-    (defined(Q_OS_MACOS) || defined(Q_OS_WIN) || defined(KENTOS_KEYCHAIN_SECRET_SERVICE))
+#if PIRICAD_HAVE_KEYCHAIN &&                                                                       \
+    (defined(Q_OS_MACOS) || defined(Q_OS_WIN) || defined(PIRICAD_KEYCHAIN_SECRET_SERVICE))
     return true;
 #else
     return false;
@@ -362,17 +362,17 @@ bool SecretStore::available() noexcept
 
 QString SecretStore::describe()
 {
-#if KENTOS_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
+#if PIRICAD_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
     return QStringLiteral("macOS Anahtar Zinciri (servis: %1). Anahtar adı bir ortam "
                           "değişkenini de adlandırabilir; o değişken ilk kullanımda okunur "
                           "ve hiçbir yere yazılmaz.")
         .arg(QString::fromUtf8(kService));
-#elif KENTOS_HAVE_KEYCHAIN && defined(Q_OS_WIN)
+#elif PIRICAD_HAVE_KEYCHAIN && defined(Q_OS_WIN)
     return QStringLiteral("Windows kimlik deposu (hedef: %1:<anahtar adı>). Anahtar adı bir "
                           "ortam değişkenini de adlandırabilir; o değişken ilk kullanımda "
                           "okunur ve hiçbir yere yazılmaz.")
         .arg(QString::fromUtf8(kService));
-#elif KENTOS_HAVE_KEYCHAIN && defined(KENTOS_KEYCHAIN_SECRET_SERVICE)
+#elif PIRICAD_HAVE_KEYCHAIN && defined(PIRICAD_KEYCHAIN_SECRET_SERVICE)
     return QStringLiteral("Sistem anahtar kasası (libsecret / Secret Service). Anahtar adı bir "
                           "ortam değişkenini de adlandırabilir; o değişken ilk kullanımda "
                           "okunur ve hiçbir yere yazılmaz.");
@@ -383,4 +383,4 @@ QString SecretStore::describe()
 #endif
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

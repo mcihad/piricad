@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: breaking a path, KIR's cut.
+// PiriCAD — core: breaking a path, KIR's cut.
 //
 // ONE ANSWER FOR THE COMMAND AND THE PREVIEW. KIR cuts here, and the canvas
 // draws the piece about to go under the cursor by calling the same function
@@ -12,15 +12,15 @@
 // out of an arc is an arc and what stays of a circle is the arc left over.
 #pragma once
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// What breaking a path between two places makes.
 struct PathBreak
@@ -61,4 +61,4 @@ std::vector<std::uint8_t> encode_break_guide(const BreakGuide& guide);
 /// The guide back, refused when the bytes are not what the encoder writes.
 Result<BreakGuide> decode_break_guide(std::span<const std::uint8_t> bytes);
 
-} // namespace kentos::core
+} // namespace piricad::core

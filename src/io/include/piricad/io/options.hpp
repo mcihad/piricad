@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: what a caller tells a reader or a writer, in one record.
+// PiriCAD — io: what a caller tells a reader or a writer, in one record.
 //
 // Every reader used to take the same four things as positional arguments —
 // driver, project CRS, layer filter, field filter — and adding a fifth (the
@@ -8,12 +8,12 @@
 // that, and a call site that does not care about a member leaves it defaulted.
 #pragma once
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// What an import is asked to do beyond "read this path".
 struct ImportOptions
@@ -68,4 +68,4 @@ struct ExportOptions
     core::Mm curve_tolerance{1};
 };
 
-} // namespace kentos::io
+} // namespace piricad::io

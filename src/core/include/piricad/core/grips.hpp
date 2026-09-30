@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the GRIPS of an entity, and what moving one does.
+// PiriCAD — core: the GRIPS of an entity, and what moving one does.
 //
 // A polyline's grips are its corners, and moving one is replacing a vertex.
 // Every other kind stores a DEFINITION rather than a boundary — a circle keeps
@@ -32,8 +32,8 @@
 // `entity_grips` states, and the documentation of the kind names it.
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -41,7 +41,7 @@
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// What a grip is on the shape, so the canvas can draw it as such and a
 /// message can name it.
@@ -210,4 +210,4 @@ std::vector<std::uint8_t> encode_grip_guide(const GripGuide& guide);
 /// The guide back, refused when the bytes are not what the encoder writes.
 Result<GripGuide> decode_grip_guide(std::span<const std::uint8_t> bytes);
 
-} // namespace kentos::core
+} // namespace piricad::core

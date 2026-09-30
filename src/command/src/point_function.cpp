@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "point_function.hpp"
 
-#include "kentos_cad/command/construct.hpp"
+#include "piricad/command/construct.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <array>
 #include <cmath>
@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command::detail {
+namespace piricad::command::detail {
 namespace {
 
 using core::err;
@@ -836,9 +836,9 @@ std::string describe_call(const Token& t)
     return out;
 }
 
-} // namespace kentos::command::detail
+} // namespace piricad::command::detail
 
-namespace kentos::command {
+namespace piricad::command {
 
 const std::vector<PointFunctionInfo>& point_functions()
 {
@@ -860,4 +860,4 @@ const std::vector<PointFunctionInfo>& point_functions()
     return offered;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

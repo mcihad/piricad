@@ -8,23 +8,23 @@
 // and prompts that asked for a second point with nothing on the canvas to say
 // what the click would make. This file pins both, by driving every interactive
 // command the way the canvas does and reading the prompts it puts up.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/break_run.hpp"
-#include "kentos_cad/core/corner.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/grips.hpp"
-#include "kentos_cad/core/parallel.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/transform.hpp"
-#include "kentos_cad/core/trim_curve.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/break_run.hpp"
+#include "piricad/core/corner.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/grips.hpp"
+#include "piricad/core/parallel.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/transform.hpp"
+#include "piricad/core/trim_curve.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/processing/registry.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -32,8 +32,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

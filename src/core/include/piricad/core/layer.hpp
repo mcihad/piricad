@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the layer table.
+// PiriCAD — core: the layer table.
 //
 // .claude/model.md R30–R33. A layer is identified by its LayerKey, never by name
 // or slot: renaming a layer must not touch a single entity, and a slot is not
@@ -10,9 +10,9 @@
 // Phase-1 deliverable. This is the table.
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/style.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/style.hpp"
 
 #include <cstdint>
 #include <string>
@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Scale denominator, as in 1:`value`. Zero means unbounded.
 using ScaleDenominator = std::uint32_t;
@@ -120,4 +120,4 @@ private:
     std::unordered_map<std::uint64_t, LayerId> by_key_;
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

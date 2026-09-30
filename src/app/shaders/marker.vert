@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — the instanced marker pipeline.
+// PiriCAD — the instanced marker pipeline.
 //
 // ONE INSTANCE PER STAMP, not one triangle list per stamp. A `nokta-desen-dolgu`
 // puts a glyph on every cell of a grid across a face, and a `çizgi-desen` puts one

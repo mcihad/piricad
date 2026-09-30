@@ -5,29 +5,29 @@
 #
 # Off by default and Clang-only, because `-fsanitize=fuzzer` is a Clang feature.
 # The seed corpora under tohum/ are NOT dead weight when this is off: every one of
-# them is replayed through the same reader by `kentos_tests`
+# them is replayed through the same reader by `piricad_tests`
 # (tests/unit/test_io.cpp), so the corpus is exercised on every ordinary build.
 #
 # test.md P8: the FP flags must not differ from the product build, so these link
-# kentos_flags exactly like everything else. -ffp-contract=off stays on.
+# piricad_flags exactly like everything else. -ffp-contract=off stays on.
 
-option(KENTOS_BUILD_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
+option(PIRICAD_BUILD_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 
-if(NOT KENTOS_BUILD_FUZZ)
+if(NOT PIRICAD_BUILD_FUZZ)
     return()
 endif()
 
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     message(FATAL_ERROR
-        "KENTOS_BUILD_FUZZ=ON needs Clang: -fsanitize=fuzzer is a Clang feature.\n"
-        "  cmake --preset dev -DKENTOS_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++\n"
-        "  Or configure with -DKENTOS_BUILD_FUZZ=OFF; the seed corpora are still\n"
-        "  replayed by kentos_tests either way.")
+        "PIRICAD_BUILD_FUZZ=ON needs Clang: -fsanitize=fuzzer is a Clang feature.\n"
+        "  cmake --preset dev -DPIRICAD_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++\n"
+        "  Or configure with -DPIRICAD_BUILD_FUZZ=OFF; the seed corpora are still\n"
+        "  replayed by piricad_tests either way.")
 endif()
 
-function(kentos_fuzz_target name source)
+function(piricad_fuzz_target name source)
     add_executable(${name} ${source})
-    target_link_libraries(${name} PRIVATE kentos_core kentos_command kentos_io kentos_flags)
+    target_link_libraries(${name} PRIVATE piricad_core piricad_command piricad_io piricad_flags)
 
     # Fuzzing without ASan and UBSan finds only the crashes that happen to be
     # fatal; io.md Enforcement asks for both.
@@ -38,22 +38,22 @@ function(kentos_fuzz_target name source)
     set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 endfunction()
 
-kentos_fuzz_target(kentos_fuzz_proje fuzz_proje.cpp)
+piricad_fuzz_target(piricad_fuzz_proje fuzz_proje.cpp)
 
 # THE grammar (command/parser.hpp): the one parser the command line, the script
 # engine and the AI share (CLAUDE.md 5.11), so a crash in it is reachable from
 # every client. test.md R9 lists it by name.
-kentos_fuzz_target(kentos_fuzz_komut fuzz_komut.cpp)
+piricad_fuzz_target(piricad_fuzz_komut fuzz_komut.cpp)
 
 # The Netcad NCZ reader (io/ncz.hpp): hand-written, so every byte of it is ours to
 # fuzz, and it needs no library — built whatever else is on.
-kentos_fuzz_target(kentos_fuzz_ncz fuzz_ncz.cpp)
+piricad_fuzz_target(piricad_fuzz_ncz fuzz_ncz.cpp)
 
-# The DXF harness exercises the KentOSCad side of the GDAL seam, so it only exists
+# The DXF harness exercises the PiriCAD side of the GDAL seam, so it only exists
 # when that seam is compiled in.
-if(KENTOS_WITH_GDAL)
-    kentos_fuzz_target(kentos_fuzz_dxf fuzz_dxf.cpp)
-    kentos_fuzz_target(kentos_fuzz_shp fuzz_shp.cpp)
+if(PIRICAD_WITH_GDAL)
+    piricad_fuzz_target(piricad_fuzz_dxf fuzz_dxf.cpp)
+    piricad_fuzz_target(piricad_fuzz_shp fuzz_shp.cpp)
 endif()
 
 # A short deterministic run per target, so a broken harness is caught by `ctest`
@@ -66,34 +66,34 @@ endif()
 # read-only inputs; the corpus stays exactly the eight named files a reviewer can
 # reason about, and a genuinely interesting find is copied in deliberately
 # (test.md R10).
-set(KENTOS_FUZZ_SCRATCH "${CMAKE_BINARY_DIR}/fuzz-corpus")
-file(MAKE_DIRECTORY "${KENTOS_FUZZ_SCRATCH}/proje" "${KENTOS_FUZZ_SCRATCH}/komut"
-                    "${KENTOS_FUZZ_SCRATCH}/dxf" "${KENTOS_FUZZ_SCRATCH}/shp"
-                    "${KENTOS_FUZZ_SCRATCH}/ncz")
+set(PIRICAD_FUZZ_SCRATCH "${CMAKE_BINARY_DIR}/fuzz-corpus")
+file(MAKE_DIRECTORY "${PIRICAD_FUZZ_SCRATCH}/proje" "${PIRICAD_FUZZ_SCRATCH}/komut"
+                    "${PIRICAD_FUZZ_SCRATCH}/dxf" "${PIRICAD_FUZZ_SCRATCH}/shp"
+                    "${PIRICAD_FUZZ_SCRATCH}/ncz")
 
 add_test(NAME fuzz_proje_smoke
-    COMMAND kentos_fuzz_proje "${KENTOS_FUZZ_SCRATCH}/proje"
+    COMMAND piricad_fuzz_proje "${PIRICAD_FUZZ_SCRATCH}/proje"
             "${CMAKE_CURRENT_SOURCE_DIR}/tohum/proje"
             -runs=2000 -max_total_time=30 -seed=1)
 
 add_test(NAME fuzz_komut_smoke
-    COMMAND kentos_fuzz_komut "${KENTOS_FUZZ_SCRATCH}/komut"
+    COMMAND piricad_fuzz_komut "${PIRICAD_FUZZ_SCRATCH}/komut"
             "${CMAKE_CURRENT_SOURCE_DIR}/tohum/komut"
             -runs=2000 -max_total_time=30 -seed=1)
 
 add_test(NAME fuzz_ncz_smoke
-    COMMAND kentos_fuzz_ncz "${KENTOS_FUZZ_SCRATCH}/ncz"
+    COMMAND piricad_fuzz_ncz "${PIRICAD_FUZZ_SCRATCH}/ncz"
             "${CMAKE_CURRENT_SOURCE_DIR}/tohum/ncz"
             -runs=2000 -max_total_time=30 -seed=1)
 
-if(KENTOS_WITH_GDAL)
+if(PIRICAD_WITH_GDAL)
     add_test(NAME fuzz_dxf_smoke
-        COMMAND kentos_fuzz_dxf "${KENTOS_FUZZ_SCRATCH}/dxf"
+        COMMAND piricad_fuzz_dxf "${PIRICAD_FUZZ_SCRATCH}/dxf"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tohum/dxf"
                 -runs=2000 -max_total_time=30 -seed=1)
 
     add_test(NAME fuzz_shp_smoke
-        COMMAND kentos_fuzz_shp "${KENTOS_FUZZ_SCRATCH}/shp"
+        COMMAND piricad_fuzz_shp "${PIRICAD_FUZZ_SCRATCH}/shp"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tohum/shp"
                 -runs=2000 -max_total_time=30 -seed=1)
 endif()

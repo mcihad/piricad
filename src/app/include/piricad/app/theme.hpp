@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the light/dark palette.
+// PiriCAD — app: the light/dark palette.
 //
 // Day mode is the default. A dark theme is a world-standard checklist item
-// (kentoscad.md §13), so both are first class and every colour used by the shell
+// (piricad.md §13), so both are first class and every colour used by the shell
 // and the canvas comes from here — no widget picks its own.
 #pragma once
 
@@ -10,7 +10,7 @@
 #include <QString>
 #include <QWidget>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// Which of the two palettes is in force.
 ///
@@ -116,6 +116,6 @@ void installShellStyle();
 /// told which directory was searched instead of quietly getting the wrong face.
 bool loadShellFonts(QString* whereLooked = nullptr);
 
-} // namespace kentos::app
+} // namespace piricad::app
 
-Q_DECLARE_INTERFACE(kentos::app::Themed, "org.kentos_cad.app.Themed")
+Q_DECLARE_INTERFACE(piricad::app::Themed, "org.piricad.app.Themed")

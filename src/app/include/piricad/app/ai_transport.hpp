@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the outbound wire, and the only place the program's own
+// PiriCAD — app: the outbound wire, and the only place the program's own
 // requests leave the machine.
 //
 // THE OTHER HALF OF `ai::HttpTransport`. `/src/ai` builds the request as data —
@@ -31,8 +31,8 @@
 // ordinary and answers the sink exactly once, like every other ending.
 #pragma once
 
-#include "kentos_cad/ai/provider.hpp"
-#include "kentos_cad/ai/transport.hpp"
+#include "piricad/ai/provider.hpp"
+#include "piricad/ai/transport.hpp"
 
 #include <QObject>
 
@@ -40,7 +40,7 @@
 
 class QNetworkAccessManager;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The key store the credential comes from, without a wait; see
 /// secret_resolver.hpp.
@@ -86,4 +86,4 @@ private:
     bool have_profile_{false};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

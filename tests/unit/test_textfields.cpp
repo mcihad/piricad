@@ -6,24 +6,24 @@
 // changes the parcel — a corner dragged, a column edited, the whole command run
 // again — and asks whether the label still says the truth, in the same undo
 // step, without a second label appearing on top of the first.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/text_fields.hpp"
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/text_fields.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <filesystem>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 namespace fs = std::filesystem;
 
@@ -203,7 +203,7 @@ TEST_CASE("BAĞLA: tur=alan bag=merkez — yazı hemen alan olur, parsel değiş
 TEST_CASE("IO: ortaya bağlı, kalıptan doldurulan etiket dosyaya yazılır; açılan çizimde izlemeyi "
           "sürdürür")
 {
-    const fs::path dir = fs::temp_directory_path() / "kentoscad-yazi-alanlari";
+    const fs::path dir = fs::temp_directory_path() / "piricad-yazi-alanlari";
     std::error_code ec;
     fs::remove_all(dir, ec);
     fs::create_directories(dir, ec);

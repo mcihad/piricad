@@ -6,7 +6,7 @@ aktarıldığını, neyin aktarılmadığını ve koordinat sisteminin nasıl ta
 bileceksiniz.
 
 Komutlar: [İÇEAKTAR](../komutlar/import.md), [DIŞAAKTAR](../komutlar/export.md).
-Kendi proje dosyanız için: [KentOSCad proje dosyası](proje-dosyasi.md).
+Kendi proje dosyanız için: [PiriCAD proje dosyası](proje-dosyasi.md).
 
 ## Bu sürümde çalışan biçimler
 
@@ -20,21 +20,21 @@ Kendi proje dosyanız için: [KentOSCad proje dosyası](proje-dosyasi.md).
 
 ¹ DWG okuma bir yapı seçeneğidir ve **kapalı gelir**: LibreDWG'nin okuyucusu bu
 sürümde altı nesne türünü tanır ve derlemesi kendi uyarılarını taşır. Açmak için
-`-DKENTOS_WITH_DWG=ON` ile yeniden yapılandırın; ağa çıkamayan bir yapıda
-(`KENTOS_FETCH_DEPENDENCIES=OFF`) kaynak indirilemediği için açılamaz. Kapalıyken
+`-DPIRICAD_WITH_DWG=ON` ile yeniden yapılandırın; ağa çıkamayan bir yapıda
+(`PIRICAD_FETCH_DEPENDENCIES=OFF`) kaynak indirilemediği için açılamaz. Kapalıyken
 bir `.dwg` açmaya çalışmak ne yapmanız gerektiğini yazan bir hata verir; içe
 aktarma penceresi de DWG yerine DXF kaydedip getirmenizi söyler.
 
-² DXF **libdxfrw** ile okunur ve yazılır (`KENTOS_WITH_DXFRW`, kaynak indirilebilen
+² DXF **libdxfrw** ile okunur ve yazılır (`PIRICAD_WITH_DXFRW`, kaynak indirilebilen
 her yapıda açık gelir). libdxfrw dosyayı grup kodu düzeyinde okur: daire daire, yay yay,
 elips elips, blok referansı açılmış üyeleriyle, XDATA baytıyla gelir; yazarken de her
-tür kendi DXF varlığı olarak gider. Kütüphane kapalıysa (`-DKENTOS_WITH_DXFRW=OFF`)
+tür kendi DXF varlığı olarak gider. Kütüphane kapalıysa (`-DPIRICAD_WITH_DXFRW=OFF`)
 DXF GDAL'ın sürücüsüyle okunur ve yazılır; o yol eğrileri parçalar, blokları ve
 XDATA'yı düşürür ve bunu transkriptte söyler.
 
 ### DWG okunur, yazılmaz
 
-KentOSCad DWG'yi **LibreDWG** ile okur — var olan tek GPL uyumlu DWG
+PiriCAD DWG'yi **LibreDWG** ile okur — var olan tek GPL uyumlu DWG
 uygulamasıdır. r13'ten 2018'e kadar bütün sürümler okunur.
 
 Yazma yok, ve iki ayrı sebeple:
@@ -47,7 +47,7 @@ Yazma yok, ve iki ayrı sebeple:
 
 DWG çıktısı gerekiyorsa **DXF** olarak dışa aktarın; her CAD programı okur.
 
-KentOSCad **hiçbir zaman** ODA Drawings SDK kullanmayacaktır: kapalı kaynaklıdır
+PiriCAD **hiçbir zaman** ODA Drawings SDK kullanmayacaktır: kapalı kaynaklıdır
 ve projenin GPLv3 lisansıyla bağdaşmaz.
 
 ### DWG'de ne okunur
@@ -73,7 +73,7 @@ parsel sınırlarının tamamı bu türde olabilir — 48 MB'lık örnek çizimd
 
 Daire ve yay her iki yolda da **gerçek daire ve yay** olarak gelir. DWG yolunda
 LibreDWG onları öyle verir; DXF yolunda libdxfrw da öyle verir. Yalnız libdxfrw
-kapalı derlenmiş bir yapıda GDAL çizgi parçalarına böler ve KentOSCad merkezle
+kapalı derlenmiş bir yapıda GDAL çizgi parçalarına böler ve PiriCAD merkezle
 yarıçapı geri kurar — nasıl olduğu aşağıda.
 
 ### Netcad NCZ okunur, yazılmaz
@@ -97,7 +97,7 @@ Bir shapefile tek dosya değildir. Dördü birlikte taşınır:
 | `.dbf` | öznitelik tablosu | **evet** |
 | `.prj` | koordinat sistemi | yoksa çizimin kendi sistemi varsayılır |
 
-Biri eksikse KentOSCad hangisinin eksik olduğunu ve ne işe yaradığını söyleyip
+Biri eksikse PiriCAD hangisinin eksik olduğunu ve ne işe yaradığını söyleyip
 durur. Size yalnız `.shp` gönderildiyse dosyayı gönderene **dördünü birden**
 isteyin — eksik bir set açılamaz.
 
@@ -112,8 +112,8 @@ kadar çalışmayan bir düğme koymaktansa düğmeyi koymuyoruz.
 Teslim için **DXF** ya da **GeoPackage** kullanın; ikisi de çizimin tamamını
 tutar.
 
-Bu liste kasten kısadır. KentOSCad'in altındaki GDAL kütüphanesi yüzden fazla biçim
-tanır; KentOSCad bunların yalnızca **açıkça izin verilenlerini** açar. Bir dosya
+Bu liste kasten kısadır. PiriCAD'in altındaki GDAL kütüphanesi yüzden fazla biçim
+tanır; PiriCAD bunların yalnızca **açıkça izin verilenlerini** açar. Bir dosya
 biçimi, üzerinde sınanmamış bir ayrıştırıcı demektir ve dosya okumak bu ürünün en
 geniş saldırı yüzeyidir.
 
@@ -133,7 +133,7 @@ sayfada bir satırı ile birlikte gelir.
 | GeoJSON | Faz 1 | İzin listesine eklenmesi için fuzz koşumu ve gidiş-dönüş sınaması gerekiyor |
 | WMS, WMTS, WFS-T, WCS | Faz 2 | Servis istemcileri kendi uygunluk sınamalarıyla gelecek |
 
-KentOSCad **hiçbir zaman** ODA Drawings SDK kullanmayacaktır; kapalı kaynaklıdır ve
+PiriCAD **hiçbir zaman** ODA Drawings SDK kullanmayacaktır; kapalı kaynaklıdır ve
 projenin GPLv3 lisansıyla bağdaşmaz.
 
 ## Koordinat sistemi
@@ -141,7 +141,7 @@ projenin GPLv3 lisansıyla bağdaşmaz.
 ### DXF koordinat sistemi taşımaz
 
 Bir DXF'in içinde koordinat sistemi için **yer yoktur**, ve hiçbir harita bürosu
-yanına `.prj` koymaz. Böyle bir dosyayı açtığınızda KentOSCad **çizimin kendi
+yanına `.prj` koymaz. Böyle bir dosyayı açtığınızda PiriCAD **çizimin kendi
 sistemini** varsayar ve bunu açıkça söyler:
 
 > Dosya koordinat sistemi bildirmiyor (DXF taşıyamaz). Çizimin kendi sistemi
@@ -178,17 +178,17 @@ ve ret mesajı dosyayı metre sayan bir sisteme dönüştürmenin yolunu söyler
 | DXF | **Taşımaz.** Yanındaki aynı adlı `.prj` dosyasından okunur |
 | Netcad NCZ | Dosyanın içinde, MPROJ ve TILED_XML bloklarında; olmayabilir. Okunur ve söylenir, ama koordinatlar **dönüştürülmez** ([ayrıntı](netcad-ncz.md#koordinat-sistemi)) |
 
-DXF'in koordinat sistemi için yeri yoktur — bu biçimin kendi eksiğidir, KentOSCad'in
+DXF'in koordinat sistemi için yeri yoktur — bu biçimin kendi eksiğidir, PiriCAD'in
 değil. Bu yüzden:
 
-- **Dışa aktarırken** KentOSCad `.dxf` ile birlikte bir `.prj` dosyası yazar ve size
+- **Dışa aktarırken** PiriCAD `.dxf` ile birlikte bir `.prj` dosyası yazar ve size
   söyler. Çizimi taşırken **iki dosyayı da götürün**.
 - **Yalnız DXF metre yazıldıysa.** `.prj` metre sayan bir sistem bildirir ve bir CBS
   programı DXF'in sayılarını bu yüzden metre okur. `çizim_birimi` milimetre ya da
   santimetre iken yazılan DXF'in yanına `.prj` **konmaz**: konsaydı bir CBS programı
   çizimi bin kat uzağa koyardı. Sonuç bunu söyler. Koordinat sistemini taşıyan bir DXF
   için `AYAR çizim_birimi metre` ile yeniden dışa aktarın.
-- **İçe aktarırken** KentOSCad aynı adlı `.prj` dosyasını arar. Yoksa çizimin
+- **İçe aktarırken** PiriCAD aynı adlı `.prj` dosyasını arar. Yoksa çizimin
   kendi sistemini varsayar ve bunu transkriptte açıkça söyler; koordinatlardan
   bölge tahmin etmez. `.prj` varsa ama çizim birimi metre değilse, DXF sizin
   ayarınızla okunur ve bu çelişki bir uyarıyla söylenir.
@@ -196,7 +196,7 @@ değil. Bu yüzden:
 `.prj`, ülkedeki her CBS yazılımının anladığı ESRI biçiminde yazılır.
 
 İçe aktarılan verinin koordinat sistemi çizimin kendi sisteminden farklıysa
-KentOSCad **koordinatları dönüştürmez**; farkı söyler ve kararı size bırakır.
+PiriCAD **koordinatları dönüştürmez**; farkı söyler ve kararı size bırakır.
 Sessiz bir yeniden projeksiyon, yanlış yere oturmuş bir parselin en kolay yoludur.
 
 Çizimin koordinat sistemini `AYAR koordinat_sistemi` ile bildirin:
@@ -227,7 +227,7 @@ AYAR koordinat_sistemi EPSG:5254
 | Koordinat sistemi (`.prj` yan dosyasından) | Kâğıt alanı (layout), sonsuz doğru, bakış penceresi, raster resim, ağ: okunmaz, sayılır |
 | **Yükseklik (Z)**: sabitse `kot` sütununa; köşeden köşeye değişiyorsa atılır ve söylenir | |
 | **Kaynak tutamağı** (`kaynak_kimlik` sütunu) ve **XDATA** (bayt bayt, `ek_veri`) | |
-| **Öznitelikler** — GeoPackage ve Shapefile'dan (`alanlar=`), GeoPackage'a; DXF'e `KENTOSCAD` XDATA olarak gider ve oradan geri gelir | |
+| **Öznitelikler** — GeoPackage ve Shapefile'dan (`alanlar=`), GeoPackage'a; DXF'e `PIRICAD` XDATA olarak gider ve oradan geri gelir | |
 | Nesne türü ve kalıcı anahtar — GeoPackage'a `tur` ve `anahtar` alanı olarak | |
 
 Bu yüzden **çalışma dosyanız `.pcad` olmalıdır**. DXF ve GeoPackage teslim
@@ -237,7 +237,7 @@ getirmez.
 ### DXF'te kapalı çizgi alandır
 
 DXF'in poligonu yoktur: bir parsel, **kapalı bayrağı** açık bir `LWPOLYLINE` ya da
-`POLYLINE`'dır. KentOSCad kapalılığı dosyanın bayrağından okur (bayrak yoksa, ilk
+`POLYLINE`'dır. PiriCAD kapalılığı dosyanın bayrağından okur (bayrak yoksa, ilk
 köşesi sonuncusuyla aynı olan çizgiyi de kapalı sayar) ve böyle bir çizgiyi
 **alan** olarak alır — yoksa dosyadaki her parsel çizgi olarak gelir, dolgusu
 olmaz, alanı ölçülemez ve [`İFRAZ`](../komutlar/split_parcel.md) ile
@@ -246,7 +246,7 @@ de alan olur.
 
 ### DXF nasıl okunur
 
-KentOSCad bir DXF'i **libdxfrw** ile grup kodu düzeyinde okur. Her varlık kendi
+PiriCAD bir DXF'i **libdxfrw** ile grup kodu düzeyinde okur. Her varlık kendi
 türüyle gelir: `CIRCLE` daire, `ARC` yay (saat yönünün tersine süpürme, dosyadaki
 yön korunarak), `ELLIPSE` elips ya da kısmi elips, `POINT` nokta, `TEXT` ve `MTEXT`
 yazı, `LWPOLYLINE` ve eski usul `POLYLINE` çoklu çizgi, alan ya da — şişkinliği varsa
@@ -297,7 +297,7 @@ parsel ve ada numarası parsel boyunca yazılır. Açı okunmazsa hepsi yatay ge
 yola göre yazılmış bir etiket yolu keser — Suşehri imar planındaki 13 112 yazının
 1 412'si dönüktür.
 
-KentOSCad bir yazıyı **taban çizgisi artı bir metin** olarak tutar, ve yazının
+PiriCAD bir yazıyı **taban çizgisi artı bir metin** olarak tutar, ve yazının
 yönü o taban çizgisinin yönüdür. Dosyadaki açı bu yüzden ayrı bir alana değil,
 taban çizgisinin kendisine yazılır: yeni bir sütun gerekmez ve yazıyı çizen her
 istemci dönük olanı da çizer.
@@ -323,7 +323,7 @@ atlandığı transkriptte söylenir. Sessizce düşürülmez.
 ## Yazma yarıda kalırsa
 
 Bir dışa aktarım, yazdırma ya da liste yazımı **dosyanızın üstüne doğrudan yazmaz.**
-Dosya önce hedefin yanında gizli bir hazırlık klasörüne (`.kentos-` ile başlayan) kendi
+Dosya önce hedefin yanında gizli bir hazırlık klasörüne (`.piricad-` ile başlayan) kendi
 adıyla yazılır; yazım hatasız biterse yerine taşınır, klasör silinir. Taşıma aynı
 diskte bir yeniden adlandırmadır, kopyalama değildir; hedef hiçbir an yarım bir dosya
 tutmaz.
@@ -367,7 +367,7 @@ etmez. Dosyayı diske indirip öyle açın.
 
 ## Dış biçim desteği kapalıysa
 
-KentOSCad, GDAL kütüphanesi olmadan da derlenebilir. O yapıda `İÇEAKTAR` ve
+PiriCAD, GDAL kütüphanesi olmadan da derlenebilir. O yapıda `İÇEAKTAR` ve
 `DIŞAAKTAR` **hata döndürür** ve hangi paketin kurulması gerektiğini söyler —
 sessizce boş bir katman döndürmez. Netcad NCZ bunun dışındadır: okuma bir kütüphane
 istemediği için `İÇEAKTAR` ve `DIŞREFERANS` onu GDAL'sız yapıda da okur (İçe Aktar penceresi ise

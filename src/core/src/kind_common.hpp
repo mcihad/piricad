@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: what every kind implementation shares.
+// PiriCAD — core: what every kind implementation shares.
 //
 // Not a public header. A kind's six functions are free functions over spans
 // (model.md R22), and the pieces they have in common — the payload header every
@@ -8,15 +8,15 @@
 // kinds do not carry eleven copies that drift apart.
 #pragma once
 
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/wire.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/wire.hpp"
 
 #include <cstdint>
 #include <span>
 #include <string>
 #include <vector>
 
-namespace kentos::core::kind {
+namespace piricad::core::kind {
 
 /// Snap-mode bits, the values `core/snap.hpp` declares. Written as numbers
 /// because a kind sits below the snap engine and must not include it.
@@ -114,4 +114,4 @@ Mm run_length(std::span<const Mm> xs, std::span<const Mm> ys, bool closed);
 /// approximation over its drawn form (spline), never for one with an exact answer.
 double run_area2(std::span<const Mm> xs, std::span<const Mm> ys);
 
-} // namespace kentos::core::kind
+} // namespace piricad::core::kind

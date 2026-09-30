@@ -3,10 +3,10 @@
 //
 // `DOCTEST_CONFIG_IMPLEMENT` rather than `..._WITH_MAIN` because this binary has
 // one job doctest's generated main does not do: print, after the summary, which
-// cases could not run in this build. See `kentos_test.hpp` for why that report
+// cases could not run in this build. See `piricad_test.hpp` for why that report
 // exists at all.
 #define DOCTEST_CONFIG_IMPLEMENT
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
 #include <cstdio>
 
@@ -24,7 +24,7 @@ struct RunningCaseListener : doctest::IReporter
 
     void test_case_start(const doctest::TestCaseData& in) override
     {
-        ::kentos_test::running_case() = in.m_name;
+        ::piricad_test::running_case() = in.m_name;
     }
 
     void report_query(const doctest::QueryData&) override {}
@@ -52,9 +52,9 @@ struct RunningCaseListener : doctest::IReporter
 
 } // namespace
 
-REGISTER_LISTENER("kentoscad-running-case", 1, RunningCaseListener);
+REGISTER_LISTENER("piricad-running-case", 1, RunningCaseListener);
 
-namespace kentos_test {
+namespace piricad_test {
 
 void report_pending()
 {
@@ -69,7 +69,7 @@ void report_pending()
         std::fprintf(stdout, "  BEKL  %s\n        %s\n", c.test.c_str(), c.why.c_str());
 }
 
-} // namespace kentos_test
+} // namespace piricad_test
 
 int main(int argc, char** argv)
 {
@@ -80,6 +80,6 @@ int main(int argc, char** argv)
     // rather than run the suite, and there is no coverage report to make.
     if (context.shouldExit()) return failed;
 
-    kentos_test::report_pending();
+    piricad_test::report_pending();
     return failed;
 }

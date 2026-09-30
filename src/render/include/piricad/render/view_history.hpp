@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — render: where the view has been (`YAKINLAŞ ÖNCEKİ`, `SONRAKİ`).
+// PiriCAD — render: where the view has been (`YAKINLAŞ ÖNCEKİ`, `SONRAKİ`).
 //
 // Netcad keeps thirty earlier windows behind Alt+C (wiki.netcad.com.tr
 // 217385173), and a surveyor who zooms into a corner to read a coordinate goes
@@ -7,14 +7,14 @@
 // here, Qt-free, so a unit test can hold it: the canvas only reports its moves.
 #pragma once
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <optional>
 
-namespace kentos::render {
+namespace piricad::render {
 
 /// ONE VIEW TO GO BACK TO: where its centre was and how far in it was.
 ///
@@ -88,4 +88,4 @@ private:
     std::int64_t wheeled_{0}; ///< when it was
 };
 
-} // namespace kentos::render
+} // namespace piricad::render

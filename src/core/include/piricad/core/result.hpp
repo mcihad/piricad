@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: fallible return type. Every fallible core function returns Result<T>.
+// PiriCAD — core: fallible return type. Every fallible core function returns Result<T>.
 #pragma once
 
 #include <cstdint>
@@ -8,7 +8,7 @@
 #include <utility>
 #include <variant>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Why something failed, in the small closed set a caller can actually branch on.
 ///
@@ -57,7 +57,7 @@ struct Error
     /// TURKISH, and actionable. This string reaches a surveyor in the transcript,
     /// so it names what was expected and what arrived: "Geçersiz nokta" is a
     /// defect, "2 sayı ya da bir nesne yakalama bekleniyordu, gelen: 'abc'" is
-    /// correct (kentoscad.md §3, §13).
+    /// correct (piricad.md §3, §13).
     std::string message;
 
     /// THE WAY OUT, when there is one: a command line that does what the
@@ -173,4 +173,4 @@ inline Status ok()
     return Status{};
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

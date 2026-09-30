@@ -34,21 +34,21 @@
 // A run that was given its size as an ARGUMENT asks nothing more and keeps the
 // old behaviour exactly — which is what makes every journal line written before
 // this change replay to the same document (Article 1.4).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/polygon.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/polygon.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -202,7 +202,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(polygon_regular)
+PIRICAD_COMMAND(polygon_regular)
 {
     return CommandSpec{
         .id       = "core.polygon_regular",
@@ -233,13 +233,13 @@ KENTOS_COMMAND(polygon_regular)
                     .en("corner"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar "
                    "uzunluğundan.",
-        .run    = &run,
-        .effect = Effect::DocumentEdit,
+        .run     = &run,
+        .effect  = Effect::DocumentEdit,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

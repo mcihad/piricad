@@ -13,7 +13,7 @@ Python bunun için vardır.
 Python motoru **seçimlik** derlenir ve varsayılan yapıda **kapalıdır**. Açmak için:
 
 ```bash
-cmake --preset dev -DKENTOS_WITH_PYTHON=ON
+cmake --preset dev -DPIRICAD_WITH_PYTHON=ON
 cmake --build --preset dev
 ```
 
@@ -39,8 +39,8 @@ Adı yazmadan da kullanılır — `cad` her betikte hazır bekler. Nereden geldi
 isterseniz içe aktarma da çalışır:
 
 ```python
-import kentos.cad          # kentos.cad.run(...)
-from kentos import cad     # cad.run(...)
+import piricad.cad          # piricad.cad.run(...)
+from piricad import cad     # cad.run(...)
 ```
 
 `cad` iki şey taşır: **her komut için bir fonksiyon** (üretilmiş) ve `cad.doc` altında
@@ -128,7 +128,7 @@ print(cad.__all__)          # bütün komut fonksiyonlarının adları
 ```
 
 Tam liste: [Python API referansı](../python/referans.md). O sayfa da bu fonksiyonlar da
-komut kaydından üretilir; yanında `docs/python/kentos_cad.pyi` tip taslağı vardır ve
+komut kaydından üretilir; yanında `docs/python/piricad_cad.pyi` tip taslağı vardır ve
 programın dışında betik yazan bir düzenleyici onu okuyup tamamlama yapabilir.
 
 ## Değer tipleri
@@ -402,8 +402,8 @@ ve **İptal** düğmesini ekleyen çalışma Faz 2'dedir; motor tarafı hazırd�
 | Yol | Nasıl |
 |---|---|
 | Komut satırından | `BETİK olcum.py` |
-| Arayüzden | **KentOS CAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
-| Açılışta | `kentos_cad --betik olcum.py` |
+| Arayüzden | **PiriCAD CAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
+| Açılışta | `piricad --betik olcum.py` |
 | Make ile | `make run-script SCRIPT=olcum.py` |
 
 Uzantı hangi motorun çalışacağını belirler: `.py` Python motoruna, geri kalanı JSON

@@ -8,18 +8,18 @@
 // Both keep IDENTITY. An object moved to another layer is the same object with
 // the same key and the same attributes — moving a parsel from PARSEL_TASLAK to
 // PARSEL must not mint a new ada/parsel row (model.md R4, R28).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/pick.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/pick.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The entities a command works on: the named ones, the selection, or the ones
@@ -266,11 +266,11 @@ Task<void> run_match_style(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(set_layer)
+PIRICAD_COMMAND(set_layer)
 {
     return CommandSpec{
-        .id = "core.set_layer",
-        .names = {"KATMANAT", "KATMANATA", "TABAKADEĞİŞTİR", "TABAKADEGISTIR", "SETLAYER", "KA"},
+        .id       = "core.set_layer",
+        .names    = {"KATMANAT", "KATMANATA", "TABAKADEĞİŞTİR", "TABAKADEGISTIR", "SETLAYER", "KA"},
         .title    = "Katmana Ata",
         .category = Category::Modify,
         .params =
@@ -288,7 +288,7 @@ KENTOS_COMMAND(set_layer)
     };
 }
 
-KENTOS_COMMAND(match_style)
+PIRICAD_COMMAND(match_style)
 {
     return CommandSpec{
         .id       = "core.match_style",
@@ -317,4 +317,4 @@ KENTOS_COMMAND(match_style)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

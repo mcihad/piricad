@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/script/python_doc.hpp"
+#include "piricad/script/python_doc.hpp"
 
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/command/registry.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::script {
+namespace piricad::script {
 namespace {
 
-using namespace kentos::command;
+using namespace piricad::command;
 
 } // namespace
 
@@ -75,7 +75,7 @@ std::vector<const CommandSpec*> surface(const Registry& reg)
 
 const char* kDoNotEdit =
     "<!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->\n"
-    "<!-- Kaynak: kentos::command::Registry.  Yeniden üret: make reference -->\n"
+    "<!-- Kaynak: piricad::command::Registry.  Yeniden üret: make reference -->\n"
     "<!-- Python yüzeyi de aynı kayıttan üretilir; elle yazılan ikinci bir -->\n"
     "<!-- bağlama listesi yoktur (CLAUDE.md 5.10, 5.20). -->\n";
 
@@ -198,7 +198,7 @@ std::string python_stub(const Registry& reg)
     std::string out = "# SPDX-License-Identifier: GPL-3.0-or-later\n";
     out += "# ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN.  Yeniden üret: make reference\n";
     out += "#\n";
-    out += "# `kentos.cad`'in tip taslağı. Program bu dosyayı ÇALIŞTIRMAZ: gerçek yüzey\n";
+    out += "# `piricad.cad`'in tip taslağı. Program bu dosyayı ÇALIŞTIRMAZ: gerçek yüzey\n";
     out += "# çalışma anında komut kaydından kurulur. Bu taslak, betiği programın\n";
     out += "# dışında yazan bir düzenleyicinin tamamlama ve tip denetimi yapabilmesi\n";
     out += "# içindir.\n";
@@ -284,4 +284,4 @@ std::string python_stub(const Registry& reg)
     return out;
 }
 
-} // namespace kentos::script
+} // namespace piricad::script

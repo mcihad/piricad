@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the second sanctioned road to a decision.
+// PiriCAD — ai: the second sanctioned road to a decision.
 //
 // THERE ARE EXACTLY TWO, and this is the one that is not a click.
 //
-// `kentoscad.md` §5.2.1 (amended 20 September 2026) allows a command sequence to
+// `piricad.md` §5.2.1 (amended 20 September 2026) allows a command sequence to
 // reach the document either through a preview a person approves, or through an
 // approval policy that person set BEFOREHAND, deliberately and for themselves.
 // CLAUDE.md 5.7 transcribes it and `.claude/ai.md` P15 makes the count
@@ -23,11 +23,11 @@
 // substitute for it — which is why every decision this file makes is written to
 // the audit record naming the policy that made it (`AuditRecord::decided_by`,
 // `AuditRecord::policy`, S-06).
-#include "kentos_cad/ai/policy_path.hpp"
+#include "piricad/ai/policy_path.hpp"
 
-#include "kentos_cad/ai/policy.hpp"
+#include "piricad/ai/policy.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 std::string policy_decider(ApprovalPolicy policy)
 {
@@ -66,4 +66,4 @@ core::Result<PolicyOutcome> decide_by_policy(Gate& gate, const Plan& plan,
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

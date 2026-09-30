@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/shell_chrome.hpp"
+#include "piricad/app/shell_chrome.hpp"
 
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/tokens.hpp"
 
 #include <QFontMetrics>
 #include <QHelpEvent>
@@ -14,7 +14,7 @@
 
 #include <algorithm>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 const Tokens& tokensOf(ThemeMode mode)
@@ -934,4 +934,4 @@ void PanelHeader::paintEvent(QPaintEvent*)
     p.fillRect(QRect(0, kHeaderHeight - 1, width(), 1), t.lineHard);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

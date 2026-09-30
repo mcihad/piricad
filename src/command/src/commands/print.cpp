@@ -13,21 +13,21 @@
 // the application's, behind `Bus::on_print_request` (bus.hpp). This file owns
 // the two commands, their parameters and what the journal records: the profile
 // NAME and every explicit override, never the PDF passwords.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 bool engine_missing(Context& ctx, Bus& bus)
@@ -376,7 +376,7 @@ Task<void> run_print_profile(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(print)
+PIRICAD_COMMAND(print)
 {
     return CommandSpec{
         .id       = "core.print",
@@ -450,11 +450,11 @@ KENTOS_COMMAND(print)
             },
         // Writes a file or drives a printer and touches no entity: nothing to
         // undo, nothing to journal as a document mutation.
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly | Flags::AiAccessible,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly | Flags::AiAccessible,
         .summary = "Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF "
                    "dosyasına yazar ya da yazıcıya gönderir.",
-        .run = &run_print,
+        .run     = &run_print,
         // THE WORST CASE, AND IT IS NOT VERB-SHAPED. `dosya=` writes a file and
         // `yazici=` sends the sheet to a printer, which is a thing that cannot be
         // taken back — so both are declared and the policy narrows by argument.
@@ -463,7 +463,7 @@ KENTOS_COMMAND(print)
     };
 }
 
-KENTOS_COMMAND(print_profile)
+PIRICAD_COMMAND(print_profile)
 {
     return CommandSpec{
         .id       = "core.print_profile",
@@ -509,4 +509,4 @@ KENTOS_COMMAND(print_profile)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the small chrome pieces the shell paints for itself.
+// PiriCAD — app: the small chrome pieces the shell paints for itself.
 //
 // WHY THESE ARE PAINTED AND NOT ASSEMBLED FROM WIDGETS. Each of them is a strip
 // of text and rules at exact pixel offsets that `design.md` §4 fixes to the
@@ -9,7 +9,7 @@
 // forbids. Painted, the offsets are the numbers in this file.
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QRect>
 #include <QStatusBar>
@@ -19,7 +19,7 @@
 
 class QTimer;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The 26 px status strip across the foot of the window (`design.md` §7).
 ///
@@ -37,7 +37,7 @@ namespace kentos::app {
 class StatusStrip : public QStatusBar, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty strip. The shell adds its toggles and its readings.
@@ -59,7 +59,7 @@ public:
     /// KOORDİNAT and every error message a command produces.
     void setMessage(const QString& text);
 
-    /// How many pixels the right-hand cells occupy, for `KENTOS_STRIP_PROBE`.
+    /// How many pixels the right-hand cells occupy, for `PIRICAD_STRIP_PROBE`.
     ///
     /// The message beside the aid chips is given whatever gap they leave, and
     /// the gap once subtracted only two of the three: a long line was drawn over
@@ -70,7 +70,7 @@ public:
 
     /// Every region the strip draws something in, as laid out for its current
     /// width — the coordinate, each chip, each right-hand cell that is shown —
-    /// for `KENTOS_STRIP_PROBE` to prove that no two of them overlap at any
+    /// for `PIRICAD_STRIP_PROBE` to prove that no two of them overlap at any
     /// window width. The message is not one: it takes what is left between.
     QVector<QRect> probeRegions() const;
 
@@ -235,7 +235,7 @@ private:
 class PanelHeader : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// `buttons` names which of the four §6 marks this header carries, in the
@@ -346,4 +346,4 @@ private:
     ThemeMode theme_ = ThemeMode::Dark;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

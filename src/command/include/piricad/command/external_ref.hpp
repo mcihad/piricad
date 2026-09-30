@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: external references, the document half (TODOS C-14).
+// PiriCAD — command: external references, the document half (TODOS C-14).
 //
 // An EXTERNAL REFERENCE is a block definition whose members come from a file
 // (model.md R45a): loaded when the drawing opens and whenever it is reloaded,
@@ -13,17 +13,17 @@
 // and DIŞREFERANS agree.
 #pragma once
 
-#include "kentos_cad/command/transaction.hpp"
+#include "piricad/command/transaction.hpp"
 
-#include "kentos_cad/core/block.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/core/block.hpp"
+#include "piricad/core/document.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// Whether `block` is an external reference still on the drawing: external,
 /// and not taken off it (`core::kBlockDetached`).
@@ -76,4 +76,4 @@ const char* external_state_word(ExternalListing::State state);
 /// How many members went.
 core::Result<std::size_t> empty_external(Transaction& tx, core::BlockId block);
 
-} // namespace kentos::command
+} // namespace piricad::command

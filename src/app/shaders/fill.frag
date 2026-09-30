@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — the flat-colour pipeline's fragment stage.
+// PiriCAD — the flat-colour pipeline's fragment stage.
 #version 440
 
 layout(location = 0) out vec4 fragColor;

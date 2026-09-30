@@ -22,11 +22,11 @@
 //   TOOLS ARE INTERNALLY TAGGED. `{type:"function", name, parameters}`, not
 //   `{type:"function", function:{…}}`. A body built for the older dialect is
 //   rejected outright.
-#include "kentos_cad/ai/chat.hpp"
-#include "kentos_cad/ai/dialect.hpp"
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/chat.hpp"
+#include "piricad/ai/dialect.hpp"
+#include "piricad/ai/redact.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -475,4 +475,4 @@ const DialectCodec& openai_responses_codec()
     return kOpenAiResponses;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

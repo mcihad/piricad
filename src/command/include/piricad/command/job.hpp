@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: work a command hands to a worker thread.
+// PiriCAD — command: work a command hands to a worker thread.
 //
 // io.md P3: no file is parsed on the UI thread. An import used to run its whole
 // read inside the command's coroutine, on whatever thread ran the bus — which in
@@ -25,7 +25,7 @@
 #include <stop_token>
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// The command's session; see session.hpp. Declared rather than included because
 /// the session includes this header.
@@ -105,4 +105,4 @@ inline JobAwaiter run_job(Session& session, Job& job) noexcept
     return JobAwaiter{session, job};
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

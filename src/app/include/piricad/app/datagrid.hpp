@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the one table, `design.md` §9.
+// PiriCAD — app: the one table, `design.md` §9.
 //
 // WHY A COMPONENT AND NOT A STYLESHEET. `QTableView` under a stylesheet gives a
 // table Qt's way: a header that is a row of buttons, a selection that is a flat
@@ -25,15 +25,15 @@
 // ran.
 #pragma once
 
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QHeaderView>
 #include <QTableView>
 
 class QPainter;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The roles a model may answer beyond Qt's own, so the grid can paint the
 /// states §9 names without knowing what the cells mean.
@@ -56,7 +56,7 @@ constexpr int Null = Qt::UserRole + 42;
 class GridHeader : public QHeaderView, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds a header for one orientation; the grid owns and sizes it.
@@ -115,7 +115,7 @@ private:
 class DataGrid : public QTableView, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty grid; give it a model.
@@ -157,4 +157,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the external references panel (TODOS C-14).
+// PiriCAD — app: the external references panel (TODOS C-14).
 //
 // Every external reference the drawing holds, with the state it is in —
 // loaded, put aside, its file missing, its file CHANGED since it was read —
@@ -11,7 +11,7 @@
 // elsewhere while the drawing is open is noticed, said, and offered for reload.
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QHash>
 #include <QSet>
@@ -25,7 +25,7 @@ class QLabel;
 class QTreeWidget;
 class QTreeWidgetItem;
 
-namespace kentos::app {
+namespace piricad::app {
 
 class Banner;     ///< widgets.hpp
 class Button;     ///< widgets.hpp
@@ -36,7 +36,7 @@ class Controller; ///< controller.hpp
 class XrefRowDelegate : public QStyledItemDelegate, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// A delegate for the panel's list.
@@ -61,7 +61,7 @@ private:
 class XrefPanel : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the panel over a controller, which outlives it.
@@ -76,7 +76,7 @@ public:
 
     void applyTheme(ThemeMode mode) override;
 
-    /// For `KENTOS_REALMOUSE_PROBE`: each row as `name|STATE|counts`.
+    /// For `PIRICAD_REALMOUSE_PROBE`: each row as `name|STATE|counts`.
     QStringList probeRows() const;
 
     /// For the probe: selects `name`'s row and presses the step button whose
@@ -149,4 +149,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

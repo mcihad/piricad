@@ -15,19 +15,19 @@
 // The curve itself comes from `core::arc_outline` and `core::circle_outline` —
 // the same deterministic bisection the document is drawn with — so a sector's
 // arc and a YAY drawn over it land on exactly the same vertices (§7.3).
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 std::vector<core::Point2> zip(const std::vector<core::Mm>& xs, const std::vector<core::Mm>& ys)
@@ -169,7 +169,7 @@ Task<void> run_annulus(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(sector)
+PIRICAD_COMMAND(sector)
 {
     return CommandSpec{
         .id       = "core.sector",
@@ -184,14 +184,14 @@ KENTOS_COMMAND(sector)
                     .en("end"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.",
-        .run = &run_sector,
+        .run     = &run_sector,
     };
 }
 
-KENTOS_COMMAND(annulus)
+PIRICAD_COMMAND(annulus)
 {
     return CommandSpec{
         .id       = "core.annulus",
@@ -212,4 +212,4 @@ KENTOS_COMMAND(annulus)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

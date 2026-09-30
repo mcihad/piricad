@@ -3,7 +3,7 @@
 #
 # GATE: everything a user can do is documented in /docs — the command system included.
 # CLAUDE.md Article 11 and 5.16/5.17, .claude/docs.md R1–R17.
-# kentoscad.md §13 lists user documentation published from CI as a world-standard
+# piricad.md §13 lists user documentation published from CI as a world-standard
 # acceptance criterion; §2.3 forbids a second, hand-maintained command list.
 set -euo pipefail
 
@@ -107,8 +107,8 @@ else
     # way out was to notice which binary it had picked.
     docgen=""
     for candidate in dev release debug asan headless; do
-        if [[ -x "$root/build/$candidate/bin/kentos_docgen" ]]; then
-            docgen="$root/build/$candidate/bin/kentos_docgen"
+        if [[ -x "$root/build/$candidate/bin/piricad_docgen" ]]; then
+            docgen="$root/build/$candidate/bin/piricad_docgen"
             break
         fi
     done
@@ -151,11 +151,11 @@ else
             # for rather than a promise about it.
             # AND THE PYTHON SURFACE, held to the same standard for the same
             # reason (CLAUDE.md 6.15). A Python user reads `referans.md` and a
-            # Python editor reads `kentos_cad.pyi`; both describe a surface that
+            # Python editor reads `piricad_cad.pyi`; both describe a surface that
             # is built at run time from the registry, so a stale one is a
             # description of a program that no longer exists.
             for pair in "llms.txt:$tmp_llms" "llms-full.txt:$tmp_llms_full" \
-                        "python/referans.md:$tmp_py" "python/kentos_cad.pyi:$tmp_pyi"; do
+                        "python/referans.md:$tmp_py" "python/piricad_cad.pyi:$tmp_pyi"; do
                 name="${pair%%:*}"
                 fresh="${pair#*:}"
                 have="$docs/$name"
@@ -178,7 +178,7 @@ else
         # checked at all and the gate reported OK. A gate that cannot measure
         # must say so loudly; `make check` builds before it runs the gates, so
         # the only way to reach this is to run the gate on a tree with no build.
-        echo "docs: kentos_docgen is not built, so the six generated artefacts could not be" >&2
+        echo "docs: piricad_docgen is not built, so the six generated artefacts could not be" >&2
         echo "docs:   verified. Build it first (make build) — a freshness check that silently" >&2
         echo "docs:   skips is a freshness check that has never run." >&2
         fail=1

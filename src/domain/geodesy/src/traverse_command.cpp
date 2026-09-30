@@ -29,24 +29,24 @@
 // THE REPORT IS STRUCTURED (`Context::report`, command.md R26), because a
 // traverse sheet is what gets filed: every station with its corrected bearing,
 // its side, its coordinates and its share of both corrections.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <cstdlib>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// Metres with three decimals, in integers, the way ÖLÇ prints one.
@@ -82,7 +82,7 @@ core::Result<Tolerance> tolerance_for(std::string_view wanted)
         return core::err(core::ErrorCode::NotFound,
                          "Poligon tolerans kataloğu okunamadı: " + text.error().message +
                              " Kapanma sınırları mevzuat verisidir ve programa gömülmez "
-                             "(CLAUDE.md 5.13); /data kurulumunu KENTOS_DATA ile gösterin.");
+                             "(CLAUDE.md 5.13); /data kurulumunu PIRICAD_DATA ile gösterin.");
 
     auto parsed = core::Json::parse(text.value());
     if (!parsed)
@@ -469,7 +469,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(traverse)
+PIRICAD_COMMAND(traverse)
 {
     return CommandSpec{
         .id       = "geodesy.traverse",
@@ -515,4 +515,4 @@ KENTOS_COMMAND(traverse)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

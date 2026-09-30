@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/transaction.hpp"
+#include "piricad/command/transaction.hpp"
 
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/text_fields.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/text_fields.hpp"
 
-#include "kentos_cad/core/dimension_link.hpp"
+#include "piricad/core/dimension_link.hpp"
 
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/hatch_link.hpp"
-#include "kentos_cad/core/lineage.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/core/ties.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/hatch_link.hpp"
+#include "piricad/core/lineage.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/core/ties.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 Transaction::Transaction(Document& doc, std::string label)
     : doc_(doc), label_(std::move(label)), first_born_(static_cast<EntityId>(doc.entities().size()))
@@ -736,10 +736,10 @@ Transaction::SettleReport Transaction::settle_attachments()
                     const auto should       = core::caption_follow(doc_, d, a);
                     const core::RingSpan rs = geom.rings_of(ents.slot[d]);
                     const bool standing     = should && rs.count == 1 &&
-                                          geom.ring_count[rs.first] == 2 &&
-                                          geom.vertex(rs.first, 0) == should->base[0] &&
-                                          geom.vertex(rs.first, 1) == should->base[1] &&
-                                          should->text == texts.text(ents.slot[d]);
+                                              geom.ring_count[rs.first] == 2 &&
+                                              geom.vertex(rs.first, 0) == should->base[0] &&
+                                              geom.vertex(rs.first, 1) == should->base[1] &&
+                                              should->text == texts.text(ents.slot[d]);
                     if (!standing && !contains(stuck, d)) {
                         stuck.push_back(d);
                         ++rep.left;
@@ -769,11 +769,11 @@ bool Transaction::place_caption(EntityId d, const core::Attachment& stored,
     // an identical slot would be an edit that changed nothing but the file.
     const core::RingSpan rs = geom.rings_of(dslot);
     const bool same_place   = rs.count == 1 && geom.ring_count[rs.first] == 2 &&
-                            geom.ring_role[rs.first] == core::RingRole::Open &&
-                            geom.vertex(rs.first, 0) == should->base[0] &&
-                            geom.vertex(rs.first, 1) == should->base[1];
-    const bool same_text   = should->text == texts.text(dslot);
-    const bool same_anchor = should->anchor == texts.anchor(dslot);
+                              geom.ring_role[rs.first] == core::RingRole::Open &&
+                              geom.vertex(rs.first, 0) == should->base[0] &&
+                              geom.vertex(rs.first, 1) == should->base[1];
+    const bool same_text    = should->text == texts.text(dslot);
+    const bool same_anchor  = should->anchor == texts.anchor(dslot);
 
     if (a != stored && !set_attachment(d, a)) return false;
     if (!same_text || !same_anchor) {
@@ -1223,7 +1223,7 @@ Transaction::SettleReport Transaction::settle_hatches()
             if (s.broken) continue;
             const EntityId src = doc_.slot_of(s.source);
             touched            = touched || src == core::kNoEntity || !doc_.alive(src) ||
-                      contains(moved, src) || contains(erased, src);
+                                 contains(moved, src) || contains(erased, src);
         }
         if (!touched) {
             // THE HATCH MOVED ON ITS OWN: it no longer fills its boundary, which
@@ -1741,8 +1741,8 @@ core::Result<Transaction::AdoptSummary> Transaction::adopt_from(const core::Docu
         if (b >= fate.size() || fate[b] != kUntouched) return;
         const core::BlockId have = doc_.blocks().find(named(scratch.blocks().at(b).name));
         const bool refill        = external && have != core::kNoBlock &&
-                            (doc_.blocks().at(have).flags & core::kBlockDependent) != 0;
-        fate[b] = have == core::kNoBlock ? kCreate : refill ? kRefill : kTheirs;
+                                   (doc_.blocks().at(have).flags & core::kBlockDependent) != 0;
+        fate[b]                  = have == core::kNoBlock ? kCreate : refill ? kRefill : kTheirs;
         if (fate[b] != kTheirs) pending.push_back(b);
     };
     const auto referenced = [&scratch](core::EntityId e) -> core::BlockId {
@@ -1956,4 +1956,4 @@ core::Result<Transaction::AdoptSummary> Transaction::adopt_from(const core::Docu
     return summary;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

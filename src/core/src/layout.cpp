@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/layout.hpp"
+#include "piricad/core/layout.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <iterator>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// One entry of the A-series table.
@@ -1291,7 +1291,7 @@ Layout default_layout(std::string name, Um width, Um height, Um margin)
     LayoutItem map = default_item(LayoutItemKind::Map);
     map.id         = "harita";
     map.frame      = PaperRect{margin, margin + title_h + gap, width - 2 * margin,
-                          height - 2 * margin - title_h - bar_h - 2 * gap};
+                               height - 2 * margin - title_h - bar_h - 2 * gap};
     out.items.push_back(std::move(map));
 
     LayoutItem bar  = default_item(LayoutItemKind::ScaleBar);
@@ -1310,4 +1310,4 @@ Layout default_layout(std::string name, Um width, Um height, Um margin)
     return out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

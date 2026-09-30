@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/geometry.hpp"
+#include "piricad/core/geometry.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -7,7 +7,7 @@
 #include <optional>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// Grows geometrically, so appending N rings is O(N) rather than O(N²).
@@ -673,4 +673,4 @@ void RingGeometry::reserve_vertices(std::size_t extra)
     reserve_for(ys, extra);
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

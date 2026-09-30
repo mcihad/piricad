@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: rounding or cutting the corner BETWEEN two objects
+// PiriCAD — core: rounding or cutting the corner BETWEEN two objects
 // (TODOS C-06).
 //
 // `corner.hpp` cuts a corner a polyline already has. This file makes the corner
@@ -25,14 +25,14 @@
 // makes (C-06: "önizleme ve çıktı aynıdır").
 #pragma once
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// How two objects meet at the corner made between them.
 struct PairCorner
@@ -84,4 +84,4 @@ std::vector<std::uint8_t> encode_pair_corner_guide(const PairCornerGuide& guide)
 /// The guide back, refused when the bytes are not what the encoder writes.
 Result<PairCornerGuide> decode_pair_corner_guide(std::span<const std::uint8_t> bytes);
 
-} // namespace kentos::core
+} // namespace piricad::core

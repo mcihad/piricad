@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: where a command's input comes from.
+// PiriCAD — command: where a command's input comes from.
 //
-// kentoscad.md §2.4, the most critical detail in the architecture: a command body
+// piricad.md §2.4, the most critical detail in the architecture: a command body
 // must NOT be able to tell whether a value came from a mouse click, a typed
 // coordinate, the next script argument, or an AI-produced value. The same command
 // code runs in all four contexts.
 #pragma once
 
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/command/value.hpp"
-#include "kentos_cad/core/identity.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/command/value.hpp"
+#include "piricad/core/identity.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -18,7 +18,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// Which client started a command.
 ///
@@ -332,4 +332,4 @@ private:
     Origin origin_{Origin::Gui};
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

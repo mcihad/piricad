@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/input.hpp"
+#include "piricad/command/input.hpp"
 
-namespace kentos::command {
+namespace piricad::command {
 
 const char* origin_name(Origin o)
 {
@@ -51,7 +51,7 @@ std::optional<Value> next_of(const Args& args,
     }
 
     // A list-valued argument is drained one element per request, so a command
-    // loop reads it exactly as it reads successive mouse clicks (kentoscad.md §2.4).
+    // loop reads it exactly as it reads successive mouse clicks (piricad.md §2.4).
     if (v->kind() == Value::Kind::PointList || v->kind() == Value::Kind::Point) {
         const auto& pts = v->as_points();
         if (*pos >= pts.size()) {
@@ -128,4 +128,4 @@ std::optional<Value> InteractiveInputSource::take(const Param& param)
     return std::nullopt;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -33,19 +33,19 @@
 // due east, and the drawing was refused whole; so was every drawing with a
 // block, whose definition's members — drawn in the definition's own frame,
 // placed by their references — were carried as if they stood on the map.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/external_ref.hpp"
-#include "kentos_cad/command/transform_edit.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/external_ref.hpp"
+#include "piricad/command/transform_edit.hpp"
 
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/domain/geodesy/crs_catalog.hpp"
-#include "kentos_cad/domain/geodesy/transform.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/domain/geodesy/crs_catalog.hpp"
+#include "piricad/domain/geodesy/transform.hpp"
 
 #include <cmath>
 #include <filesystem>
@@ -53,7 +53,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The systems a user is offered: the TM 3° zones of the data package, by the
@@ -118,7 +118,7 @@ Task<void> run(Context& ctx)
     if (!domain::geodesy::Transform::available()) {
         ctx.refuse(core::ErrorCode::Unsupported,
                    "PROJ bu yapıda yok; koordinat dönüşümü yapılamaz. "
-                   "KENTOS_WITH_PROJ=ON ile derleyin.");
+                   "PIRICAD_WITH_PROJ=ON ile derleyin.");
         co_return;
     }
 
@@ -293,7 +293,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(reproject)
+PIRICAD_COMMAND(reproject)
 {
     return CommandSpec{
         .id       = "core.reproject",
@@ -316,4 +316,4 @@ KENTOS_COMMAND(reproject)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

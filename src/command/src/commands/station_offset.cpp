@@ -6,20 +6,20 @@
 // the reverse of `dik(A,B,ayak,boy)`: that function puts a point down from the
 // two numbers, this reads the two numbers back from the point, with the same
 // sign — RIGHT POSITIVE, looking from A to B (`core::station_offset`).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// A length as a surveyor reads one: metres, three decimals, the Turkish comma.
@@ -114,7 +114,7 @@ Task<void> run_station_offset(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(station_offset)
+PIRICAD_COMMAND(station_offset)
 {
     return CommandSpec{
         .id       = "core.station_offset",
@@ -130,14 +130,14 @@ KENTOS_COMMAND(station_offset)
                               "sağda pozitif")
                     .en("points"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly |
-                 Flags::NoEffect,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly |
+                   Flags::NoEffect,
         .summary = "Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy "
                    "sağda pozitif, solda negatiftir.",
-        .run    = &run_station_offset,
-        .effect = Effect::Query,
+        .run     = &run_station_offset,
+        .effect  = Effect::Query,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

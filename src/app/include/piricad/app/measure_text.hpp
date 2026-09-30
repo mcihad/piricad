@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: how a measurement is written for a person to read.
+// PiriCAD — app: how a measurement is written for a person to read.
 //
 // ONE PLACE, because two of them disagree. These started as file-local helpers in
 // `attribute_panel.cpp`, and the moment a second window had to say what an entity
@@ -9,14 +9,14 @@
 // (CLAUDE.md 5.10, in spirit): one fact, told twice, free to drift.
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 
 #include <QString>
 
-namespace kentos::app::measure {
+namespace piricad::app::measure {
 
 /// `12.480` — a length in metres, three decimals, no unit.
 ///
@@ -75,4 +75,4 @@ QString spacedThousands(const QString& text);
 /// would be a column of numbers that never distinguishes anything.
 QString sizeSummary(const core::Document& doc, core::EntityId entity);
 
-} // namespace kentos::app::measure
+} // namespace piricad::app::measure

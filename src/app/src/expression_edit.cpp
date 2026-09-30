@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/expression_edit.hpp"
+#include "piricad/app/expression_edit.hpp"
 
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/tokens.hpp"
 
 #include <QKeyEvent>
 #include <QMimeData>
 #include <QRegularExpression>
 #include <QTextCharFormat>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 constexpr int kBarHeight = 30; ///< the standard's regular control
@@ -140,4 +140,4 @@ void ExpressionEdit::insertFromMimeData(const QMimeData* source)
     insertPlainText(source->text().simplified());
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

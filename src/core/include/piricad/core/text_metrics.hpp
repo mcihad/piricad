@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: how wide a drawing's text is (TODOS C-18).
+// PiriCAD — core: how wide a drawing's text is (TODOS C-18).
 //
 // ONE MEASURE FOR EVERYTHING THAT ASKS. The box a text is picked by, whether a
 // dimension's figure fits between its extension lines, the baseline a caption
@@ -14,7 +14,7 @@
 // global core.md P8 forbids — and would make a document's geometry depend on
 // whether some caller remembered to install it. So the drawing face's advances
 // are CONSTANT DATA of this library, generated from the font file the program
-// ships (`data/fonts/IBMPlexSans-Regular.ttf`) by `kentos_yazi_olcusu`
+// ships (`data/fonts/IBMPlexSans-Regular.ttf`) by `piricad_yazi_olcusu`
 // (src/render/tools), which shapes every character with the atlas's own
 // shaper (`render::Spacing::Technical`). `scripts/ci-gate-yazi-olcusu.sh`
 // regenerates the table and fails on any difference, so the numbers here are
@@ -30,7 +30,7 @@
 #include <cstdint>
 #include <string_view>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The drawing face's grid, as the font declares it.
 struct TextFace
@@ -55,4 +55,4 @@ std::int32_t text_advance(char32_t c) noexcept;
 /// broken string measures as it draws.
 std::int64_t text_run_advance(std::string_view utf8) noexcept;
 
-} // namespace kentos::core
+} // namespace piricad::core

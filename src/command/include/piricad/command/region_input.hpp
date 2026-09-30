@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: a region asked for by a point inside it.
+// PiriCAD — command: a region asked for by a point inside it.
 //
 // SINIR asked for one first, and ALANÖLÇ `yontem=ic` asks the same question —
 // Netcad's `Alan Seçim Aracı`, "the area round the point I click" (wiki
@@ -8,16 +8,16 @@
 // an open region is refused in one sentence whichever command asked.
 #pragma once
 
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/core/planar.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/core/planar.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// A REGION FOUND BY A POINT INSIDE IT (`ask_region`).
 struct FoundRegion
@@ -49,4 +49,4 @@ void record_region(Context& ctx, const FoundRegion& found);
 /// A length the way a gap is read: `5 cm`, `12 mm`, `1,25 m`.
 std::string gap_words(core::Mm v);
 
-} // namespace kentos::command
+} // namespace piricad::command

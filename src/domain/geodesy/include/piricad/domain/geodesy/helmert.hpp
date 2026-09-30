@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — geodesy: the 2D similarity (Helmert) transformation.
+// PiriCAD — geodesy: the 2D similarity (Helmert) transformation.
 //
 // WHAT IT IS FOR. A survey is very often measured in a LOCAL system: the crew
 // sets a station, calls it 0,0, and works from there for a week. The drawing is
@@ -30,14 +30,14 @@
 // eastings — an 8·10^8 mm easting squared leaves the 53-bit mantissa immediately.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/transform.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/transform.hpp"
 
 #include <cstddef>
 #include <vector>
 
-namespace kentos::domain::geodesy {
+namespace piricad::domain::geodesy {
 
 /// One control point: where it is in the drawing, and where it belongs on the map.
 struct ControlPoint
@@ -97,4 +97,4 @@ struct Helmert2D
 /// drawing.
 core::Result<Helmert2D> fit_helmert(const std::vector<ControlPoint>& points, bool lock_scale);
 
-} // namespace kentos::domain::geodesy
+} // namespace piricad::domain::geodesy

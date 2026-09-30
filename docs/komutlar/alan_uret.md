@@ -152,7 +152,7 @@ islands=True)` olarak çağrılır.
 | `N açık uç bir çizgiye yakın ama değmiyor; …` (not) | Bazı uçlar düğüm toleransından uzak | Uçları yakalamayla birleştirin ya da `bosluk=` ile köprüleyin |
 | `Köprülenecek boşluk eksi olamaz; …` | `bosluk` eksi verildi | 0 ya da daha büyük bir metre değeri verin |
 | `Kapsamda bu araca uygun nesne yok (N nesne bakıldı). …` | Kapsamda yalnız noktalar ya da yazılar var | Çizgi, alan ya da eğri seçin |
-| `Bu derleme CGAL olmadan yapıldı; …` | Program CGAL kütüphanesi olmadan derlenmiş | CGAL'ı kurup `KENTOS_WITH_CGAL=ON` ile derleyin |
+| `Bu derleme CGAL olmadan yapıldı; …` | Program CGAL kütüphanesi olmadan derlenmiş | CGAL'ı kurup `PIRICAD_WITH_CGAL=ON` ile derleyin |
 
 ## İlgili
 

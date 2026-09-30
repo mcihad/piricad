@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: DXF, read and written as what it is.
+// PiriCAD — io: DXF, read and written as what it is.
 //
 // io.md R13: DXF is first-class — full read and write, round-trip tested. The
 // GDAL vector path reads a DXF through OGR, which flattens every curve before
@@ -13,12 +13,12 @@
 // in src/dxf_reader.cpp, src/dxf_writer.cpp and src/dxf_common.cpp.
 #pragma once
 
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/io/diagnostics.hpp"
-#include "kentos_cad/io/options.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/io/diagnostics.hpp"
+#include "piricad/io/options.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -27,9 +27,9 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
-/// True when this build carries libdxfrw (`KENTOS_WITH_DXFRW`). False routes DXF
+/// True when this build carries libdxfrw (`PIRICAD_WITH_DXFRW`). False routes DXF
 /// through the GDAL vector path, which reads less and says so.
 bool dxf_backend_available();
 
@@ -74,11 +74,11 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
                                                   ImportOptions options, std::stop_token stop);
 
 /// Writes `doc` to `path` as a DXF of `version`, every kind as its own DXF
-/// entity, layers with their colours and weights, attributes as `KENTOSCAD`
+/// entity, layers with their colours and weights, attributes as `PIRICAD`
 /// extended data, foreign data as the XDATA it came from, and a `.prj` beside it.
 /// Long work, as `export_vector` is: counts and stops on `control`.
 command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std::string path,
                                                   ExportOptions options, DxfVersion version,
                                                   command::JobControl control);
 
-} // namespace kentos::io
+} // namespace piricad::io

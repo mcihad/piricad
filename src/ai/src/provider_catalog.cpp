@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/provider_catalog.hpp"
+#include "piricad/ai/provider_catalog.hpp"
 
-#include "kentos_cad/core/json.hpp"
+#include "piricad/core/json.hpp"
 
 #include <algorithm>
 #include <array>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -313,4 +313,4 @@ std::vector<std::string> parse_model_list(ModelListShape shape, std::string_view
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

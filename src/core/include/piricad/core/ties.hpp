@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: every tie between objects, asked one question (TODOS F-04).
+// PiriCAD — core: every tie between objects, asked one question (TODOS F-04).
 //
 // FOUR TIES, ONE QUESTION. A caption follows an edge (core/attach.hpp), a
 // dimension measures corners (core/dimension_link.hpp), a hatch fills what its
@@ -19,11 +19,11 @@
 // the check compares with it, so the two cannot disagree.
 #pragma once
 
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/hatch_link.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/text_store.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/hatch_link.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/text_store.hpp"
 
 #include <array>
 #include <cstdint>
@@ -32,7 +32,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// What kind of tie a dependent has to its sources.
 enum class TieKind : std::uint8_t {
@@ -102,4 +102,4 @@ std::vector<Tie> ties_of(const Document& doc, EntityId e);
 /// Every tie in the drawing, by dependent row: what BAĞIMLILIK reads.
 std::vector<Tie> every_tie(const Document& doc);
 
-} // namespace kentos::core
+} // namespace piricad::core

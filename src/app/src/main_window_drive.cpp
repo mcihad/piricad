@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: every ribbon tool, USED (`KENTOS_TOOL_DRIVE=<dir>`).
+// PiriCAD — app: every ribbon tool, USED (`PIRICAD_TOOL_DRIVE=<dir>`).
 //
 // THE USER SAID SOME TOOLS DO NOT WORK AND SOME WORK WRONGLY, and named none.
 // Pressing a button proves it starts a command; it does not prove the command
@@ -16,16 +16,16 @@
 //
 // It is a MEASUREMENT for a reviewer, not a gate: a tool whose obvious answers
 // are not the right ones is listed and read, not failed.
-#include "kentos_cad/app/main_window.hpp"
+#include "piricad/app/main_window.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/map_canvas.hpp"
-#include "kentos_cad/app/ribbon.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/targets.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/map_canvas.hpp"
+#include "piricad/app/ribbon.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/targets.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -43,7 +43,7 @@
 #include <optional>
 #include <vector>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The property every tool action carries (ribbon.hpp).
@@ -62,7 +62,7 @@ struct Outcome
 
 int MainWindow::probeToolDrive()
 {
-    const QString into = QString::fromLocal8Bit(qgetenv("KENTOS_TOOL_DRIVE"));
+    const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_TOOL_DRIVE"));
     QDir().mkpath(into);
     const auto settle = [] {
         for (int i = 0; i < 3; ++i)
@@ -191,8 +191,8 @@ int MainWindow::probeToolDrive()
             // then reach for the tool — only for a tool that takes objects.
             if (picked_first && !takes_objects) continue;
 
-            Outcome out{.label = QString(action->text()).remove(QLatin1Char('&')) +
-                                 (picked_first ? QStringLiteral(" (seçili)") : QString()),
+            Outcome out{.label   = QString(action->text()).remove(QLatin1Char('&')) +
+                                   (picked_first ? QStringLiteral(" (seçili)") : QString()),
                         .command = line};
             controller_->clearSelection();
             if (picked_first)
@@ -239,7 +239,7 @@ int MainWindow::probeToolDrive()
                                                       asked.contains(QStringLiteral("gösterin")) ||
                                                       asked.contains(QStringLiteral("köşe")) ||
                                                       asked.contains(QStringLiteral("kenar")));
-                    const bool corner = asked.contains(QStringLiteral("köşe"));
+                    const bool corner    = asked.contains(QStringLiteral("köşe"));
                     std::optional<core::Point2> at;
                     if (on_object)
                         if (const auto key = object_for(targets)) at = point_on(*key, corner);
@@ -339,4 +339,4 @@ int MainWindow::probeToolDrive()
     return 0;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

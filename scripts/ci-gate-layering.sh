@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: the module dependency graph is one-way.
-# kentoscad.md §8 / Constitution Article 3.2-3.3: core -> nothing (not even Qt),
+# piricad.md §8 / Constitution Article 3.2-3.3: core -> nothing (not even Qt),
 # command -> core, io/domain -> core+command, render -> core+Qt Gui, script/ai ->
 # command, app -> everything; a reverse or lateral dependency is a build failure,
 # and Article 3.4 lists the Qt-free targets. script.md R10/P4/P9 adds: no
@@ -35,7 +35,7 @@ for rule in "${rules[@]}"; do
     # Article 3.4: every module here except render is a Qt-free target.
     if [[ "$mod" != render ]]; then
         while IFS= read -r hit; do
-            echo "layering: Qt inside the Qt-free target kentos_$mod -> $hit" >&2
+            echo "layering: Qt inside the Qt-free target piricad_$mod -> $hit" >&2
             fail=1
         done < <(grep -rn "${sources[@]}" -E \
                      '#[[:space:]]*include[[:space:]]*[<"]Q|\b(QString|QObject|QWidget|QVariant|QByteArray|Q_OBJECT|qDebug)\b' \
@@ -44,9 +44,9 @@ for rule in "${rules[@]}"; do
     # A GENERATOR EXECUTABLE IS NOT PART OF ITS MODULE'S LIBRARY, and the arrow
     # does not bind it. `src/command/tools/docgen.cpp` walks every registry the
     # program has — builtin, processing, the three domain modules — and projects
-    # the agent catalogue through `kentos_ai`; it is an `add_executable` that
+    # the agent catalogue through `piricad_ai`; it is an `add_executable` that
     # links UP, exactly like /src/app, and nothing it includes reaches
-    # `kentos_command` itself. Before this, the reference it generates was missing
+    # `piricad_command` itself. Before this, the reference it generates was missing
     # the nine domain commands and there was no way to fix that without either
     # breaking this gate or inventing a second generator.
     #
@@ -56,7 +56,7 @@ for rule in "${rules[@]}"; do
         echo "layering: reverse or lateral dependency out of /src/$mod -> $hit" >&2
         fail=1
     done < <(grep -rn "${sources[@]}" --exclude-dir=tools -E \
-                 "#[[:space:]]*include[[:space:]]*\"kentos_cad/(${rule#*:})/" "$dir" || true)
+                 "#[[:space:]]*include[[:space:]]*\"piricad/(${rule#*:})/" "$dir" || true)
 done
 
 # script.md R10/P4: a script binding never sees a raw Document or Layer handle.

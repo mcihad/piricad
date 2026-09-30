@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: nothing secret reaches a log, a message or a transcript.
+// PiriCAD — ai: nothing secret reaches a log, a message or a transcript.
 //
 // THE RULE. `.claude/ai.md` P11: "NEVER write API keys, tokens or endpoint
 // credentials into the audit record, the `Journal`, or the repository." CLAUDE.md
@@ -24,14 +24,14 @@
 // path only. A redacted request is for reading, and it is never sent.
 #pragma once
 
-#include "kentos_cad/ai/transport.hpp"
+#include "piricad/ai/transport.hpp"
 
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// What replaces a secret. Not Turkish and not English: this string ends up in
 /// log lines, audit records and pasted transcripts, and it should read the same
@@ -84,4 +84,4 @@ HttpRequest redact_request(HttpRequest request);
 /// forbids dumping that anywhere it is not needed.
 std::string describe_request(const HttpRequest& request);
 
-} // namespace kentos::ai
+} // namespace piricad::ai

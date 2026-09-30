@@ -247,7 +247,7 @@ bu eşitlik `tests/unit/test_ai_provider.cpp` içinde kanıtlanır.
 | `Bu ortamda ağ taşıyıcısı bağlı değil, bu yüzden bağlantı denenemedi; komutu uygulama içinden çalıştırın. Profil olduğu gibi duruyor.` | `dene` ağ taşıyıcısı olmayan bir ortamda çalıştı | Uygulama içinden çalıştırın |
 | `Model sağlayıcı deposu bu ortamda bağlı değil; komutu uygulama içinden çalıştırın.` | Komut, profil deposu bağlı olmayan bir ortamda çalıştı (başsız çalıştırma, betik koşucusu, test) | Uygulama içinden çalıştırın |
 | `Model sağlayıcı dosyası yazılamadı: <yol>` | Ayar dizini yazılamıyor | Dizinin yazma iznini denetleyin |
-| `Bu yapıda sistem anahtar deposu yok (KENTOS_WITH_KEYCHAIN kapalı), bu yüzden anahtar kaydedilemez. Anahtarı bir ortam değişkeninde tutun: … değişkenini ayarlayıp programı yeniden başlatın.` | Anahtar deposu olmayan bir yapıda anahtar kaydedilmek istendi | Ortam değişkeni yolunu kullanın |
+| `Bu yapıda sistem anahtar deposu yok (PIRICAD_WITH_KEYCHAIN kapalı), bu yüzden anahtar kaydedilemez. Anahtarı bir ortam değişkeninde tutun: … değişkenini ayarlayıp programı yeniden başlatın.` | Anahtar deposu olmayan bir yapıda anahtar kaydedilmek istendi | Ortam değişkeni yolunu kullanın |
 | `Sağlayıcı dosyası bu sürümden yeni (dosya N, bu sürüm M). Programı güncelleyin; dosya olduğu gibi bırakıldı.` | `ai-modelleri.json` ileri bir sürümle yazılmış | Programı güncelleyin |
 
 ## İlgili

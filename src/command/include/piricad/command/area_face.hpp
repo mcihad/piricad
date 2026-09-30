@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: an area as a face for cutting and joining, and back.
+// PiriCAD — command: an area as a face for cutting and joining, and back.
 //
 // AN AREA WITH AN ARC EDGE KEEPS ITS ARC (TODOS O-3). Cutting and joining
 // areas used to read their rings and hand them to Clipper2, and an arc
@@ -17,17 +17,17 @@
 // an arc edge is.
 #pragma once
 
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/result.hpp"
 
 #include <optional>
 #include <span>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// An area read for cutting and joining: its boundary and holes, arcs as arcs,
 /// and whether any edge bends — which decides the road it is cut by.
@@ -69,4 +69,4 @@ core::Result<std::vector<core::KernelFace>> area_boolean(std::span<const core::K
 core::Result<core::EntityId> add_face(Context& ctx, core::LayerId layer,
                                       const core::KernelFace& face);
 
-} // namespace kentos::command
+} // namespace piricad::command

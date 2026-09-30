@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Drives KENTOS_OSCLICK_PROBE with REAL window-system events. macOS only, and it
+# Drives PIRICAD_OSCLICK_PROBE with REAL window-system events. macOS only, and it
 # needs Accessibility permission for the terminal that runs it (System Settings →
 # Privacy & Security → Accessibility).
 #
@@ -23,8 +23,8 @@ mkdir -p "$dir"
 driver="$dir/os-tikla"
 cc -O1 -o "$driver" "$here/os-tikla.c" -framework ApplicationServices
 "$driver" || { echo "os-tikla: Erişilebilirlik izni yok — Sistem Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik"; exit 1; }
-app="$root/build/dev/bin/KentOSCad.app/Contents/MacOS/KentOSCad"
-KENTOS_OSCLICK_PROBE="$dir" KENTOS_OSCLICK_SECONDS="$seconds" KENTOS_DATA="$root/data" "$app" > "$dir/app.log" 2>&1 &
+app="$root/build/dev/bin/PiriCAD.app/Contents/MacOS/PiriCAD"
+PIRICAD_OSCLICK_PROBE="$dir" PIRICAD_OSCLICK_SECONDS="$seconds" PIRICAD_DATA="$root/data" "$app" > "$dir/app.log" 2>&1 &
 pid=$!
 for _ in $(seq 1 60); do grep -q '^\[os\] hazır' "$dir/app.log" && break; osascript -e 'delay 0.5'; done
 grep -q '^\[os\] hazır' "$dir/app.log" || { echo "os-tikla: probe hazır olmadı"; kill "$pid"; exit 1; }

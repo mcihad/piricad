@@ -6,22 +6,22 @@
 // 217385147). A cadastral drawing is a legal document, and which object is
 // "wrong" is the engineer's call: this answers the question and writes out the
 // one line that would act on the answer, for the user to run or not.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/detached.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/detached.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <cstdint>
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// How many objects the next-step lines name before they stop; the report
@@ -100,7 +100,7 @@ Task<void> run_extent_check(Context& ctx)
         const core::Layer* on   = doc.layer(doc.entities().layer[d.entity]);
         const std::string layer = on != nullptr ? on->name : std::string();
         const bool near_zero    = zero_is_far && std::llabs(d.centre.x) < kNearZeroMm &&
-                               std::llabs(d.centre.y) < kNearZeroMm;
+                                  std::llabs(d.centre.y) < kNearZeroMm;
 
         ctx.echo("  nesne " + std::to_string(key) + " · " + layer + " · çoğunluğun merkezinden " +
                  distance_text(d.distance_mm) +
@@ -144,7 +144,7 @@ Task<void> run_extent_check(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(extent_check)
+PIRICAD_COMMAND(extent_check)
 {
     return CommandSpec{
         .id       = "core.extent_check",
@@ -154,11 +154,11 @@ KENTOS_COMMAND(extent_check)
         .params   = {},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly | Flags::NoEffect,
-        .summary = "Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat "
-                   "sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz.",
-        .run    = &run_extent_check,
-        .effect = Effect::Query,
+        .summary  = "Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat "
+                    "sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz.",
+        .run      = &run_extent_check,
+        .effect   = Effect::Query,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

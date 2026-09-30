@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: Turkish-correct text handling.
+// PiriCAD — core: Turkish-correct text handling.
 //
 // std::toupper / std::tolower are BANNED on Turkish text: they map
 // 'i' -> 'I' and 'I' -> 'i', which is wrong in Turkish ('i' -> 'İ', 'ı' -> 'I').
@@ -11,7 +11,7 @@
 #include <string>
 #include <string_view>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Turkish-aware UTF-8 upper-casing, restricted to ASCII + the six Turkish pairs.
 ///
@@ -77,4 +77,4 @@ constexpr std::uint64_t fnv1a_int(std::int64_t v, std::uint64_t seed)
     return h;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

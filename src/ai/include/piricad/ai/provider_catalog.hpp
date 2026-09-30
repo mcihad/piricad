@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: what the vendors offer, as DATA rather than as C++ literals.
+// PiriCAD — ai: what the vendors offer, as DATA rather than as C++ literals.
 //
 // WHY THIS FILE EXISTS. The endpoints and model ids of two dozen model vendors
 // are the fastest-rotting facts in this program: a model id is renamed in a
@@ -27,10 +27,10 @@
 // of a provider whose key has not been entered yet.
 #pragma once
 
-#include "kentos_cad/ai/provider.hpp"
-#include "kentos_cad/ai/transport.hpp"
+#include "piricad/ai/provider.hpp"
+#include "piricad/ai/transport.hpp"
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -39,7 +39,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// One model a vendor serves.
 struct CatalogModel
@@ -195,4 +195,4 @@ std::optional<HttpRequest> model_list_request(const ProviderProfile& profile,
 /// that cannot be filled falls back to the catalogue, and the caller says so.
 std::vector<std::string> parse_model_list(ModelListShape shape, std::string_view body);
 
-} // namespace kentos::ai
+} // namespace piricad::ai

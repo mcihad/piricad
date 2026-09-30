@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/script/python_runner.hpp"
+#include "piricad/script/python_runner.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 #include "python_impl.hpp"
 
 #include <pybind11/embed.h>
@@ -18,7 +18,7 @@
 
 namespace py = pybind11;
 
-namespace kentos::script {
+namespace piricad::script {
 namespace {
 
 using core::ErrorCode;
@@ -182,7 +182,7 @@ void PythonRunner::Impl::flush_out()
     out_buffer.clear();
 }
 
-/// Builds the `kentos.cad` module for THIS runner.
+/// Builds the `piricad.cad` module for THIS runner.
 ///
 /// Built at run time from lambdas that capture `this`, and not with
 /// `PYBIND11_EMBEDDED_MODULE`: that macro registers a module for the process and
@@ -193,14 +193,14 @@ py::object PythonRunner::Impl::build_module()
 {
     py::object module_type = py::module_::import("types").attr("ModuleType");
 
-    py::object package = module_type("kentos");
-    py::object cad     = module_type("kentos.cad");
+    py::object package = module_type("piricad");
+    py::object cad     = module_type("piricad.cad");
 
     // THE DRAWING'S OWN READS LIVE ON A SECOND OBJECT, `cad.doc`. The reason is
     // written out at the reads themselves: the top level of `cad` belongs to the
     // projection, and anything hand-written up there is a collision waiting for
     // the command that happens to share its name.
-    py::object doc = module_type("kentos.cad.doc");
+    py::object doc = module_type("piricad.cad.doc");
 
     package.attr("cad")     = cad;
     package.attr("__all__") = py::make_tuple("cad");
@@ -431,19 +431,19 @@ core::Result<RunReport> PythonRunner::run_text(std::string_view source, std::str
             py::object package = impl_->build_module();
             py::object cad     = package.attr("cad");
 
-            // Registered so `import kentos.cad` and `from kentos import cad`
+            // Registered so `import piricad.cad` and `from piricad import cad`
             // resolve, then ALSO handed to the script's own globals, so a one-line
             // script needs no import at all. A one-liner typed at an evaluator
             // should not have to open with an import.
-            py::dict modules          = py::module_::import("sys").attr("modules");
-            modules["kentos"]         = package;
-            modules["kentos.cad"]     = cad;
-            modules["kentos.cad.doc"] = cad.attr("doc");
+            py::dict modules           = py::module_::import("sys").attr("modules");
+            modules["piricad"]         = package;
+            modules["piricad.cad"]     = cad;
+            modules["piricad.cad.doc"] = cad.attr("doc");
 
             py::dict globals;
             globals["__builtins__"] = py::module_::import("builtins");
-            globals["__name__"]     = py::str("__kentos_script__");
-            globals["kentos"]       = package;
+            globals["__name__"]     = py::str("__piricad_script__");
+            globals["piricad"]      = package;
             globals["cad"]          = cad;
 
             // `print()` LANDS ON THE COMMAND LINE rather than on a stdout nobody
@@ -653,4 +653,4 @@ void install(command::Bus& bus, JsonRunner& json, PythonRunner& python)
     install_snippet(bus, python);
 }
 
-} // namespace kentos::script
+} // namespace piricad::script

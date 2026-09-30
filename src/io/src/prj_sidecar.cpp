@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "prj_sidecar.hpp"
 
-#ifdef KENTOS_HAVE_GDAL
+#ifdef PIRICAD_HAVE_GDAL
 #include <cpl_conv.h>
 #include <cpl_error.h>
 #include <ogr_spatialref.h>
@@ -13,7 +13,7 @@
 #include <system_error>
 #include <utility>
 
-namespace kentos::io {
+namespace piricad::io {
 
 using core::err;
 using core::ErrorCode;
@@ -63,7 +63,7 @@ std::string remove_stale_prj(const std::string& path)
            "metre diye etiketlerdi.";
 }
 
-#ifdef KENTOS_HAVE_GDAL
+#ifdef PIRICAD_HAVE_GDAL
 
 namespace {
 
@@ -166,7 +166,7 @@ core::Result<std::string> prj_sidecar_crs(const std::string& path)
 {
     (void)path;
     return err(ErrorCode::Unsupported,
-               ".prj dosyası bu yapıda çözülemez (KENTOS_WITH_GDAL=OFF); çizimin kendi "
+               ".prj dosyası bu yapıda çözülemez (PIRICAD_WITH_GDAL=OFF); çizimin kendi "
                "sistemi kullanıldı.");
 }
 
@@ -174,9 +174,9 @@ core::Result<std::string> write_prj_sidecar(const std::string& path, const std::
 {
     (void)path;
     (void)crs_id;
-    return err(ErrorCode::Unsupported, ".prj dosyası bu yapıda yazılamaz (KENTOS_WITH_GDAL=OFF).");
+    return err(ErrorCode::Unsupported, ".prj dosyası bu yapıda yazılamaz (PIRICAD_WITH_GDAL=OFF).");
 }
 
 #endif
 
-} // namespace kentos::io
+} // namespace piricad::io

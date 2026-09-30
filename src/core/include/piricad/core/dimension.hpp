@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: dimensions and leaders.
+// PiriCAD — core: dimensions and leaders.
 //
 // A DIMENSION shows a measurement: two definition points, a dimension line, two
 // extension lines, two arrowheads and the measured text. What is STORED is the
@@ -15,11 +15,11 @@
 // one, is a separate text entity, as it is in every CAD format.
 #pragma once
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -30,7 +30,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// What a dimension measures, numbered as DXF group 70's low bits so a file
 /// round-trips its type without a table.
@@ -389,4 +389,4 @@ void leader_outline(const RingGeometry& geom, std::uint32_t slot, EmitBuffer& in
 /// for `Open`, one oblique stroke for `Tick`. Shared by dimensions and leaders.
 void arrowhead_outline(Point2 tip, Point2 from, Mm size, ArrowStyle style, EmitBuffer& into);
 
-} // namespace kentos::core
+} // namespace piricad::core

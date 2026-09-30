@@ -5,7 +5,7 @@
 // formality. Constitution Article 1.2 makes the mouse one client among equals: if
 // a rubber-band drag reached the selection directly, a script and the AI would
 // have no way to say "the parcels inside this box", and `secimi_al()` in
-// kentoscad.md §5.1 would have nothing to read. So the drag builds the same
+// piricad.md §5.1 would have nothing to read. So the drag builds the same
 // invocation the command line builds, and both take the bus.
 //
 // It carries `UndoPolicy::None` and `Flags::ReadOnly`, exactly as `core.mode` and
@@ -17,23 +17,23 @@
 // Identity is `EntityKey` throughout (R44). A key survives a save, a reorder and
 // a reload; a dense slot does not, and a selection that silently shifted by one
 // after a compaction would delete the neighbouring parcel.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/select_modes.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/select_modes.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <array>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 using core::EntityKey;
@@ -774,7 +774,7 @@ Task<void> run_select(Context& ctx)
     if (bus.on_selection_changed) bus.on_selection_changed();
 
     // The RESOLVED selection is recorded, not the gesture that produced it, so
-    // every client's run reads the same however it aimed (kentoscad.md §2.2).
+    // every client's run reads the same however it aimed (piricad.md §2.2).
     ctx.record("mod", Value::text(mode_name(mode)));
     // The layer NAME is recorded, not the slot it resolved to: a slot is an
     // index into this document's table and means nothing in a replay against
@@ -831,7 +831,7 @@ std::span<const SelectModeInfo> select_modes()
     return offered;
 }
 
-KENTOS_COMMAND(select)
+PIRICAD_COMMAND(select)
 {
     return CommandSpec{
         .id       = "core.select",
@@ -879,7 +879,7 @@ KENTOS_COMMAND(select)
         .summary = "Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, "
                    "daire, kutunun dışı, önceki seçim, son nesne, tek nokta, bir noktayı içeren "
                    "alan ya da noktadan geçen çizgiler.",
-        .run = &run_select,
+        .run     = &run_select,
         // NOT A QUERY, THOUGH IT WRITES NOTHING. A changed highlight changes
         // what the next SİL deletes, so it is treated as an edit to the thing
         // the next edit will act on — which is also why it is closed to agents.
@@ -887,4 +887,4 @@ KENTOS_COMMAND(select)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

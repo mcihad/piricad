@@ -327,7 +327,7 @@ sayfasından ya da [`TERCİH`](preference.md) ile verirsiniz.
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
 | `Aracı sunucusu bu yapıda bağlı değil; uygulama içinden çalıştırın.` | Komut, dinleyici bağlı olmayan bir ortamda çalıştı (başsız çalıştırma, betik koşucusu, test) | Uygulama içinden çalıştırın |
-| `Bu yapıda MCP sunucusu yok (KENTOS_WITH_MCP kapalı).` | Yapı MCP dinleyicisi olmadan derlenmiş | Dinleyicisi olan bir yapı kullanın |
+| `Bu yapıda MCP sunucusu yok (PIRICAD_WITH_MCP kapalı).` | Yapı MCP dinleyicisi olmadan derlenmiş | Dinleyicisi olan bir yapı kullanın |
 | `Bu proje hassas işaretli: MCP sunucusu başlatılmaz. Ayarı Seçenekler ▸ Yapay Zeka Modelleri sayfasından değiştirebilirsiniz.` | Projenin `core.ai.hassas` ayarı açık | Karar size ait: ya proje hassas kalır ve sunucu açılmaz, ya ayarı değiştirirsiniz |
 | `MCP sunucusu <port> portunda açılamadı: <sebep>. Başka bir port deneyin: MCPSUNUCU islem=baslat port=<numara>` | Port başka bir program tarafından tutuluyor ya da işletim sistemi izin vermedi | Başka bir port verin |
 | `MCP sunucusu porta bağlanamadı.` | Dinleyici kuruldu ama HTTP sunucusu porta bağlanamadı | Sunucuyu yeniden başlatın; sürerse portu değiştirin |
@@ -341,7 +341,7 @@ sayfasından ya da [`TERCİH`](preference.md) ile verirsiniz.
 | `Sunucu kapalı; sınanacak bir bağlantı yok. Açmak için: MCPSUNUCU islem=baslat` | `sina`, kapalı sunucuya verildi | Önce başlatın |
 | `Sunucu 2 saniyede cevap vermedi (127.0.0.1:<port>). Sunucuyu durdurup yeniden başlatmayı deneyin.` | Dinleyici açık görünüyor ama cevap vermiyor | Durdurup yeniden başlatın |
 | `Sunucu açık ama belirteci kabul etmedi (401). Ayarlar sayfasındaki adresi yeniden kopyalayın.` | Adresteki belirteç dinleyicinin istediği belirteç değil | Adresi sayfadan yeniden kopyalayın |
-| `127.0.0.1:<port> cevap verdi ama bu bir KentOSCad MCP sunucusu değil. Portu başka bir program kullanıyor olabilir.` | O portta başka bir program var | Başka bir port verin |
+| `127.0.0.1:<port> cevap verdi ama bu bir PiriCAD MCP sunucusu değil. Portu başka bir program kullanıyor olabilir.` | O portta başka bir program var | Başka bir port verin |
 | `'core.mcp': 'port' 1024 ile 65535 arasında olmalı, 80 geldi.` | Port aralığın dışında — bu ret **betikten** geldiğinde, komut gövdesi hiç çalışmadan verilir | 1024–65535 arasında bir port yazın |
 | `MCP sunucusu 80 portunda açılamadı: The address is protected. Başka bir port deneyin: MCPSUNUCU islem=baslat port=<numara>` | Aynı port **komut satırından** verildiğinde işi işletim sistemi reddeder: 1024'ün altı ayrıcalıklıdır | 1024'ün üstünde bir port yazın |
 | `'core.mcp': 'port' parametresi tam sayı bekliyor. Girilen: 'abc'` | Komut satırına sayı olmayan bir port yazıldı | Tam sayı yazın |

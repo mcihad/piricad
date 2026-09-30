@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Entity kinds (.claude/model.md R22–R26) and attribute columns (R27–R29).
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
 
 #include <array>
 #include <span>
 #include <string>
 #include <vector>
 
-using namespace kentos::core;
+using namespace piricad::core;
 
 namespace {
 
@@ -134,18 +134,18 @@ TEST_CASE("builtin_kinds her çağrıda aynı tabloyu verir")
 TEST_CASE("eksik ya da çakışan tür bildirimi reddedilir")
 {
     KindTable t;
-    CHECK(t.add(kentos_kind_polyline()).ok());
+    CHECK(t.add(piricad_kind_polyline()).ok());
 
     // Same id twice.
-    CHECK(!t.add(kentos_kind_polyline()).ok());
+    CHECK(!t.add(piricad_kind_polyline()).ok());
 
-    KindSpec renamed = kentos_kind_polyline();
+    KindSpec renamed = piricad_kind_polyline();
     renamed.id       = 2;
     // Names still collide, and a name that resolves to two kinds makes the
     // command line ambiguous.
     CHECK(!t.add(renamed).ok());
 
-    KindSpec missing_fn = kentos_kind_polyline();
+    KindSpec missing_fn = piricad_kind_polyline();
     missing_fn.id       = 3;
     missing_fn.names[0] = "TEST_TÜR";
     missing_fn.names[1] = nullptr;
@@ -156,7 +156,7 @@ TEST_CASE("eksik ya da çakışan tür bildirimi reddedilir")
     CHECK(!st.ok());
     CHECK_EQ(static_cast<int>(st.error().code), static_cast<int>(ErrorCode::InvalidArgument));
 
-    KindSpec no_stable_id  = kentos_kind_polyline();
+    KindSpec no_stable_id  = piricad_kind_polyline();
     no_stable_id.id        = 4;
     no_stable_id.stable_id = "";
     CHECK(!t.add(no_stable_id).ok());
@@ -168,7 +168,7 @@ TEST_CASE("KindSpec ek alanlara açık kalır")
 {
     // The leading size field is what makes the record additive-only across a
     // later ABI boundary (.claude/plugin-api.md).
-    CHECK_EQ(kentos_kind_polyline().size, static_cast<std::uint32_t>(sizeof(KindSpec)));
+    CHECK_EQ(piricad_kind_polyline().size, static_cast<std::uint32_t>(sizeof(KindSpec)));
 }
 
 TEST_CASE("çokluçizgi türü sınır kutusunu ve alanı geometriyle aynı hesaplar")

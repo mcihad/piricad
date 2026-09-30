@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/colour.hpp"
+#include "piricad/command/colour.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <array>
 #include <charconv>
 #include <string>
 #include <string_view>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 constexpr std::array<NamedColour, 9> kNamed{{
@@ -85,4 +85,4 @@ std::string_view colour_word(std::uint32_t rgba) noexcept
     return {};
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

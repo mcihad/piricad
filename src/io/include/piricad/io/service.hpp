@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: the file engine, plugged into the command bus.
+// PiriCAD — io: the file engine, plugged into the command bus.
 //
 // WHY THIS SEAM EXISTS, stated once so nobody has to rediscover it.
 //
 // Constitution Article 3.2 makes `io -> command` one-way: /src/io may include
 // /src/command, and /src/command may never include /src/io. But io.md R4 also
 // requires every import and export to be a command registered in `Registry`, and
-// the registry, the CLI help, the AI schema and `kentos_docgen` all live in
+// the registry, the CLI help, the AI schema and `piricad_docgen` all live in
 // /src/command. A command whose factory lived in /src/io would be invisible to
 // docgen, and `docs/komutlar/referans.md` is generated from the registry
 // (CLAUDE.md 5.18) — so the reference would silently lose the file commands.
@@ -22,11 +22,11 @@
 // answer BETİK gives without a script engine.
 #pragma once
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/io/vector.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/io/vector.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -35,7 +35,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// What one READ-ONLY look at an import file found: which layers it holds, how
 /// many entities each would produce, and what the reader wants to say about it.
@@ -147,7 +147,7 @@ public:
 
     /// The MIME type the payload is offered under. Named here so the app and any
     /// test agree on one string rather than two spellings of it.
-    static constexpr const char* kClipboardMime = "application/x-kentoscad-project";
+    static constexpr const char* kClipboardMime = "application/x-piricad-project";
 
     /// Where a clipboard payload lives when the caller named no file: one path
     /// per user, so two windows of this program share a clipboard and a crash
@@ -256,4 +256,4 @@ private:
     std::stop_source stop_;
 };
 
-} // namespace kentos::io
+} // namespace piricad::io

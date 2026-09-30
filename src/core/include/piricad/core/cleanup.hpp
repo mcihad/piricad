@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: what a drawing holds twice, or holds for nothing.
+// PiriCAD — core: what a drawing holds twice, or holds for nothing.
 //
 // NONE OF IT IS VISIBLE, ALL OF IT IS FOUND LATER (TODOS C-09). A DXF brought
 // in twice, a parcel digitised on top of itself, a line a double click left at
@@ -19,8 +19,8 @@
 // test is exact and the same on every machine (§7.3).
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/geometry.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/geometry.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -28,7 +28,7 @@
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// What is redundant about an object.
 enum class RedundancyKind : std::uint8_t {
@@ -77,4 +77,4 @@ bool same_attributes(const Document& doc, EntityId a, EntityId b);
 /// Whether `e` carries any attribute value at all.
 bool has_attributes(const Document& doc, EntityId e);
 
-} // namespace kentos::core
+} // namespace piricad::core

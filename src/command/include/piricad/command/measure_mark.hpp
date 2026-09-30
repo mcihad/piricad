@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: what a measurement leaves on the canvas once it has answered.
+// PiriCAD — command: what a measurement leaves on the canvas once it has answered.
 //
 // A MEASUREMENT THAT VANISHES IS A MEASUREMENT TAKEN TWICE. ÖLÇ, ALANÖLÇ,
 // AÇIÖLÇ and KOORDİNAT answered in the transcript and left the canvas as it was,
@@ -15,13 +15,13 @@
 // command's words and its report.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
+#include "piricad/core/geometry.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// One measurement, as the canvas draws it.
 struct MeasureMark
@@ -43,4 +43,4 @@ struct MeasureMark
     std::vector<std::string> labels;  ///< see `Shape`, in the user's language and units
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

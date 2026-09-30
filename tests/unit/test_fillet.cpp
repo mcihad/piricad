@@ -6,18 +6,18 @@
 // tangent points lie on both, and it sits in the corner the picks name — never
 // the one across from it. Every expected value below is a closed form a
 // surveyor can check by hand, asserted to the millimetre rounding allows.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/corner.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/fillet.hpp"
-#include "kentos_cad/core/pick.hpp"
+#include "piricad/core/corner.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/fillet.hpp"
+#include "piricad/core/pick.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-using namespace kentos::core;
+using namespace piricad::core;
 
 namespace {
 
@@ -278,15 +278,15 @@ TEST_CASE("C-06: köşe önizlemesinin baytları gidip gelir, bozuğu reddedilir
 // YUVARLA and PAH between two objects, and on every corner of a run
 // =============================================================================
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/document.hpp"
 
 namespace {
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 struct Rig
 {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: bringing a face to a WANTED AREA.
+// PiriCAD — core: bringing a face to a WANTED AREA.
 //
 // A surveyor is handed a parcel and a figure: the tapu says 1 250,00 m² and the
 // drawing says 1 248,71. The correction is not "draw it again" but "move this
@@ -17,9 +17,9 @@
 // writes the result; nothing here reads or writes a document.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Which part of the face moves.
 enum class AreaEditMode : std::uint8_t {
@@ -112,4 +112,4 @@ Result<std::vector<Point2>> area_edit_apply(const std::vector<Point2>& ring,
 /// integers so the printed figure is the stored one rounded (Article 2.4).
 std::string format_square_metres(Mm2 area);
 
-} // namespace kentos::core
+} // namespace piricad::core

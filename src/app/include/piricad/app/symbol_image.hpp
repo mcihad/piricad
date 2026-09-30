@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: an embedded symbol picture, decoded.
+// PiriCAD — app: an embedded symbol picture, decoded.
 //
 // MPYY publishes part of its symbology as PICTURES — a hatch for `orman`, a glyph
 // for `cami`, a line type for `il sınırı` — and 161 of the annex's 1 574 symbol
@@ -17,7 +17,7 @@
 #include <cstddef>
 #include <span>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// Decodes an embedded picture at the size it will be drawn.
 ///
@@ -33,4 +33,4 @@ namespace kentos::app {
 /// than one per frame.
 QImage decode_symbol_image(std::span<const std::byte> bytes, int wanted_px);
 
-} // namespace kentos::app
+} // namespace piricad::app

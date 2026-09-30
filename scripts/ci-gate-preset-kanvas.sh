@@ -3,7 +3,7 @@
 #
 # GATE: the sanctioned presets DEMAND the full canvas, they do not hope for it.
 #
-# WHAT WENT WRONG WITHOUT THIS. `KENTOS_WITH_RHI` and `KENTOS_WITH_TEXT` default
+# WHAT WENT WRONG WITHOUT THIS. `PIRICAD_WITH_RHI` and `PIRICAD_WITH_TEXT` default
 # to ON *where their toolchain is found* — a probe, and a probe that fails is
 # silent by construction. So a fresh checkout on a machine missing Qt Shader
 # Tools or HarfBuzz configured happily, built happily, ran happily, and drew no
@@ -13,7 +13,7 @@
 # A build that cannot draw text is not a build of this program. So `dev`, `debug`,
 # `release` and `asan` set both to ON explicitly, which turns the silent
 # degradation into the hard error `src/app/CMakeLists.txt` and
-# `cmake/KentOSCadDependencies.cmake` already write — with the apt, dnf, brew and
+# `cmake/PiriCADDependencies.cmake` already write — with the apt, dnf, brew and
 # vcpkg names in it.
 #
 # `headless` is the exception and it is a real one: it builds no application and
@@ -21,8 +21,8 @@
 # FreeType there would add a dependency to the one preset whose whole point is
 # not having any.
 #
-# THE ESCAPE IS STILL THERE, and it has to be: `-DKENTOS_WITH_RHI=OFF` or
-# `-DKENTOS_WITH_TEXT=OFF` on the command line still overrides a preset. What is
+# THE ESCAPE IS STILL THERE, and it has to be: `-DPIRICAD_WITH_RHI=OFF` or
+# `-DPIRICAD_WITH_TEXT=OFF` on the command line still overrides a preset. What is
 # gone is getting there by accident.
 set -euo pipefail
 
@@ -64,7 +64,7 @@ PY
 }
 
 for preset in dev debug release asan; do
-    for option in KENTOS_WITH_RHI KENTOS_WITH_TEXT; do
+    for option in PIRICAD_WITH_RHI PIRICAD_WITH_TEXT; do
         got="$(deger "$preset" "$option")"
         if [[ "$got" != "ON" ]]; then
             echo "preset-kanvas: '$preset' ön ayarı $option değerini ON istemiyor" >&2
@@ -79,7 +79,7 @@ done
 
 # And the exception stays an exception: headless says OFF out loud rather than
 # inheriting a demand it cannot meet.
-for option in KENTOS_WITH_RHI KENTOS_WITH_TEXT; do
+for option in PIRICAD_WITH_RHI PIRICAD_WITH_TEXT; do
     got="$(deger headless "$option")"
     if [[ "$got" != "OFF" ]]; then
         echo "preset-kanvas: 'headless' ön ayarı $option için OFF demiyor (bulunan: '${got:-yok}')" >&2
@@ -92,7 +92,7 @@ done
 # The failure the demand produces has to be ACTIONABLE, or the demand only moves
 # the confusion from run time to configure time.
 for needle in "qt6-shadertools-dev" "libharfbuzz-dev" "freetype-devel" "brew install freetype"; do
-    if ! grep -rqF -- "$needle" "$kok/src/app/CMakeLists.txt" "$kok/cmake/KentOSCadDependencies.cmake"; then
+    if ! grep -rqF -- "$needle" "$kok/src/app/CMakeLists.txt" "$kok/cmake/PiriCADDependencies.cmake"; then
         echo "preset-kanvas: eksik bağımlılık mesajında '$needle' geçmiyor" >&2
         fail=1
     fi

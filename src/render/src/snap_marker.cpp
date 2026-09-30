@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/render/snap_marker.hpp"
+#include "piricad/render/snap_marker.hpp"
 
-#include "kentos_cad/core/snap.hpp"
+#include "piricad/core/snap.hpp"
 
-namespace kentos::render {
+namespace piricad::render {
 namespace {
 
 MarkerRun run_of(std::initializer_list<ScreenPointF> points, bool closed)
@@ -15,7 +15,7 @@ MarkerRun run_of(std::initializer_list<ScreenPointF> points, bool closed)
 
 Marker snap_marker(std::uint32_t mode, float x, float y, float h)
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     Marker m;
     switch (mode) {
@@ -157,4 +157,4 @@ Marker snap_marker(std::uint32_t mode, float x, float y, float h)
     return m;
 }
 
-} // namespace kentos::render
+} // namespace piricad::render

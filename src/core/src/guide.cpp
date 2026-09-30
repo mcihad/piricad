@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/guide.hpp"
+#include "piricad/core/guide.hpp"
 
 #include <cstdlib>
 
-namespace kentos::core {
+namespace piricad::core {
 
 GuideRow GuideStore::row(std::size_t i) const
 {
@@ -100,4 +100,4 @@ bool GuideStore::any_angled() const noexcept
     return false;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

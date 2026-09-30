@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: moving objects into and out of a block definition.
+// PiriCAD — command: moving objects into and out of a block definition.
 //
 // Three verbs cross the line between the sheet and a definition, and each
 // crossing is said once, here, so the three agree (TODOS C-13):
@@ -13,16 +13,16 @@
 //     (`refresh_references`).
 #pragma once
 
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/core/block.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/transform.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/core/block.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/transform.hpp"
 
 #include <cstddef>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// What one member became when a reference's placement made it a drawing
 /// object, and which of the reference's gifts it took.
@@ -85,4 +85,4 @@ core::Result<core::EntityId> place_reference(Context& ctx, core::Point2 at,
 /// definition — up to date with what it draws now. How many boxes changed.
 core::Result<std::size_t> refresh_references(Context& ctx, core::BlockId block);
 
-} // namespace kentos::command
+} // namespace piricad::command

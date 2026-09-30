@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: validation.
+// PiriCAD — command: validation.
 //
-// kentoscad.md §2.6: topology checks, regulatory rules and geometry validity run ON
+// piricad.md §2.6: topology checks, regulatory rules and geometry validity run ON
 // THE COMMAND BUS, not in the UI. It must be impossible for the AI or a script to
 // skip a rule. The rule engine itself is data-driven (§9.9, §15).
 #pragma once
 
-#include "kentos_cad/command/input.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/command/input.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/core/document.hpp"
 
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// Everything a rule needs to judge one invocation.
 ///
@@ -74,4 +74,4 @@ private:
     std::vector<std::shared_ptr<Rule>> rules_;
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

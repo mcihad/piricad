@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io (internal): the `.prj` companion of a coordinate-less format.
+// PiriCAD — io (internal): the `.prj` companion of a coordinate-less format.
 //
 // A DXF has no slot for a coordinate system (io.md R20 would make the format
 // unimportable without one), so the convention every GIS in the country follows
@@ -9,17 +9,17 @@
 // header of its own and not a corner of either.
 #pragma once
 
-#include "kentos_cad/core/crs.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/crs.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 
-#ifdef KENTOS_HAVE_GDAL
+#ifdef PIRICAD_HAVE_GDAL
 class OGRSpatialReference;
 #endif
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// The identifier (`EPSG:5256`, or the system's name when it has no authority
 /// code) of the coordinate system the `.prj` beside `path` names. `NotFound` when
@@ -40,7 +40,7 @@ std::string prj_sidecar_path(const std::string& path);
 /// very mistake `dxf_prj_withheld` withholds a new one to avoid.
 std::string remove_stale_prj(const std::string& path);
 
-#ifdef KENTOS_HAVE_GDAL
+#ifdef PIRICAD_HAVE_GDAL
 /// `srs` as a `core::Crs` named `id` and carrying what its coordinates COUNT —
 /// metres, degrees or something else — so the one message
 /// (`core::crs_unit_problem`) can speak for a file as it does for a setting.
@@ -61,4 +61,4 @@ std::string dxf_prj_withheld(core::DrawingUnit unit);
 /// another" the way `AYAR` does: it says how to bring the file into metres.
 core::Status file_crs_holds_metres(const core::Crs& crs, const std::string& where);
 
-} // namespace kentos::io
+} // namespace piricad::io

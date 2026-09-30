@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: object snap, ortho and polar tracking.
+// PiriCAD — core: object snap, ortho and polar tracking.
 //
 // A snap engine takes an AIM — wherever the user, the script or the model pointed
 // — and returns the point they meant. It is the difference between a drawing that
@@ -8,7 +8,7 @@
 //
 // THE ENGINE DOES NOT KNOW WHERE THE AIM CAME FROM. There is no mouse in this
 // header, no view, no widget: an aim is a `Point2` and a tolerance is a distance.
-// kentoscad.md §2.4 makes that the most critical detail of the architecture, and it
+// piricad.md §2.4 makes that the most critical detail of the architecture, and it
 // is what lets the same snap apply to a mouse click, a typed coordinate, a script
 // argument and an AI-produced point without one line of branching.
 //
@@ -16,7 +16,7 @@
 // SCREEN PIXELS (core.yakalama.tolerans), because a user aims at what they can
 // see: at 1:1000 a 12-pixel aperture is metres, at 1:10 it is centimetres. The
 // pixels-to-millimetres conversion needs a view scale, so it happens one layer up
-// (`kentos_cad/command/aids.hpp`). A caller with no view — a headless replay, a
+// (`piricad/command/aids.hpp`). A caller with no view — a headless replay, a
 // batch job — passes radius 0, and object snap is then inert by construction
 // rather than by a client check.
 //
@@ -36,13 +36,13 @@
 // already on the grid rounds to itself, a point already on an axis stays on it.
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Forward-declared: the engine searches a document, and core headers avoid
 /// including one another where a declaration will do.
@@ -181,8 +181,8 @@ enum SnapMode : std::uint32_t {
     /// no view still has its marks. Putting it here would switch it off for every
     /// caller that left `radius` at zero.
     SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapCentroid | SnapIntersection |
-                     SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel |
-                     SnapApparent | SnapGuide | SnapInsertion | SnapQuadrant | SnapTangent,
+        SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel | SnapApparent |
+        SnapGuide | SnapInsertion | SnapQuadrant | SnapTangent,
 
     /// The modes that look BEYOND the aperture, because the point they build is
     /// not where the geometry that implies it is. They are the only reason
@@ -203,7 +203,7 @@ enum SnapMode : std::uint32_t {
 /// transcript, the generated documentation and the canvas marker table.
 const char* snap_mode_id(std::uint32_t single_bit);
 
-/// Turkish label of ONE mode bit — "uç nokta", "orta nokta" (kentoscad.md §13).
+/// Turkish label of ONE mode bit — "uç nokta", "orta nokta" (piricad.md §13).
 const char* snap_mode_label(std::uint32_t single_bit);
 
 /// Every declared bit, low to high, terminated by SnapNone. Iterating this is how
@@ -332,4 +332,4 @@ Point2 apply_ortho(Point2 base, Point2 p) noexcept;
 /// keeping its distance from `base`. This is kutupsal izleme.
 Point2 apply_polar(Point2 base, Point2 p, std::int64_t step_udeg) noexcept;
 
-} // namespace kentos::core
+} // namespace piricad::core

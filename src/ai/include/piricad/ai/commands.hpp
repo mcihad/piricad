@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the read tools, and they are COMMANDS.
+// PiriCAD — ai: the read tools, and they are COMMANDS.
 //
 // WHY COMMANDS RATHER THAN AN AI-ONLY API. `.claude/ai.md` R11 names six read
 // tools and says context "MUST be supplied only through queryable read tools".
@@ -22,11 +22,11 @@
 // (dispatcher.hpp).
 #pragma once
 
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/command/registry.hpp"
 
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// Registers the read tools on `registry`.
 ///
@@ -59,4 +59,4 @@ command::CommandSpec provider_command_spec();
 
 } // namespace detail
 
-} // namespace kentos::ai
+} // namespace piricad::ai

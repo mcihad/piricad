@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/command/registry.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <numeric>
 
-namespace kentos::command {
+namespace piricad::command {
 
 core::Status Registry::add(CommandSpec spec)
 {
@@ -126,7 +126,7 @@ std::uint64_t Registry::fingerprint() const
     std::sort(sorted.begin(), sorted.end(),
               [this](std::size_t a, std::size_t b) { return specs_[a].id < specs_[b].id; });
 
-    std::uint64_t h = core::fnv1a("kentos.ai.catalog");
+    std::uint64_t h = core::fnv1a("piricad.ai.catalog");
     for (const std::size_t at : sorted) {
         const CommandSpec* spec = &specs_[at];
         h                       = core::fnv1a(spec->id, h);
@@ -212,4 +212,4 @@ Registry& registry()
     return r;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

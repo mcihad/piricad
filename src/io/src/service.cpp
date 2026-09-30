@@ -1,28 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/io/service.hpp"
+#include "piricad/io/service.hpp"
 
-#include "kentos_cad/command/external_ref.hpp"
+#include "piricad/command/external_ref.hpp"
 
-#include "kentos_cad/core/transform.hpp"
+#include "piricad/core/transform.hpp"
 
-#include "kentos_cad/command/journal.hpp"
+#include "piricad/command/journal.hpp"
 
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/command/registry.hpp"
 
-#include "kentos_cad/io/dwg.hpp"
-#include "kentos_cad/io/dxf.hpp"
-#include "kentos_cad/io/ncz.hpp"
+#include "piricad/io/dwg.hpp"
+#include "piricad/io/dxf.hpp"
+#include "piricad/io/ncz.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
-#include "kentos_cad/io/point_list.hpp"
+#include "piricad/io/point_list.hpp"
 
 #include "adopt.hpp"
 #include "qgis_style.hpp"
 
-#include "kentos_cad/io/project.hpp"
-#include "kentos_cad/io/staging.hpp"
-#include "kentos_cad/io/vector.hpp"
+#include "piricad/io/project.hpp"
+#include "piricad/io/staging.hpp"
+#include "piricad/io/vector.hpp"
 
 #include "xref.hpp"
 
@@ -32,7 +32,7 @@
 #include <string>
 #include <utility>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 using core::err;
@@ -499,7 +499,7 @@ std::string FileService::default_clipboard_path()
     // crash leaves the payload behind rather than losing it. Not the OS
     // clipboard: that is the window layer's job and it is `/src/app`'s, because
     // `/src/io` links no Qt (Article 3.2).
-    return (std::filesystem::temp_directory_path() / "kentoscad-pano.pcad").string();
+    return (std::filesystem::temp_directory_path() / "piricad-pano.pcad").string();
 }
 
 core::Result<std::string> FileService::clipboard_copy(std::string path,
@@ -858,8 +858,8 @@ command::Task<core::Result<std::string>> FileService::xref(command::FileRequest 
     if (block != core::kNoBlock) {
         const core::BlockDef& def = doc.blocks().at(block);
         const bool live_same      = command::is_external_reference(doc, block) &&
-                               std::filesystem::path(def.path).lexically_normal() ==
-                                   std::filesystem::path(file).lexically_normal();
+                                    std::filesystem::path(def.path).lexically_normal() ==
+                                        std::filesystem::path(file).lexically_normal();
         if (live_same) {
             if (request.resolved_block != nullptr) *request.resolved_block = def.name;
             co_return "'" + def.name +
@@ -923,7 +923,7 @@ FileService::import_into(command::Transaction* tx, command::Session* session, st
     if (is_project_path(path))
         co_return err(ErrorCode::InvalidArgument,
                       "'" + path +
-                          "' bir KentOSCad proje dosyası. Proje dosyası açılır, içe aktarılmaz: "
+                          "' bir PiriCAD proje dosyası. Proje dosyası açılır, içe aktarılmaz: "
                           "AÇ komutunu kullanın.");
 
     ImportOptions options;
@@ -974,7 +974,7 @@ FileService::import_into(command::Transaction* tx, command::Session* session, st
     // carries the count with the first reason, the unit that was used and every
     // type that was read, degraded or left out.
     const ImportOutcome& r = outcome.value();
-    std::string said       = "İçe aktarıldı: " + std::to_string(r.entities) + " nesne, " +
+    std::string said = "İçe aktarıldı: " + std::to_string(r.entities) + " nesne, " +
                        std::to_string(r.layers) + " katman (" + r.driver + ", " + r.crs + ")" +
                        r.diagnostics.transcript();
     for (const std::string& n : adopted.value().notes)
@@ -991,7 +991,7 @@ command::Task<core::Result<std::string>> FileService::export_out(command::Sessio
     if (is_project_path(path))
         co_return err(ErrorCode::InvalidArgument,
                       "'" + path +
-                          "' bir KentOSCad proje dosyası uzantısı taşıyor. Proje kaydetmek için "
+                          "' bir PiriCAD proje dosyası uzantısı taşıyor. Proje kaydetmek için "
                           "FARKLIKAYDET kullanın.");
 
     const std::string target = path;
@@ -1034,8 +1034,8 @@ command::Task<core::Result<std::string>> FileService::export_out(command::Sessio
                 std::string(dxf_backend_available() ? "." : " ve bu yapıda libdxfrw kapalı."));
     }
 
-    const core::Document& doc           = bus_.document();
-    core::Result<DxfReport> dxf_written = err(ErrorCode::Internal, "Dışa aktarma başlamadı.");
+    const core::Document& doc                 = bus_.document();
+    core::Result<DxfReport> dxf_written       = err(ErrorCode::Internal, "Dışa aktarma başlamadı.");
     core::Result<VectorReport> vector_written = err(ErrorCode::Internal, "Dışa aktarma başlamadı.");
     command::Job job;
     job.label = "Dışa aktarılıyor: " + std::filesystem::path(target).filename().string();
@@ -1085,7 +1085,7 @@ FileService::import_points(command::Transaction* tx, std::string path, bool swap
     // second column.
     const core::AttrTable& table = tx->document().attributes();
     const auto column            = [&](const char* id, const char* label,
-                            core::AttrType type) -> core::Result<core::AttrId> {
+                                       core::AttrType type) -> core::Result<core::AttrId> {
         if (const core::AttrId found = table.find(id); found != core::kNoAttr) return found;
 
         core::AttrSpec spec;
@@ -1223,4 +1223,4 @@ core::Result<std::string> FileService::export_points(std::string path, bool swap
     return std::to_string(points.size()) + " nokta yazıldı: " + path;
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

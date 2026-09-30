@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // AGPL rather than GPL for the reason `jsonrpc.hpp` states: this is part of a
 // server component, and CLAUDE.md Article 2.1 puts those under AGPLv3.
-#include "kentos_cad/ai/jsonrpc.hpp"
+#include "piricad/ai/jsonrpc.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -97,4 +97,4 @@ Json rpc_notification(std::string method, Json params)
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

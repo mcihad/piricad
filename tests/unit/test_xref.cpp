@@ -10,21 +10,21 @@
 //   * a missing source does not keep the drawing from opening;
 //   * a project folder carried elsewhere finds its references by relative path
 //     and by name beside it.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/external_ref.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/block.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/geodesy/transform.hpp"
-#include "kentos_cad/io/format.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/external_ref.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/block.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/geodesy/transform.hpp"
+#include "piricad/io/format.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -34,8 +34,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 
 namespace {
@@ -111,7 +111,7 @@ class TempDir
 public:
     explicit TempDir(const char* tag)
     {
-        path_ = fs::temp_directory_path() / (std::string("kentoscad-xref-") + tag);
+        path_ = fs::temp_directory_path() / (std::string("piricad-xref-") + tag);
         std::error_code ec;
         fs::remove_all(path_, ec);
         fs::create_directories(path_, ec);
@@ -454,7 +454,7 @@ TEST_CASE("DIŞREFERANS: kılavuz sayfasının örnekleri yazıldığı gibi ça
         neighbour.run("DIŞAAKTAR \"" + tmp.file("komsu.dxf") + "\"");
     }
 
-    std::ifstream page(std::string(KENTOS_DOCS_DIR) + "/komutlar/xref.md");
+    std::ifstream page(std::string(PIRICAD_DOCS_DIR) + "/komutlar/xref.md");
     REQUIRE(page.good());
     std::vector<std::string> lines;
     std::vector<std::pair<std::size_t, std::string>> expected; ///< after which line
@@ -496,7 +496,7 @@ TEST_CASE("DIŞREFERANS: kılavuz sayfasının örnekleri yazıldığı gibi ça
     Rig scripted;
     scripted.run("AYAR core.crs.id " + crs);
     scripted.run("FARKLIKAYDET \"" + tmp.file("betik.pcad") + "\"");
-    std::ifstream again(std::string(KENTOS_DOCS_DIR) + "/komutlar/xref.md");
+    std::ifstream again(std::string(PIRICAD_DOCS_DIR) + "/komutlar/xref.md");
     std::stringstream whole;
     whole << again.rdbuf();
     const std::string text = whole.str();
@@ -709,7 +709,8 @@ TEST_CASE("DIŞREFERANS: DXF'teki dış referans bloğu adıyla söylenir, boş 
     // the block and its XREF flag but not its path (group 1), so the block
     // arrives empty — and the import says so, by name, instead of leaving a
     // block that draws nothing to look like one that should.
-    const fs::path seed = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "dxf" / "28-dis-referans-blogu.dxf";
+    const fs::path seed =
+        fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "dxf" / "28-dis-referans-blogu.dxf";
     REQUIRE(fs::exists(seed));
     Rig r;
     r.run("AYAR core.crs.id EPSG:5254");
@@ -730,7 +731,7 @@ TEST_CASE("DIŞREFERANS: Netcad NCZ çizimin sisteminde okunur, İÇEAKTAR gibi;
     // a TM39 drawing's base map was "carried" 250 km from TM36.
     if (!domain::geodesy::Transform::available()) return; // PROJ off in this build
     const std::string source =
-        (std::filesystem::path(KENTOS_FUZZ_DIR) / "tohum" / "ncz" / "01-her-tur.ncz").string();
+        (std::filesystem::path(PIRICAD_FUZZ_DIR) / "tohum" / "ncz" / "01-her-tur.ncz").string();
 
     Rig linked(true);
     linked.run("AYAR core.crs.id EPSG:5257");

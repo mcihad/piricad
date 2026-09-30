@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/preview.hpp"
+#include "piricad/command/preview.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/pick.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/pick.hpp"
 
 #include <algorithm>
 #include <array>
 #include <string_view>
 #include <utility>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 using core::ErrorCode;
@@ -245,7 +245,7 @@ std::string describe_preview(const Preview& p)
         out += " Uygulanırsa bütünüyle geri alınacak; çizim değişmedi.";
     } else {
         const std::string would = describe_changes(p.changes, ChangeTense::Would);
-        out                     = "Önizleme: " + std::to_string(p.steps) + " adım" +
+        out = "Önizleme: " + std::to_string(p.steps) + " adım" +
               (would.empty() ? std::string(" — uygulanırsa çizimde bir şey değişmeyecek")
                              : " — uygulanırsa " + would);
         out += ". Çizim değişmedi.";
@@ -326,4 +326,4 @@ void answer_preview(Context& ctx, const Preview& p, bool with_shapes)
     ctx.report(preview_json(p, with_shapes));
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

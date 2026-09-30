@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // core.erase (SİL), core.undo (GERİAL), core.redo (YİNELE)
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 // `nesneler` carries persistent KEYS, not dense slots.
@@ -138,7 +138,7 @@ Task<void> run_redo(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(erase)
+PIRICAD_COMMAND(erase)
 {
     return CommandSpec{
         .id       = "core.erase",
@@ -146,7 +146,7 @@ KENTOS_COMMAND(erase)
         .title    = "Sil",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Silinecek nesnelerin kimlikleri; yoksa etkin seçim"}
+                           "Silinecek nesnelerin kimlikleri; yoksa etkin seçim"}
                          .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -157,7 +157,7 @@ KENTOS_COMMAND(erase)
 
 // GERİAL and YİNELE walk the command journal rather than editing the document
 // themselves, so they are marked ReadOnly: they must never become an undo step.
-KENTOS_COMMAND(undo)
+PIRICAD_COMMAND(undo)
 {
     return CommandSpec{
         .id       = "core.undo",
@@ -175,7 +175,7 @@ KENTOS_COMMAND(undo)
     };
 }
 
-KENTOS_COMMAND(redo)
+PIRICAD_COMMAND(redo)
 {
     return CommandSpec{
         .id       = "core.redo",
@@ -191,4 +191,4 @@ KENTOS_COMMAND(redo)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

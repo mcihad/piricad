@@ -19,25 +19,25 @@
 // flag the approval gate reads, and it is narrower than `ReadOnly` on purpose —
 // `core.undo`, `core.save` and `core.export` are all `ReadOnly` and none of them
 // is safe to hand an agent unattended.
-#include "kentos_cad/ai/catalog.hpp"
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/ai/job_templates.hpp"
+#include "piricad/ai/catalog.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/ai/job_templates.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/log.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/log.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/grips.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/grips.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -45,7 +45,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using command::Arity;
@@ -219,9 +219,9 @@ Task<void> run_query(Context& ctx)
             ++reported;
             const core::Box2 box = entities.box_of(e);
             extent               = have_extent ? core::Box2{std::min(extent.min_x, box.min_x),
-                                              std::min(extent.min_y, box.min_y),
-                                              std::max(extent.max_x, box.max_x),
-                                              std::max(extent.max_y, box.max_y)}
+                                                            std::min(extent.min_y, box.min_y),
+                                                            std::max(extent.max_x, box.max_x),
+                                                            std::max(extent.max_y, box.max_y)}
                                                : box;
             have_extent          = true;
         }
@@ -345,8 +345,8 @@ std::optional<core::Point2> face_centroid(const core::RingGeometry& geom, core::
 Task<void> run_object_points(Context& ctx)
 {
     const core::Document& doc = ctx.document();
-    const std::string asked   = ctx.argument("tur").as_text().empty() ? std::string("merkez")
-                                                                      : ctx.argument("tur").as_text();
+    const std::string asked = ctx.argument("tur").as_text().empty() ? std::string("merkez")
+                                                                    : ctx.argument("tur").as_text();
     // Named, highlighted, or ASKED FOR. The Sorgu menu's entry used to answer
     // "zorunlu 'nesneler' parametresi eksik" even with objects highlighted,
     // because the command read only its argument and was not interactive — so
@@ -861,8 +861,8 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .params   = {},
         .undo     = UndoPolicy::None,
         .flags    = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler.",
-        .run = &run_layers,
+        .summary  = "Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler.",
+        .run      = &run_layers,
     });
 
     specs.push_back(CommandSpec{
@@ -897,10 +897,10 @@ std::vector<CommandSpec> detail::read_tool_specs()
                                      "En çok kaç nesne bildirileceği; varsayılan 200")
                     .en("limit"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir.",
-        .run = &run_query,
+        .run     = &run_query,
     });
 
     specs.push_back(CommandSpec{
@@ -932,12 +932,12 @@ std::vector<CommandSpec> detail::read_tool_specs()
                               "köşeleri ya da kenar ortaları; varsayılan merkez")
                     .en("which"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable |
-                 Flags::AiAccessible,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable |
+                   Flags::AiAccessible,
         .summary = "Nesnelerin merkezini, köşelerini, uçlarını, kutusunu ya da kenar ortalarını "
                    "bildirir; bir ajan bunları yeni çizimin taban noktası olarak kullanır.",
-        .run = &run_object_points,
+        .run     = &run_object_points,
     });
 
     specs.push_back(CommandSpec{
@@ -948,9 +948,9 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .params   = {},
         .undo     = UndoPolicy::None,
         .flags    = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini "
-                   "bildirir.",
-        .run = &run_view_info,
+        .summary  = "Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini "
+                    "bildirir.",
+        .run      = &run_view_info,
     });
 
     specs.push_back(CommandSpec{
@@ -961,11 +961,11 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .params   = {},
         .undo     = UndoPolicy::None,
         .flags    = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat "
-                   "sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, "
-                   "seçili nesneler ve görünüm. Özet verir, döküm değil.",
-        .run    = &run_context,
-        .effect = command::Effect::Query,
+        .summary  = "Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat "
+                    "sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, "
+                    "seçili nesneler ve görünüm. Özet verir, döküm değil.",
+        .run      = &run_context,
+        .effect   = command::Effect::Query,
     });
 
     specs.push_back(CommandSpec{
@@ -986,9 +986,9 @@ std::vector<CommandSpec> detail::read_tool_specs()
                                      "sayısı her hâlde bildirilir")
                     .en("limit"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable |
-                 Flags::AiAccessible,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable |
+                   Flags::AiAccessible,
         .summary = "Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın "
                    "eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını "
                    "söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.",
@@ -1009,9 +1009,9 @@ std::vector<CommandSpec> detail::read_tool_specs()
                 Param::text("sablon", Arity::optional(), "Şablonun kimliği; goster için gerekir")
                     .en("template"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable |
-                 Flags::AiAccessible,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable |
+                   Flags::AiAccessible,
         .summary = "Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut "
                    "satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç "
                    "yüzeyinden gönderilir ve yazan her adım yine öneri olur.",
@@ -1022,4 +1022,4 @@ std::vector<CommandSpec> detail::read_tool_specs()
     return specs;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

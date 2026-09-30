@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the active selection.
+// PiriCAD — command: the active selection.
 //
 // .claude/model.md R43: selection is NOT document state. It never touches
 // `content_hash()`, it never touches `revision()`, and changing it is never
@@ -21,12 +21,12 @@
 // two different journal lines from one user action.
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
+#include "piricad/core/identity.hpp"
 
 #include <cstdint>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 class Selection
 {
@@ -61,4 +61,4 @@ private:
     std::uint64_t revision_{0};
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

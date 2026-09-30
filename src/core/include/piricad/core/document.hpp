@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the document model.
+// PiriCAD — core: the document model.
 //
 // Built on .claude/model.md. The three tiers, and the frame path only ever
 // touches tier 1:
@@ -16,25 +16,25 @@
 // reach them through a Transaction, which the command bus owns (Article 1).
 #pragma once
 
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/block.hpp"
-#include "kentos_cad/core/crs.hpp"
-#include "kentos_cad/core/dash_store.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/foreign_table.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/guide.hpp"
-#include "kentos_cad/core/hatch_link.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/image_store.hpp"
-#include "kentos_cad/core/layer.hpp"
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/lineage.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/block.hpp"
+#include "piricad/core/crs.hpp"
+#include "piricad/core/dash_store.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/foreign_table.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/guide.hpp"
+#include "piricad/core/hatch_link.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/image_store.hpp"
+#include "piricad/core/layer.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/lineage.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -44,7 +44,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The STR-packed R-tree the document rebuilds lazily; see spatial_index.hpp.
 class SpatialIndex;
@@ -142,7 +142,7 @@ struct Op
         DetachForeign,      ///< entity, str_arg (the tag)
         SetAttachment,      ///< entity, has_attach, attach_arg — what it followed before
         SetDimensionLinks,  ///< entity, bytes_arg — the links it had before (encode_dim_links)
-        SetHatchLinks, ///< entity, bytes_arg — the sources it had before (encode_hatch_links)
+        SetHatchLinks,      ///< entity, bytes_arg — the sources it had before (encode_hatch_links)
 
         /// The WHOLE guide list, restored as it was.
         ///
@@ -923,4 +923,4 @@ Symbol layer_symbol(const Document& doc, LayerId layer);
 /// carries the ByLayer sentinel.
 Symbol drawn_symbol(const Document& doc, EntityId e);
 
-} // namespace kentos::core
+} // namespace piricad::core

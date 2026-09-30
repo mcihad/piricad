@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: transaction and undo.
+// PiriCAD — command: transaction and undo.
 //
-// kentoscad.md §2.5:
+// piricad.md §2.5:
 //   * one command  = one undo step (default)
 //   * one script block or one AI suggestion = ONE merged undo step
 //   * a validation failure inside a transaction = full rollback, no partial apply
 //   * a half-applied edit on cadastral or zoning data is never acceptable
 #pragma once
 
-#include "kentos_cad/command/changes.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/command/changes.hpp"
+#include "piricad/core/document.hpp"
 
 #include <algorithm>
 #include <span>
@@ -17,7 +17,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 using core::Appearance;
 using core::Document;
@@ -583,4 +583,4 @@ private:
     std::vector<UndoEntry> redo_;
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

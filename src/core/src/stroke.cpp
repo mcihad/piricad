@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/stroke.hpp"
+#include "piricad/core/stroke.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/spline.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/spline.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::int64_t kQuarterTurn = kUDegFullCircle / 4;
@@ -294,4 +294,4 @@ bool stroke_curve(KindId kind, const RingGeometry& geom, std::uint32_t slot, Mm 
     return false;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

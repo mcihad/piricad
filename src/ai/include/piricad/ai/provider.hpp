@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: which model, on which machine, spoken to in which dialect.
+// PiriCAD — ai: which model, on which machine, spoken to in which dialect.
 //
 // ONE ABSTRACTION, FOUR WIRE LANGUAGES. `.claude/ai.md` R13 requires llama.cpp,
 // an in-institution vLLM/Ollama server and a cloud API to sit behind ONE provider
@@ -26,8 +26,8 @@
 // make one. A panel that forgot the check cannot compile a call.
 #pragma once
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -37,7 +37,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// Which wire language an endpoint speaks. The set is closed on purpose: it is
 /// the number of genuinely different protocols, and a new vendor that speaks one
@@ -414,4 +414,4 @@ private:
     std::string default_;
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

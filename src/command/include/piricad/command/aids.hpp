@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the input aids, and where they are applied.
+// PiriCAD — command: the input aids, and where they are applied.
 //
 // An "input aid" is anything that moves a point the user aimed at to the point
 // they meant: object snap, `dik mod`, `kutupsal izleme` and `ızgaraya yakalama`.
 // The
-// engine lives in `kentos_cad/core/snap.hpp` and knows no client; this file is the
+// engine lives in `piricad/core/snap.hpp` and knows no client; this file is the
 // seam that gives it a tolerance and a document.
 //
 // WHY IT IS HERE AND NOT IN THE CANVAS. Constitution Article 1.2 makes the GUI
@@ -35,20 +35,20 @@
 // against a document that has since grown a nearer vertex.
 #pragma once
 
-#include "kentos_cad/command/input.hpp"
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/core/snap.hpp"
+#include "piricad/command/input.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/core/snap.hpp"
 
 #include <cstdint>
 #include <span>
 
-namespace kentos::core {
+namespace piricad::core {
 /// Forward-declared: the aids read a document to snap against, and this header
 /// must stay includable from anywhere in /src/command.
 class Document;
-} // namespace kentos::core
+} // namespace piricad::core
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// The aid settings as numbers the engine can use, resolved from the two stores
 /// that own them. Assembled in one place so no caller reads a setting id twice.
@@ -169,4 +169,4 @@ bool aimed_from_origin(const Prompt& p) noexcept;
 /// (`RubberShape::Trim`): the click names a piece, not a point.
 AidSettings aids_for(const AidSettings& set, const Prompt& p);
 
-} // namespace kentos::command
+} // namespace piricad::command

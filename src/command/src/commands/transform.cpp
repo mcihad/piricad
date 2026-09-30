@@ -16,27 +16,27 @@
 // `Transaction::set_geometry`, so the key, the layer, the style, the attributes
 // and the text stay with the object: a parsel moved onto its correct station is
 // the same parsel, with the same ada/parsel numbers (model.md R4, R28).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/transform_edit.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/transform_edit.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/transform.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/transform.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <array>
@@ -47,7 +47,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// `Xform` AND ITS APPLICATION MOVED TO `core` (core/transform.hpp), because the
@@ -1403,7 +1403,7 @@ core::Result<core::EntityId> clone_entity(Context& ctx, core::EntityId slot, con
     return clone_one(ctx, slot, x, onto);
 }
 
-KENTOS_COMMAND(move)
+PIRICAD_COMMAND(move)
 {
     return CommandSpec{
         .id       = "core.move",
@@ -1426,7 +1426,7 @@ KENTOS_COMMAND(move)
     };
 }
 
-KENTOS_COMMAND(copy_objects)
+PIRICAD_COMMAND(copy_objects)
 {
     return CommandSpec{
         .id       = "core.copy",
@@ -1451,7 +1451,7 @@ KENTOS_COMMAND(copy_objects)
     };
 }
 
-KENTOS_COMMAND(array_objects)
+PIRICAD_COMMAND(array_objects)
 {
     return CommandSpec{
         .id       = "core.array",
@@ -1513,7 +1513,7 @@ KENTOS_COMMAND(array_objects)
     };
 }
 
-KENTOS_COMMAND(rotate)
+PIRICAD_COMMAND(rotate)
 {
     return CommandSpec{
         .id       = "core.rotate",
@@ -1548,15 +1548,15 @@ KENTOS_COMMAND(rotate)
                                "yerinde kalır")
                     .en("copy"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Seçilen nesneleri bir merkez etrafında döndürür; açı verilir, gösterilir ya "
                    "da bir referans doğrultudan bulunur.",
-        .run = &run_rotate,
+        .run     = &run_rotate,
     };
 }
 
-KENTOS_COMMAND(scale)
+PIRICAD_COMMAND(scale)
 {
     return CommandSpec{
         .id       = "core.scale",
@@ -1596,15 +1596,15 @@ KENTOS_COMMAND(scale)
                                "yerinde kalır")
                     .en("copy"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit "
                    "olmayan ölçek, referans uzunlukla ölçek.",
-        .run = &run_scale,
+        .run     = &run_scale,
     };
 }
 
-KENTOS_COMMAND(mirror)
+PIRICAD_COMMAND(mirror)
 {
     return CommandSpec{
         .id       = "core.mirror",
@@ -1630,4 +1630,4 @@ KENTOS_COMMAND(mirror)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

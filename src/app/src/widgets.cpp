@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/app/datagrid.hpp"
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/app/expression_edit.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/datagrid.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/app/expression_edit.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/tokens.hpp"
 
 #include <algorithm>
 
@@ -29,7 +29,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 // `bileşen_standardı.png`, measured: "yarıçap 4 px · kenar #363D43", a 14 px
@@ -254,7 +254,7 @@ void Button::refreshIcon()
     QColor ink = t.textDim;
     if (role_ == ButtonRole::Primary) ink = t.onAccent;
     if (role_ == ButtonRole::Danger) ink = t.danger;
-    setIcon(kentos::app::icon(*glyph_, ink, t.accentHi, kIconPx));
+    setIcon(piricad::app::icon(*glyph_, ink, t.accentHi, kIconPx));
 }
 
 void Button::applyTheme(ThemeMode mode)
@@ -1241,7 +1241,7 @@ namespace {
 /// THE WORDS ARE BUILT WITH `QCoreApplication::translate`, not handed out as
 /// `const char*` for a caller to `tr()`. `tr(variable)` is invisible to
 /// `lupdate`, so a table of raw pointers would have quietly kept four visible
-/// strings out of `kentos_tr.ts` and out of Article 6.9's reach.
+/// strings out of `piricad_tr.ts` and out of Article 6.9's reach.
 struct SpeakerFace
 {
     QString who;
@@ -1252,7 +1252,7 @@ struct SpeakerFace
 SpeakerFace faceOf(Speaker speaker)
 {
     const auto say = [](const char* text) {
-        return QCoreApplication::translate("kentos::app::MessageBubble", text);
+        return QCoreApplication::translate("piricad::app::MessageBubble", text);
     };
     switch (speaker) {
     case Speaker::Person: return {say("Siz"), QString(), Tone::Neutral};
@@ -1263,7 +1263,7 @@ SpeakerFace faceOf(Speaker speaker)
     // on screen without it.
     case Speaker::Model: return {say("Model"), say("ÖNERİ"), Tone::Accent};
     case Speaker::ToolResult: return {say("Araç"), say("SONUÇ"), Tone::Neutral};
-    case Speaker::Notice: return {say("KentOSCad"), QString(), Tone::Warn};
+    case Speaker::Notice: return {say("PiriCAD"), QString(), Tone::Warn};
     }
     return {QString(), QString(), Tone::Neutral};
 }
@@ -2125,7 +2125,7 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
         auto* date         = new FormRow(
             QStringLiteral("Tarih"),
             shown(field(dateSpec, QStringLiteral("2019-03-14"), FieldState::Normal, std::nullopt),
-                          "girdi", "tarih"),
+                  "girdi", "tarih"),
             sheet);
 
         grid->addWidget(plain, 0, 0);
@@ -2404,4 +2404,4 @@ QStringList componentSheetInventory(QWidget* sheet)
     return out;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

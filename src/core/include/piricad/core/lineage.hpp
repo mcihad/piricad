@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: where a derived object came from (TODOS F-02).
+// PiriCAD — core: where a derived object came from (TODOS F-02).
 //
 // AN ANALYSIS RESULT KNOWS ITS ORIGIN. A buffer drawn round a well, the two
 // parcels an ifraz made of one, the piece a trim left, the boundary SINIR found
@@ -39,8 +39,8 @@
 // holds it once; each object's row names it.
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <map>
@@ -49,7 +49,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The document the checks read.
 class Document;
@@ -182,4 +182,4 @@ std::vector<std::uint8_t> encode_lineage(const Lineage* origin);
 /// are not what the encoder writes.
 Result<Lineage> decode_lineage(std::span<const std::uint8_t> bytes);
 
-} // namespace kentos::core
+} // namespace piricad::core

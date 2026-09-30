@@ -6,7 +6,7 @@
 # WHY THIS GATE EXISTS.
 #
 # `docs/nesneler/destek-matrisi.md` answers "what does each editing command do to
-# each kind" — and it answers it by RUNNING them (`kentos_kapsam`): one fresh
+# each kind" — and it answers it by RUNNING them (`piricad_kapsam`): one fresh
 # document per cell, the entity made through the commands a user types, the edit
 # run through the same bus, the result classified. A table like that is only
 # worth anything while it matches the program, so this regenerates it and fails
@@ -36,13 +36,13 @@ fi
 
 tool=""
 for candidate in dev release debug asan; do
-    if [[ -x "$root/build/$candidate/bin/kentos_kapsam" ]]; then
-        tool="$root/build/$candidate/bin/kentos_kapsam"
+    if [[ -x "$root/build/$candidate/bin/piricad_kapsam" ]]; then
+        tool="$root/build/$candidate/bin/piricad_kapsam"
         break
     fi
 done
 if [[ -z "$tool" ]]; then
-    echo "kapsam: kentos_kapsam derlenmemiş; destek matrisi doğrulanamadı." >&2
+    echo "kapsam: piricad_kapsam derlenmemiş; destek matrisi doğrulanamadı." >&2
     echo "kapsam:   Önce derleyin (make build). Atlayan bir tazelik denetimi hiç koşmamış demektir." >&2
     exit 1
 fi
@@ -50,7 +50,7 @@ fi
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
 if ! "$tool" "$scratch/matris.md" "$root" "$scratch/is" >/dev/null 2>"$scratch/hata"; then
-    echo "kapsam: kentos_kapsam çalışmadı:" >&2
+    echo "kapsam: piricad_kapsam çalışmadı:" >&2
     cat "$scratch/hata" >&2
     exit 1
 fi

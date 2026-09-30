@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the drawn shape of one entity.
+// PiriCAD — core: the drawn shape of one entity.
 //
 // `curve_outline` (entity_kind.hpp) answers for a KIND over the geometry alone,
 // which is all a circle, an arc or an ellipse needs. Some shapes need the
@@ -11,10 +11,10 @@
 // agree (model.md R22).
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The out-of-line half of `entity_outline`, for a kind that is not a polyline.
 bool curve_entity_outline(const Document& doc, EntityId e, EmitBuffer& into);
@@ -37,4 +37,4 @@ inline bool entity_outline(const Document& doc, EntityId e, EmitBuffer& into)
     return curve_entity_outline(doc, e, into);
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

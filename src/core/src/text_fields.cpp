@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/text_fields.hpp"
+#include "piricad/core/text_fields.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/dimension.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/dimension.hpp"
 
 #include <algorithm>
 #include <optional>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// The figure a `#` name measures, or nothing for a name that is not one.
@@ -81,4 +81,4 @@ bool has_fields(std::string_view format)
     return open != std::string_view::npos && format.find('}', open + 1) != std::string_view::npos;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

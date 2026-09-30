@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: drafting guides.
+// PiriCAD — core: drafting guides.
 //
 // The infinite construction line a drafter pulls off a ruler: a horizontal or
 // vertical line at a fixed coordinate that the cursor snaps to and the plot never
@@ -29,13 +29,13 @@
 // construction line it cannot represent.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Which way a guide runs.
 ///
@@ -145,4 +145,4 @@ private:
     std::vector<std::uint8_t> rays_;
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -29,25 +29,25 @@
 // style unless told otherwise (`ozellik=aktif`), the source's attribute values
 // unless told otherwise (`oznitelik=aktarma`), and the source stays unless told
 // otherwise (`kaynak=sil`).
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/path_edit.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/path_edit.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/parallel.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/parallel.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 core::JoinStyle join_from(const std::string& word)
@@ -147,7 +147,7 @@ Task<void> run(Context& ctx)
         guide.rubber_shape   = RubberShape::Parallel;
         const core::Box2 box = doc.entities().box_of(slots.front());
         guide.rubber_origin  = core::Point2{box.min_x + (box.max_x - box.min_x) / 2,
-                                           box.min_y + (box.max_y - box.min_y) / 2};
+                                            box.min_y + (box.max_y - box.min_y) / 2};
         core::ParallelPreview preview{.keys = {}, .distance = reach, .join = join};
         for (const core::EntityId e : slots)
             preview.keys.push_back(static_cast<std::int64_t>(core::raw(doc.key_of(e))));
@@ -297,7 +297,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(offset)
+PIRICAD_COMMAND(offset)
 {
     return CommandSpec{
         .id       = "core.offset",
@@ -350,4 +350,4 @@ KENTOS_COMMAND(offset)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

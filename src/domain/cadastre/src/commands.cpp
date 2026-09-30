@@ -1,27 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/domain/cadastre/commands.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
 
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/spec.hpp"
 
-namespace kentos::command {
-KENTOS_COMMAND(merge);
-KENTOS_COMMAND(split_parcel);
-KENTOS_COMMAND(split_area);
-KENTOS_COMMAND(topology);
-} // namespace kentos::command
+namespace piricad::command {
+PIRICAD_COMMAND(merge);
+PIRICAD_COMMAND(split_parcel);
+PIRICAD_COMMAND(split_area);
+PIRICAD_COMMAND(topology);
+} // namespace piricad::command
 
-namespace kentos::domain::cadastre {
+namespace piricad::domain::cadastre {
 
-void register_cadastre_commands(kentos::command::Registry& r)
+void register_cadastre_commands(piricad::command::Registry& r)
 {
     // These sit here rather than in the builtin X-macro list because that list
     // lives in `/src/command`, which may not depend on a domain module
     // (CLAUDE.md Article 3.2).
-    (void)r.add(kentos::command::kentos_command_merge());
-    (void)r.add(kentos::command::kentos_command_split_parcel());
-    (void)r.add(kentos::command::kentos_command_split_area());
-    (void)r.add(kentos::command::kentos_command_topology());
+    (void)r.add(piricad::command::piricad_command_merge());
+    (void)r.add(piricad::command::piricad_command_split_parcel());
+    (void)r.add(piricad::command::piricad_command_split_area());
+    (void)r.add(piricad::command::piricad_command_topology());
 }
 
-} // namespace kentos::domain::cadastre
+} // namespace piricad::domain::cadastre

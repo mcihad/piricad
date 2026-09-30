@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// What the ribbon's tool drive (`KENTOS_TOOL_DRIVE`, main_window_drive.cpp)
+// What the ribbon's tool drive (`PIRICAD_TOOL_DRIVE`, main_window_drive.cpp)
 // found, each held here so it stays found: a tool pressed and answered the
 // way a hand would must do its work, or say in words the user can act on why
 // it cannot — never a sentence about a parameter the user never saw.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/processing/registry.hpp"
 
 #include <string>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

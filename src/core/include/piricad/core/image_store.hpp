@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the raster images a drawing carries with it.
+// PiriCAD — core: the raster images a drawing carries with it.
 //
 // WHY A DRAWING EMBEDS ITS PICTURES INSTEAD OF POINTING AT THEM.
 //
@@ -30,7 +30,7 @@
 // links nothing).
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -40,7 +40,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The encodings a drawing may carry.
 ///
@@ -153,4 +153,4 @@ private:
     std::size_t total_bytes_{0};
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

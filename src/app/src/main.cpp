@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — application entry point.
-#include "kentos_cad/app/attribute_panel.hpp"
-#include "kentos_cad/app/command_line.hpp"
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/import_wizard.hpp"
-#include "kentos_cad/app/layout_designer.hpp"
-#include "kentos_cad/app/layout_render.hpp"
-#include "kentos_cad/app/main_window.hpp"
-#include "kentos_cad/app/map_canvas.hpp"
-#include "kentos_cad/app/panels.hpp"
-#include "kentos_cad/app/print_dialog.hpp"
-#include "kentos_cad/app/provider_dialog.hpp"
-#include "kentos_cad/app/ribbon.hpp"
-#include "kentos_cad/app/settings_dialog.hpp"
-#include "kentos_cad/app/suggestion_card.hpp"
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/widgets.hpp"
-#include "kentos_cad/command/log.hpp"
-#include "kentos_cad/core/circle.hpp"
+// PiriCAD — application entry point.
+#include "piricad/app/attribute_panel.hpp"
+#include "piricad/app/command_line.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/import_wizard.hpp"
+#include "piricad/app/layout_designer.hpp"
+#include "piricad/app/layout_render.hpp"
+#include "piricad/app/main_window.hpp"
+#include "piricad/app/map_canvas.hpp"
+#include "piricad/app/panels.hpp"
+#include "piricad/app/print_dialog.hpp"
+#include "piricad/app/provider_dialog.hpp"
+#include "piricad/app/ribbon.hpp"
+#include "piricad/app/settings_dialog.hpp"
+#include "piricad/app/suggestion_card.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/widgets.hpp"
+#include "piricad/command/log.hpp"
+#include "piricad/core/circle.hpp"
 
 #include <csignal>
 
@@ -29,11 +29,11 @@
 #if __has_include(<execinfo.h>)
 #include <execinfo.h>
 #include <unistd.h>
-#define KENTOS_HAVE_BACKTRACE 1
+#define PIRICAD_HAVE_BACKTRACE 1
 #endif
 #endif
-#ifndef KENTOS_HAVE_BACKTRACE
-#define KENTOS_HAVE_BACKTRACE 0
+#ifndef PIRICAD_HAVE_BACKTRACE
+#define PIRICAD_HAVE_BACKTRACE 0
 #endif
 
 #include <QAbstractItemView>
@@ -75,16 +75,9 @@
 
 namespace {
 
-/// A window's picture, WITH the canvas frame in it.
-///
-/// `QWidget::grab()` walks the widget tree through the BACKING STORE, and a
-/// `QRhiWidget` has nothing there: its frame lives on the GPU. A plain window grab
-/// of a GPU build therefore comes out with a hole exactly where the drawing is —
-/// which is what made a frame dump report an empty canvas on a canvas that was
-/// drawing correctly. So the canvas is asked for its own frame and composited in.
 /// Moves this user's settings, config and data from the program's former name.
 ///
-/// The program was called KentOSCad until Faz 0 and Qt derives every per-user path
+/// The program was called KentOSCad until this rename, and Qt derives every per-user path
 /// from the application and organisation names — the settings file, the config
 /// directory the style designer writes a saved gösterim into, and the data
 /// directory the autosave uses. Renaming without this would not lose the files,
@@ -125,27 +118,34 @@ void migrate_user_data()
     };
 
     const QStringList from = paths_under("KentOSCad", "KentOSCad");
-    const QStringList to   = paths_under("KentOSCad", "KentOSCad");
+    const QStringList to   = paths_under("PiriCAD", "PiriCAD");
 
     for (int i = 0; i < from.size() && i < to.size(); ++i) {
         if (from[i].isEmpty() || to[i].isEmpty() || from[i] == to[i]) continue;
         if (!QFileInfo::exists(from[i]) || QFileInfo::exists(to[i])) continue;
 
         // The parent has to exist before a rename into it, and on a fresh machine
-        // it does not: nothing has written a KentOSCad path yet.
+        // it does not: nothing has written a PiriCAD path yet.
         QDir().mkpath(QFileInfo(to[i]).absolutePath());
         if (QFile::rename(from[i], to[i]))
-            (void)std::fprintf(stderr, "[kentoscad] taşındı: %s -> %s\n",
+            (void)std::fprintf(stderr, "[piricad] taşındı: %s -> %s\n",
                                from[i].toUtf8().constData(), to[i].toUtf8().constData());
     }
 }
 
+/// A window's picture, WITH the canvas frame in it.
+///
+/// `QWidget::grab()` walks the widget tree through the BACKING STORE, and a
+/// `QRhiWidget` has nothing there: its frame lives on the GPU. A plain window grab
+/// of a GPU build therefore comes out with a hole exactly where the drawing is —
+/// which is what made a frame dump report an empty canvas on a canvas that was
+/// drawing correctly. So the canvas is asked for its own frame and composited in.
 QImage window_shot(QWidget* subject)
 {
     QImage shot = subject->grab().toImage();
     if (shot.isNull()) return shot;
 
-    auto* canvas = subject->findChild<kentos::app::MapCanvas*>();
+    auto* canvas = subject->findChild<piricad::app::MapCanvas*>();
     if (canvas == nullptr || !canvas->isVisible()) return shot;
 
     const QImage frame = canvas->grabCanvas();
@@ -171,11 +171,11 @@ QImage window_shot(QWidget* subject)
 /// than into a string. The default handler is restored and the signal re-raised,
 /// so the process still dies the way the system expects and a core file is still
 /// written.
-extern "C" void kentos_crash_handler(int signal_number)
+extern "C" void piricad_crash_handler(int signal_number)
 {
-#if KENTOS_HAVE_BACKTRACE
+#if PIRICAD_HAVE_BACKTRACE
     static const char banner[] =
-        "\n[kentos] ÇÖKME. Aşağıdaki yığın izini hata bildirimine ekleyin.\n";
+        "\n[piricad] ÇÖKME. Aşağıdaki yığın izini hata bildirimine ekleyin.\n";
     // The result is discarded on purpose and the cast is not enough for GCC: a
     // handler that branched on a failed write would be a handler doing more work
     // inside a signal, which is the one thing it must not do.
@@ -202,7 +202,7 @@ extern "C" void kentos_crash_handler(int signal_number)
 void install_crash_handler()
 {
     for (const int sig : {SIGSEGV, SIGABRT, SIGBUS, SIGFPE, SIGILL})
-        (void)std::signal(sig, &kentos_crash_handler);
+        (void)std::signal(sig, &piricad_crash_handler);
 }
 
 } // namespace
@@ -243,15 +243,15 @@ int main(int argc, char** argv)
     // path — see `migrate_user_data` above.
     migrate_user_data();
 
-    QApplication::setApplicationName(QStringLiteral("KentOSCad"));
-    QApplication::setApplicationVersion(QStringLiteral(KENTOS_VERSION));
+    QApplication::setApplicationName(QStringLiteral("PiriCAD"));
+    QApplication::setApplicationVersion(QStringLiteral(PIRICAD_VERSION));
 
     // EVERY WINDOW'S ICON, and on Linux the task bar's: the bundle and the
     // executable carry their own for the system, and this is the one Qt hands
     // to each window it opens (`scripts/uygulama-simgesi.py` makes it).
     QApplication::setWindowIcon(QIcon(QStringLiteral(":/brand/packaging/icon/piricad-1024.png")));
-    QApplication::setOrganizationName(QStringLiteral("KentOSCad"));
-    QApplication::setOrganizationDomain(QStringLiteral("kentoscad.org"));
+    QApplication::setOrganizationName(QStringLiteral("PiriCAD"));
+    QApplication::setOrganizationDomain(QStringLiteral("piricad.org"));
 
     // FUSION, ON EVERY PLATFORM, BEFORE THE FIRST WIDGET EXISTS.
     //
@@ -268,22 +268,22 @@ int main(int argc, char** argv)
     // "Please instantiate the QApplication object first" and dies on the next
     // line. Before the first widget is still required, which is why they sit
     // here rather than lower down.
-    kentos::app::installShellStyle();
+    piricad::app::installShellStyle();
 
     QString fontDir;
-    if (!kentos::app::loadShellFonts(&fontDir)) {
-        qWarning("KentOSCad: IBM Plex yüklenemedi (%s). Arayüz bu makinede tasarlandığı gibi "
-                 "görünmeyecek; KENTOS_DATA ile veri dizinini gösterin.",
+    if (!piricad::app::loadShellFonts(&fontDir)) {
+        qWarning("PiriCAD: IBM Plex yüklenemedi (%s). Arayüz bu makinede tasarlandığı gibi "
+                 "görünmeyecek; PIRICAD_DATA ile veri dizinini gösterin.",
                  fontDir.toUtf8().constData());
     }
 
     // Turkish is the source language. Case conversion of user-visible text goes
     // through QLocale, never std::toupper — 'i' upper-cases to 'İ', not 'I'
-    // (kentoscad.md §13).
+    // (piricad.md §13).
     QLocale::setDefault(QLocale(QLocale::Turkish, QLocale::Turkey));
 
     QTranslator translator;
-    if (translator.load(QLocale(), QStringLiteral("kentos"), QStringLiteral("_"),
+    if (translator.load(QLocale(), QStringLiteral("piricad"), QStringLiteral("_"),
                         QStringLiteral(":/i18n")))
         QApplication::installTranslator(&translator);
 
@@ -300,7 +300,7 @@ int main(int argc, char** argv)
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("KentOSCad — Türkiye odaklı CBS + CAD harita yazılımı"));
+        QStringLiteral("PiriCAD — Türkiye odaklı CBS + CAD harita yazılımı"));
     parser.addHelpOption();
     parser.addVersionOption();
 
@@ -317,7 +317,7 @@ int main(int argc, char** argv)
     // still exits 0. `ci-gate-theme.sh` catches the cause statically; this
     // catches anything that reaches Qt by another road.
     static bool sheet_refused = false;
-    if (qEnvironmentVariableIsSet("KENTOS_SMOKE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_SMOKE")) {
         static QtMessageHandler chained = qInstallMessageHandler(
             [](QtMsgType type, const QMessageLogContext& where, const QString& text) {
                 if (text.contains(QLatin1String("stylesheet"))) sheet_refused = true;
@@ -325,10 +325,10 @@ int main(int argc, char** argv)
             });
     }
 
-    kentos::command::set_log_sink([](kentos::command::LogLevel level, std::string_view message) {
+    piricad::command::set_log_sink([](piricad::command::LogLevel level, std::string_view message) {
         // Diagnostics; see core/log.cpp for why the result is discarded.
-        (void)std::fprintf(level >= kentos::command::LogLevel::Warn ? stderr : stdout,
-                           "[kentos] %.*s\n", static_cast<int>(message.size()), message.data());
+        (void)std::fprintf(level >= piricad::command::LogLevel::Warn ? stderr : stdout,
+                           "[piricad] %.*s\n", static_cast<int>(message.size()), message.data());
     });
 
     // ---- NO PROBE TOUCHES THE PERSON'S OWN PROFILE -------------------------
@@ -349,25 +349,25 @@ int main(int argc, char** argv)
     // Set BEFORE the window is built: the print service resolves its path once,
     // in its constructor.
     for (const char* probe : {
-             "KENTOS_PRINT_PROBE",     "KENTOS_LAYOUT_PROBE",  "KENTOS_SHOT_DIR",
-             "KENTOS_DESIGNER_PROBE",  "KENTOS_HELP_PROBE",    "KENTOS_MENU_PROBE",
-             "KENTOS_REACH_PROBE",     "KENTOS_ANSWER_PROBE",  "KENTOS_FLYOUT_PROBE",
-             "KENTOS_REALMOUSE_PROBE", "KENTOS_STRIP_PROBE",   "KENTOS_WIDGETS_PROBE",
-             "KENTOS_DIALOG_PROBE",    "KENTOS_HAND_PROBE",    "KENTOS_LAYER_PROBE",
-             "KENTOS_PICK_PROBE",      "KENTOS_TABLE_PROBE",   "KENTOS_SCHEMA_PROBE",
-             "KENTOS_CHAT_PROBE",      "KENTOS_TOOL_PROBE",    "KENTOS_NORMAL_PROBE",
-             "KENTOS_FAMILY_PROBE",    "KENTOS_BUDGET_PROBE",  "KENTOS_CLIP_PROBE",
-             "KENTOS_PROBE_LINE",      "KENTOS_OSCLICK_PROBE", "KENTOS_ACCESS_PROBE",
-             "KENTOS_PYTHON_PROBE",    "KENTOS_FIT_PROBE",     "KENTOS_RIBBON_SHEET",
-             "KENTOS_TOOL_DRIVE",      "KENTOS_REPEAT_PROBE",  "KENTOS_VIEW_PROBE",
-             "KENTOS_OFFER_PROBE",     "KENTOS_PROMPT_PROBE",  "KENTOS_WINDOW_SHOT",
+             "PIRICAD_PRINT_PROBE",     "PIRICAD_LAYOUT_PROBE",  "PIRICAD_SHOT_DIR",
+             "PIRICAD_DESIGNER_PROBE",  "PIRICAD_HELP_PROBE",    "PIRICAD_MENU_PROBE",
+             "PIRICAD_REACH_PROBE",     "PIRICAD_ANSWER_PROBE",  "PIRICAD_FLYOUT_PROBE",
+             "PIRICAD_REALMOUSE_PROBE", "PIRICAD_STRIP_PROBE",   "PIRICAD_WIDGETS_PROBE",
+             "PIRICAD_DIALOG_PROBE",    "PIRICAD_HAND_PROBE",    "PIRICAD_LAYER_PROBE",
+             "PIRICAD_PICK_PROBE",      "PIRICAD_TABLE_PROBE",   "PIRICAD_SCHEMA_PROBE",
+             "PIRICAD_CHAT_PROBE",      "PIRICAD_TOOL_PROBE",    "PIRICAD_NORMAL_PROBE",
+             "PIRICAD_FAMILY_PROBE",    "PIRICAD_BUDGET_PROBE",  "PIRICAD_CLIP_PROBE",
+             "PIRICAD_PROBE_LINE",      "PIRICAD_OSCLICK_PROBE", "PIRICAD_ACCESS_PROBE",
+             "PIRICAD_PYTHON_PROBE",    "PIRICAD_FIT_PROBE",     "PIRICAD_RIBBON_SHEET",
+             "PIRICAD_TOOL_DRIVE",      "PIRICAD_REPEAT_PROBE",  "PIRICAD_VIEW_PROBE",
+             "PIRICAD_OFFER_PROBE",     "PIRICAD_PROMPT_PROBE",  "PIRICAD_WINDOW_SHOT",
          })
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
             break;
         }
 
-    kentos::app::MainWindow window;
+    piricad::app::MainWindow window;
     window.show();
 
     if (parser.isSet(scriptOption)) {
@@ -381,8 +381,8 @@ int main(int argc, char** argv)
     // this runs through the command line's own road, so a hosted job — an import
     // reading on a worker thread — can be photographed with its Durdur on the
     // status strip. Developer tooling, an environment variable for the reason
-    // KENTOS_FRAME_DUMP is one.
-    if (const QByteArray typed = qgetenv("KENTOS_PROBE_LINE"); !typed.isEmpty()) {
+    // PIRICAD_FRAME_DUMP is one.
+    if (const QByteArray typed = qgetenv("PIRICAD_PROBE_LINE"); !typed.isEmpty()) {
         const QString line = QString::fromUtf8(typed);
         QTimer::singleShot(0, &window, [&window, line] { window.runScriptLine(line); });
     }
@@ -395,11 +395,11 @@ int main(int argc, char** argv)
 
     // Headless frame proof, for a developer and for CI.
     //
-    // With KENTOS_FRAME_DUMP set, the window paints once, is written to that PNG
+    // With PIRICAD_FRAME_DUMP set, the window paints once, is written to that PNG
     // path and the process exits. An ENVIRONMENT VARIABLE and not a command-line
     // option on purpose: a CLI flag is a user-facing feature and CLAUDE.md 5.17
     // would require its own /docs page, and this is not a feature a surveyor has
-    // any use for. It is the same category as KENTOS_BENCH_RECORD.
+    // any use for. It is the same category as PIRICAD_BENCH_RECORD.
     //
     // Why it exists at all: the canvas is the one part of this program whose
     // correctness is a picture, and until now the only way to see that picture was
@@ -407,40 +407,40 @@ int main(int argc, char** argv)
     // produces the picture without a display, which is what makes a rendering
     // change reviewable.
     // Opens the style designer on one layer, so its own frame can be dumped.
-    // Same category as KENTOS_FRAME_DUMP: developer tooling, not a feature.
+    // Same category as PIRICAD_FRAME_DUMP: developer tooling, not a feature.
     // Opens every window the shell has, one after another, and closes each.
     //
-    // Developer tooling, same category as KENTOS_FRAME_DUMP: not a feature a
+    // Developer tooling, same category as PIRICAD_FRAME_DUMP: not a feature a
     // surveyor has any use for, so an environment variable rather than a CLI flag
     // (a flag would be user-facing and CLAUDE.md 5.17 would want a /docs page).
     //
     // WHY IT EXISTS. `shell-starts` proved the main window comes up, and a
     // dialog that crashed the moment it opened still passed it — twice. A window
     // that is never constructed in any test is a window nothing is checking.
-    // ONE SETTINGS PAGE, PHOTOGRAPHED. `KENTOS_SMOKE` proves every window opens
+    // ONE SETTINGS PAGE, PHOTOGRAPHED. `PIRICAD_SMOKE` proves every window opens
     // and says nothing about what is ON one — which is how a page shipped
     // carrying two switches and none of the block that was the point of it. The
-    // variable names a directory; `KENTOS_SETTINGS_PAGE` names the page, and the
+    // variable names a directory; `PIRICAD_SETTINGS_PAGE` names the page, and the
     // picture lands as `ayarlar.png`. Developer tooling, same category as
-    // `KENTOS_FRAME_DUMP`.
+    // `PIRICAD_FRAME_DUMP`.
     // ONE LAYOUT, RENDERED TO A PNG. The layout renderer is the one piece of this
     // subsystem whose output cannot be asserted in a unit test — what matters is
     // whether the sheet LOOKS like a pafta — so it gets the same treatment the
     // canvas and the component sheet get: a probe that draws it and leaves a
     // picture a person can look at.
-    if (qEnvironmentVariableIsSet("KENTOS_LAYOUT_SHOT")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_LAYOUT_SHOT")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
-            const QString dir                   = qEnvironmentVariable("KENTOS_LAYOUT_SHOT");
-            kentos::app::Controller* controller = window.controller();
+            const QString dir                    = qEnvironmentVariable("PIRICAD_LAYOUT_SHOT");
+            piricad::app::Controller* controller = window.controller();
             window.seedProbeDrawing();
 
             const QString sheet =
-                qEnvironmentVariable("KENTOS_LAYOUT_NAME", QStringLiteral("Deneme Paftası"));
+                qEnvironmentVariable("PIRICAD_LAYOUT_NAME", QStringLiteral("Deneme Paftası"));
             controller->runLine(
                 QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"%1\" kagit=A3 yon=yatay").arg(sheet),
-                kentos::command::Origin::Gui);
+                piricad::command::Origin::Gui);
 
-            const kentos::core::Layout* layout =
+            const piricad::core::Layout* layout =
                 controller->document().layouts().find(sheet.toStdString());
             if (layout == nullptr) {
                 (void)std::fprintf(stdout, "[yerlesim] çıktı yerleşimi kurulamadı\n");
@@ -453,36 +453,36 @@ int main(int argc, char** argv)
             // its geometry.
             controller->runLine(
                 QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=\"%1\" tur=tablo ad=tablo").arg(sheet),
-                kentos::command::Origin::Gui);
+                piricad::command::Origin::Gui);
             controller->runLine(
                 QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=\"%1\" ad=tablo "
                                "metin=\"Kadastro Parselleri\" x=250 y=35 genislik=155 "
                                "yukseklik=60 yazi=3 cerceve=evet")
                     .arg(sheet),
-                kentos::command::Origin::Gui);
+                piricad::command::Origin::Gui);
 
             // AIM THE MAP AT THE DRAWING — through the COMMAND, which is the
             // road the canvas's print frame takes too. A probe that wrote the
             // extent straight into the document would be proving a path no user
             // has (Article 1.2).
-            const kentos::core::Box2 extent = controller->document().extent();
+            const piricad::core::Box2 extent = controller->document().extent();
             // METRES ON THE LINE, not `Mm`. A command line carries ground
             // coordinates in the drawing's own unit and the parser turns them
             // into millimetres; writing the millimetres straight out made the
             // frame a thousand times too wide (`print_dialog.cpp` does the same
             // conversion for `YAZDIR pencere=`).
-            const auto metres = [](kentos::core::Mm v) {
+            const auto metres = [](piricad::core::Mm v) {
                 return QString::number(static_cast<double>(v) / 1000.0, 'f', 3);
             };
             controller->runLine(QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=\"%1\" ad=harita "
                                                "pencere=%2,%3 pencere=%4,%5")
                                     .arg(sheet, metres(extent.min_x), metres(extent.min_y),
                                          metres(extent.max_x), metres(extent.max_y)),
-                                kentos::command::Origin::Gui);
+                                piricad::command::Origin::Gui);
 
-            const kentos::core::Layout* aimed =
+            const piricad::core::Layout* aimed =
                 controller->document().layouts().find(sheet.toStdString());
-            const kentos::core::LayoutPage& page = aimed->pages.front();
+            const piricad::core::LayoutPage& page = aimed->pages.front();
 
             // 150 dpi: big enough to judge line weights and text, small enough to
             // open in a viewer.
@@ -492,30 +492,30 @@ int main(int argc, char** argv)
             QImage out(w_px, h_px, QImage::Format_ARGB32_Premultiplied);
             out.fill(Qt::white);
 
-            kentos::app::LayoutFacts facts;
+            piricad::app::LayoutFacts facts;
             facts.sheet   = sheet;
             facts.project = QStringLiteral("deneme.pcad");
             facts.crs     = QString::fromStdString(controller->document().crs().id());
             facts.date    = QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
 
             QPainter painter(&out);
-            kentos::app::paint_layout_page(painter, QRectF(0, 0, w_px, h_px),
-                                           controller->document(), *aimed, 0, kDpi, facts);
+            piricad::app::paint_layout_page(painter, QRectF(0, 0, w_px, h_px),
+                                            controller->document(), *aimed, 0, kDpi, facts);
             painter.end();
 
             QDir().mkpath(dir);
             const bool saved = out.save(dir + QStringLiteral("/yerlesim.png"));
-            for (const kentos::core::LayoutItem& item : aimed->items) {
-                const kentos::core::Box2 win = kentos::core::map_window(item);
+            for (const piricad::core::LayoutItem& item : aimed->items) {
+                const piricad::core::Box2 win = piricad::core::map_window(item);
                 (void)std::fprintf(
                     stdout,
                     "[yerlesim] öğe %-8s %s  kutu %d,%d %dx%d um  pencere %lld,%lld "
                     "%lld,%lld  olcek 1:%lld\n",
-                    item.id.c_str(), kentos::core::layout_item_kind_id(item.kind), item.frame.x,
+                    item.id.c_str(), piricad::core::layout_item_kind_id(item.kind), item.frame.x,
                     item.frame.y, item.frame.w, item.frame.h, static_cast<long long>(win.min_x),
                     static_cast<long long>(win.min_y), static_cast<long long>(win.max_x),
                     static_cast<long long>(win.max_y),
-                    static_cast<long long>(kentos::core::map_scale(item)));
+                    static_cast<long long>(piricad::core::map_scale(item)));
             }
             (void)std::fprintf(
                 stdout, "[yerlesim] çizim kapsamı %lld,%lld %lld,%lld — %zu nesne\n",
@@ -537,11 +537,11 @@ int main(int argc, char** argv)
     // redraws from the document afterwards, and that the sheet then prints. The
     // unit suite proves the model and the commands; this is the seam between
     // them and the mouse.
-    if (qEnvironmentVariableIsSet("KENTOS_LAYOUT_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_LAYOUT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
-            const QString dir = qEnvironmentVariable("KENTOS_LAYOUT_PROBE");
+            const QString dir = qEnvironmentVariable("PIRICAD_LAYOUT_PROBE");
             QDir().mkpath(dir);
-            kentos::app::Controller* controller = window.controller();
+            piricad::app::Controller* controller = window.controller();
             window.seedProbeDrawing();
 
             int failures     = 0;
@@ -554,18 +554,18 @@ int main(int argc, char** argv)
 
             controller->runLine(
                 QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay"),
-                kentos::command::Origin::Gui);
+                piricad::command::Origin::Gui);
             check(controller->document().layouts().find("Ada 1284") != nullptr,
                   "çıktı yerleşimi kurulamadı");
 
-            kentos::app::LayoutDesigner designer(*controller, QStringLiteral("Ada 1284"), &window);
+            piricad::app::LayoutDesigner designer(*controller, QStringLiteral("Ada 1284"), &window);
             designer.applyTheme(window.themeMode());
             designer.show();
             QCoreApplication::processEvents();
 
             // AIM IT, the way the canvas frame does.
             designer.aimAt(controller->document().extent());
-            const kentos::core::LayoutItem* map =
+            const piricad::core::LayoutItem* map =
                 controller->document().layouts().find("Ada 1284")->first_map();
             check(map != nullptr && !map->extent.empty(), "harita hedeflenmedi");
 
@@ -574,7 +574,7 @@ int main(int argc, char** argv)
                 (void)std::fflush(stdout);
             }
 
-            const kentos::core::Layout* after = controller->document().layouts().find("Ada 1284");
+            const piricad::core::Layout* after = controller->document().layouts().find("Ada 1284");
             check(after != nullptr && after->items.size() == 5, "lejant eklenmedi");
 
             // THE SHEET SURVIVED ITS OWN SETTINGS PANEL. `probeDrive` changed
@@ -584,9 +584,9 @@ int main(int argc, char** argv)
             // that sent one argument at a time would have made this an A4.
             check(after != nullptr && after->paper == "A3" && after->landscape,
                   "KÂĞIT AYARI KENDİ PANELİNDE KAYBOLDU — A3 yatay değil");
-            check(after != nullptr && after->pages.front().w == kentos::core::um_from_mm(420),
+            check(after != nullptr && after->pages.front().w == piricad::core::um_from_mm(420),
                   "sayfa boyu ayar sırasında değişti");
-            check(after != nullptr && after->margin == kentos::core::um_from_mm(15),
+            check(after != nullptr && after->margin == piricad::core::um_from_mm(15),
                   "kenar boşluğu yazılmadı");
             check(after != nullptr && after->dpi == 600, "çözünürlük yazılmadı");
 
@@ -603,13 +603,13 @@ int main(int argc, char** argv)
                 QApplication::exit(1);
                 return;
             }
-            if (const kentos::core::LayoutItem* title = after->find("baslik"); title != nullptr)
+            if (const piricad::core::LayoutItem* title = after->find("baslik"); title != nullptr)
                 check(title->text == "<yerlesim> — <olcek>", "başlık metni yazılmadı");
 
             // AND ONE Ctrl+Z UNDOES THE LAST GESTURE, which is the claim a
             // designer with its own edit path could not make.
             const std::size_t before = after->items.size();
-            controller->runLine(QStringLiteral("GERİAL"), kentos::command::Origin::Gui);
+            controller->runLine(QStringLiteral("GERİAL"), piricad::command::Origin::Gui);
             check(controller->document().layouts().find("Ada 1284")->items.size() == before - 1,
                   "GERİAL son jesti geri almadı");
 
@@ -620,23 +620,23 @@ int main(int argc, char** argv)
             // page. Rendered through the printer's own path, nothing in the
             // bar's band may be inked to the right of the bar's frame: in the
             // default sheet that band holds the bar alone.
-            if (const kentos::core::Layout* sheet =
+            if (const piricad::core::Layout* sheet =
                     controller->document().layouts().find("Ada 1284");
                 sheet != nullptr)
-                if (const kentos::core::LayoutItem* bar = sheet->find("olcek"); bar != nullptr) {
-                    constexpr double kPerMm            = 4.0;
-                    const kentos::core::LayoutPage& pg = sheet->pages.front();
-                    const auto px                      = [](kentos::core::Um um) {
+                if (const piricad::core::LayoutItem* bar = sheet->find("olcek"); bar != nullptr) {
+                    constexpr double kPerMm             = 4.0;
+                    const piricad::core::LayoutPage& pg = sheet->pages.front();
+                    const auto px                       = [](piricad::core::Um um) {
                         return static_cast<int>(static_cast<double>(um) / 1000.0 * kPerMm);
                     };
                     QImage paper(px(pg.w), px(pg.h), QImage::Format_RGB32);
                     paper.fill(Qt::white);
                     {
                         QPainter onto(&paper);
-                        kentos::app::paint_layout_page(onto,
-                                                       QRectF(QPointF(0, 0), QSizeF(paper.size())),
-                                                       controller->document(), *sheet, 0,
-                                                       kPerMm * 25.4, kentos::app::LayoutFacts{});
+                        piricad::app::paint_layout_page(onto,
+                                                        QRectF(QPointF(0, 0), QSizeF(paper.size())),
+                                                        controller->document(), *sheet, 0,
+                                                        kPerMm * 25.4, piricad::app::LayoutFacts{});
                     }
                     int spilled = 0;
                     for (int y = px(bar->frame.y); y < px(bar->frame.bottom()); ++y)
@@ -718,7 +718,7 @@ int main(int argc, char** argv)
             const QString pdf = dir + QStringLiteral("/yerlesim.pdf");
             controller->runLine(
                 QStringLiteral("YAZDIR yerlesim=\"Ada 1284\" dosya=\"%1\"").arg(pdf),
-                kentos::command::Origin::Gui);
+                piricad::command::Origin::Gui);
             const QFileInfo written(pdf);
             check(written.exists() && written.size() > 1000, "PDF yazılmadı");
 
@@ -769,7 +769,7 @@ int main(int argc, char** argv)
 
             const QString key_pdf = dir + QStringLiteral("/anahtar.pdf");
             controller->runLine(QStringLiteral("YAZDIR yerlesim=Anahtar dosya=\"%1\"").arg(key_pdf),
-                                kentos::command::Origin::Gui);
+                                piricad::command::Origin::Gui);
             const QByteArray key_bytes = [&key_pdf] {
                 QFile f(key_pdf);
                 return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
@@ -784,15 +784,15 @@ int main(int argc, char** argv)
             // text and paths are compressed and a substring search finds
             // neither — which is exactly how "it printed" gets confused with
             // "it printed something".
-            if (const kentos::core::Layout* key = controller->document().layouts().find("Anahtar");
+            if (const piricad::core::Layout* key = controller->document().layouts().find("Anahtar");
                 key != nullptr && !key->pages.empty()) {
                 QImage page(1200, 850, QImage::Format_ARGB32_Premultiplied);
                 page.fill(Qt::white);
                 QPainter into(&page);
-                kentos::app::LayoutFacts facts;
+                piricad::app::LayoutFacts facts;
                 facts.sheet = QStringLiteral("Anahtar");
-                kentos::app::paint_layout_page(into, QRectF(0, 0, 1200, 850),
-                                               controller->document(), *key, 0, 96.0, facts);
+                piricad::app::paint_layout_page(into, QRectF(0, 0, 1200, 850),
+                                                controller->document(), *key, 0, 96.0, facts);
                 into.end();
 
                 bool orange = false;
@@ -836,12 +836,12 @@ int main(int argc, char** argv)
             // data and a green bar that still passed a naive check.
             check(controller->bus()
                       .execute_line("ALAN 500,500 510,500 510,510 500,510",
-                                    kentos::command::Origin::Test)
+                                    piricad::command::Origin::Test)
                       .ok(),
                   "grafik için ilk alan çizilemedi");
             check(controller->bus()
                       .execute_line("ALAN 530,500 540,500 540,510 530,510",
-                                    kentos::command::Origin::Test)
+                                    piricad::command::Origin::Test)
                       .ok(),
                   "grafik için ikinci alan çizilemedi");
 
@@ -850,13 +850,13 @@ int main(int argc, char** argv)
             // a running total put the value on the wrong parcel the first time
             // this was written — which is the mistake the key exists to prevent.
             {
-                const kentos::core::Document& doc = controller->document();
-                const kentos::core::LayerId on    = doc.find_layer("GRAFİK");
+                const piricad::core::Document& doc = controller->document();
+                const piricad::core::LayerId on    = doc.find_layer("GRAFİK");
                 std::vector<qint64> keys;
-                for (kentos::core::EntityId slot = 0; slot < doc.entities().size(); ++slot) {
+                for (piricad::core::EntityId slot = 0; slot < doc.entities().size(); ++slot) {
                     if (!doc.entities().standalone(slot)) continue;
                     if (doc.entities().layer[slot] != on) continue;
-                    keys.push_back(static_cast<qint64>(kentos::core::raw(doc.key_of(slot))));
+                    keys.push_back(static_cast<qint64>(piricad::core::raw(doc.key_of(slot))));
                 }
                 check(keys.size() == 2, "grafik katmanında iki nesne bekleniyordu");
                 for (std::size_t i = 0; i < keys.size(); ++i)
@@ -874,17 +874,17 @@ int main(int argc, char** argv)
                                                 "x=20 y=20 genislik=120 yukseklik=70"));
 
             const auto render_chart_sheet = [&](std::vector<std::string>* notes) {
-                const kentos::core::Layout* made =
+                const piricad::core::Layout* made =
                     controller->document().layouts().find("Grafikli");
                 if (made == nullptr || made->pages.empty()) return QImage();
                 QImage page(1200, 850, QImage::Format_ARGB32_Premultiplied);
                 page.fill(Qt::white);
                 QPainter into(&page);
-                kentos::app::LayoutFacts facts;
+                piricad::app::LayoutFacts facts;
                 facts.sheet = QStringLiteral("Grafikli");
-                kentos::app::paint_layout_page(into, QRectF(0, 0, 1200, 850),
-                                               controller->document(), *made, 0, 96.0, facts, false,
-                                               notes);
+                piricad::app::paint_layout_page(into, QRectF(0, 0, 1200, 850),
+                                                controller->document(), *made, 0, 96.0, facts,
+                                                false, notes);
                 into.end();
                 return page;
             };
@@ -926,7 +926,7 @@ int main(int argc, char** argv)
             // would mean a publish that did not finish and nobody noticed
             // (TODOS C-05, F-05).
             const QStringList left = QDir(QFileInfo(pdf).absolutePath())
-                                         .entryList(QStringList{QStringLiteral(".kentos-*")},
+                                         .entryList(QStringList{QStringLiteral(".piricad-*")},
                                                     QDir::AllEntries | QDir::Hidden);
             check(left.isEmpty(), "yayımlanmamış hazırlık klasörü kaldı");
 
@@ -943,7 +943,7 @@ int main(int argc, char** argv)
             const QString narrow = dir + QStringLiteral("/dar.pdf");
             controller->runLine(
                 QStringLiteral("YAZDIR yerlesim=\"Ada 1284\" dosya=\"%1\"").arg(narrow),
-                kentos::command::Origin::Gui);
+                piricad::command::Origin::Gui);
             QCoreApplication::processEvents();
             check(QFileInfo::exists(narrow), "dar tablolu PDF yazılmadı");
 
@@ -965,7 +965,7 @@ int main(int argc, char** argv)
             const QString atlas = dir + QStringLiteral("/atlas.pdf");
             QFile::remove(atlas);
             controller->runLine(QStringLiteral("YAZDIR yerlesim=Askı dosya=\"%1\"").arg(atlas),
-                                kentos::command::Origin::Gui);
+                                piricad::command::Origin::Gui);
             QCoreApplication::processEvents();
 
             check(QFileInfo::exists(atlas), "atlas PDF yazılmadı");
@@ -1001,11 +1001,11 @@ int main(int argc, char** argv)
     // THE MODEL PROFILE WINDOW, photographed on its own. Same category as the
     // settings shot beside it: it is the window this change is about, and a
     // window nothing looks at is a window nobody checked.
-    if (qEnvironmentVariableIsSet("KENTOS_PROVIDER_SHOT")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_PROVIDER_SHOT")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
-            const QString dir = qEnvironmentVariable("KENTOS_PROVIDER_SHOT");
-            kentos::app::ProviderDialog dialog(
-                *window.controller(), qEnvironmentVariable("KENTOS_PROVIDER_EDIT"), &window);
+            const QString dir = qEnvironmentVariable("PIRICAD_PROVIDER_SHOT");
+            piricad::app::ProviderDialog dialog(
+                *window.controller(), qEnvironmentVariable("PIRICAD_PROVIDER_EDIT"), &window);
             dialog.applyTheme(window.themeMode());
             dialog.show();
             QCoreApplication::processEvents();
@@ -1024,11 +1024,11 @@ int main(int argc, char** argv)
         });
     }
 
-    if (qEnvironmentVariableIsSet("KENTOS_SETTINGS_SHOT")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_SETTINGS_SHOT")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
-            const QString dir = qEnvironmentVariable("KENTOS_SETTINGS_SHOT");
+            const QString dir = qEnvironmentVariable("PIRICAD_SETTINGS_SHOT");
             const QString page =
-                qEnvironmentVariable("KENTOS_SETTINGS_PAGE", QStringLiteral("MCP Sunucusu"));
+                qEnvironmentVariable("PIRICAD_SETTINGS_PAGE", QStringLiteral("MCP Sunucusu"));
             window.openSettingsSection(page);
             QCoreApplication::processEvents();
             QDir().mkpath(dir);
@@ -1037,7 +1037,7 @@ int main(int argc, char** argv)
             // MODELESS, so on a fresh start the platform has not given it focus
             // yet and `activeWindow()` is still the shell — which grabs the wrong
             // picture, or none at all.
-            if (QWidget* top = window.findChild<kentos::app::SettingsDialog*>(); top != nullptr) {
+            if (QWidget* top = window.findChild<piricad::app::SettingsDialog*>(); top != nullptr) {
                 rc = top->grab().save(dir + QStringLiteral("/ayarlar.png")) ? 0 : 1;
                 (void)std::fprintf(stdout, "[ayarlar] %s — %s\n",
                                    rc == 0 ? "kare: ayarlar.png" : "kare yazılamadı",
@@ -1048,7 +1048,7 @@ int main(int argc, char** argv)
         });
     }
 
-    if (qEnvironmentVariableIsSet("KENTOS_SMOKE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_SMOKE")) {
         int at           = 0;
         const auto later = [&window, &at](auto&& step) {
             at += 120;
@@ -1073,7 +1073,7 @@ int main(int argc, char** argv)
         later([&window] {
             window.controller()->runLine(
                 QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Duman\" kagit=A4"),
-                kentos::command::Origin::Gui);
+                piricad::command::Origin::Gui);
             window.openLayoutManager();
         });
         later([] {
@@ -1095,17 +1095,17 @@ int main(int argc, char** argv)
         // THE PRINT PREVIEW, constructed like every other window: it renders a
         // sheet on construction, and a sheet renderer that crashes on an empty
         // drawing is exactly what this test is for.
-        later([&window] { window.openPrintDialog(kentos::core::Box2{0, 0, 40000, 30000}); });
+        later([&window] { window.openPrintDialog(piricad::core::Box2{0, 0, 40000, 30000}); });
         later([] {
             if (QWidget* top = QApplication::activeModalWidget()) top->close();
         });
         later([&window] {
             if (sheet_refused) {
-                (void)std::fprintf(stderr, "[kentos] duman testi: stil sayfası REDDEDİLDİ\n");
+                (void)std::fprintf(stderr, "[piricad] duman testi: stil sayfası REDDEDİLDİ\n");
                 QApplication::exit(2);
                 return;
             }
-#if KENTOS_HAVE_RHI
+#if PIRICAD_HAVE_RHI
             // THE CANVAS HAS ITS GPU CONTEXT. A `QRhiWidget` whose window was
             // created before it existed paints nothing and says so only on
             // stderr (see `AA_DontUseNativeMenuBar` above); a shell test that
@@ -1118,33 +1118,33 @@ int main(int argc, char** argv)
             const bool can_have_rhi =
                 platform != QLatin1String("offscreen") && platform != QLatin1String("minimal");
             if (can_have_rhi && window.canvas() != nullptr && !window.canvas()->hasGpuContext()) {
-                (void)std::fprintf(stderr, "[kentos] duman testi: tuval GPU bağlamı ALAMADI "
+                (void)std::fprintf(stderr, "[piricad] duman testi: tuval GPU bağlamı ALAMADI "
                                            "(QRhiWidget: No QRhi) — çizim boş kalır\n");
                 QApplication::exit(2);
                 return;
             }
 #endif
-            (void)std::fprintf(stdout, "[kentos] duman testi: bütün pencereler açıldı\n");
+            (void)std::fprintf(stdout, "[piricad] duman testi: bütün pencereler açıldı\n");
             QApplication::exit(0);
         });
     }
 
     // Every window, photographed, from the REAL binary.
     //
-    // `KENTOS_FRAME_DUMP` grabs one frame of whatever is in front. This opens
+    // `PIRICAD_FRAME_DUMP` grabs one frame of whatever is in front. This opens
     // each window in turn, grabs it, closes it, and writes a numbered PNG into
     // the named directory — so a reviewer sees what the program actually draws
     // rather than what a test harness draws. Same category as the other two:
     // developer tooling, an environment variable rather than a CLI flag.
     // ONE WINDOW, PHOTOGRAPHED, for the hand that is redesigning it:
-    // `KENTOS_WINDOW_SHOT=yazdir|disa|ice|yerlesim|hakkinda|hepsi` with `KENTOS_SHOT_DIR`.
+    // `PIRICAD_WINDOW_SHOT=yazdir|disa|ice|yerlesim|hakkinda|hepsi` with `PIRICAD_SHOT_DIR`.
     // The same drawing and the same sheet every time, the window opened in its
     // working state, grabbed and put away — seconds, where the whole sequence
     // below takes minutes. Developer tooling, like the rest of this block.
-    // `KENTOS_SHOT_THEME=koyu` photographs the dark theme; the light one is set
+    // `PIRICAD_SHOT_THEME=koyu` photographs the dark theme; the light one is set
     // otherwise, so the theme a previous run left behind — `hakkinda` ends on
     // the dark one — does not decide this one.
-    if (const QByteArray only = qgetenv("KENTOS_WINDOW_SHOT"), shots = qgetenv("KENTOS_SHOT_DIR");
+    if (const QByteArray only = qgetenv("PIRICAD_WINDOW_SHOT"), shots = qgetenv("PIRICAD_SHOT_DIR");
         !only.isEmpty() && !shots.isEmpty()) {
         const QString into = QString::fromLocal8Bit(shots);
         const QString want = QString::fromLocal8Bit(only);
@@ -1156,7 +1156,7 @@ int main(int argc, char** argv)
         const auto shot = [into](const QString& name, QWidget* subject) {
             if (subject == nullptr) return;
             const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
-            (void)std::fprintf(window_shot(subject).save(path) ? stdout : stderr, "[kentos] %s\n",
+            (void)std::fprintf(window_shot(subject).save(path) ? stdout : stderr, "[piricad] %s\n",
                                qPrintable(path));
         };
         const auto later = [&window, &at](auto&& step) {
@@ -1169,7 +1169,7 @@ int main(int argc, char** argv)
         const QString dxf  = into + QStringLiteral("/ornek-cizim.dxf");
         const QString gpkg = into + QStringLiteral("/ornek-cizim.gpkg");
 
-        const bool shootDark = qgetenv("KENTOS_SHOT_THEME") == QByteArrayLiteral("koyu");
+        const bool shootDark = qgetenv("PIRICAD_SHOT_THEME") == QByteArrayLiteral("koyu");
         later([&window, dxf, gpkg, shootDark] {
             QMetaObject::invokeMethod(&window, "toggleTheme", Qt::DirectConnection,
                                       Q_ARG(bool, shootDark));
@@ -1221,7 +1221,7 @@ int main(int argc, char** argv)
                 QWidget* top = QApplication::activeModalWidget();
                 if (top == nullptr) return;
                 const auto type = [top](const QString& spoken, const QString& text) {
-                    for (auto* field : top->findChildren<kentos::app::Field*>())
+                    for (auto* field : top->findChildren<piricad::app::Field*>())
                         if (field->accessibleName() == spoken)
                             if (auto* line = field->findChild<QLineEdit*>(); line != nullptr) {
                                 field->setValue(text);
@@ -1229,8 +1229,8 @@ int main(int argc, char** argv)
                                 QApplication::sendEvent(line, &enter);
                             }
                 };
-                using kentos::app::PrintDialog;
-                for (auto* fold : top->findChildren<kentos::app::Button*>())
+                using piricad::app::PrintDialog;
+                for (auto* fold : top->findChildren<piricad::app::Button*>())
                     if (fold->accessibleName() == PrintDialog::tr("Aç")) fold->click();
                 type(PrintDialog::tr("PDF dosyası"),
                      QStringLiteral("/Users/harita/pafta-1284.pdf"));
@@ -1243,7 +1243,7 @@ int main(int argc, char** argv)
             // AND SENT TO A PRINTER, where the two PDF groups have no business.
             later([] {
                 if (QWidget* top = QApplication::activeModalWidget(); top != nullptr)
-                    if (auto* target = top->findChild<kentos::app::Segment*>(); target != nullptr)
+                    if (auto* target = top->findChild<piricad::app::Segment*>(); target != nullptr)
                         target->setCurrent(1);
             });
             later([shot] {
@@ -1254,11 +1254,11 @@ int main(int argc, char** argv)
             later([] {
                 QWidget* top = QApplication::activeModalWidget();
                 if (top == nullptr) return;
-                if (auto* target = top->findChild<kentos::app::Segment*>(); target != nullptr)
+                if (auto* target = top->findChild<piricad::app::Segment*>(); target != nullptr)
                     target->setCurrent(0);
-                for (auto* offer : top->findChildren<kentos::app::Button*>())
+                for (auto* offer : top->findChildren<piricad::app::Button*>())
                     if (offer->accessibleName() ==
-                        kentos::app::PrintDialog::tr("Ölçeği pafta ölçeğine yuvarla"))
+                        piricad::app::PrintDialog::tr("Ölçeği pafta ölçeğine yuvarla"))
                         offer->click();
             });
             later([shot] {
@@ -1295,8 +1295,8 @@ int main(int argc, char** argv)
                 QFile note(text);
                 if (note.open(QIODevice::WriteOnly)) note.write("ada 1284\n");
                 note.close();
-                if (auto* wizard =
-                        qobject_cast<kentos::app::ImportWizard*>(QApplication::activeModalWidget()))
+                if (auto* wizard = qobject_cast<piricad::app::ImportWizard*>(
+                        QApplication::activeModalWidget()))
                     wizard->setPath(text);
             });
             later([shot] {
@@ -1322,8 +1322,8 @@ int main(int argc, char** argv)
                 shot(QStringLiteral("pencere-ice-3"), QApplication::activeModalWidget());
             });
             later([] {
-                if (auto* wizard =
-                        qobject_cast<kentos::app::ImportWizard*>(QApplication::activeModalWidget()))
+                if (auto* wizard = qobject_cast<piricad::app::ImportWizard*>(
+                        QApplication::activeModalWidget()))
                     (void)wizard->probeSettle(2, 2000);
             });
             later([shot] {
@@ -1365,7 +1365,7 @@ int main(int argc, char** argv)
                                           window.controller()->document().extent());
             });
             const auto designer = [] {
-                return qobject_cast<kentos::app::LayoutDesigner*>(
+                return qobject_cast<piricad::app::LayoutDesigner*>(
                     QApplication::activeModalWidget());
             };
             const auto pose = [designer](const QString& id) {
@@ -1427,7 +1427,7 @@ int main(int argc, char** argv)
             later(closeModal);
         }
         later([] { QApplication::exit(0); });
-    } else if (const QByteArray dir = qgetenv("KENTOS_SHOT_DIR"); !dir.isEmpty()) {
+    } else if (const QByteArray dir = qgetenv("PIRICAD_SHOT_DIR"); !dir.isEmpty()) {
         const QString into = QString::fromLocal8Bit(dir);
         QDir().mkpath(into);
 
@@ -1435,7 +1435,7 @@ int main(int argc, char** argv)
         const auto shot = [into](const QString& name, QWidget* subject) {
             if (subject == nullptr) return;
             const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
-            (void)std::fprintf(window_shot(subject).save(path) ? stdout : stderr, "[kentos] %s\n",
+            (void)std::fprintf(window_shot(subject).save(path) ? stdout : stderr, "[piricad] %s\n",
                                qPrintable(path));
         };
         const auto later = [&window, &at](auto&& step) {
@@ -1464,7 +1464,7 @@ int main(int argc, char** argv)
         later([] {
             if (QWidget* top = QApplication::activeModalWidget()) top->close();
         });
-        later([&window] { window.openPrintDialog(kentos::core::Box2{0, 0, 40000, 30000}); });
+        later([&window] { window.openPrintDialog(piricad::core::Box2{0, 0, 40000, 30000}); });
         later([shot] { shot(QStringLiteral("2b-yazdir"), QApplication::activeModalWidget()); });
         later([] {
             if (QWidget* top = QApplication::activeModalWidget()) top->close();
@@ -1523,7 +1523,7 @@ int main(int argc, char** argv)
                                      floating->grab());
             paint.end();
             const QString path = into + QStringLiteral("/1f-python-liste-ve-ipucu.png");
-            (void)std::fprintf(frame.save(path) ? stdout : stderr, "[kentos] %s\n",
+            (void)std::fprintf(frame.save(path) ? stdout : stderr, "[piricad] %s\n",
                                qPrintable(path));
         });
 
@@ -1551,7 +1551,7 @@ int main(int argc, char** argv)
         // accident; the full one is the state they need to look at.
         later([] {
             if (auto* designer =
-                    qobject_cast<kentos::app::LayoutDesigner*>(QApplication::activeModalWidget()))
+                    qobject_cast<piricad::app::LayoutDesigner*>(QApplication::activeModalWidget()))
                 designer->showItem(QStringLiteral("harita"));
         });
         later([shot] {
@@ -1577,7 +1577,7 @@ int main(int argc, char** argv)
             // The window itself, not whichever is active: a modeless window
             // behind a stolen focus is still the one on the screen.
             shot(QStringLiteral("4c-yapay-zeka-politikasi"),
-                 window.findChild<kentos::app::SettingsDialog*>());
+                 window.findChild<piricad::app::SettingsDialog*>());
         });
         // The plot page, because the print profiles live on it and a table
         // nobody has photographed is a table nobody has looked at.
@@ -1627,12 +1627,12 @@ int main(int argc, char** argv)
             if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });
 
-        // The import wizard, both pages. `KENTOS_IMPORT_SAMPLE` names a file to
+        // The import wizard, both pages. `PIRICAD_IMPORT_SAMPLE` names a file to
         // read; without it only the file page can be photographed, because there
         // is nothing to list on the second one.
-        static kentos::app::ImportWizard* wizard = nullptr;
+        static piricad::app::ImportWizard* wizard = nullptr;
         later([&window] { wizard = window.openImportWizard(); });
-        later([] { wizard->setPath(QString::fromLocal8Bit(qgetenv("KENTOS_IMPORT_SAMPLE"))); });
+        later([] { wizard->setPath(QString::fromLocal8Bit(qgetenv("PIRICAD_IMPORT_SAMPLE"))); });
         later([shot] {
             shot(QStringLiteral("6-ice-aktarma-dosya"), QApplication::activeModalWidget());
         });
@@ -1641,7 +1641,7 @@ int main(int argc, char** argv)
         // thread and the layer page does not exist until it has finished.
         later([] {
             if (wizard != nullptr)
-                wizard->beginWith(QString::fromLocal8Bit(qgetenv("KENTOS_IMPORT_SAMPLE")));
+                wizard->beginWith(QString::fromLocal8Bit(qgetenv("PIRICAD_IMPORT_SAMPLE")));
         });
         later([] {});
         later([] {});
@@ -1746,8 +1746,8 @@ int main(int argc, char** argv)
         // starts it, the corner is given, and the cursor is put where a hand
         // would hold it — so the frame shows what the next click will make,
         // drawn by the function the command itself calls.
-        const auto hover = [&window](kentos::core::Point2 world) {
-            kentos::app::MapCanvas* canvas = window.canvas();
+        const auto hover = [&window](piricad::core::Point2 world) {
+            piricad::app::MapCanvas* canvas = window.canvas();
             if (canvas == nullptr) return;
             const auto at = canvas->view().to_screen(world);
             const QPointF p(at.x, at.y);
@@ -2408,12 +2408,12 @@ int main(int argc, char** argv)
         const auto family = [&window, into](const QStringList& members, const QString& name) {
             SARibbonBar* bar = window.ribbonBar();
             if (bar == nullptr) return;
-            const kentos::app::RibbonFamily* found = nullptr;
-            for (const kentos::app::RibbonFamily* f :
-                 window.findChildren<kentos::app::RibbonFamily*>())
+            const piricad::app::RibbonFamily* found = nullptr;
+            for (const piricad::app::RibbonFamily* f :
+                 window.findChildren<piricad::app::RibbonFamily*>())
                 for (const QAction* a : f->members())
                     if (found == nullptr &&
-                        members.contains(a->property(kentos::app::kToolCommandProperty)
+                        members.contains(a->property(piricad::app::kToolCommandProperty)
                                              .toString()
                                              .section(QLatin1Char(' '), 0, 0)))
                         found = f;
@@ -2440,7 +2440,7 @@ int main(int argc, char** argv)
                 list->close();
             }
             const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
-            (void)std::fprintf(frame.save(path) ? stdout : stderr, "[kentos] %s\n",
+            (void)std::fprintf(frame.save(path) ? stdout : stderr, "[piricad] %s\n",
                                qPrintable(path));
         };
         later([family] {
@@ -2520,7 +2520,7 @@ int main(int argc, char** argv)
             window.runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-1,-1 21,13"));
         });
         later([&window] {
-            if (auto* fill = window.findChild<kentos::app::RibbonColourBox*>(
+            if (auto* fill = window.findChild<piricad::app::RibbonColourBox*>(
                     QStringLiteral("ribbonFillBox"));
                 fill != nullptr) {
                 if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
@@ -2542,16 +2542,17 @@ int main(int argc, char** argv)
             }
             QImage out(whole.size() * frame.devicePixelRatio(), QImage::Format_ARGB32);
             out.setDevicePixelRatio(frame.devicePixelRatio());
-            out.fill((window.themeMode() == kentos::app::ThemeMode::Dark
-                          ? kentos::app::darkTokens()
-                          : kentos::app::lightTokens())
+            out.fill((window.themeMode() == piricad::app::ThemeMode::Dark
+                          ? piricad::app::darkTokens()
+                          : piricad::app::lightTokens())
                          .bgApp);
             QPainter paint(&out);
             paint.drawImage(-whole.topLeft(), frame);
             if (!card.isNull()) paint.drawPixmap(card.topLeft() - whole.topLeft(), popup->grab());
             paint.end();
             const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
-            (void)std::fprintf(out.save(path) ? stdout : stderr, "[kentos] %s\n", qPrintable(path));
+            (void)std::fprintf(out.save(path) ? stdout : stderr, "[piricad] %s\n",
+                               qPrintable(path));
         };
         later([&window, with_popup] {
             auto* menu = window.findChild<QMenu*>(QStringLiteral("colourMenu.fill"));
@@ -2576,7 +2577,7 @@ int main(int argc, char** argv)
         });
         later([&window] { window.controller()->supplyObjects({1}); });
         later([&window, with_popup] {
-            auto* line    = window.findChild<kentos::app::CommandLine*>();
+            auto* line    = window.findChild<piricad::app::CommandLine*>();
             QWidget* list = line != nullptr && line->completer() != nullptr
                                 ? line->completer()->popup()
                                 : nullptr;
@@ -2606,7 +2607,7 @@ int main(int argc, char** argv)
             window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
         });
         later([&window] {
-            kentos::app::MapCanvas* canvas = window.canvas();
+            piricad::app::MapCanvas* canvas = window.canvas();
             canvas->beginWindowZoom();
             const QPointF from(canvas->width() * 0.36, canvas->height() * 0.30);
             const QPointF to(canvas->width() * 0.58, canvas->height() * 0.55);
@@ -2627,7 +2628,7 @@ int main(int argc, char** argv)
         // AND THE LAYER ROW'S MENU, open over the panel, with `Katmana yakınlaş`
         // beside `Tümünü seç` (Netcad's Limit Bul from the layer menu).
         later([&window] {
-            auto* layers = window.findChild<kentos::app::LayerPanel*>();
+            auto* layers = window.findChild<piricad::app::LayerPanel*>();
             if (layers != nullptr)
                 (void)layers->popContextMenu(
                     QStringLiteral("PARSEL"),
@@ -2694,7 +2695,7 @@ int main(int argc, char** argv)
         // strip south of the parcels, closed by three loose lines and the
         // parcels' own edges. Previewed under the cursor, clicked, measured,
         // and "Sınır olarak çiz" offered over the canvas.
-        const kentos::core::Point2 strip{485340000, 4310192000};
+        const piricad::core::Point2 strip{485340000, 4310192000};
         later([&window] {
             window.cancelCommand();
             window.canvas()->clearMeasureMarks(); ///< the yard's, from the frame before
@@ -2719,8 +2720,8 @@ int main(int argc, char** argv)
         later([hover, strip] { hover(strip); });
         later([&window, shot] { shot(QStringLiteral("34-alan-ic-onizleme"), &window); });
         later([&window, strip] {
-            kentos::app::MapCanvas* canvas = window.canvas();
-            const auto at                  = canvas->view().to_screen(strip);
+            piricad::app::MapCanvas* canvas = window.canvas();
+            const auto at                   = canvas->view().to_screen(strip);
             const QPointF p(at.x, at.y);
             QMouseEvent press(QEvent::MouseButtonPress, p, canvas->mapToGlobal(p), Qt::LeftButton,
                               Qt::LeftButton, Qt::NoModifier);
@@ -2732,7 +2733,7 @@ int main(int argc, char** argv)
         });
         // The cursor moved off, so the re-armed tool previews no region over
         // the one just measured.
-        later([hover] { hover(kentos::core::Point2{485290000, 4310232000}); });
+        later([hover] { hover(piricad::core::Point2{485290000, 4310232000}); });
         later([&window, shot] { shot(QStringLiteral("34b-alan-ic"), &window); });
         // The family's menu, open under its button on `Harita`.
         later([&window] {
@@ -2741,10 +2742,10 @@ int main(int argc, char** argv)
             if (auto* tab = bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonMap")))
                 bar->raiseCategory(tab);
             QCoreApplication::sendPostedEvents(); ///< the tab laid out, its buttons placed
-            for (auto* f : window.findChildren<kentos::app::RibbonFamily*>()) {
+            for (auto* f : window.findChildren<piricad::app::RibbonFamily*>()) {
                 const bool measures =
                     std::any_of(f->members().begin(), f->members().end(), [](const QAction* a) {
-                        return a->property(kentos::app::kToolCommandProperty).toString() ==
+                        return a->property(piricad::app::kToolCommandProperty).toString() ==
                                QStringLiteral("ALANÖLÇ yontem=ic");
                     });
                 if (!measures || f->head()->menu() == nullptr) continue;
@@ -2795,10 +2796,10 @@ int main(int argc, char** argv)
             SARibbonBar* bar = window.ribbonBar();
             if (bar == nullptr) return;
             QCoreApplication::sendPostedEvents(); ///< the tab laid out, its buttons placed
-            for (auto* f : window.findChildren<kentos::app::RibbonFamily*>()) {
+            for (auto* f : window.findChildren<piricad::app::RibbonFamily*>()) {
                 const bool hatches =
                     std::any_of(f->members().begin(), f->members().end(), [](const QAction* a) {
-                        return a->property(kentos::app::kToolCommandProperty).toString() ==
+                        return a->property(piricad::app::kToolCommandProperty).toString() ==
                                QStringLiteral("TARAMA yontem=ic");
                     });
                 if (!hatches || f->head()->menu() == nullptr) continue;
@@ -2817,9 +2818,9 @@ int main(int argc, char** argv)
 
         // AND THE SEÇİM TAB (`.claude/ui.md` R48a), up while TAŞI asks for
         // objects; then ÇİT started from it, two corners clicked into the line.
-        const auto clickAt = [&window](kentos::core::Point2 world) {
-            kentos::app::MapCanvas* canvas = window.canvas();
-            const auto at                  = canvas->view().to_screen(world);
+        const auto clickAt = [&window](piricad::core::Point2 world) {
+            piricad::app::MapCanvas* canvas = window.canvas();
+            const auto at                   = canvas->view().to_screen(world);
             const QPointF p(at.x, at.y);
             QMouseEvent press(QEvent::MouseButtonPress, p, canvas->mapToGlobal(p), Qt::LeftButton,
                               Qt::LeftButton, Qt::NoModifier);
@@ -2842,14 +2843,14 @@ int main(int argc, char** argv)
         later([&window, clickAt] {
             if (auto* fence = window.findChild<QAction*>(QStringLiteral("promptSelect.ÇİT")))
                 fence->trigger();
-            clickAt(kentos::core::Point2{485310000, 4310250000});
-            clickAt(kentos::core::Point2{485330000, 4310190000});
+            clickAt(piricad::core::Point2{485310000, 4310250000});
+            clickAt(piricad::core::Point2{485330000, 4310190000});
         });
-        later([hover] { hover(kentos::core::Point2{485370000, 4310240000}); });
+        later([hover] { hover(piricad::core::Point2{485370000, 4310240000}); });
         later([&window, shot] { shot(QStringLiteral("37b-secim-cit"), &window); });
         later([&window] {
             QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
-            QCoreApplication::sendEvent(window.findChild<kentos::app::CommandLine*>(), &esc);
+            QCoreApplication::sendEvent(window.findChild<piricad::app::CommandLine*>(), &esc);
             window.controller()->cancelAll();
             if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });
@@ -2870,14 +2871,14 @@ int main(int argc, char** argv)
         later([&window, clickAt] {
             if (auto* dik = window.findChild<QAction*>(QStringLiteral("promptPoint.fn.dik")))
                 dik->trigger();
-            clickAt(kentos::core::Point2{485300000, 4310200000});
-            clickAt(kentos::core::Point2{485380000, 4310200000});
+            clickAt(piricad::core::Point2{485300000, 4310200000});
+            clickAt(piricad::core::Point2{485380000, 4310200000});
         });
-        later([hover] { hover(kentos::core::Point2{485330000, 4310214000}); });
+        later([hover] { hover(piricad::core::Point2{485330000, 4310214000}); });
         later([&window, shot] { shot(QStringLiteral("38-nokta-girisi"), &window); });
         later([&window] {
             QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
-            QCoreApplication::sendEvent(window.findChild<kentos::app::CommandLine*>(), &esc);
+            QCoreApplication::sendEvent(window.findChild<piricad::app::CommandLine*>(), &esc);
             window.controller()->cancelAll();
             if (SARibbonBar* bar = window.ribbonBar(); bar != nullptr) bar->setCurrentIndex(0);
         });
@@ -2890,7 +2891,7 @@ int main(int argc, char** argv)
             QCoreApplication::sendPostedEvents();
             window.runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
         });
-        later([clickAt] { clickAt(kentos::core::Point2{485320000, 4310245000}); });
+        later([clickAt] { clickAt(piricad::core::Point2{485320000, 4310245000}); });
         later([&window, shot] { shot(QStringLiteral("39-yerinde-gezinme"), &window); });
         later([&window] {
             QKeyEvent space(QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier);
@@ -2930,7 +2931,7 @@ int main(int argc, char** argv)
                     QStringLiteral("toolAction.TARAMA yontem=ic disarida")))
                 a->trigger();
         });
-        later([clickAt] { clickAt(kentos::core::Point2{485404000, 4310205000}); });
+        later([clickAt] { clickAt(piricad::core::Point2{485404000, 4310205000}); });
         later([&window, shot] {
             window.controller()->cancelAll();
             QCoreApplication::sendPostedEvents();
@@ -2941,10 +2942,10 @@ int main(int argc, char** argv)
             SARibbonBar* bar = window.ribbonBar();
             if (bar == nullptr) return;
             QCoreApplication::sendPostedEvents();
-            for (auto* f : window.findChildren<kentos::app::RibbonFamily*>()) {
+            for (auto* f : window.findChildren<piricad::app::RibbonFamily*>()) {
                 const bool hatches =
                     std::any_of(f->members().begin(), f->members().end(), [](const QAction* a) {
-                        return a->property(kentos::app::kToolCommandProperty).toString() ==
+                        return a->property(piricad::app::kToolCommandProperty).toString() ==
                                QStringLiteral("TARAMA yontem=ic");
                     });
                 if (!hatches || f->head()->menu() == nullptr) continue;
@@ -2977,24 +2978,24 @@ int main(int argc, char** argv)
                         bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonPromptPoint")))
                     bar->raiseCategory(tab);
         });
-        later([clickAt] { clickAt(kentos::core::Point2{485300000, 4310222000}); });
+        later([clickAt] { clickAt(piricad::core::Point2{485300000, 4310222000}); });
         later([&window, clickAt] {
             if (auto* take = window.findChild<QAction*>(QStringLiteral("promptPoint.KATMAN")))
                 take->trigger();
             // THE ROAD'S HATCH LIES INSIDE THE ADA: two things under the click,
             // walked in place, the smaller first; Enter takes it.
-            clickAt(kentos::core::Point2{485340000, 4310192000});
+            clickAt(piricad::core::Point2{485340000, 4310192000});
         });
         later([&window] {
             QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
             QCoreApplication::sendEvent(window.canvas(), &enter);
         });
-        later([hover] { hover(kentos::core::Point2{485440000, 4310222000}); });
+        later([hover] { hover(piricad::core::Point2{485440000, 4310222000}); });
         later([&window, shot] { shot(QStringLiteral("41-katmani-nesneden-al"), &window); });
         later([&window, clickAt] {
-            clickAt(kentos::core::Point2{485440000, 4310222000});
+            clickAt(piricad::core::Point2{485440000, 4310222000});
             QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
-            QCoreApplication::sendEvent(window.findChild<kentos::app::CommandLine*>(), &esc);
+            QCoreApplication::sendEvent(window.findChild<piricad::app::CommandLine*>(), &esc);
         });
         later([&window, shot] {
             window.controller()->cancelAll();
@@ -3005,21 +3006,21 @@ int main(int argc, char** argv)
         later([] { QApplication::exit(0); });
     }
 
-    if (const QByteArray layer = qgetenv("KENTOS_OPEN_DESIGNER"); !layer.isEmpty()) {
+    if (const QByteArray layer = qgetenv("PIRICAD_OPEN_DESIGNER"); !layer.isEmpty()) {
         const QString name = QString::fromLocal8Bit(layer);
         QTimer::singleShot(kFrameDumpSettleMs / 2, &window,
                            [&window, name] { window.openStyleDesigner(name); });
     }
 
     // Headless frame timing, for choosing between backends and for judging
-    // whether a new one earns its keep. Same category as KENTOS_FRAME_DUMP:
+    // whether a new one earns its keep. Same category as PIRICAD_FRAME_DUMP:
     // developer tooling, no /docs page, no user-facing flag.
-    if (const QByteArray rounds = qgetenv("KENTOS_FRAME_TIMES"); !rounds.isEmpty()) {
+    if (const QByteArray rounds = qgetenv("PIRICAD_FRAME_TIMES"); !rounds.isEmpty()) {
         const int n = std::max(1, rounds.toInt());
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window, n] {
-            kentos::app::MapCanvas* canvas = window.canvas();
+            piricad::app::MapCanvas* canvas = window.canvas();
             if (canvas == nullptr) {
-                (void)std::fprintf(stderr, "[kentos] tuval yok\n");
+                (void)std::fprintf(stderr, "[piricad] tuval yok\n");
                 QApplication::exit(1);
                 return;
             }
@@ -3030,7 +3031,7 @@ int main(int argc, char** argv)
             // magnifications report the same vertex count to the digit. A
             // symbology cost that depends on magnification cannot be found at one
             // magnification.
-            if (const QByteArray zoom = qgetenv("KENTOS_ZOOM"); !zoom.isEmpty()) {
+            if (const QByteArray zoom = qgetenv("PIRICAD_ZOOM"); !zoom.isEmpty()) {
                 bool ok            = false;
                 const double times = QString::fromLocal8Bit(zoom).toDouble(&ok);
                 if (ok && times > 0.0) canvas->zoomBy(times);
@@ -3047,13 +3048,13 @@ int main(int argc, char** argv)
             // frame time long after it is cheap to find; printing the two
             // together is what lets the < 100 budget be measured on the same run
             // that measures the 16 ms one.
-            const kentos::render::FrameStats fs = canvas->frameStats();
+            const piricad::render::FrameStats fs = canvas->frameStats();
             // THE SCALE COMES WITH THE NUMBERS. A frame cost without the
             // magnification it was measured at cannot be compared with another
             // one, and a probe that silently failed to zoom looks exactly like a
             // cost that does not depend on zoom.
             (void)std::fprintf(stdout,
-                               "[kentos] %d kare  cizim ortanca %d us  en iyi %d us"
+                               "[piricad] %d kare  cizim ortanca %d us  en iyi %d us"
                                "  |  sahne ortanca %d us  |  cizim cagrisi %u"
                                "  gecis %u  kose %u  |  1:%.0f\n",
                                n, costs[costs.size() / 2], costs.front(),
@@ -3067,7 +3068,7 @@ int main(int argc, char** argv)
     // a release on the canvas widget.
     //
     // Developer tooling and an environment variable rather than a CLI flag, the
-    // same category as KENTOS_FRAME_DUMP and KENTOS_SMOKE (CLAUDE.md 5.17 wants
+    // same category as PIRICAD_FRAME_DUMP and PIRICAD_SMOKE (CLAUDE.md 5.17 wants
     // a /docs page for a FEATURE, and this is not one).
     //
     // WHY IT EXISTS. The unit suite links no Qt, so it can prove `KÖŞETAŞI` moves
@@ -3077,7 +3078,7 @@ int main(int argc, char** argv)
     // before the body ran, and the only trace was a line in the transcript. Every
     // unit test still passed, and grips could be grabbed and dragged with nothing
     // whatsoever happening on release.
-    // THE §10.1 AND R7 BUDGETS, ASSERTED. `KENTOS_FRAME_TIMES` measures and
+    // THE §10.1 AND R7 BUDGETS, ASSERTED. `PIRICAD_FRAME_TIMES` measures and
     // prints; this one measures and FAILS, which is what a gate needs.
     //
     // It lives here rather than in `/tests/bench` because of Article 3.4, not
@@ -3085,10 +3086,10 @@ int main(int argc, char** argv)
     // definition, so the bench binary has nowhere to construct one and could only
     // ever measure the scene builder. The budgets are about what reaches the
     // screen. `scripts/ci-gate-butce.sh` drives this.
-    if (const QByteArray rounds = qgetenv("KENTOS_BUDGET_PROBE"); !rounds.isEmpty()) {
+    if (const QByteArray rounds = qgetenv("PIRICAD_BUDGET_PROBE"); !rounds.isEmpty()) {
         const int n = std::max(1, rounds.toInt());
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window, n] {
-            kentos::app::MapCanvas* canvas = window.canvas();
+            piricad::app::MapCanvas* canvas = window.canvas();
             if (canvas == nullptr) {
                 (void)std::fprintf(stderr, "[butce] tuval yok\n");
                 QApplication::exit(2);
@@ -3099,7 +3100,7 @@ int main(int argc, char** argv)
             std::sort(costs.begin(), costs.end());
             const int median = costs[costs.size() / 2];
 
-            const kentos::render::FrameStats fs = canvas->frameStats();
+            const piricad::render::FrameStats fs = canvas->frameStats();
 
             // The two numbers `render.md` names: R13's 16 ms and R7's hundred.
             // The draw-call budget is asserted only where it MEANS something —
@@ -3139,7 +3140,7 @@ int main(int argc, char** argv)
             if (gpu && fs.vertices >= kVertexBudget) {
                 (void)std::fprintf(stderr,
                                    "[butce] kose %u — butce %u. Bir sembol katmani damga basina "
-                                   "geometri uretiyor olabilir; KENTOS_FRAME_PARTS=1 hangisi "
+                                   "geometri uretiyor olabilir; PIRICAD_FRAME_PARTS=1 hangisi "
                                    "oldugunu soyler.\n",
                                    fs.vertices, kVertexBudget);
                 kusur = 1;
@@ -3156,22 +3157,22 @@ int main(int argc, char** argv)
     }
 
     // Presses every button on the tool column and prints what came back. Same
-    // category as KENTOS_EDIT_PROBE below: developer tooling, not a feature.
+    // category as PIRICAD_EDIT_PROBE below: developer tooling, not a feature.
     // THE CHAT DOCK, driven by a recorded provider stream. Same category as the
     // probes around it: developer tooling, not a feature. It is what proves the
     // seam no unit test can reach — a decoded tool call becoming a bubble, a
     // card and an undo entry in a running shell.
-    if (qEnvironmentVariableIsSet("KENTOS_PYTHON_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_PYTHON_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probePython()); });
     }
 
-    if (qEnvironmentVariableIsSet("KENTOS_CHAT_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_CHAT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeChat()); });
     }
 
-    if (qEnvironmentVariableIsSet("KENTOS_TOOL_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_TOOL_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeTools();
             QApplication::exit(0);
@@ -3180,7 +3181,7 @@ int main(int argc, char** argv)
 
     // The layer panel, clicked rather than called. Same category as the two
     // probes around it: developer tooling, an environment variable, no /docs page.
-    if (qEnvironmentVariableIsSet("KENTOS_LAYER_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_LAYER_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeLayerPanel();
             QApplication::exit(0);
@@ -3190,7 +3191,7 @@ int main(int argc, char** argv)
     // The pick chooser, opened by a real click rather than by a call. Same
     // category as the probes around it: developer tooling, an environment
     // variable, no /docs page.
-    if (qEnvironmentVariableIsSet("KENTOS_PICK_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_PICK_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probePickList();
             QApplication::exit(0);
@@ -3199,7 +3200,7 @@ int main(int argc, char** argv)
 
     // The surface-normal lock, engaged by HOLDING A KEY on a real canvas. The
     // engine half has a unit test; this is the half only a screen can answer.
-    if (qEnvironmentVariableIsSet("KENTOS_NORMAL_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_NORMAL_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeSurfaceNormal();
             QApplication::exit(0);
@@ -3209,13 +3210,13 @@ int main(int argc, char** argv)
     // THE OPERATING SYSTEM'S CLIPBOARD, end to end. `/tests` links no Qt, so the
     // half that puts bytes on `QClipboard` and takes them back is only answerable
     // here.
-    if (qEnvironmentVariableIsSet("KENTOS_CLIP_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_CLIP_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeClipboard() == 0 ? 0 : 1); });
     }
 
     // The tool family flyout, opened from the button rather than by a call.
-    if (qEnvironmentVariableIsSet("KENTOS_FAMILY_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_FAMILY_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeToolFamily();
             QApplication::exit(0);
@@ -3224,7 +3225,7 @@ int main(int argc, char** argv)
 
     // The attribute schema page of Katman Özellikleri, driven through its own
     // dialog lines.
-    if (qEnvironmentVariableIsSet("KENTOS_SCHEMA_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_SCHEMA_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeSchemaPage();
             QApplication::exit(0);
@@ -3233,7 +3234,7 @@ int main(int argc, char** argv)
 
     // The attribute grid: the edit-mode gate, our editors, and Enter walking the
     // row the way a ledger is filled in.
-    if (qEnvironmentVariableIsSet("KENTOS_TABLE_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_TABLE_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeAttributeGrid();
             QApplication::exit(0);
@@ -3242,7 +3243,7 @@ int main(int argc, char** argv)
 
     // The living component standard: every control in every state, its
     // inventory printed for the gate and its picture saved for the manual.
-    if (qEnvironmentVariableIsSet("KENTOS_WIDGETS_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_WIDGETS_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeWidgets();
             QApplication::exit(0);
@@ -3250,7 +3251,7 @@ int main(int argc, char** argv)
     }
 
     // Every window, photographed into a directory, for looking at.
-    if (qEnvironmentVariableIsSet("KENTOS_DIALOG_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_DIALOG_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeDialogs();
             QApplication::exit(0);
@@ -3258,7 +3259,7 @@ int main(int argc, char** argv)
     }
 
     // The layer properties window: classify a layer by a column and apply it.
-    if (qEnvironmentVariableIsSet("KENTOS_DESIGNER_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_DESIGNER_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeDesigner();
             QApplication::exit(0);
@@ -3266,26 +3267,26 @@ int main(int argc, char** argv)
     }
 
     // EVERY RIBBON TOOL, used the way a hand would, for the review of what works.
-    if (qEnvironmentVariableIsSet("KENTOS_TOOL_DRIVE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_TOOL_DRIVE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeToolDrive() == 0 ? 0 : 1); });
     }
 
     // THE RIBBON, EVERY TAB AND EVERY PICTURE, for the review of what it shows.
-    if (qEnvironmentVariableIsSet("KENTOS_RIBBON_SHEET")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_RIBBON_SHEET")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             QApplication::exit(window.probeRibbonSheet() == 0 ? 0 : 1);
         });
     }
 
     // THE WINDOW ON A LAPTOP SCREEN: every part of it, and every tool, on show.
-    if (qEnvironmentVariableIsSet("KENTOS_FIT_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_FIT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeFit() == 0 ? 0 : 1); });
     }
 
     // THE STATUS STRIP UNDER A LONG MESSAGE, in pixels.
-    if (qEnvironmentVariableIsSet("KENTOS_STRIP_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_STRIP_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             QApplication::exit(window.probeStatusStrip() == 0 ? 0 : 1);
         });
@@ -3294,14 +3295,14 @@ int main(int argc, char** argv)
     // DRAWING, THE WAY A REAL MOUSE ARRIVES: through the hit test that decides
     // which widget is under the pointer, and with a press-to-release interval a
     // hand actually produces.
-    if (qEnvironmentVariableIsSet("KENTOS_REALMOUSE_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_REALMOUSE_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeRealMouse() == 0 ? 0 : 1); });
     }
 
     // AND EVENTS FROM THE WINDOW SYSTEM ITSELF: the window stays open and reports
     // what real clicks do to it, while a driver outside the process makes them.
-    if (qEnvironmentVariableIsSet("KENTOS_OSCLICK_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_OSCLICK_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeOsClicks()); });
     }
@@ -3312,7 +3313,7 @@ int main(int argc, char** argv)
     // checkable tool button's press with `toggle()` — the button lit and the
     // command never ran. Same category as the probes around it: developer
     // tooling, an environment variable, no /docs page.
-    if (qEnvironmentVariableIsSet("KENTOS_ACCESS_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_ACCESS_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeAccessible()); });
     }
@@ -3320,27 +3321,27 @@ int main(int argc, char** argv)
     // THE TOOL FAMILIES, OPENED WITH A MOUSE. Eleven tools live only behind a
     // family card, and the column's own probe presses only the face — so none of
     // them had ever been pressed by a test.
-    if (qEnvironmentVariableIsSet("KENTOS_FLYOUT_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_FLYOUT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeFlyouts() == 0 ? 0 : 1); });
     }
 
     // AND WHETHER A HAND CAN ANSWER what a pressed tool asks.
-    if (qEnvironmentVariableIsSet("KENTOS_ANSWER_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_ANSWER_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             QApplication::exit(window.probeAnswerable() == 0 ? 0 : 1);
         });
     }
 
     // HOW MUCH OF THE PROGRAM A HAND CAN REACH.
-    if (qEnvironmentVariableIsSet("KENTOS_REACH_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_REACH_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeReach() == 0 ? 0 : 1); });
     }
 
     // THE MENU BAR, OPENED. A menu is not in the window until it is opened, so
     // nothing else in this program can show you one.
-    if (qEnvironmentVariableIsSet("KENTOS_MENU_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_MENU_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeMenus() == 0 ? 0 : 1); });
     }
@@ -3348,38 +3349,38 @@ int main(int argc, char** argv)
     // YARDIM → KOMUT LİSTESİ, ASSERTED. `/tests` links no Qt, so nothing there
     // can see that the answer is a page with a scrollbar rather than a message
     // box taller than the screen. Exits non-zero on any of it.
-    if (qEnvironmentVariableIsSet("KENTOS_HELP_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_HELP_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeHelpPage() == 0 ? 0 : 1); });
     }
 
     // THE PROMPT TABS AND A LINE COMPOSED WITH THE SCENE, over the real canvas.
-    if (qEnvironmentVariableIsSet("KENTOS_PROMPT_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_PROMPT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             QApplication::exit(window.probePromptTabs() == 0 ? 0 : 1);
         });
     }
 
     // A COMMAND'S OFFER, ASSERTED over the real canvas.
-    if (qEnvironmentVariableIsSet("KENTOS_OFFER_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_OFFER_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeOffer() == 0 ? 0 : 1); });
     }
 
     // THE VIEW HISTORY, ASSERTED on the real canvas.
-    if (qEnvironmentVariableIsSet("KENTOS_VIEW_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_VIEW_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             QApplication::exit(window.probeViewHistory() == 0 ? 0 : 1);
         });
     }
 
     // THE LAST COMMAND AGAIN, ASSERTED with real keys and a real click.
-    if (qEnvironmentVariableIsSet("KENTOS_REPEAT_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_REPEAT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,
                            [&window] { QApplication::exit(window.probeRepeat() == 0 ? 0 : 1); });
     }
 
-    if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_HAND_PROBE")) {
         // The value, when it is a path, is the directory every step is
         // photographed into. See `MainWindow::probeToolsByHand`.
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
@@ -3389,12 +3390,12 @@ int main(int argc, char** argv)
     }
 
     // THE PLOT, ASSERTED. `/tests` links no Qt and a PDF is written by Qt, so
-    // the only place this can be proved is here (the reason KENTOS_EDIT_PROBE
+    // the only place this can be proved is here (the reason PIRICAD_EDIT_PROBE
     // lives here too). Draws a parcel, prints it to a PDF on the named profile,
     // and checks what came out: one page, the sheet's own size in points, and
     // — with a password — an encrypted file. Exits non-zero on any of it.
     // Developer tooling and an environment variable, not a feature.
-    if (const QByteArray into = qgetenv("KENTOS_PRINT_PROBE"); !into.isEmpty()) {
+    if (const QByteArray into = qgetenv("PIRICAD_PRINT_PROBE"); !into.isEmpty()) {
         const QString dir = QString::fromLocal8Bit(into);
         QDir().mkpath(dir);
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window, dir] {
@@ -3402,7 +3403,7 @@ int main(int argc, char** argv)
             const auto check = [&failures](bool ok, const char* what) {
                 if (ok) return;
                 ++failures;
-                (void)std::fprintf(stderr, "[kentos] BAŞARISIZ: %s\n", what);
+                (void)std::fprintf(stderr, "[piricad] BAŞARISIZ: %s\n", what);
             };
 
             window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
@@ -3423,7 +3424,7 @@ int main(int argc, char** argv)
             QFile::remove(sealed);
             window.runScriptLine(
                 QStringLiteral("YAZDIR pencere=-5,-5 pencere=45,35 profil=\"Sınama A3\" "
-                               "dosya=\"%1\" baslik=\"Sınama paftası\" yazar=KentOSCad")
+                               "dosya=\"%1\" baslik=\"Sınama paftası\" yazar=PiriCAD")
                     .arg(plain));
             window.runScriptLine(
                 QStringLiteral("YAZDIR pencere=-5,-5 pencere=45,35 profil=\"Sınama A3\" "
@@ -3459,7 +3460,7 @@ int main(int argc, char** argv)
                 QFile f(plain);
                 return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
             }();
-            check(plain_bytes.contains("/Author (KentOSCad)"), "PDF yazar alanı yazılmadı");
+            check(plain_bytes.contains("/Author (PiriCAD)"), "PDF yazar alanı yazılmadı");
             check(!plain_bytes.contains("/Encrypt"), "şifresiz PDF şifreli çıktı");
 
             check(QFileInfo::exists(sealed), "şifreli PDF yazılmadı");
@@ -3530,7 +3531,7 @@ int main(int argc, char** argv)
             // MIDDLE one — so taking hold of the map to aim it meant the map
             // followed the mouse for ever after. Nothing in a unit test can see
             // that; it needs real press, move and release events on the widget.
-            kentos::app::MapCanvas* canvas = window.canvas();
+            piricad::app::MapCanvas* canvas = window.canvas();
             check(canvas != nullptr, "tuval yok");
             if (canvas != nullptr) {
                 const auto send = [canvas](QEvent::Type type, const QPointF& at,
@@ -3543,7 +3544,7 @@ int main(int argc, char** argv)
 
                 window.printWithProfile();
                 check(canvas->printFraming(), "yazdırma çerçevesi açılmadı");
-                const kentos::core::Box2 framed = canvas->printFrameWindow();
+                const piricad::core::Box2 framed = canvas->printFrameWindow();
                 check(!framed.empty(), "çerçeve boş bir pencere verdi");
 
                 const QPointF from(canvas->width() / 2.0, canvas->height() / 2.0);
@@ -3551,7 +3552,7 @@ int main(int argc, char** argv)
                 send(QEvent::MouseMove, from + QPointF(60, 40), Qt::NoButton, Qt::LeftButton);
                 send(QEvent::MouseButtonRelease, from + QPointF(60, 40), Qt::LeftButton,
                      Qt::NoButton);
-                const kentos::core::Point2 settled = canvas->view().centre();
+                const piricad::core::Point2 settled = canvas->view().centre();
 
                 // THE BUTTON IS UP: moving the mouse must move nothing.
                 send(QEvent::MouseMove, from + QPointF(200, 150), Qt::NoButton, Qt::NoButton);
@@ -3662,7 +3663,7 @@ int main(int argc, char** argv)
                 window.runScriptLine(QStringLiteral(
                     "ÇIKTIÖĞE islem=ayarla yerlesim=Raster ad=harita pencere=0,0 pencere=60,45"));
 
-                kentos::app::Controller* controller = window.controller();
+                piricad::app::Controller* controller = window.controller();
 
                 const QString png = dir + QStringLiteral("/sayfa.png");
                 QFile::remove(png);
@@ -3685,7 +3686,7 @@ int main(int argc, char** argv)
                 // THE PICTURE AND ITS WORLD FILE MOVED TOGETHER out of one
                 // staging directory, and none is left (TODOS F-05).
                 check(QDir(dir)
-                          .entryList(QStringList{QStringLiteral(".kentos-*")},
+                          .entryList(QStringList{QStringLiteral(".piricad-*")},
                                      QDir::AllEntries | QDir::Hidden)
                           .isEmpty(),
                       "görüntünün hazırlık klasörü kaldı");
@@ -3703,9 +3704,9 @@ int main(int argc, char** argv)
                         // THE MAP FRAME'S CENTRE MUST LAND ON THE AIMED WINDOW'S
                         // CENTRE. Exact, and independent of the letterboxing:
                         // whatever the frame's aspect, the fitted view is centred.
-                        const kentos::core::Layout* raster =
+                        const piricad::core::Layout* raster =
                             controller->document().layouts().find("Raster");
-                        const kentos::core::LayoutItem* frame =
+                        const piricad::core::LayoutItem* frame =
                             raster != nullptr ? raster->first_map() : nullptr;
                         if (frame != nullptr) {
                             const double dpi    = raster->dpi > 0 ? raster->dpi : 300;
@@ -3763,7 +3764,7 @@ int main(int argc, char** argv)
         });
     }
 
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
     // ---- THE AGENT SERVER, OVER A REAL SOCKET --------------------------------
     //
     // The protocol itself is proved by 23 Qt-free cases over `ai::McpServer`
@@ -3776,16 +3777,16 @@ int main(int argc, char** argv)
     // over HTTP changes nothing until a person decides. That is CLAUDE.md 5.7 and
     // .claude/ai.md R3/P1, and it is the sentence a reviewer will most want to
     // see demonstrated rather than asserted.
-    if (qEnvironmentVariableIsSet("KENTOS_MCP_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_MCP_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             int failures     = 0;
             const auto check = [&failures](bool ok, const char* what) {
                 if (ok) return;
                 ++failures;
-                (void)std::fprintf(stderr, "[kentos] BAŞARISIZ: %s\n", what);
+                (void)std::fprintf(stderr, "[piricad] BAŞARISIZ: %s\n", what);
             };
 
-            kentos::app::Controller* controller = window.controller();
+            piricad::app::Controller* controller = window.controller();
             check(controller != nullptr, "denetleyici yok");
             if (controller == nullptr) {
                 QApplication::exit(1);
@@ -3807,7 +3808,7 @@ int main(int argc, char** argv)
             auto started = server->start(18765);
             check(started.ok(), "sunucu başlamadı");
             if (!started.ok()) {
-                (void)std::fprintf(stderr, "[kentos]   %s\n", started.error().message.c_str());
+                (void)std::fprintf(stderr, "[piricad]   %s\n", started.error().message.c_str());
                 QApplication::exit(1);
                 return;
             }
@@ -3864,7 +3865,7 @@ int main(int argc, char** argv)
             };
             const QByteArray meta =
                 "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
-                "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"kentos-probe\","
+                "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"piricad-probe\","
                 "\"version\":\"1\"}}";
 
             // 1. DISCOVERY, which is mandatory in this revision.
@@ -3899,13 +3900,13 @@ int main(int argc, char** argv)
             const QByteArray wrote   = post(
                 base,
                 envelope("tools/call",
-                           "{\"name\":\"core_layer\",\"arguments\":{\"ad\":\"AJAN\"}," + meta + "}"),
+                         "{\"name\":\"core_layer\",\"arguments\":{\"ad\":\"AJAN\"}," + meta + "}"),
                 "tools/call", "core_layer", &status);
             say("write tool", status, wrote);
             check(status == 200, "yazma aracı 200 vermedi");
             check(wrote.contains("oneri") || wrote.contains("öneri"),
                   "yazma aracı öneri kimliği döndürmedi");
-            check(controller->document().find_layer("AJAN") == kentos::core::kNoLayer,
+            check(controller->document().find_layer("AJAN") == piricad::core::kNoLayer,
                   "YAZMA ARACI UYGULANDI — onay beklemesi gerekirdi");
             check(controller->document().live_entity_count() == before, "çizim değişti");
             check(controller->aiService().plans().pending().size() == 1,
@@ -3929,19 +3930,19 @@ int main(int argc, char** argv)
             //    dock shows for the plan and presses its `Uygula`, the only thing
             //    in the program that can mint an `ai::Approval` for a person
             //    (ai.md P15, TODOS A-03).
-            const std::vector<const kentos::ai::Plan*> open =
+            const std::vector<const piricad::ai::Plan*> open =
                 controller->aiService().plans().pending();
             check(!open.empty(), "bekleyen öneri yok");
             if (!open.empty()) {
-                const QString plan                 = QString::fromStdString(open.front()->id);
-                kentos::app::SuggestionCard* shown = nullptr;
-                for (auto* card : window.findChildren<kentos::app::SuggestionCard*>())
+                const QString plan                  = QString::fromStdString(open.front()->id);
+                piricad::app::SuggestionCard* shown = nullptr;
+                for (auto* card : window.findChildren<piricad::app::SuggestionCard*>())
                     if (card->planId() == plan) shown = card;
                 check(shown != nullptr, "MCP önerisi için pencerede kart yok");
                 if (shown != nullptr) {
                     // A PICTURE OF IT, when the probe is given a folder: the card
                     // as the person at the workstation sees it, before the click.
-                    if (const QString into = QString::fromLocal8Bit(qgetenv("KENTOS_MCP_PROBE"));
+                    if (const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_MCP_PROBE"));
                         into.size() > 1) {
                         QDir().mkpath(into);
                         // The transcript scrolls after its layout has run.
@@ -3965,7 +3966,7 @@ int main(int argc, char** argv)
                     const auto decided = shown->probeApply();
                     check(decided.ok(), "onaylanan öneri uygulanamadı");
                     check(!shown->pending(), "karar verilen kart hâlâ bekliyor");
-                    check(controller->document().find_layer("AJAN") != kentos::core::kNoLayer,
+                    check(controller->document().find_layer("AJAN") != piricad::core::kNoLayer,
                           "onaydan sonra katman yok");
                 }
             }
@@ -4013,17 +4014,17 @@ int main(int argc, char** argv)
                     const auto filed = controller->aiService().plans().pending();
                     check(filed.size() == pending + 1, "göreli kare bir öneri açmadı");
                     if (filed.size() == pending + 1) {
-                        const kentos::ai::Plan* plan = filed.back();
+                        const piricad::ai::Plan* plan = filed.back();
                         const auto corners = plan->steps.front().args.get("noktalar").as_points();
-                        const std::optional<kentos::command::ViewInfo> view =
+                        const std::optional<piricad::command::ViewInfo> view =
                             controller->aiService().view();
                         check(corners.size() == 4, "önerinin dört köşesi yok");
                         if (view && corners.size() == 4) {
-                            check(corners[0] == kentos::core::Point2{view->centre.x - 10000,
-                                                                     view->centre.y - 10000},
+                            check(corners[0] == piricad::core::Point2{view->centre.x - 10000,
+                                                                      view->centre.y - 10000},
                                   "göreli köşe merkezden ölçülmedi");
-                            check(corners[2] == kentos::core::Point2{view->centre.x + 10000,
-                                                                     view->centre.y + 10000},
+                            check(corners[2] == piricad::core::Point2{view->centre.x + 10000,
+                                                                      view->centre.y + 10000},
                                   "karşı köşe merkezden ölçülmedi");
                         }
                         check(plan->steps.front().constructions.size() == 4,
@@ -4039,7 +4040,7 @@ int main(int argc, char** argv)
             {
                 controller->runLine(QStringLiteral("ALAN 485340,4310230 485350,4310230 "
                                                    "485350,4310240 485340,4310240"),
-                                    kentos::command::Origin::Gui);
+                                    piricad::command::Origin::Gui);
                 const QByteArray found = post(
                     base,
                     envelope("tools/call", "{\"name\":\"sorgula\",\"arguments\":{}," + meta + "}"),
@@ -4091,11 +4092,10 @@ int main(int argc, char** argv)
             // `satirlar` for every sheet, which reads as "nothing wrong". Only a
             // real request over a real socket shows that (A-05, L-15).
             window.runScriptLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Sınama kagit=A4"));
-            const QByteArray preflight =
-                post(base,
-                     envelope("resources/read",
-                              "{\"uri\":\"kentoscad://yerlesim/denetim\"," + meta + "}"),
-                     "resources/read", "kentoscad://yerlesim/denetim", &status);
+            const QByteArray preflight = post(
+                base,
+                envelope("resources/read", "{\"uri\":\"piricad://yerlesim/denetim\"," + meta + "}"),
+                "resources/read", "piricad://yerlesim/denetim", &status);
             say("preflight", status, preflight);
             check(status == 200, "önizleme kaynağı 200 vermedi");
             check(preflight.contains("Sınama"), "önizleme kaynağı yerleşimi saymadı");
@@ -4110,13 +4110,13 @@ int main(int argc, char** argv)
             //    a session — 2026-07-28 has none — so what a person is shown is
             //    who SPOKE and when, and this is where that is proved over a
             //    real socket rather than against a test double.
-            const kentos::ai::ClientLedger& ledger = server->clients();
+            const piricad::ai::ClientLedger& ledger = server->clients();
             check(ledger.size() >= 1, "istemci defteri boş");
             std::string probe_label;
-            for (const kentos::ai::ClientRecord& one : ledger.clients())
+            for (const piricad::ai::ClientRecord& one : ledger.clients())
                 if (one.calls > 0) probe_label = one.label;
             check(!probe_label.empty(), "defterde çağrısı olan istemci yok");
-            const kentos::ai::ClientRecord* row = ledger.find(probe_label);
+            const piricad::ai::ClientRecord* row = ledger.find(probe_label);
             check(row != nullptr && row->calls >= 5, "çağrılar sayılmadı");
             check(row != nullptr && row->plans >= 1, "açılan öneri sayılmadı");
             check(row != nullptr && row->last_seen != 0, "son görülme zamanı yazılmadı");
@@ -4131,7 +4131,7 @@ int main(int argc, char** argv)
             auto tried = server->probe();
             check(tried.ok(), "MCPSUNUCU islem=sina başarısız");
             if (!tried.ok())
-                (void)std::fprintf(stderr, "[kentos]   %s\n", tried.error().message.c_str());
+                (void)std::fprintf(stderr, "[piricad]   %s\n", tried.error().message.c_str());
 
             // 11. ONE CLIENT IS SHUT OUT AND THE TOKEN DOES NOT MOVE. A 403 for
             //     the revoked label, a 200 for a different one, and the address
@@ -4146,7 +4146,7 @@ int main(int argc, char** argv)
 
             const QByteArray other_meta =
                 "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
-                "\"cad.kentos/client\":\"baska-ajan\"}";
+                "\"cad.piricad/client\":\"baska-ajan\"}";
             (void)post(base, envelope("tools/list", "{" + other_meta + "}"), "tools/list", {},
                        &status);
             say("other client", status, QByteArray());
@@ -4168,11 +4168,11 @@ int main(int argc, char** argv)
     }
 #endif
 
-    if (qEnvironmentVariableIsSet("KENTOS_EDIT_PROBE")) {
+    if (qEnvironmentVariableIsSet("PIRICAD_EDIT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             auto* canvas = window.canvas();
             if (canvas == nullptr) {
-                (void)std::fprintf(stderr, "[kentos] tuval yok\n");
+                (void)std::fprintf(stderr, "[piricad] tuval yok\n");
                 QApplication::exit(1);
                 return;
             }
@@ -4222,7 +4222,7 @@ int main(int argc, char** argv)
                 send(QEvent::MouseButtonRelease, to, Qt::LeftButton, Qt::NoButton);
             };
 
-            const auto at = [&](kentos::core::Point2 world) {
+            const auto at = [&](piricad::core::Point2 world) {
                 const auto p = canvas->view().to_screen(world);
                 return QPointF(p.x, p.y);
             };
@@ -4231,7 +4231,7 @@ int main(int argc, char** argv)
             const auto check = [&](bool ok, const char* what) {
                 if (!ok) {
                     ++failures;
-                    (void)std::fprintf(stderr, "[kentos] BAŞARISIZ: %s\n", what);
+                    (void)std::fprintf(stderr, "[piricad] BAŞARISIZ: %s\n", what);
                 }
             };
 
@@ -4244,7 +4244,7 @@ int main(int argc, char** argv)
             // 1. Drag corner 1. It must MOVE, and the object must stay one object
             //    with the same key — a corner correction is not a new parsel.
             const auto key_before = doc.entities().key[0];
-            const QPointF grabbed = at(kentos::core::Point2{485300000, 4310200000});
+            const QPointF grabbed = at(piricad::core::Point2{485300000, 4310200000});
             drag(grabbed, grabbed + QPointF(60, -40));
 
             check(doc.geometry().ring_xs(corners().first).size() == 4,
@@ -4255,7 +4255,7 @@ int main(int argc, char** argv)
 
             // 2. Drag the MIDDLE of the edge from corner 2 to corner 3. That is not
             //    a corner, so it must INSERT one rather than move either end.
-            const QPointF on_edge = at(kentos::core::Point2{485360000, 4310222500});
+            const QPointF on_edge = at(piricad::core::Point2{485360000, 4310222500});
             drag(on_edge, on_edge + QPointF(50, 0));
 
             check(doc.geometry().ring_xs(corners().first).size() == 5, "kenara köşe eklenmedi");
@@ -4328,7 +4328,7 @@ int main(int argc, char** argv)
             send(QEvent::MouseMove, QPointF(280, 200), Qt::NoButton, Qt::NoButton);
             (void)canvas->grabCanvas(); // the overlay is built while painting
 
-            check(canvas->guideVertexCountForProbe() >= kentos::core::kCircleSegments,
+            check(canvas->guideVertexCountForProbe() >= piricad::core::kCircleSegments,
                   "daire kılavuzu çember çizmiyor");
 
             {
@@ -4412,7 +4412,7 @@ int main(int argc, char** argv)
                 window.runScriptLine(QStringLiteral("SEÇ nesneler=1"));
                 QCoreApplication::processEvents();
 
-                auto* panel = window.findChild<kentos::app::AttributePanel*>();
+                auto* panel = window.findChild<piricad::app::AttributePanel*>();
                 check(panel != nullptr, "öznitelik paneli bulunamadı");
                 if (panel != nullptr) {
                     check(panel->editRowForProbe(QStringLiteral("ada_no"), QStringLiteral("1284")),
@@ -4423,7 +4423,7 @@ int main(int argc, char** argv)
                     // indexed by geometry slot, not by entity slot, and only
                     // `Document::attribute` knows the mapping.
                     const auto col = doc.attributes().find("ada_no");
-                    check(col != kentos::core::kNoAttr, "ada_no sütunu tanımlanmadı");
+                    check(col != piricad::core::kNoAttr, "ada_no sütunu tanımlanmadı");
 
                     const auto stored = doc.attribute(col, doc.slot_of(doc.entities().key[0]));
                     check(stored.ok() && stored.value().present && stored.value().text == "1284",
@@ -4434,12 +4434,12 @@ int main(int argc, char** argv)
                 }
             }
 
-            if (failures == 0) (void)std::fprintf(stdout, "[kentos] tuval düzenleme: tamam\n");
+            if (failures == 0) (void)std::fprintf(stdout, "[piricad] tuval düzenleme: tamam\n");
             QApplication::exit(failures == 0 ? 0 : 1);
         });
     }
 
-    if (const QByteArray dump = qgetenv("KENTOS_FRAME_DUMP"); !dump.isEmpty()) {
+    if (const QByteArray dump = qgetenv("PIRICAD_FRAME_DUMP"); !dump.isEmpty()) {
         const QString path = QString::fromLocal8Bit(dump);
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window, path] {
             // The ACTIVE window, not the main one: a dialog under review is the
@@ -4451,7 +4451,7 @@ int main(int argc, char** argv)
             // The same magnification hook the timing probe uses. A rendering
             // change that only shows at 1:1 cannot be reviewed from a picture
             // taken at the drawing's full extent.
-            if (const QByteArray zoom = qgetenv("KENTOS_ZOOM"); !zoom.isEmpty()) {
+            if (const QByteArray zoom = qgetenv("PIRICAD_ZOOM"); !zoom.isEmpty()) {
                 bool ok            = false;
                 const double times = QString::fromLocal8Bit(zoom).toDouble(&ok);
                 if (ok && times > 0.0 && window.canvas() != nullptr) {
@@ -4460,22 +4460,22 @@ int main(int argc, char** argv)
                 }
             }
 
-            // KENTOS_ARM presses one tool-column button before the shot, so a
+            // PIRICAD_ARM presses one tool-column button before the shot, so a
             // review can see what an ARMED tool looks like. The actions are named
             // `toolAction.<KOMUT>` for exactly this kind of reach; same category
             // as the probes above — developer tooling, not a feature.
-            if (const QByteArray arm = qgetenv("KENTOS_ARM"); !arm.isEmpty()) {
+            if (const QByteArray arm = qgetenv("PIRICAD_ARM"); !arm.isEmpty()) {
                 const QString name = QStringLiteral("toolAction.") + QString::fromUtf8(arm);
                 if (QAction* action = window.findChild<QAction*>(name)) {
                     action->trigger();
                     QCoreApplication::processEvents();
                 } else {
-                    (void)std::fprintf(stderr, "[kentos] araç bulunamadı: %s\n", qPrintable(name));
+                    (void)std::fprintf(stderr, "[piricad] araç bulunamadı: %s\n", qPrintable(name));
                 }
             }
 
             const bool saved = window_shot(subject).save(path);
-            (void)std::fprintf(saved ? stdout : stderr, "[kentos] kare %s: %s\n",
+            (void)std::fprintf(saved ? stdout : stderr, "[piricad] kare %s: %s\n",
                                saved ? "yazıldı" : "YAZILAMADI", qPrintable(path));
             QApplication::exit(saved ? 0 : 1);
         });

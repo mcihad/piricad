@@ -14,19 +14,19 @@
 //   * an external reference stays clipped across a reload and a save, and a
 //     file holding a clip asks for a reader that knows one;
 //   * every refusal says what was wrong, and every step is one undo step.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/io/format.hpp"
-#include "kentos_cad/io/service.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/io/format.hpp"
+#include "piricad/io/service.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -35,8 +35,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 
 namespace {
@@ -129,7 +129,7 @@ class TempDir
 public:
     explicit TempDir(const char* tag)
     {
-        path_ = fs::temp_directory_path() / (std::string("kentoscad-blokkirp-") + tag);
+        path_ = fs::temp_directory_path() / (std::string("piricad-blokkirp-") + tag);
         std::error_code ec;
         fs::remove_all(path_, ec);
         fs::create_directories(path_, ec);

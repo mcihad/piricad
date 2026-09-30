@@ -356,7 +356,7 @@ yazar.
 Politika bir öneriyi uyguladığında istemciye bu **söylenir**: sohbetteki model
 `UYGULANDI` yanıtını alır ve onay beklemeden işin sonraki adımına geçer; bir MCP
 istemcisinin yanıtında `durum: uygulandi` ve `_meta` içinde
-`cad.kentos/approval: policy-applied` yazar; döküm satırı
+`cad.piricad/approval: policy-applied` yazar; döküm satırı
 `(onay politikasıyla uygulandı — politika:otomatik)` der. Bekleyen bir önerinin yanıtı
 ise bekleme sebebini söyler. Böylece `otomatik` seçen biri için birkaç adımlık bir iş,
 arada kart tıklanmadan tek istekte biter; her öneri yine tek Ctrl+Z ile geri alınır.
@@ -389,7 +389,7 @@ Okuma ve görünüm her üç modda da doğrudan çalışır — onlar zaten hiç
 Soru sormak modelin işidir; programın işi, seçtiğiniz kuralı sohbetteki modele ve MCP
 istemcilerine **aynı sözlerle** söylemektir (sohbette sistem metninde, MCP'de
 `server/discover` yanıtının `instructions` alanında ve `_meta` içindeki
-`cad.kentos/policy`de). Model varsayım yaptığında onu yazan çağrının `varsayimlar`
+`cad.piricad/policy`de). Model varsayım yaptığında onu yazan çağrının `varsayimlar`
 alanına yazar; varsayımlar kartta, yanıtta, döküm satırında ve denetim kaydında görünür.
 Hiçbir modda koordinat, koordinat sistemi ya da hedef nesne gibi sonucu belirleyen bir
 bilgi uydurulmaz — model onu bulamıyorsa durur ve eksik olanı söyler.

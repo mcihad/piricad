@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/polygon.hpp"
+#include "piricad/core/polygon.hpp"
 
-#include "kentos_cad/core/pick.hpp"
+#include "piricad/core/pick.hpp"
 
 #include <cmath>
 #include <cstring>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 bool sides_in_range(std::int64_t sides) noexcept
@@ -199,4 +199,4 @@ bool polygon_from_guide(const PolygonGuide& guide, Point2 centre, Point2 at,
     return out.corners.size() >= static_cast<std::size_t>(kPolygonMinSides);
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

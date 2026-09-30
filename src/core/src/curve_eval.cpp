@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core (private): an ellipse or a spline piece as the exact curve
+// PiriCAD — core (private): an ellipse or a spline piece as the exact curve
 // it is. See curve_eval.hpp.
 #include "curve_eval.hpp"
 
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/precision.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/precision.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 
-namespace kentos::core::curve {
+namespace piricad::core::curve {
 namespace {
 
 /// Radians in one micro-degree.
@@ -123,7 +123,7 @@ std::vector<double> breaks(const PathPiece& piece, double t0, double t1)
     } else if (piece.kind != PathPiece::Kind::Segment) {
         const double turns = std::abs(static_cast<double>(piece.sweep_udeg)) /
                              static_cast<double>(kUDegFullCircle) * (t1 - t0);
-        const int parts = std::max(1, static_cast<int>(std::ceil(turns * 16.0)));
+        const int parts    = std::max(1, static_cast<int>(std::ceil(turns * 16.0)));
         for (int i = 1; i < parts; ++i)
             out.push_back(t0 + ((t1 - t0) * static_cast<double>(i) / static_cast<double>(parts)));
     }
@@ -471,7 +471,7 @@ Eval::Eval(const PathPiece& piece, Point2 origin) : kind_(piece.kind), origin_(o
         const double r = mm_to_metres(piece.radius);
         u_             = Vec{r, 0.0};
         v_             = Vec{0.0, r};
-        start_         = static_cast<double>(
+        start_ = static_cast<double>(
                      atan2_udeg(piece.from.y - piece.centre.y, piece.from.x - piece.centre.x)) *
                  kUdegToRad;
         sweep_ = static_cast<double>(piece.sweep_udeg) * kUdegToRad;
@@ -1116,4 +1116,4 @@ Box2 bounds(const PathPiece& piece)
     return box;
 }
 
-} // namespace kentos::core::curve
+} // namespace piricad::core::curve

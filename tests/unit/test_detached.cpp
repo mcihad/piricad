@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — tests: KAPSAMDENETİM, the objects cut off from the drawing's
+// PiriCAD — tests: KAPSAMDENETİM, the objects cut off from the drawing's
 // majority (`core::find_detached`, netcad_plan.md N-01).
 //
 // The acceptance is the plan's own: ten thousand parcels and three stragglers,
 // exactly three reported and none of them touched. The other half is the rule's
 // promise — a drawing that thins out gradually has no straggler — because a
 // check that cries wolf on the outskirts of every town plan is switched off.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/detached.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/detached.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

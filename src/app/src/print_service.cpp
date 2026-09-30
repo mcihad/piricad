@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/print_service.hpp"
+#include "piricad/app/print_service.hpp"
 
-#include "kentos_cad/app/layout_render.hpp"
+#include "piricad/app/layout_render.hpp"
 
-#include "kentos_cad/app/backend_factory.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/io/pdf_encrypt.hpp"
-#include "kentos_cad/io/staging.hpp"
-#include "kentos_cad/render/backend.hpp"
-#include "kentos_cad/render/drawlist.hpp"
-#include "kentos_cad/render/scene.hpp"
-#include "kentos_cad/render/view.hpp"
+#include "piricad/app/backend_factory.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/io/pdf_encrypt.hpp"
+#include "piricad/io/staging.hpp"
+#include "piricad/render/backend.hpp"
+#include "piricad/render/drawlist.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/render/view.hpp"
 
 #include <QDate>
 #include <QDir>
@@ -34,7 +34,7 @@
 #include <memory>
 #include <utility>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 constexpr double kMmPerInch = 25.4;
@@ -110,10 +110,10 @@ QByteArray sheet_xmp(const QString& title)
                        "    xmlns:xmp=\"http://ns.adobe.com/xap/1.0/\"\n"
                        "    xmlns:xmpTPg=\"http://ns.adobe.com/xap/1.0/t/pg/\"\n"
                        "    xmlns:stFnt=\"http://ns.adobe.com/xap/1.0/sType/Font#\"\n"
-                       "    xmlns:kentos=\"https://kentoscad.org/ns/pafta/1.0/\">\n"
+                       "    xmlns:piricad=\"https://piricad.org/ns/pafta/1.0/\">\n"
                        "   <dc:title><rdf:Alt><rdf:li "
                        "xml:lang=\"x-default\">%1</rdf:li></rdf:Alt></dc:title>\n"
-                       "   <xmp:CreatorTool>KentOSCad</xmp:CreatorTool>\n"
+                       "   <xmp:CreatorTool>PiriCAD</xmp:CreatorTool>\n"
                        "   <xmpTPg:Fonts><rdf:Bag><rdf:li rdf:parseType=\"Resource\">\n"
                        "    <stFnt:fontName>IBMPlexSans</stFnt:fontName>\n"
                        "    <stFnt:fontFamily>%2</stFnt:fontFamily>\n"
@@ -121,8 +121,8 @@ QByteArray sheet_xmp(const QString& title)
                        "    <stFnt:fontType>TrueType</stFnt:fontType>\n"
                        "    <stFnt:fontFileName>IBMPlexSans-Regular.ttf</stFnt:fontFileName>\n"
                        "   </rdf:li></rdf:Bag></xmpTPg:Fonts>\n"
-                       "   <kentos:yaziTipiLisansi>%2 — %3 (ayrılmış yazı tipi adı: "
-                       "Plex)</kentos:yaziTipiLisansi>\n"
+                       "   <piricad:yaziTipiLisansi>%2 — %3 (ayrılmış yazı tipi adı: "
+                       "Plex)</piricad:yaziTipiLisansi>\n"
                        "  </rdf:Description>\n"
                        " </rdf:RDF>\n"
                        "</x:xmpmeta>\n"
@@ -652,7 +652,7 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
         const core::Mm pad_x = one.bounds.width() * sheet->atlas.margin_percent / 100;
         const core::Mm pad_y = one.bounds.height() * sheet->atlas.margin_percent / 100;
         map->extent          = core::Box2{one.bounds.min_x - pad_x, one.bounds.min_y - pad_y,
-                                 one.bounds.max_x + pad_x, one.bounds.max_y + pad_y};
+                                          one.bounds.max_x + pad_x, one.bounds.max_y + pad_y};
         // THE DECLARED SCALE STILL WINS when there is one: an atlas at 1:1000 is
         // a hundred sheets at 1:1000, which is the point of declaring it.
     };
@@ -744,7 +744,7 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             QPdfWriter writer(temp);
             writer.setPageLayout(page);
             writer.setResolution(sheet->dpi > 0 ? sheet->dpi : 300);
-            writer.setCreator(QStringLiteral("KentOSCad"));
+            writer.setCreator(QStringLiteral("PiriCAD"));
             const QString title = request.title.empty() ? utf8(sheet->name) : utf8(request.title);
             writer.setTitle(title);
             writer.setDocumentXmpMetadata(sheet_xmp(title));
@@ -819,7 +819,7 @@ core::Result<std::string> PrintService::toPdf(const command::PrintRequest& reque
     const bool post       = finish.encrypts() || !finish.author.empty();
     if (post && !io::pdf_encryption_available())
         return core::err(core::ErrorCode::Unsupported,
-                         "Bu yapı PDF şifreleme ve yazar alanını içermiyor (KENTOS_WITH_QPDF). "
+                         "Bu yapı PDF şifreleme ve yazar alanını içermiyor (PIRICAD_WITH_QPDF). "
                          "sifre, sahip_sifresi ve yazar olmadan yazın.");
 
     // Qt writes the plain file into a staging directory; when a password or an
@@ -834,7 +834,7 @@ core::Result<std::string> PrintService::toPdf(const command::PrintRequest& reque
         QPdfWriter writer(plain);
         writer.setPageLayout(layout_of(profile));
         writer.setResolution(static_cast<int>(profile.dpi));
-        writer.setCreator(QStringLiteral("KentOSCad"));
+        writer.setCreator(QStringLiteral("PiriCAD"));
         if (!request.title.empty()) writer.setTitle(utf8(request.title));
         writer.setDocumentXmpMetadata(sheet_xmp(utf8(request.title)));
         const QRect paint = writer.pageLayout().paintRectPixels(writer.resolution());
@@ -862,8 +862,8 @@ core::Result<std::string> PrintService::toPdf(const command::PrintRequest& reque
 
     const double scale = scaleDenominator(profile, fitWindow(profile, request.window));
     std::string said   = "PDF yazıldı: " + path.toStdString() + " — " +
-                       io::describe_print_profile(profile) +
-                       ", ölçek 1:" + std::to_string(static_cast<long long>(std::llround(scale)));
+                         io::describe_print_profile(profile) +
+                         ", ölçek 1:" + std::to_string(static_cast<long long>(std::llround(scale)));
     if (finish.encrypts()) said += ", şifreli";
     said += sheet_face_note();
     return said;
@@ -888,7 +888,7 @@ core::Result<std::string> PrintService::toPrinter(const command::PrintRequest& r
     QPrinter printer(info, QPrinter::HighResolution);
     printer.setPageLayout(layout_of(profile));
     printer.setResolution(static_cast<int>(profile.dpi));
-    printer.setDocName(request.title.empty() ? QStringLiteral("KentOSCad") : utf8(request.title));
+    printer.setDocName(request.title.empty() ? QStringLiteral("PiriCAD") : utf8(request.title));
     const QRect paint = printer.pageLayout().paintRectPixels(printer.resolution());
     if (paint.isEmpty())
         return core::err(core::ErrorCode::InvalidArgument,
@@ -902,4 +902,4 @@ core::Result<std::string> PrintService::toPrinter(const command::PrintRequest& r
            ", ölçek 1:" + std::to_string(static_cast<long long>(std::llround(scale)));
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

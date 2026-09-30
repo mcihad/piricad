@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/angle.hpp"
+#include "piricad/core/angle.hpp"
 
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <cstdint>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 
 Point2 polar_offset(double distance_metres, double angle, AngleConvention convention) noexcept
 {
@@ -123,4 +123,4 @@ const char* angle_rule_label(AngleRule rule) noexcept
     return rule == AngleRule::Matematik ? "doğudan saat yönünün tersine" : "kuzeyden saat yönünde";
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -11,24 +11,24 @@
 //
 //   SOURCE-BLINDNESS — the same aim through a GUI session, through the command
 //   line and through a JSON script must land on the same millimetre, because the
-//   aids are applied on the one path all three take (kentoscad.md §2.4).
-#include "kentos_test.hpp"
+//   aids are applied on the one path all three take (piricad.md §2.4).
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/guide.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/render/snap_marker.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/guide.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/render/snap_marker.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <array>
 #include <cstdlib>
 #include <initializer_list>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -586,7 +586,7 @@ TEST_CASE("YAKALAMA: yarıçap sıfırken nesne yakalama devre dışıdır")
 {
     // This is what keeps a headless journal replay honest: no view, no pixels, no
     // aperture, so a recorded point is never re-snapped onto a neighbour that the
-    // recording session did not have (kentos_cad/command/aids.hpp).
+    // recording session did not have (piricad/command/aids.hpp).
     core::Document doc;
     (void)add_square(doc, 0, 0, 10000);
 
@@ -1611,7 +1611,7 @@ TEST_CASE(
 TEST_CASE("YAKALAMA: günlük tekrar oynatıldığında belge değişmez")
 {
     // Idempotence where it matters: a snapped run is replayed through the bus and
-    // must reproduce the same document (kentoscad.md §2.2, CLAUDE.md 6.4).
+    // must reproduce the same document (piricad.md §2.2, CLAUDE.md 6.4).
     Rig original;
     original.with_view(1.0);
     CHECK(original.line("ÇİZGİ 0,0 10,0").ok());
@@ -2193,7 +2193,7 @@ TEST_CASE("YAKALAMA: her mod idempotent — snap(snap(p)) == snap(p)")
 
 TEST_CASE("Yakalama işareti: her modun bir işareti var")
 {
-    using namespace kentos::core;
+    using namespace piricad::core;
 
     struct Named
     {
@@ -2219,12 +2219,12 @@ TEST_CASE("Yakalama işareti: her modun bir işareti var")
     };
 
     for (const Named& mode : all) {
-        const kentos::render::Marker mark =
-            kentos::render::snap_marker(mode.bit, 100.0F, 50.0F, 6.0F);
+        const piricad::render::Marker mark =
+            piricad::render::snap_marker(mode.bit, 100.0F, 50.0F, 6.0F);
         INFO("mod: ", mode.id);
         CHECK_FALSE(mark.empty());
         // A stroke of one point is not a stroke: the overlay draws runs.
-        for (const kentos::render::MarkerRun& stroke : mark.runs)
+        for (const piricad::render::MarkerRun& stroke : mark.runs)
             CHECK(stroke.points.size() >= 2);
     }
 
@@ -2238,5 +2238,5 @@ TEST_CASE("Yakalama işareti: her modun bir işareti var")
 
     // An unknown bit still answers a mark rather than nothing: the engine moved
     // the point, so something has to say so.
-    CHECK_FALSE(kentos::render::snap_marker(1U << 30, 0.0F, 0.0F, 6.0F).empty());
+    CHECK_FALSE(piricad::render::snap_marker(1U << 30, 0.0F, 0.0F, 6.0F).empty());
 }

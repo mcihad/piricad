@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — render: the backend interface.
+// PiriCAD — render: the backend interface.
 //
-// Target (kentoscad.md §6.3): a GPU pipeline inside QRhiWidget.
+// Target (piricad.md §6.3): a GPU pipeline inside QRhiWidget.
 // Phase 0 deviation (CLAUDE.md Article 8.1): the QRhi backend exists behind
-// `KENTOS_WITH_RHI`, which is OFF by default while it draws geometry but not yet
+// `PIRICAD_WITH_RHI`, which is OFF by default while it draws geometry but not yet
 // text; the QPainter backend ships meanwhile. Nothing above this interface knows
 // which one is live — that is the whole point of the interface.
 #pragma once
 
-#include "kentos_cad/render/drawlist.hpp"
+#include "piricad/render/drawlist.hpp"
 
 #include <cstdint>
 
 #include <string>
 
-namespace kentos::render {
+namespace piricad::render {
 
 /// What one frame needs that the draw list does not carry.
 struct FrameContext
@@ -27,7 +27,7 @@ struct FrameContext
 
     /// The surface to draw into, opaque to /src/render.
     ///
-    /// A `void*` because this header may not name a Qt type: `kentos_render`
+    /// A `void*` because this header may not name a Qt type: `piricad_render`
     /// links no Qt (CLAUDE.md 3.4, Article 8.5) and the whole point of the
     /// interface is that nothing above it knows which backend is live. The
     /// backend that receives it is the only code that knows what it is — a paint
@@ -127,7 +127,7 @@ std::string gpu_backend_status();
 /// Empty when the SDF text atlas is compiled in, and an actionable line when it
 /// is not.
 ///
-/// WHY IT IS ITS OWN LINE. `KENTOS_WITH_TEXT` is optional and the QRhi canvas's
+/// WHY IT IS ITS OWN LINE. `PIRICAD_WITH_TEXT` is optional and the QRhi canvas's
 /// entire text path lives behind it, so a build without it draws a plan sheet
 /// correctly and at full speed while silently omitting every caption on it. That
 /// is the worst shape a missing option can take: nothing is wrong, nothing is
@@ -135,4 +135,4 @@ std::string gpu_backend_status();
 /// prints this at start-up beside the canvas backend's own status.
 std::string text_backend_status();
 
-} // namespace kentos::render
+} // namespace piricad::render

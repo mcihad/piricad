@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/command_line.hpp"
+#include "piricad/app/command_line.hpp"
 
-#include "kentos_cad/app/controller.hpp"
+#include "piricad/app/controller.hpp"
 
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/command/colour.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/command/colour.hpp"
 
 #include <algorithm>
 
@@ -19,7 +19,7 @@
 #include <QPixmap>
 #include <QStringListModel>
 
-namespace kentos::app {
+namespace piricad::app {
 
 namespace {
 
@@ -139,7 +139,7 @@ void CommandLine::paintEvent(QPaintEvent* event)
 void CommandLine::refreshCompletions()
 {
     // Completions come from the command registry — the single source of truth.
-    // There is no second command list anywhere (kentoscad.md §2.3).
+    // There is no second command list anywhere (piricad.md §2.3).
     QStringList names;
     for (const auto& spec : controller_.registry().all())
         for (const auto& n : spec.names)
@@ -345,4 +345,4 @@ bool CommandLine::event(QEvent* event)
     return QLineEdit::event(event);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

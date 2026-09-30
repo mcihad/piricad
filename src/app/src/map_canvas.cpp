@@ -1,41 +1,41 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/map_canvas.hpp"
+#include "piricad/app/map_canvas.hpp"
 
-#include "kentos_cad/app/backend_factory.hpp"
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/text_engine.hpp"
-#include "kentos_cad/command/aids.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/ghost.hpp"
-#include "kentos_cad/command/path_edit.hpp"
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/area_edit.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/break_run.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/corner.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/fillet.hpp"
-#include "kentos_cad/core/grips.hpp"
-#include "kentos_cad/core/guide.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/lineage.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/parallel.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/polygon.hpp"
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/core/spline.hpp"
-#include "kentos_cad/core/ties.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/trim_curve.hpp"
-#include "kentos_cad/render/backend.hpp"
-#include "kentos_cad/render/snap_marker.hpp"
+#include "piricad/app/backend_factory.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/text_engine.hpp"
+#include "piricad/command/aids.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/ghost.hpp"
+#include "piricad/command/path_edit.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/area_edit.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/break_run.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/corner.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/fillet.hpp"
+#include "piricad/core/grips.hpp"
+#include "piricad/core/guide.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/lineage.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/parallel.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/polygon.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/core/spline.hpp"
+#include "piricad/core/ties.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/trim_curve.hpp"
+#include "piricad/render/backend.hpp"
+#include "piricad/render/snap_marker.hpp"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -59,12 +59,12 @@
 #include <string>
 #include <vector>
 
-namespace kentos::app {
+namespace piricad::app {
 
 MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
     : CanvasSurface(parent), controller_(controller), backend_(make_canvas_backend())
 {
-#if KENTOS_HAVE_RHI
+#if PIRICAD_HAVE_RHI
     // FOUR SAMPLES. A GPU pipeline rasterises a hard edge, and at a 1.5 px stroke
     // that lands on two pixel columns or three depending on where the line falls
     // — so a hatch whose spacing is uniform comes out with one line in every set
@@ -118,7 +118,7 @@ void MapCanvas::publishViewScale()
 {
     // The only number the aid layer cannot work out for itself. Everything else
     // about snapping — modes, ortho, polar step, grid — lives in the settings and
-    // is readable by every client (kentos_cad/command/aids.hpp).
+    // is readable by every client (piricad/command/aids.hpp).
     controller_.bus().aids().set_view_scale(view_.mm_per_pixel());
 }
 
@@ -137,7 +137,7 @@ void MapCanvas::applyTheme(ThemeMode mode)
 
 bool MapCanvas::hasGpuContext() const
 {
-#if KENTOS_HAVE_RHI
+#if PIRICAD_HAVE_RHI
     return rhi() != nullptr;
 #else
     return true;
@@ -802,8 +802,8 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
                 if (d2 < corner_best) {
                     corner_best = d2;
                     corner_hit  = Grip{e,           static_cast<std::int64_t>(i + 1),
-                                      false,       grips[i].at,
-                                      grips[i].at, locked};
+                                       false,       grips[i].at,
+                                       grips[i].at, locked};
                 }
             }
             continue;
@@ -831,11 +831,11 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
                 if (d2 < corner_best) {
                     corner_best = d2;
                     corner_hit  = Grip{e,
-                                      number,
-                                      false,
-                                      core::Point2{xs[v], ys[v]},
-                                      core::Point2{xs[v], ys[v]},
-                                      locked};
+                                       number,
+                                       false,
+                                       core::Point2{xs[v], ys[v]},
+                                       core::Point2{xs[v], ys[v]},
+                                       locked};
                 }
 
                 // The edge LEAVING this corner. On an open ring the last vertex has
@@ -2203,10 +2203,10 @@ void MapCanvas::buildMeasureMarks()
     const auto place = [&](double left, double top, const std::string& text) {
         QRectF box(left, top, metrics.horizontalAdvance(QString::fromStdString(text)),
                    metrics.height());
-        for (int tries = 0; tries < 8 && std::ranges::any_of(placed,
-                                                             [&box](const QRectF& other) {
-                                                                 return other.intersects(box);
-                                                             });
+        for (int tries = 0;
+             tries < 8 &&
+             std::ranges::any_of(
+                 placed, [&box](const QRectF& other) { return other.intersects(box); });
              ++tries)
             box.translate(0.0, metrics.height() + 2.0);
         placed.push_back(box);
@@ -2644,7 +2644,7 @@ void MapCanvas::buildRegionPreview(std::span<const std::uint8_t> payload, core::
     };
     RegionCache& cache = region_cache_;
     bool keep          = cache.valid && cache.revision == doc.revision() &&
-                std::ranges::equal(cache.payload, payload);
+                         std::ranges::equal(cache.payload, payload);
     if (keep) {
         if (cache.found) {
             keep = !cache.rings.empty() && inside_ring(cache.rings.front(), at);
@@ -2985,9 +2985,9 @@ void MapCanvas::buildOverlay()
                 const double sweep =
                     core::arc_sweep_toward(centre, start, cursorWorld(), convention);
                 if (sweep > 0.0) {
-                    const double turns = sweep * core::udeg_per_angle_unit(convention.unit) /
-                                         static_cast<double>(core::kUDegFullCircle);
-                    const std::string text        = core::angle_text(turns, convention.unit);
+                    const double turns     = sweep * core::udeg_per_angle_unit(convention.unit) /
+                                             static_cast<double>(core::kUDegFullCircle);
+                    const std::string text = core::angle_text(turns, convention.unit);
                     const render::ScreenPointF at = toScreenF(to);
                     overlay_.labels.push_back(
                         render::OverlayLabel{tokens_->readout.rgba(), at.x + 12.0F, at.y - 10.0F,
@@ -3278,10 +3278,10 @@ void MapCanvas::buildOverlay()
                     const core::Mm size =
                         core::segment_length(session->prompt().rubber_origin, cursorWorld());
                     const core::PairCornerGuide& g = guide.value();
-                    auto made                      = g.fillet
-                                                         ? core::fillet_pair(*pa, g.pick_a, *pb, g.pick_b, size)
-                                                         : core::chamfer_pair(*pa, g.pick_a, *pb, g.pick_b, size, size);
-                    const render::ScreenPointF c   = toScreenF(to);
+                    auto made = g.fillet
+                                    ? core::fillet_pair(*pa, g.pick_a, *pb, g.pick_b, size)
+                                    : core::chamfer_pair(*pa, g.pick_a, *pb, g.pick_b, size, size);
+                    const render::ScreenPointF c = toScreenF(to);
                     std::string text;
                     if (made) {
                         const auto draw = [this](std::size_t into, const core::CurvePath& path) {
@@ -3813,7 +3813,7 @@ void MapCanvas::buildOverlay()
     buildSnapMarker();
 
     // Developer HUD. Dear ImGui replaces this once the GPU canvas lands; it is a
-    // debug layer and never a user-facing feature (kentoscad.md §6.3), so it is off
+    // debug layer and never a user-facing feature (piricad.md §6.3), so it is off
     // unless the developer asks for it.
     if (!debug_hud_) return;
 
@@ -3830,7 +3830,7 @@ void MapCanvas::buildOverlay()
 
 QImage MapCanvas::grabCanvas()
 {
-#if KENTOS_HAVE_RHI
+#if PIRICAD_HAVE_RHI
     // The GPU's own copy. `grabFramebuffer()` renders a frame and reads it back,
     // so what comes out is what the pipeline drew rather than what the widget
     // system thinks is there.
@@ -3889,7 +3889,7 @@ std::vector<int> MapCanvas::timeFrames(int rounds)
     return costs;
 }
 
-#if KENTOS_HAVE_RHI
+#if PIRICAD_HAVE_RHI
 void MapCanvas::render(QRhiCommandBuffer* cb)
 #else
 void MapCanvas::paintEvent(QPaintEvent*)
@@ -3910,7 +3910,7 @@ void MapCanvas::paintEvent(QPaintEvent*)
     ctx.width_px           = width();
     ctx.height_px          = height();
     ctx.device_pixel_ratio = static_cast<float>(devicePixelRatioF());
-#if KENTOS_HAVE_RHI
+#if PIRICAD_HAVE_RHI
     // The GPU frame's handles, packed by the factory. Packing them HERE would put
     // backend knowledge in the widget, which render.md R1 keeps out of it.
     ctx.target = rhi_frame_target(rhi(), cb, renderTarget());
@@ -4059,7 +4059,7 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
 
             // A click is one input value for the running command, and it is the RAW
             // world point, marked AIMED. Snapping is not applied here: it happens
-            // once, inside the command layer (kentos_cad/command/aids.hpp), on the
+            // once, inside the command layer (piricad/command/aids.hpp), on the
             // road every client's value takes — and it acts on an aimed point
             // only, because a coordinate somebody typed is not a guess (TODOS
             // F-03). A canvas that snapped first would be a client with a private
@@ -4904,4 +4904,4 @@ void MapCanvas::closeTextEditor()
     setFocus(Qt::OtherFocusReason);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

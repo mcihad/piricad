@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/area_edit.hpp"
+#include "piricad/core/area_edit.hpp"
 
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/wire.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/wire.hpp"
 
 #include <cmath>
 #include <cstring>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::size_t kPayloadBytes = 8 + 1 + 4 + 8 + 8 + 8;
@@ -111,10 +111,10 @@ std::optional<AreaEditRequest> decode_area_edit(std::span<const std::uint8_t> by
     AreaEditRequest r;
     r.key = i64(0);
     if (bytes[8] > 2) return std::nullopt;
-    r.mode  = static_cast<AreaEditMode>(bytes[8]);
-    r.index = static_cast<std::uint32_t>(bytes[9]) | (static_cast<std::uint32_t>(bytes[10]) << 8) |
-              (static_cast<std::uint32_t>(bytes[11]) << 16) |
-              (static_cast<std::uint32_t>(bytes[12]) << 24);
+    r.mode   = static_cast<AreaEditMode>(bytes[8]);
+    r.index  = static_cast<std::uint32_t>(bytes[9]) | (static_cast<std::uint32_t>(bytes[10]) << 8) |
+               (static_cast<std::uint32_t>(bytes[11]) << 16) |
+               (static_cast<std::uint32_t>(bytes[12]) << 24);
     r.target = i64(13);
     r.grab   = Point2{i64(21), i64(29)};
     return r;
@@ -384,4 +384,4 @@ std::string format_square_metres(Mm2 area)
     return (negative ? "-" : "") + std::to_string(cm2 / 100) + "," + frac + " m²";
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

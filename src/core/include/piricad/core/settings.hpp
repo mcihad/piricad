@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: settings.
+// PiriCAD — core: settings.
 //
 // .claude/model.md R38–R42. A setting is declared ONCE as a SettingSpec; the
 // persistence, the validation, the user interface and the documentation are all
 // generated from that declaration. There is no second list of settings anywhere,
 // exactly as there is no second list of commands (CLAUDE.md 5.10).
 //
-// The shape deliberately mirrors kentos_cad/command/spec.hpp — stable namespaced id,
+// The shape deliberately mirrors piricad/command/spec.hpp — stable namespaced id,
 // Turkish names with ASCII-folded and English aliases, a declared type, a declared
-// range, a one-line Turkish summary, and a KENTOS_SETTING(sym) factory macro fed
+// range, a one-line Turkish summary, and a PIRICAD_SETTING(sym) factory macro fed
 // by one X-macro list. One idiom in this codebase, not two (model.md R25).
 //
 // Three scopes, and the boundary is the whole point (R39):
@@ -23,8 +23,8 @@
 // many decimals reach the koordinat özet cetveli that an engineer signs.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -34,7 +34,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 // ---------------------------------------------------------------- scope -----
 
@@ -43,7 +43,7 @@ enum class SettingScope : std::uint8_t { App, Project, Session };
 /// Stable machine name. Reaches files, journals and schemas, so it never changes.
 const char* setting_scope_name(SettingScope s);
 
-/// Turkish label for the text a user reads (kentoscad.md §13).
+/// Turkish label for the text a user reads (piricad.md §13).
 const char* setting_scope_label(SettingScope s);
 
 /// Which scopes one store accepts. The project store and the application store are
@@ -103,7 +103,7 @@ enum class SettingType : std::uint8_t {
 /// Stable machine name for schemas, files and tests. Not user-facing.
 const char* setting_type_name(SettingType t);
 
-/// Turkish label for a message the user reads (kentoscad.md §13).
+/// Turkish label for a message the user reads (piricad.md §13).
 const char* setting_type_label(SettingType t);
 
 /// Text settings are short by construction — a CRS id, a language tag, a package
@@ -290,7 +290,7 @@ struct SettingSection
 /// Declares the factory for one built-in setting. The body returns its SettingSpec.
 /// Registration happens in exactly one place, from one list, exactly as commands
 /// are registered in commands/builtin.cpp (model.md R25).
-#define KENTOS_SETTING(sym) ::kentos::core::SettingSpec kentos_setting_##sym()
+#define PIRICAD_SETTING(sym) ::piricad::core::SettingSpec piricad_setting_##sym()
 
 /// "No such setting", returned by `SettingCatalog::find`.
 inline constexpr std::uint32_t kNoSetting = 0xFFFFFFFFu;
@@ -363,7 +363,7 @@ std::span<const std::string> builtin_setting_failures();
 std::string format_setting(const SettingSpec& spec, const SettingValue& v);
 
 /// Text to SettingValue in the declared type. This is a scalar conversion, not a
-/// grammar: the one parser (kentos_cad/command/parser.hpp) still owns the command line
+/// grammar: the one parser (piricad/command/parser.hpp) still owns the command line
 /// (CLAUDE.md 5.11). Accepts hexadecimal for masks and colours, and an all-zero
 /// fraction ("3.000000") because the command line's number token renders that way.
 Result<SettingValue> parse_setting(const SettingSpec& spec, std::string_view text);
@@ -489,4 +489,4 @@ private:
     std::uint64_t revision_{0};
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

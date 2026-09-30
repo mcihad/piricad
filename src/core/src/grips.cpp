@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/grips.hpp"
+#include "piricad/core/grips.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/spline.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/spline.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -20,7 +20,7 @@
 #include <string>
 #include <utility>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// The stored rings of `e`, unpacked so they can be edited and handed back.
@@ -170,11 +170,11 @@ Result<GripEdit> arc_move(GripEdit edit, std::size_t index, Point2 to)
     // stored counter-clockwise, so a clockwise run is stored from `b` to `a`.
     const double turn = static_cast<double>(through.x - a.x) * static_cast<double>(b.y - a.y) -
                         static_cast<double>(through.y - a.y) * static_cast<double>(b.x - a.x);
-    const bool ccw = turn > 0.0;
-    v[0]           = centre;
-    v[1]           = Point2{centre.x + radius, centre.y};
-    v[2]           = ccw ? a : b;
-    v[3]           = ccw ? b : a;
+    const bool ccw    = turn > 0.0;
+    v[0]              = centre;
+    v[1]              = Point2{centre.x + radius, centre.y};
+    v[2]              = ccw ? a : b;
+    v[3]              = ccw ? b : a;
     return edit;
 }
 
@@ -379,7 +379,7 @@ Result<GripEdit> dimension_move(const Document& doc, EntityId e, GripEdit edit, 
     const std::string_view text = doc.texts().text(slot);
     const auto refused          = [] {
         return err(ErrorCode::ValidationFailed,
-                            "Ölçü bu noktayla kurulamıyor: iki nokta çakıştı ya da tepe kolun ucuna geldi.");
+                   "Ölçü bu noktayla kurulamıyor: iki nokta çakıştı ya da tepe kolun ucuna geldi.");
     };
 
     std::vector<Point2> picks;
@@ -908,4 +908,4 @@ Result<GripGuide> decode_grip_guide(std::span<const std::uint8_t> bytes)
     return guide;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

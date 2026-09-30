@@ -57,7 +57,7 @@ nesne 8 katman=EGRI stil=0 halka=1 tur=7 yuk=010010000000000002060000002bac2c360
   alan_mm2 0  cevre_mm 1891
   koken core.split 5
 kapsam -20000 -10000 70000 35000
-icerik-ozeti 15626ddef624b321
+icerik-ozeti 9faa4a682db1bf81
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"EGRI"},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}
   {"seq":2,"cmd":"core.ellipse_draw","args":{"merkez":[0,0],"birinci":[10000,0],"ikinci":[0,5000]},"origin":"test","crs":"TUREF/TM36","katman":"EGRI"}

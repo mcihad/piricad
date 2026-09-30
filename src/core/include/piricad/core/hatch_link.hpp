@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: which objects a hatch's boundary was taken from.
+// PiriCAD — core: which objects a hatch's boundary was taken from.
 //
 // A HATCH THAT DOES NOT FOLLOW ITS BOUNDARY FILLS SOMETHING THAT IS NOT THERE
 // (TODOS C-11). A parcel's corner moves, a courtyard's hole is redrawn, and a
@@ -22,16 +22,16 @@
 // edit.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <map>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The document the table lives in; `hatch_boundary` reads its geometry.
 class Document;
@@ -138,4 +138,4 @@ HatchBoundary nest_loops(std::vector<std::vector<Point2>> loops, std::uint16_t s
 Result<HatchBoundary> hatch_boundary(const Document& doc, std::span<const EntityId> sources,
                                      std::uint16_t style);
 
-} // namespace kentos::core
+} // namespace piricad::core

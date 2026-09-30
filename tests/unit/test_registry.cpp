@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — tests: the command registry as the program assembles it.
+// PiriCAD — tests: the command registry as the program assembles it.
 //
 // Six modules register commands — the built-ins, geodesy, cadastre, surface, the
 // processing tools and the AI layer's own — and four places put them on one
@@ -8,22 +8,22 @@
 // later `Registry::add` fail, and four of the six registration functions drop
 // that status: the command was simply not in the program, the build was clean
 // and every test that registered one module at a time was green.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/processing/registry.hpp"
 
 #include <set>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

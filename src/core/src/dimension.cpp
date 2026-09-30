@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/dimension.hpp"
+#include "piricad/core/dimension.hpp"
 
-#include "kentos_cad/core/document.hpp"
+#include "piricad/core/document.hpp"
 
-#include "kentos_cad/core/angle.hpp"
+#include "piricad/core/angle.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/wire.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/wire.hpp"
 
 #include "kind_common.hpp"
 
@@ -16,7 +16,7 @@
 #include <cmath>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::uint16_t kFlagUserText  = 1u << 0;
@@ -1376,7 +1376,7 @@ void leader_outline(const RingGeometry& geom, std::uint32_t slot, EmitBuffer& in
         arrowhead_outline(pts[0], pts[1], def.value().arrow_size, ArrowStyle::Closed, into);
 }
 
-KENTOS_KIND(dimension)
+PIRICAD_KIND(dimension)
 {
     KindSpec s{};
     s.id         = kDimensionKind;
@@ -1398,7 +1398,7 @@ KENTOS_KIND(dimension)
     return s;
 }
 
-KENTOS_KIND(leader)
+PIRICAD_KIND(leader)
 {
     KindSpec s{};
     s.id         = kLeaderKind;
@@ -1551,7 +1551,7 @@ Result<DimensionRebuild> dimension_rebuild(const Document& doc, EntityId e,
         const auto dy    = static_cast<double>(base[1].y - base[0].y);
         const double len = std::sqrt(dx * dx + dy * dy);
         out.baseline     = dimension_baseline(kept, len > 0.0 ? dx / len : 1.0,
-                                          len > 0.0 ? dy / len : 0.0, height, out.text);
+                                              len > 0.0 ? dy / len : 0.0, height, out.text);
         out.payload      = encode_dimension(def);
         out.def          = std::move(def);
         return out;
@@ -1597,4 +1597,4 @@ Result<DimensionRebuild> dimension_follow(const Document& doc, EntityId e,
     return dimension_rebuild(doc, e, DimensionEdit{.moves = moves}, unit);
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

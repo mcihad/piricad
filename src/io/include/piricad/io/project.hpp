@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: reading and writing the native project file.
+// PiriCAD — io: reading and writing the native project file.
 //
-// .claude/io.md R1: a public `kentos_cad/io/` header exposes only core and command
+// .claude/io.md R1: a public `piricad/io/` header exposes only core and command
 // types. There is no GDAL, no LibreDWG and no operating-system type below; the
 // memory mapping, the bounds checking and the column decoding all live in the
 // module's .cpp files (R2).
@@ -15,18 +15,18 @@
 // nothing in /src/io reaches around a transaction.
 #pragma once
 
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/settings.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/settings.hpp"
 
 #include <cstdint>
 #include <stop_token>
 #include <string>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// Something the reader accepted but not exactly as the file recorded it.
 ///
@@ -81,7 +81,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 /// an untrusted hint and bounds-checked against the real file size before it is
 /// used for an allocation or a seek (R18, P6).
 ///
-/// Errors carry a stable token from `kentos_cad/io/format.hpp` at the front of the
+/// Errors carry a stable token from `piricad/io/format.hpp` at the front of the
 /// message: `io.format_too_new` for a file this build would misread (R9),
 /// `io.truncated`, `io.bad_block`, `io.inconsistent`, `io.key_mismatch`.
 ///
@@ -93,4 +93,4 @@ command::Task<core::Result<ProjectReport>> read_project(command::Transaction& tx
                                                         core::Settings& settings,
                                                         std::stop_token stop);
 
-} // namespace kentos::io
+} // namespace piricad::io

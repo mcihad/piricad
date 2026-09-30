@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/script/json_runner.hpp"
 
-#include "kentos_cad/core/json.hpp"
+#include "piricad/core/json.hpp"
 
 #include <fstream>
 #include <sstream>
 
-namespace kentos::script {
+namespace piricad::script {
 
 namespace {
 
@@ -189,4 +189,4 @@ void install(command::Bus& bus, JsonRunner& runner)
     };
 }
 
-} // namespace kentos::script
+} // namespace piricad::script

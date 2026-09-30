@@ -12,16 +12,16 @@
 // integer segment rather than a stored angle — exact, and identical on every
 // platform because no trigonometry is involved (§7.3). DXF TEXT stores an
 // insertion point and an alignment point for the same reasons.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/dimension.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/dimension.hpp"
 
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/text_store.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/text_store.hpp"
 
 #include <algorithm>
 #include <array>
@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The `hizalama` words, one per anchor and in its order: the anchor's own
@@ -666,7 +666,7 @@ Task<void> run_find_replace(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(text)
+PIRICAD_COMMAND(text)
 {
     return CommandSpec{
         .id       = "core.text",
@@ -705,11 +705,11 @@ KENTOS_COMMAND(text)
                     .en("width"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizime tek ya da çok satırlı metin yazar; yükseklik, dokuz hizalama, satır "
                    "aralığı ve kırılma genişliği verilebilir.",
-        .run = &run,
+        .run     = &run,
     };
 }
 
@@ -725,7 +725,7 @@ KENTOS_COMMAND(text)
 /// It also closes a hole the property panel named out loud: the caption's text
 /// was shown read-only there with the note "a row becomes editable when a command
 /// exists that changes it, and this one does not yet". Now it does.
-KENTOS_COMMAND(edittext)
+PIRICAD_COMMAND(edittext)
 {
     return CommandSpec{
         .id       = "core.edittext",
@@ -754,8 +754,8 @@ KENTOS_COMMAND(edittext)
                     .measured_in("m")
                     .en("width"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Var olan bir yazının metnini, yüksekliğini, hizalamasını, satır aralığını ya "
                    "da kırılma genişliğini değiştirir.",
         .run     = &run_edit,
@@ -770,7 +770,7 @@ KENTOS_COMMAND(edittext)
 /// dialog's table — and a replacement waits for `uygula`: asked at the prompt,
 /// named in a script. So a batch rewrite of a sheet's four hundred captions is
 /// seen before it happens, by every client, and undone in one step after.
-KENTOS_COMMAND(find_replace)
+PIRICAD_COMMAND(find_replace)
 {
     return CommandSpec{
         .id       = "core.find_replace",
@@ -800,12 +800,12 @@ KENTOS_COMMAND(find_replace)
                                "Önizlemedeki değişiklik uygulansın mı; verilmezse sorulur")
                     .en("apply"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Yazılarda bir sözcüğü bulur, önizler ve hepsinde birden değiştirir; tek geri "
                    "alma adımı.",
-        .run = &run_find_replace,
+        .run     = &run_find_replace,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

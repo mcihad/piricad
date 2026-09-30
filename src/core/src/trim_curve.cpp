@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: BUDA and UZAT on lines, arcs and circles. See trim_curve.hpp.
-#include "kentos_cad/core/trim_curve.hpp"
-#include "kentos_cad/core/precision.hpp"
+// PiriCAD — core: BUDA and UZAT on lines, arcs and circles. See trim_curve.hpp.
+#include "piricad/core/trim_curve.hpp"
+#include "piricad/core/precision.hpp"
 
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -14,7 +14,7 @@
 #include <optional>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::int64_t kTurn = kUDegFullCircle;
@@ -243,8 +243,8 @@ Result<CurveExtension> extend_curve(const CurvePath& target, std::span<const Cur
         return err(ErrorCode::InvalidArgument,
                    "Kapalı bir şeklin ucu yok; uzatılacak bir şey yok.");
 
-    const bool at_start = distance_squared(target.pieces.front().from, pick) <=
-                          distance_squared(target.pieces.back().to, pick);
+    const bool at_start  = distance_squared(target.pieces.front().from, pick) <=
+                           distance_squared(target.pieces.back().to, pick);
     const PathPiece& tip = at_start ? target.pieces.front() : target.pieces.back();
 
     CurveExtension out;
@@ -450,8 +450,8 @@ FencePlan plan_fence(const Document& doc, std::span<const Point2> fence, const T
         bool start = false;
         bool end   = false;
         for (const PathCrossing& m : meets) {
-            const bool nearer_start = distance_squared(path->pieces.front().from, m.point) <=
-                                      distance_squared(path->pieces.back().to, m.point);
+            const bool nearer_start      = distance_squared(path->pieces.front().from, m.point) <=
+                                           distance_squared(path->pieces.back().to, m.point);
             (nearer_start ? start : end) = true;
         }
         CurveExtension total{.extended = *path, .added = {}};
@@ -511,4 +511,4 @@ Result<TrimGuide> decode_trim_guide(std::span<const std::uint8_t> bytes)
     return guide;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

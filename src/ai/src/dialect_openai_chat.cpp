@@ -9,13 +9,13 @@
 // reader opens by accident. They live here because `openai_chat` is the dialect
 // eleven of the thirteen shipped providers speak, so this is the file a reader
 // opens FIRST. The section is marked.
-#include "kentos_cad/ai/chat.hpp"
-#include "kentos_cad/ai/dialect.hpp"
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/chat.hpp"
+#include "piricad/ai/dialect.hpp"
+#include "piricad/ai/redact.hpp"
 
 #include <algorithm>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -549,4 +549,4 @@ const DialectCodec& codec_for(Dialect dialect)
     return openai_chat_codec();
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

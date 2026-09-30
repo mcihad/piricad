@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: Netcad NCZ drawings, read natively.
+// PiriCAD — io: Netcad NCZ drawings, read natively.
 //
 // Copyright (C) 2026 Erdinç Örsan ÜNAL
 //     The NCZ parser this reader ports: `ncz_pure.py` of his QGIS plugin
 //     "NCZ Reader", version 1.4.3,
 //     https://github.com/erdincunal/Jeomatik-NCZ-Reader — licensed GPL-2.0-or-later.
-// Copyright (C) 2026 KentOSCad contributors
+// Copyright (C) 2026 PiriCAD contributors
 //     The C++ port and the reader around it, 28 September 2026.
 //
 // This program is free software: you can redistribute it and/or modify it under
@@ -22,15 +22,15 @@
 // program has: a circle is a circle and an arc is an arc, not the 72- and
 // 48-segment rings the plugin approximates them with for QGIS.
 //
-// No library, so no `KENTOS_WITH_*` option: every build reads NCZ.
+// No library, so no `PIRICAD_WITH_*` option: every build reads NCZ.
 #pragma once
 
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/io/diagnostics.hpp"
-#include "kentos_cad/io/options.hpp"
-#include "kentos_cad/io/vector.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/io/diagnostics.hpp"
+#include "piricad/io/options.hpp"
+#include "piricad/io/vector.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -39,7 +39,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// What one NCZ read produced, and what it could not.
 struct NczReport
@@ -83,4 +83,4 @@ struct NczReport
 command::Task<core::Result<NczReport>> import_ncz(command::Transaction& tx, std::string path,
                                                   ImportOptions options, std::stop_token stop);
 
-} // namespace kentos::io
+} // namespace piricad::io

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — the instanced marker pipeline's fragment stage.
+// PiriCAD — the instanced marker pipeline's fragment stage.
 //
 // One draw, one colour — the uniform block's, already straight RGBA and already
 // faded by the symbol layer's opacity. A glyph filled in one ink and stroked in

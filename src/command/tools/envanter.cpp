@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — the capability inventory, taken from the live registries.
+// PiriCAD — the capability inventory, taken from the live registries.
 //
 // WHY THIS IS NOT A COUNT IN A COMMENT. The question "how much of this program
 // can an agent actually reach" was being answered by grepping `return
@@ -13,13 +13,13 @@
 //
 // It is an executable at the top of the dependency graph, so it may link the
 // processing and domain modules the command library must not (Article 3.2a).
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/processing/registry.hpp"
 
 #include <cstdio>
 #include <exception>
@@ -29,15 +29,15 @@
 
 namespace {
 
-using kentos::command::CommandSpec;
-using kentos::command::Effect;
-using kentos::command::Flags;
-using kentos::command::Param;
-using kentos::command::Registry;
-using kentos::command::target_names;
-using kentos::command::Targets;
-using kentos::command::UndoPolicy;
-using kentos::core::Json;
+using piricad::command::CommandSpec;
+using piricad::command::Effect;
+using piricad::command::Flags;
+using piricad::command::Param;
+using piricad::command::Registry;
+using piricad::command::target_names;
+using piricad::command::Targets;
+using piricad::command::UndoPolicy;
+using piricad::core::Json;
 
 bool has(Flags value, Flags bit)
 {
@@ -58,7 +58,7 @@ Json param_json(const Param& p)
 {
     Json out;
     out.set("ad", Json::string(p.name));
-    out.set("tur", Json::string(kentos::command::param_kind_name(p.kind)));
+    out.set("tur", Json::string(piricad::command::param_kind_name(p.kind)));
     out.set("en_az", Json::integer(p.arity.min));
     out.set("en_cok", Json::integer(p.arity.max));
     if (!p.was.empty()) out.set("eski_ad", Json::string(p.was));
@@ -87,7 +87,7 @@ Json command_json(const CommandSpec& spec)
         names.push_back(Json::string(one));
     out.set("adlar", Json::array(std::move(names)));
 
-    out.set("kategori", Json::string(kentos::command::category_name(spec.category)));
+    out.set("kategori", Json::string(piricad::command::category_name(spec.category)));
     out.set("geri_alma", Json::string(undo_name(spec.undo)));
 
     std::vector<Json> params;
@@ -115,24 +115,24 @@ Json command_json(const CommandSpec& spec)
     // WHAT IT LEAVES CHANGED, which is a different question from which client
     // may reach it. `effect_of` is the one place that answers it, so the
     // inventory, a policy and an audit record cannot disagree (CLAUDE.md 5.10).
-    const Effect worst = kentos::command::effect_of(spec);
+    const Effect worst = piricad::command::effect_of(spec);
     std::vector<Json> etkiler;
     for (const Effect bit :
          {Effect::Query, Effect::ViewChange, Effect::DocumentEdit, Effect::FileRead,
           Effect::FileWrite, Effect::ExternalWrite, Effect::SettingsChange})
-        if (kentos::command::has_effect(worst, bit))
-            etkiler.push_back(Json::string(kentos::command::effect_name(bit)));
+        if (piricad::command::has_effect(worst, bit))
+            etkiler.push_back(Json::string(piricad::command::effect_name(bit)));
     out.set("etki", Json::array(std::move(etkiler)));
 
     if (!spec.effect_verb.empty()) {
         Json per;
-        for (const kentos::command::VerbEffect& one : spec.verb_effects) {
+        for (const piricad::command::VerbEffect& one : spec.verb_effects) {
             std::vector<Json> words;
             for (const Effect bit :
                  {Effect::Query, Effect::ViewChange, Effect::DocumentEdit, Effect::FileRead,
                   Effect::FileWrite, Effect::ExternalWrite, Effect::SettingsChange})
-                if (kentos::command::has_effect(one.effect, bit))
-                    words.push_back(Json::string(kentos::command::effect_name(bit)));
+                if (piricad::command::has_effect(one.effect, bit))
+                    words.push_back(Json::string(piricad::command::effect_name(bit)));
             per.set(one.word, Json::array(std::move(words)));
         }
         out.set("fiil_parametresi", Json::string(spec.effect_verb));
@@ -146,12 +146,12 @@ Json command_json(const CommandSpec& spec)
 int run(int argc, char** argv)
 {
     Registry reg;
-    kentos::command::register_builtin_commands(reg);
-    kentos::processing::register_processing_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
-    kentos::domain::cadastre::register_cadastre_commands(reg);
-    kentos::domain::surface::register_surface_commands(reg);
-    kentos::ai::register_ai_commands(reg);
+    piricad::command::register_builtin_commands(reg);
+    piricad::processing::register_processing_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+    piricad::domain::cadastre::register_cadastre_commands(reg);
+    piricad::domain::surface::register_surface_commands(reg);
+    piricad::ai::register_ai_commands(reg);
 
     // SORTED BY ID, so two runs on two machines produce the same bytes and a
     // diff in the gate means a real change (Article 2.5, §7.3).

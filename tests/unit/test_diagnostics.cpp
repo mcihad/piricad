@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — tests: the import diagnostics record and the drawing unit.
+// PiriCAD — tests: the import diagnostics record and the drawing unit.
 //
 // io.md P11/P13: a loss is reported, never silent. These cases lock the SHAPE of
 // that report — the cap that keeps a broken file from printing ten thousand
 // lines, the prefixes a user reads, the census that survives the cap — and the
 // one place a file's numbers are scaled to millimetres.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/units.hpp"
-#include "kentos_cad/io/diagnostics.hpp"
+#include "piricad/core/units.hpp"
+#include "piricad/io/diagnostics.hpp"
 
 #include <string>
 
-using namespace kentos;
+using namespace piricad;
 
 TEST_CASE("TANI: not başlığı sekizde durur ve kalanı sayar")
 {

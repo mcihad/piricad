@@ -1,16 +1,16 @@
-// GENERATED FILE - do not edit: run `make yazi-olcusu` (kentos_yazi_olcusu).
+// GENERATED FILE - do not edit: run `make yazi-olcusu` (piricad_yazi_olcusu).
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The drawing face's advance for every Unicode scalar, in font units, as the
 // atlas shapes each one alone in technical spacing: IBMPlexSans-Regular.ttf,
 // SIL Open Font License 1.1 (data/fonts/LICENCE.txt). What the numbers are for
-// and why they are compiled in: kentos_cad/core/text_metrics.hpp.
+// and why they are compiled in: piricad/core/text_metrics.hpp.
 #include "text_metrics_table.hpp"
 
 #include <array>
 
 // clang-format off
-namespace kentos::core::text_table {
+namespace piricad::core::text_table {
 namespace {
 
 /// U+0000 to U+017F, sixteen to a line.
@@ -768,6 +768,6 @@ std::span<const Run> runs() noexcept
     return kRuns;
 }
 
-} // namespace kentos::core::text_table
+} // namespace piricad::core::text_table
 
 // clang-format on

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: bytes into records, incrementally.
+// PiriCAD — ai: bytes into records, incrementally.
 //
 // WHY THIS IS ITS OWN FILE AND ITS OWN TEST. A streamed answer arrives in
 // whatever pieces the network produced. One `on_chunk` may carry three events, or
@@ -24,7 +24,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// One assembled Server-Sent Event.
 struct SseEvent
@@ -111,4 +111,4 @@ private:
     std::string buffer_;
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

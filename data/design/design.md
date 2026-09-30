@@ -221,13 +221,13 @@ Dikey sıra: sistem başlık çubuğu → şerit → gövde → durum çubuğu.
 **Pencere çerçevesi.** Çerçeve, başlık çubuğu ve pencere düğmeleri **işletim sisteminindir**.
 Uygulama kendi çerçevesini çizmez: yeniden boyutlandırma kenarları, kenara yapıştırma
 (snap), pencere menüsü ve gölgelendirme pencere yöneticisinin işidir ve çizili bir çerçeve
-bunların hiçbirini veremez. Pencere başlığı `<doküman> — KentOSCad <sürüm>`, diyaloglarda
+bunların hiçbirini veremez. Pencere başlığı `<doküman> — PiriCAD <sürüm>`, diyaloglarda
 `<ad> <nitelik>`; pencere simgesi diyalogun `Glyph`'inden üretilir.
 
 **Şerit (131 px).** Menü çubuğunun, araç çubuğunun ve sol araç kutusunun yerine tek yüzey:
 SARibbon'un sıkı üç satırlı Office düzeni, iki yüzeyle (§2 `--ribbon-tabs`, `--ribbon-body`).
 
-- **Sekme satırı (40 px).** Solda **KentOS CAD** düğmesi — dolu `--accent` blok, beyaz 12 px
+- **Sekme satırı (40 px).** Solda **PiriCAD CAD** düğmesi — dolu `--accent` blok, beyaz 12 px
   yarı kalın yazı, uygulama menüsünü açar. Sonra sekmeler: Giriş · Çizim · Değiştir ·
   Açıklama · Kadastro · Harita · Analiz · Görünüm · Çıktı ve seçimle açılan düzenleyici
   sekmeleri. Sekme bir **klasör sekmesidir**: seçili olan gövdeden kesilir (`--ribbon-body`
@@ -247,7 +247,7 @@ SARibbon'un sıkı üç satırlı Office düzeni, iki yüzeyle (§2 `--ribbon-ta
 - **Genişlik.** Giriş ve Çizim sekmeleri 1440 px pencereye kaydırmasız sığar; daha dar bir
   pencerede sekmenin iki ucunda kaydırma okları belirir, hiçbir düğme gizlenmez.
 
-**Uygulama menüsü (660 px).** KentOS CAD düğmesinin altında açılan panel (menü değil, pencereyi
+**Uygulama menüsü (660 px).** PiriCAD CAD düğmesinin altında açılan panel (menü değil, pencereyi
 örten bir sayfa da değil): üstte komut arama; solda dosya fiilleri 42 px satırlar hâlinde, 24 px
 renkli simge, 13 px ad ve altında 11 px `--text-faint` açıklama; sağda son belgeler ya da imlecin
 üstündeki fiilin seçenekleri (Yazdır'ın profilleri, yerleşimler); altta Komut Listesi, Hakkında,

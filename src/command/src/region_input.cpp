@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/region_input.hpp"
+#include "piricad/command/region_input.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/session.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/session.hpp"
 
 #include <algorithm>
 #include <set>
 
-namespace kentos::command {
+namespace piricad::command {
 
 namespace {
 
@@ -156,4 +156,4 @@ void record_region(Context& ctx, const FoundRegion& found)
     if (!found.keys.empty()) ctx.record("nesneler", Value::ids(found.keys));
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

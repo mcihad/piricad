@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: a curve flattened to a STATED error, for a file that cannot
+// PiriCAD — core: a curve flattened to a STATED error, for a file that cannot
 // hold a curve (TODOS F-03).
 //
 // TWO DIFFERENT QUESTIONS, TWO DIFFERENT ANSWERS. The picture draws every curve
@@ -18,14 +18,14 @@
 // an arc that meets a line meets it exactly in the file too.
 #pragma once
 
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// One run of a stroked shape: its vertices, without a repeated closing vertex,
 /// and the role its ring plays — `Exterior` for a closed curve (a circle, a
@@ -72,4 +72,4 @@ bool stroke_curve(KindId kind, const RingGeometry& geom, std::uint32_t slot, Mm 
 /// Whether `kind` is one `stroke_curve` answers for.
 bool strokes_as_curve(KindId kind) noexcept;
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the canvas backend factory.
+// PiriCAD — app: the canvas backend factory.
 //
 // render.md R1: "Only the backend factory may name a backend implementation
 // type." This header is the seam that makes that possible — the canvas asks for a
 // backend and gets one, and the concrete type never appears in the widget.
 //
-// Which backend it returns is a build-time fact today (`KENTOS_WITH_RHI`), and
+// Which backend it returns is a build-time fact today (`PIRICAD_WITH_RHI`), and
 // the canvas is written so that it stays a build-time fact it does not read:
 // `Backend::name()` and `Backend::gpu()` are what the F12 overlay and the About
 // box ask, not a preprocessor symbol.
 #pragma once
 
-#include "kentos_cad/render/backend.hpp"
+#include "piricad/render/backend.hpp"
 
 #include <memory>
 
@@ -20,7 +20,7 @@ class QRhi;
 class QRhiCommandBuffer;
 class QRhiRenderTarget;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The QRhi handles one frame needs, behind `FrameContext::target`.
 ///
@@ -54,7 +54,7 @@ std::unique_ptr<render::Backend> make_canvas_backend();
 /// factory and by a test that renders one document through both.
 std::unique_ptr<render::Backend> make_builtin_backend();
 
-/// The GPU backend. Only built when `KENTOS_WITH_RHI=ON`; declared here because
+/// The GPU backend. Only built when `PIRICAD_WITH_RHI=ON`; declared here because
 /// this header is the one place a backend implementation may be named (R1).
 std::unique_ptr<render::Backend> make_rhi_backend();
 
@@ -96,4 +96,4 @@ void paint_frame_ground(QPainter& painter, const render::Overlay& overlay);
 void paint_frame_aids(QPainter& painter, const render::DrawList& list,
                       const render::Overlay& overlay, double cx, double cy);
 
-} // namespace kentos::app
+} // namespace piricad::app

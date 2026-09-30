@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/validation.hpp"
+#include "piricad/command/validation.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 bool kind_accepts(const Param& p, const Value& v)
@@ -201,4 +201,4 @@ core::Status Validator::run(const ValidationRequest& req) const
     return core::ok();
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

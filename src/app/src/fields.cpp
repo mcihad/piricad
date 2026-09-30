@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/fields.hpp"
+#include "piricad/app/fields.hpp"
 
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/widgets.hpp"
 
 #include <QApplication>
 #include <QColorDialog>
@@ -27,7 +27,7 @@
 #include <QStyle>
 #include <QToolButton>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The picker on the right of a date, a colour or a multi-select: square, the
@@ -133,10 +133,10 @@ QRect DatePopup::arrowRect(int which) const
     const int left = kCalShadow;
     const int card = width() - kCalShadow * 2;
     switch (which) {
-    case 0: return {left + kCalPad, top + 4, kArrowW, kCalHead - 8};           // ‹ month
-    case 1: return {left + kCalPad + kArrowW, top + 4, kArrowW, kCalHead - 8}; // › month
+    case 0: return {left + kCalPad, top + 4, kArrowW, kCalHead - 8};                      // ‹ month
+    case 1: return {left + kCalPad + kArrowW, top + 4, kArrowW, kCalHead - 8};            // › month
     case 2: return {left + card - kCalPad - kArrowW * 2, top + 4, kArrowW, kCalHead - 8}; // ‹ year
-    case 3: return {left + card - kCalPad - kArrowW, top + 4, kArrowW, kCalHead - 8}; // › year
+    case 3: return {left + card - kCalPad - kArrowW, top + 4, kArrowW, kCalHead - 8};     // › year
     default: return {};
     }
 }
@@ -1119,4 +1119,4 @@ void FieldDelegate::updateEditorGeometry(QWidget* editor, const QStyleOptionView
     editor->setGeometry(option.rect);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

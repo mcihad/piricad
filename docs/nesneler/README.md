@@ -39,7 +39,7 @@ belgesinin alanı hangi makinede hesaplandığına bağlı olamaz.
 
 ## Tanınmayan tür
 
-Daha yeni bir KentOSCad'in ya da bir eklentinin yazdığı bir türü bu sürüm tanımıyorsa
+Daha yeni bir PiriCAD'in ya da bir eklentinin yazdığı bir türü bu sürüm tanımıyorsa
 nesne **kaybolmaz**: halkaları ve yükü bayt bayt korunur, halkaları ekranda çizilir,
 kapsamda ve dizinde yer alır. Yalnız düzenlenemez — taşımaya, kırpmaya ya da yükünü
 değiştirmeye kalkışan komut şunu söyler:
@@ -54,7 +54,7 @@ numarasıyla gösterir.
 ## Yabancı veri
 
 Bir DXF'ten gelen nesne, başka bir programın ona bağladığı **ek veriyi** (XDATA)
-taşıyabilir. KentOSCad bunu okuyamaz ama kaybetmez: baytlar nesnenin yanında
+taşıyabilir. PiriCAD bunu okuyamaz ama kaybetmez: baytlar nesnenin yanında
 etiketiyle saklanır, dosyaya yazılır, dışa aktarımda geri verilir. Öznitelik paneli
 yalnız sayısını gösterir (`ek_veri: 2 kayıt`); hiçbir komut içeriğini değiştirmez.
 

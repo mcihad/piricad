@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: a curve walked piece by piece, and where two curves meet.
+// PiriCAD — core: a curve walked piece by piece, and where two curves meet.
 //
 // ONE WAY TO WALK A LINE, AN ARC, A CIRCLE AND A POLYLINE WHOSE EDGES BEND
 // (TODOS C-01, C-05). Trimming, extending
@@ -43,10 +43,10 @@
 // itself.
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/spline.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/spline.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -54,7 +54,7 @@
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// One piece of a path: a straight segment, or an arc of a circle swept from
 /// `from` to `to` — counter-clockwise when `sweep_udeg` is positive, clockwise
@@ -338,4 +338,4 @@ std::vector<Point2> path_vertices(const CurvePath& path);
 /// routine a YAY is drawn with.
 void path_outline(const CurvePath& path, std::vector<Mm>& xs, std::vector<Mm>& ys);
 
-} // namespace kentos::core
+} // namespace piricad::core

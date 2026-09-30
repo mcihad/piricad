@@ -287,7 +287,7 @@ satırıyla çıkar ve türüne uygun düzenleyiciyle açılır — tarihe takvi
 kelimelik segment.
 
 **Buradan tanımlanan sütun yalnız bu katmana aittir.** Çizimin tamamına ait bir alan
-— `ada`, `parsel` gibi — **KentOS CAD ▸ Proje Ayarları… ▸ Öznitelikler** sayfasında
+— `ada`, `parsel` gibi — **PiriCAD CAD ▸ Proje Ayarları… ▸ Öznitelikler** sayfasında
 tanımlanır.
 
 Sayfa proje sütunlarını da listeler, `proje sütunu` diye işaretli ve düzenlenemez
@@ -322,9 +322,9 @@ paketi** olarak yazar:
 
 | Sistem | Yer |
 |---|---|
-| Linux | `~/.config/KentOSCad/stiller/` |
-| Windows | `%APPDATA%\KentOSCad\stiller\` |
-| macOS | `~/Library/Application Support/KentOSCad/stiller/` |
+| Linux | `~/.config/PiriCAD/stiller/` |
+| Windows | `%APPDATA%\PiriCAD\stiller\` |
+| macOS | `~/Library/Application Support/PiriCAD/stiller/` |
 
 Proje dizinine değil: tasarladığınız sembol size aittir, çizimden çizime sizinle
 gelir ve birinin paftasının yanında takip edilmeyen bir dosya olarak durmamalıdır.
@@ -345,7 +345,7 @@ Lisans engel değil — QGIS GPL-2.0-or-later ve uyumlu. Engeller ölçülebilir
 - `QgsApplication::initQgis()` sağlayıcı kaydını ve SRS veritabanını yüklüyor;
   bu programın soğuk açılış bütçesi **2 saniye**.
 - Gidiş-dönüş tam da bizim bilerek ayrıldığımız yerde kayıplı:
-  `QgsRasterFillSymbolLayer` bir **dosya yolu** tutar, KentOSCad'in görsel dolgusu
+  `QgsRasterFillSymbolLayer` bir **dosya yolu** tutar, PiriCAD'in görsel dolgusu
   ise baytları ve künyesini belgenin içinde taşır — çizim e-postayla gittiğinde
   ayakta kalmasını sağlayan şey bu.
 

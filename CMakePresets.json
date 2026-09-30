@@ -16,16 +16,16 @@
         "CMAKE_CXX_STANDARD": "20",
         "CMAKE_CXX_STANDARD_REQUIRED": "ON",
         "CMAKE_CXX_EXTENSIONS": "OFF",
-        "KENTOS_WITH_OCCT": "ON"
+        "PIRICAD_WITH_OCCT": "ON"
       }
     },
     {
       "name": "canvas",
       "hidden": true,
       "cacheVariables": {
-        "KENTOS_WITH_RHI": "ON",
-        "KENTOS_WITH_TEXT": "ON",
-        "KENTOS_WITH_DWG": "OFF"
+        "PIRICAD_WITH_RHI": "ON",
+        "PIRICAD_WITH_TEXT": "ON",
+        "PIRICAD_WITH_DWG": "OFF"
       }
     },
     {
@@ -37,8 +37,8 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "KENTOS_BUILD_APP": "ON",
-        "KENTOS_BUILD_TESTS": "ON"
+        "PIRICAD_BUILD_APP": "ON",
+        "PIRICAD_BUILD_TESTS": "ON"
       }
     },
     {
@@ -61,7 +61,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "KENTOS_BUILD_TESTS": "OFF"
+        "PIRICAD_BUILD_TESTS": "OFF"
       }
     },
     {
@@ -83,10 +83,10 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "KENTOS_BUILD_APP": "OFF",
-        "KENTOS_BUILD_TESTS": "ON",
-        "KENTOS_WITH_RHI": "OFF",
-        "KENTOS_WITH_TEXT": "OFF"
+        "PIRICAD_BUILD_APP": "OFF",
+        "PIRICAD_BUILD_TESTS": "ON",
+        "PIRICAD_WITH_RHI": "OFF",
+        "PIRICAD_WITH_TEXT": "OFF"
       }
     }
   ],

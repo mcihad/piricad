@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/layout_templates.hpp"
+#include "piricad/app/layout_templates.hpp"
 
-#include "kentos_cad/io/staging.hpp"
+#include "piricad/io/staging.hpp"
 
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The extension a template file carries.
@@ -169,4 +169,4 @@ LayoutTemplates::handle(command::LayoutTemplateRequest request)
     co_return core::err(core::ErrorCode::Internal, "İşlenmemiş şablon isteği.");
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

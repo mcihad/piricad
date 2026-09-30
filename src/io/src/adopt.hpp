@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io (internal): putting a freshly read project in place of the live one.
+// PiriCAD — io (internal): putting a freshly read project in place of the live one.
 //
 // SHARED because two things open a project now — `AÇ` from a file and
 // `VERİTABANI projeac` from a database — and the delicate part is identical for
@@ -11,14 +11,14 @@
 // own service layer.
 #pragma once
 
-#include "kentos_cad/io/project.hpp"
+#include "piricad/io/project.hpp"
 
-#include "kentos_cad/command/bus.hpp"
+#include "piricad/command/bus.hpp"
 
 #include <stop_token>
 #include <string>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// Reads `path` and, only on success, makes it the bus's document.
 ///
@@ -40,4 +40,4 @@ namespace kentos::io {
 command::Task<core::Result<ProjectReport>> adopt_project(command::Bus& bus, std::string path,
                                                          std::stop_token stop);
 
-} // namespace kentos::io
+} // namespace piricad::io

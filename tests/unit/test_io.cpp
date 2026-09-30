@@ -14,41 +14,41 @@
 //
 // test.md P9: nothing here mutates a Document except through a command dispatched
 // on the Bus. Tests are a client of the bus with no privileges (Article 1.2).
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/guide.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/spline.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/guide.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/spline.hpp"
 
 #include <cmath>
 #include <iterator>
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/io/dwg.hpp"
-#include "kentos_cad/io/dxf.hpp"
-#include "kentos_cad/io/format.hpp"
-#include "kentos_cad/io/pdf_encrypt.hpp"
-#include "kentos_cad/io/print_profiles.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/io/staging.hpp"
-#include "kentos_cad/io/vector.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/io/dwg.hpp"
+#include "piricad/io/dxf.hpp"
+#include "piricad/io/format.hpp"
+#include "piricad/io/pdf_encrypt.hpp"
+#include "piricad/io/print_profiles.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/io/staging.hpp"
+#include "piricad/io/vector.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -62,8 +62,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -94,7 +94,7 @@ class TempDir
 public:
     explicit TempDir(const char* tag)
     {
-        path_ = fs::temp_directory_path() / (std::string("kentoscad-io-") + tag);
+        path_ = fs::temp_directory_path() / (std::string("piricad-io-") + tag);
         std::error_code ec;
         fs::remove_all(path_, ec);
         fs::create_directories(path_, ec);
@@ -188,7 +188,7 @@ void write_bytes(const std::string& path, const std::vector<char>& bytes)
 
 /// True when the error message carries the stable token io.md R9 names. The token
 /// is at the front of the message because `core::Error` carries an enum code, not
-/// the string code the rulebook writes — see `kentos_cad/io/format.hpp`.
+/// the string code the rulebook writes — see `piricad/io/format.hpp`.
 bool has_token(const core::Error& e, const char* token)
 {
     return e.message.rfind(token, 0) == 0;
@@ -299,13 +299,13 @@ TEST_CASE("NOKTALAR: Y sağa, X yukarı okunur")
 
 TEST_CASE("İÇEAKTAR: alanlar=* bir Shapefile'ın alanlarını sütun yapar")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF; Shapefile okunamıyor.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF; Shapefile okunamıyor.");
 
     // `parsel.shp` carries two text fields, `ada` and `parsel`. Without `alanlar`
     // they stay in the file and the report says so; with `*` they become two
     // layer-scoped columns and every parcel carries its values.
     const std::string fixture =
-        (fs::path(KENTOS_FUZZ_DIR) / "tohum" / "shp" / "parsel.shp").string();
+        (fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "shp" / "parsel.shp").string();
 
     Rig quiet;
     REQUIRE(quiet.bus.execute_line("AYAR koordinat_sistemi EPSG:5254", Origin::Test).ok());
@@ -1403,7 +1403,7 @@ TEST_CASE("IO: tanınmayan blok atlanır, dosya yine açılır")
     CHECK(reloaded.transcript.find("tanımadığı") != std::string::npos);
 }
 
-TEST_CASE("IO: KentOSCad dosyası olmayan bir dosya adıyla birlikte reddedilir")
+TEST_CASE("IO: PiriCAD dosyası olmayan bir dosya adıyla birlikte reddedilir")
 {
     TempDir tmp("notpiri");
     const std::string path = tmp.file("baska.pcad");
@@ -1676,7 +1676,7 @@ TEST_CASE("IO: dış biçim arka ucu durumunu her hâlükârda bildirir")
     if (!io::vector_backend_available()) {
         // The status has to name the option, or a user cannot tell an unsupported
         // format from an uninstalled one.
-        CHECK(status.find("KENTOS_WITH_GDAL") != std::string::npos);
+        CHECK(status.find("PIRICAD_WITH_GDAL") != std::string::npos);
     }
 }
 
@@ -1687,13 +1687,13 @@ TEST_CASE("IO: GDAL kapalıyken İÇEAKTAR sessizce başarılı olmaz")
     Rig rig;
     auto r = rig.bus.execute_line("İÇEAKTAR \"/veri/pafta.dxf\"", Origin::Test);
     REQUIRE(!r.ok());
-    CHECK(r.error().message.find("KENTOS_WITH_GDAL") != std::string::npos);
+    CHECK(r.error().message.find("PIRICAD_WITH_GDAL") != std::string::npos);
 }
 
 TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
 {
     if (!io::vector_backend_available())
-        PENDING("KENTOS_WITH_GDAL=OFF; DXF gidiş-dönüşü sınanamıyor.");
+        PENDING("PIRICAD_WITH_GDAL=OFF; DXF gidiş-dönüşü sınanamıyor.");
     TempDir tmp("dxf");
     const std::string path = tmp.file("cizim.dxf");
 
@@ -1732,8 +1732,8 @@ TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
 
 TEST_CASE("IO: DWG her sürümden okunur ve neyi atladığını söyler")
 {
-#ifndef KENTOS_DWG_SAMPLES
-    PENDING("KENTOS_WITH_DWG=OFF; DWG okuma sınanamıyor.");
+#ifndef PIRICAD_DWG_SAMPLES
+    PENDING("PIRICAD_WITH_DWG=OFF; DWG okuma sınanamıyor.");
 #else
     // io.md R13 names LibreDWG and R14 wants coverage MEASURED rather than
     // asserted. LibreDWG ships ten of its own drawings spanning r13 to 2018 —
@@ -1746,7 +1746,7 @@ TEST_CASE("IO: DWG her sürümden okunur ve neyi atladığını söyler")
     // nothing like an AutoCAD sample. This is what makes the reader testable
     // before that corpus exists, and the coverage numbers it prints are the shape
     // the real report will take.
-    const fs::path dir = KENTOS_DWG_SAMPLES;
+    const fs::path dir = PIRICAD_DWG_SAMPLES;
     if (!fs::exists(dir)) PENDING("LibreDWG örnek dosyaları bulunamadı: " + dir.string());
 
     std::vector<fs::path> files;
@@ -1782,8 +1782,8 @@ TEST_CASE("IO: DWG her sürümden okunur ve neyi atladığını söyler")
 
 TEST_CASE("IO: DWG eski usul POLYLINE'i ve katman listesini getiriyor")
 {
-#ifndef KENTOS_DWG_SAMPLES
-    PENDING("KENTOS_WITH_DWG=OFF; DWG POLYLINE okuma sınanamıyor.");
+#ifndef PIRICAD_DWG_SAMPLES
+    PENDING("PIRICAD_WITH_DWG=OFF; DWG POLYLINE okuma sınanamıyor.");
 #else
     // TWO REGRESSIONS, both of which a real cadastral DWG walks straight into.
     //
@@ -1797,8 +1797,8 @@ TEST_CASE("IO: DWG eski usul POLYLINE'i ve katman listesini getiriyor")
     //     offered a DWG no layers to tick.
     //
     // Neither needs a fixture of our own: LibreDWG ships its own drawings, GPLv3
-    // like the library, and `KENTOS_DWG_SAMPLES` points at them.
-    const fs::path dir = KENTOS_DWG_SAMPLES;
+    // like the library, and `PIRICAD_DWG_SAMPLES` points at them.
+    const fs::path dir = PIRICAD_DWG_SAMPLES;
     if (!fs::exists(dir)) PENDING("LibreDWG örnek dosyaları bulunamadı: " + dir.string());
 
     std::vector<fs::path> files;
@@ -1846,7 +1846,7 @@ TEST_CASE("IO: okunabilir her biçim dosya diyaloğunda görünür")
     //
     // Checked here rather than in the shell because /tests links no Qt: what is
     // testable is that the two lists agree about what is readable.
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     bool dxf = false;
     bool shp = false;
@@ -1880,7 +1880,7 @@ TEST_CASE("IO: DWG yazma yok, ve kütüphane düzeyinde yok")
 TEST_CASE("IO: .prj'siz bir DXF reddedilmez — çizimin sistemi varsayılır ve SÖYLENİR")
 {
     if (!io::vector_backend_available())
-        PENDING("KENTOS_WITH_GDAL=OFF; DXF içe aktarımı sınanamıyor.");
+        PENDING("PIRICAD_WITH_GDAL=OFF; DXF içe aktarımı sınanamıyor.");
 
     // WHAT REAL FILES LOOK LIKE. A DXF from a surveying office is one file: no
     // `.prj` beside it, because DXF has nowhere to put a coordinate system in the
@@ -1924,7 +1924,7 @@ TEST_CASE("IO: .prj'siz bir DXF reddedilmez — çizimin sistemi varsayılır ve
 TEST_CASE("IO: Shapefile içe aktarımı — parseller alan olarak gelir")
 {
     if (!io::vector_backend_available())
-        PENDING("KENTOS_WITH_GDAL=OFF; Shapefile içe aktarımı sınanamıyor.");
+        PENDING("PIRICAD_WITH_GDAL=OFF; Shapefile içe aktarımı sınanamıyor.");
 
     // WHAT INSTITUTIONS ACTUALLY SEND. The land registry, the municipality and
     // the provincial directorate all hand over `.shp`; a program that cannot open
@@ -2016,7 +2016,7 @@ constexpr const char* kWgs84Prj =
 
 TEST_CASE("İÇEAKTAR: derece sayan bir CBS katmanı reddedilir ve yolu söylenir (F-03)")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // THE DEFECT. A layer in WGS 84 was read as metres like every GIS layer and
     // multiplied into millidegrees: 29,83° became 29 830 mm, every parcel in it
@@ -2056,7 +2056,7 @@ TEST_CASE("İÇEAKTAR: derece sayan bir CBS katmanı reddedilir ve yolu söyleni
 
 TEST_CASE("İÇEAKTAR: sistem bildirmeyen katmanın sayıları derece gibiyse uyarılır (F-03)")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // A shapefile whose `.prj` got lost on the way, holding longitude and
     // latitude. Nothing can be sure it is degrees — a small site grid looks the
@@ -2178,7 +2178,7 @@ TEST_CASE("DXF: milimetre yazılan DXF'in yanına .prj konmaz; okurken çelişki
 
 TEST_CASE("IO: eksik .shx Türkçe açıklanır, GDAL'ın config önerisiyle değil")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // What a user actually meets. Someone e-mails the `.shp` alone, or a zip
     // loses a member, and GDAL answers
@@ -2205,7 +2205,7 @@ TEST_CASE("IO: eksik .shx Türkçe açıklanır, GDAL'ın config önerisiyle de�
 
 TEST_CASE("IO: Shapefile YAZMA için açık değil, ve sebebini söylüyor")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // A shapefile holds exactly ONE geometry type. A drawing with parcels,
     // boundaries, monuments and parcel numbers in it cannot be written to one
@@ -2221,7 +2221,7 @@ TEST_CASE("IO: Shapefile YAZMA için açık değil, ve sebebini söylüyor")
 TEST_CASE("IO: DXF içe aktarımı noktayı, yazıyı ve KAPALI çizgiyi kaybetmiyor")
 {
     if (!io::vector_backend_available())
-        PENDING("KENTOS_WITH_GDAL=OFF; DXF içe aktarımı sınanamıyor.");
+        PENDING("PIRICAD_WITH_GDAL=OFF; DXF içe aktarımı sınanamıyor.");
 
     // THE THREE THINGS A CADASTRAL DXF IS MADE OF, and all three used to be lost.
     //
@@ -2308,7 +2308,7 @@ TEST_CASE("IO: DXF yazısı dosyadaki açıyla geliyor")
     // facing from the first vertex to the last. So the angle is checked where it
     // actually lives: the direction of the two vertices the import produced.
     if (!io::vector_backend_available())
-        PENDING("KENTOS_WITH_GDAL=OFF; DXF yazı açısı sınanamıyor.");
+        PENDING("PIRICAD_WITH_GDAL=OFF; DXF yazı açısı sınanamıyor.");
 
     TempDir tmp("dxf-yazi-aci");
     const std::string path = tmp.file("yazili.dxf");
@@ -2364,7 +2364,7 @@ TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda
 {
     // The regression this locks. DXF holds exactly ONE OGR layer, named
     // `entities`, and a drawing's layers live there as a `Layer` attribute. The
-    // export asked OGR for a layer per KentOSCad layer, so the second call failed
+    // export asked OGR for a layer per PiriCAD layer, so the second call failed
     // with "Unable to have more than one OGR entities layer in a DXF file": the
     // first layer was written, the command reported the GDAL message, and the file
     // left on disk held a fraction of the drawing.
@@ -2372,7 +2372,7 @@ TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda
     // The case above this one draws on a single layer, which is exactly why the
     // bug survived it. A cadastral drawing is never one layer.
     if (!io::vector_backend_available())
-        PENDING("KENTOS_WITH_GDAL=OFF; çok katmanlı DXF sınanamıyor.");
+        PENDING("PIRICAD_WITH_GDAL=OFF; çok katmanlı DXF sınanamıyor.");
     TempDir tmp("dxf-katman");
     const std::string path = tmp.file("cok-katman.dxf");
 
@@ -2413,7 +2413,7 @@ TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda
 TEST_CASE("IO: GeoPackage dışa aktar -> içe aktar gidiş dönüşü, koordinat mm cinsinden korunur")
 {
     if (!io::vector_backend_available())
-        PENDING("KENTOS_WITH_GDAL=OFF; GeoPackage gidiş-dönüşü sınanamıyor.");
+        PENDING("PIRICAD_WITH_GDAL=OFF; GeoPackage gidiş-dönüşü sınanamıyor.");
     TempDir tmp("gpkg");
     const std::string path = tmp.file("parseller.gpkg");
 
@@ -2448,7 +2448,7 @@ TEST_CASE("IO: GeoPackage dışa aktar -> içe aktar gidiş dönüşü, koordina
 
 TEST_CASE("IO: GeoPackage'e eğriler söylenen bir kiriş hatasıyla gider, yay yay kalır (F-03)")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // WHAT A GEOPACKAGE RECEIVED. A circle went out at the picture's density —
     // 128 chords, nine centimetres off a 300 m curve; an arc polyline as its bare
@@ -2513,7 +2513,7 @@ TEST_CASE("IO: GeoPackage'e eğriler söylenen bir kiriş hatasıyla gider, yay 
 
 TEST_CASE("IO: sanal dosya sistemi yolları reddedilir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF; /vsi reddi sınanamıyor.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF; /vsi reddi sınanamıyor.");
     // io.md P14: a dataset path must not become a network fetch or an archive
     // traversal, whoever typed it — a user, a script or the AI.
     Rig rig;
@@ -2546,7 +2546,7 @@ TEST_CASE("IO: fuzz tohum korpusundaki her dosya çökmeden ele alınır")
     // CLAUDE.md 6.7 ships the harness and the corpus with the format. The libFuzzer
     // target in /tests/fuzz needs Clang; this replays the same seeds through the
     // same reader on every build, so the corpus is never dead weight.
-    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
     if (!fs::exists(corpus)) PENDING("Fuzz tohum korpusu bulunamadı: " + corpus.string());
 
     std::vector<fs::path> seeds;
@@ -2574,11 +2574,11 @@ TEST_CASE("IO: DXF ve Shapefile tohum korpusu da içe aktarımdan geçirilir")
     // build nobody makes on an ordinary machine. `tests/fuzz/CMakeLists.txt` says
     // the corpora are "NOT dead weight when this is off"; this is what makes that
     // sentence true.
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     std::size_t handled = 0;
     for (const char* klasor : {"dxf", "shp"}) {
-        const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / klasor;
+        const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / klasor;
         if (!fs::exists(corpus)) continue;
 
         std::vector<fs::path> seeds;
@@ -2624,9 +2624,9 @@ TEST_CASE("DXF: daire daire, yay yay olarak okunur — çokgen olarak değil")
     //   * the sweep direction is read from the tessellation, because OGR hands
     //     these arcs over CLOCKWISE and taking the ends in arrival order stored
     //     the COMPLEMENT — a 120 degree arc became the 240 degree one.
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
-    const fs::path seed = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "dxf" / "05-daire-yay-cizgi.dxf";
+    const fs::path seed = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "dxf" / "05-daire-yay-cizgi.dxf";
     if (!fs::exists(seed)) PENDING("Fikstür bulunamadı: " + seed.string());
 
     Rig rig;
@@ -2727,7 +2727,7 @@ TEST_CASE("QML: sayılar yerel ayara değil biçime aittir")
     CHECK(body.find("outline_width\" v=\"0.700\"") != std::string::npos);
     CHECK(body.find("0,700") == std::string::npos); // never a comma, on any machine
 
-    // Colours reach QGIS as r,g,b,a decimal — written the KentOSCad way they would
+    // Colours reach QGIS as r,g,b,a decimal — written the PiriCAD way they would
     // load as black and the user would blame the export.
     CHECK(body.find("140,84,26,255") != std::string::npos); // fill  #8C541A
     CHECK(body.find("93,58,18,255") != std::string::npos);  // stroke #5D3A12
@@ -2984,7 +2984,7 @@ TEST_CASE("IO: biçim 3 öncesinde tarih yuvalarıyla yazılmış dosya doğru a
     // then corrected; a line with XDATA moved. The reader must put every value
     // on the object that holds its slot NOW, pass the leftover slots over as
     // the history they are, and open the file the old reader refused.
-    const fs::path file = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje" / "13-tarih-yuvalari.pcad";
+    const fs::path file = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje" / "13-tarih-yuvalari.pcad";
     REQUIRE(fs::exists(file));
 
     Rig r;
@@ -3294,7 +3294,7 @@ TEST_CASE("IO: gömülü görsel dosyayla gidip geliyor")
     // the belediye that has to check it, which is the case this format exists for.
     TempDir tmp("gorsel");
     const std::string path = tmp.file("gorsel.pcad");
-    const std::string pack = std::string(KENTOS_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+    const std::string pack = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
 
     Rig rig;
     REQUIRE(rig.bus.execute_line("KATMAN OSB", Origin::Test).ok());
@@ -3351,7 +3351,7 @@ TEST_CASE("IO: aynı görsel iki kez eklenince tek kopya saklanıyor")
     // deduplication a sheet using twenty gösterim from one annex would carry
     // twenty copies of the same scan.
     Rig rig;
-    const std::string pack = std::string(KENTOS_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+    const std::string pack = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
 
     REQUIRE(rig.bus.execute_line("KATMAN A", Origin::Test).ok());
     REQUIRE(rig.bus.execute_line("KATMAN B", Origin::Test).ok());
@@ -3460,7 +3460,7 @@ namespace {
 /// returns the transcript the command printed.
 std::string import_seed(Rig& rig, const char* name)
 {
-    const fs::path seed = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "dxf" / name;
+    const fs::path seed = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "dxf" / name;
     REQUIRE(fs::exists(seed));
     REQUIRE(rig.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
     auto imported = rig.bus.execute_line("İÇEAKTAR \"" + seed.string() + "\"", Origin::Test);
@@ -3497,7 +3497,7 @@ int first_of_kind(const core::Document& doc, core::KindId kind)
 
 TEST_CASE("DXF: milimetrenin altındaki ayrıntı sayılır ve söylenir — örnek veriyle karar (F-03)")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // THE SAMPLE THE SUB-MILLIMETRE DECISION WAS MADE ON (docs/veri/hassasiyet.md).
     // Seed 29 is a detail drawn in millimetres, finer than the store: a 12,345 mm
@@ -3542,7 +3542,7 @@ TEST_CASE("DXF: milimetrenin altındaki ayrıntı sayılır ve söylenir — ör
 
 TEST_CASE("DXF: $INSUNITS başlığı ayarın yerine geçmez, yalnız karşılaştırılır")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // 10 says `$INSUNITS 4` (millimetres) and its numbers really are millimetres.
     // With the default setting (metres) it is read as METRES all the same — the
@@ -3574,7 +3574,7 @@ TEST_CASE("DXF: $INSUNITS başlığı ayarın yerine geçmez, yalnız karşıla�
 
 TEST_CASE("DXF: başlığı milimetre diyen metre dosyası daire ve yayını metre boyunda getirir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // THE SUSEHRI FILE. A real cadastral DXF said `$INSUNITS 4` over coordinates
     // that were plainly metres; obeying the header divided the whole town by a
@@ -3608,7 +3608,7 @@ TEST_CASE("DXF: başlığı milimetre diyen metre dosyası daire ve yayını met
 
 TEST_CASE("DXF: birimsiz dosya proje ayarının birimiyle okunur ve bunu söyler")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // 05 has no HEADER at all. In metres (the default) the circle sits at
     // 422 575.25 m; told the drawing is in centimetres, the same numbers are a
@@ -3654,7 +3654,7 @@ TEST_CASE("DXF: birimsiz dosya proje ayarının birimiyle okunur ve bunu söyler
 
 TEST_CASE("DXF: kâğıt alanındaki nesne okunmaz ve sayılır")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "11-kagit-alani.dxf");
 
@@ -3667,8 +3667,8 @@ TEST_CASE("DXF: kâğıt alanındaki nesne okunmaz ve sayılır")
 
 TEST_CASE("DXF: elips elips olarak gelir, spline düzleştirilir ve söylenir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF: GDAL yolu elipsi parçalar.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF: GDAL yolu elipsi parçalar.");
 
     // libdxfrw hands the ELLIPSE over as centre and axes, so it is an ellipse in
     // the drawing — the GDAL path could only make a face of its stroked outline.
@@ -3702,7 +3702,7 @@ TEST_CASE("DXF: elips elips olarak gelir, spline düzleştirilir ve söylenir")
 
 TEST_CASE("DXF: tarama tarama olarak gelir, dolu ise dolgu katmanıyla çizilir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "07-tarama.dxf");
 
@@ -3731,7 +3731,7 @@ TEST_CASE("DXF: tarama tarama olarak gelir, dolu ise dolgu katmanıyla çizilir"
 
 TEST_CASE("DXF: ölçü ölçü olarak gelir: tanım noktaları, ölçülen değer, yazılan metin")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "09-olculendirme.dxf");
     CHECK(rig.doc.live_entity_count() >= 1u);
@@ -3760,7 +3760,7 @@ TEST_CASE("DXF: ölçü ölçü olarak gelir: tanım noktaları, ölçülen değ
 
 TEST_CASE("DXF: lider lider olarak gelir, oku ilk köşede")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "22-lider.dxf");
     REQUIRE_EQ(rig.doc.live_entity_count(), 1u);
@@ -3778,7 +3778,7 @@ TEST_CASE("DXF: lider lider olarak gelir, oku ilk köşede")
 
 TEST_CASE("DXF: yükseklik (Z) atıldığında söylenir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "14-yukseklik-z.dxf");
     CHECK_EQ(rig.doc.live_entity_count(), 1u);
@@ -3800,7 +3800,7 @@ TEST_CASE("DXF: yükseklik (Z) atıldığında söylenir")
 
 TEST_CASE("DXF: nesnenin kendi rengi ve çizgi tipi okunmadığında söylenir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "15-renk-cizgitipi.dxf");
     CHECK_EQ(rig.doc.live_entity_count(), 2u);
@@ -3821,7 +3821,7 @@ TEST_CASE("DXF: nesnenin kendi rengi ve çizgi tipi okunmadığında söylenir")
 
 TEST_CASE("DXF: iç içe blok referansı yapısıyla gelir ve üyeleri yerinde çizilir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "13-ic-ice-blok.dxf");
 
@@ -3872,7 +3872,7 @@ TEST_CASE("DXF: iç içe blok referansı yapısıyla gelir ve üyeleri yerinde �
 
 TEST_CASE("DXF: Türkçe kod sayfalı yazı UTF-8 olarak gelir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
     Rig rig;
     (void)import_seed(rig, "12-turkce-yazi.dxf");
 
@@ -3895,7 +3895,7 @@ TEST_CASE("DXF: Türkçe kod sayfalı yazı UTF-8 olarak gelir")
 
 TEST_CASE("DXF: nokta ve yazı kendi türleriyle gelir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
     Rig rig;
     (void)import_seed(rig, "16-nokta-ve-yazi.dxf");
 
@@ -3918,7 +3918,7 @@ TEST_CASE("DXF: nokta ve yazı kendi türleriyle gelir")
 
 TEST_CASE("DXF: transkript okunan türlerin sayımıyla biter")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "05-daire-yay-cizgi.dxf");
     CHECK(said.find("Okunan türler:") != std::string::npos);
@@ -3937,7 +3937,7 @@ TEST_CASE("IO: GPKG dışa aktarım daire, yay, elips, nokta ve yazıyı türüy
     // decides what is written, the caption's four facts ride as fields, and the
     // attribute table travels with the geometry — so a GeoPackage written here
     // comes back as the drawing it was.
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     TempDir dir("gpkg-turler");
     const std::string path = dir.file("turler.gpkg");
@@ -4025,7 +4025,7 @@ TEST_CASE("IO: DXF dışa aktarım parseli kapalı LWPOLYLINE, yazıyı yazı ol
     // GDAL's DXF writer turns a polygon into a solid HATCH unless told otherwise,
     // and a parcel delivered as a hatch is a filled picture to every CAD program
     // that opens it. And a caption used to leave as a bare baseline.
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     TempDir dir("dxf-parsel");
     const std::string path = dir.file("parsel.dxf");
@@ -4228,8 +4228,8 @@ TEST_CASE("IO: yabancı veri ve blok tanımı dosyaya gider, geri gelir, yeniden
 
 TEST_CASE("İÇEAKTAR: arayüz (iş sahibi), komut satırı ve betik aynı belgeyi ve günlüğü üretir")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
-    const std::string path = std::string(KENTOS_FUZZ_DIR) + "/tohum/dxf/05-daire-yay-cizgi.dxf";
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    const std::string path = std::string(PIRICAD_FUZZ_DIR) + "/tohum/dxf/05-daire-yay-cizgi.dxf";
 
     // ---- client 1: the GUI. A host takes the read off the bus thread; here it
     //      is a test double that records the session, runs the job when told and
@@ -4285,8 +4285,8 @@ TEST_CASE("İÇEAKTAR: arayüz (iş sahibi), komut satırı ve betik aynı belge
 
 TEST_CASE("İÇEAKTAR: Durdur okumayı keser ve çizim değişmez")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
-    const std::string path = std::string(KENTOS_FUZZ_DIR) + "/tohum/dxf/05-daire-yay-cizgi.dxf";
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    const std::string path = std::string(PIRICAD_FUZZ_DIR) + "/tohum/dxf/05-daire-yay-cizgi.dxf";
 
     Rig rig;
     REQUIRE(rig.bus.execute_line("ÇİZGİ 10,10 20,20", Origin::Test).ok());
@@ -4326,8 +4326,8 @@ TEST_CASE("İÇEAKTAR: Durdur okumayı keser ve çizim değişmez")
 
 TEST_CASE("İÇEAKTAR: iş sahibi kurulu olsa da tek çağrılık yol yerinde koşar")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
-    const std::string path = std::string(KENTOS_FUZZ_DIR) + "/tohum/dxf/05-daire-yay-cizgi.dxf";
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    const std::string path = std::string(PIRICAD_FUZZ_DIR) + "/tohum/dxf/05-daire-yay-cizgi.dxf";
 
     // A host is installed, but `execute_line` finishes in one call and its session
     // is not client-driven: the job runs in place and the host is never asked.
@@ -4341,7 +4341,7 @@ TEST_CASE("İÇEAKTAR: iş sahibi kurulu olsa da tek çağrılık yol yerinde ko
 
 TEST_CASE("DXF: şişkinlikli çoklu çizgi yaylı çoklu çizgi olur; alanı tam, yayı tanımıyla")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "18-siskinlik.dxf");
     REQUIRE_EQ(rig.doc.live_entity_count(), 1u);
@@ -4368,7 +4368,7 @@ TEST_CASE("DXF: köşesi YUVARLA ile yuvarlanan parsel şişkinlikle gidiyor, ay
 {
     // TODOS O-2: a rounded corner is an arc, and it leaves the program as one —
     // a bulge on the LWPOLYLINE — and comes back as the same arc, the same area.
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-yuvarla");
     Rig rig;
     REQUIRE(rig.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
@@ -4400,7 +4400,7 @@ TEST_CASE("DXF: köşesi YUVARLA ile yuvarlanan parsel şişkinlikle gidiyor, ay
 
 TEST_CASE("DXF: XDATA bayt bayt korunur, tutamak kaynak_kimlik olur, dışa aktarımla geri döner")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-xdata");
     Rig rig;
     const std::string said = import_seed(rig, "19-xdata.dxf");
@@ -4433,7 +4433,7 @@ TEST_CASE("DXF: XDATA bayt bayt korunur, tutamak kaynak_kimlik olur, dışa akta
 TEST_CASE(
     "DXF: blok referansı ölçek, dönme ve aynayla yerleşir; ByBlock üye referansın rengini alır")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "20-blok-donusum.dxf");
     // One definition (a circle and a line), two references on the drawing.
@@ -4497,7 +4497,7 @@ TEST_CASE(
 
 TEST_CASE("DXF: aynalı OCS (normal −Z) daireyi ve yayı çizim düzlemine doğru taşır")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     Rig rig;
     (void)import_seed(rig, "21-aynali-ocs.dxf");
     REQUIRE_EQ(rig.doc.live_entity_count(), 2u);
@@ -4526,7 +4526,7 @@ TEST_CASE("DXF: süslenmiş ölçü <> ile, elle yazılmış ölçü yazıldığ
 {
     // TODOS C-10: a reader that measures the figure itself has to be told where
     // it goes (`<>`), and a figure typed by hand has to come back typed by hand.
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-olcu-yazisi");
     const std::string path = dir.file("olcu.dxf");
 
@@ -4570,7 +4570,7 @@ TEST_CASE("DXF: kendi birimi olan ölçü ve yay uzunluğu bu programa ölçüle
     // would measure in its own degrees, so the figure goes out whole; the
     // writer's own notes bring it back MEASURED and in grad, and an arc-length
     // dimension back as one rather than as the angle DXF had to write it as.
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-olcu-birimi");
     const std::string path = dir.file("olcu.dxf");
 
@@ -4659,7 +4659,7 @@ TEST_CASE("DXF: her ölçü kendi resmini taşır — *D bloğu, grup 2, dolu ok
 {
     // TODOS C-17: a DIMENSION without its picture block is drawn by each
     // reader from its own idea of a dimension — or not at all.
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-olcu-resmi");
     const std::string path = dir.file("resim.dxf");
 
@@ -4753,7 +4753,7 @@ TEST_CASE("DXF: tutamaktan çekilen ölçü yazısı yerinde kalır ve elle yerl
 {
     // TODOS C-17: a caption the hand put somewhere goes out at that place with
     // the flag that says so (group 70, bit 128), and comes back placed by hand.
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-yazi-yeri");
     const std::string path = dir.file("yazi-yeri.dxf");
 
@@ -4790,7 +4790,7 @@ TEST_CASE(
     // TODOS C-12: every caption is drawn in the bundled IBM Plex, so a drawing
     // made in another face comes out narrower or wider than its author saw
     // it — said in the report with the face and how many captions ask for it.
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-yazi-tipi");
     const std::string ours = dir.file("bizim.dxf");
 
@@ -4837,7 +4837,7 @@ TEST_CASE("DXF: MULTILEADER kılavuz çizgi olarak gelir; ok ucu, iniş ve kıla
 {
     // TODOS C-12: libdxfrw has no MULTILEADER at all, and a drawing's notes
     // made with one simply did not arrive. GDAL's DXF driver reads them.
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-mleader");
     const std::string path = dir.file("mleader.dxf");
     {
@@ -4977,7 +4977,7 @@ TEST_CASE("DXF: MULTILEADER kılavuz çizgi olarak gelir; ok ucu, iniş ve kıla
     REQUIRE(r.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
     INFO(r.transcript);
-    if (r.transcript.find("GDAL'sız") != std::string::npos) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (r.transcript.find("GDAL'sız") != std::string::npos) PENDING("PIRICAD_WITH_GDAL=OFF.");
     CHECK(r.transcript.find("1 MULTILEADER 1 kılavuz çizgi olarak okundu (GDAL ile); 1 yazı "
                             "kılavuzun ucuna bağlandı.") != std::string::npos);
 
@@ -5071,7 +5071,7 @@ TEST_CASE("IO: kılavuz çizginin bağlı yazısı dosyayla ve panoyla bağıyla
 
 TEST_CASE("DXF gidiş-dönüş: her tür, yazı ve öznitelik geri gelir; surum=2000 kod sayfasını yazar")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-gidis-donus");
     const std::string path = dir.file("tumu.dxf");
 
@@ -5121,7 +5121,7 @@ TEST_CASE("DXF gidiş-dönüş: her tür, yazı ve öznitelik geri gelir; surum=
     CHECK(bytes.find("\nINSERT\n") != std::string::npos);
     CHECK(bytes.find("\nDIMENSION\n") != std::string::npos);
     CHECK(bytes.find("\nLEADER\n") != std::string::npos);
-    CHECK(bytes.find("KENTOSCAD") != std::string::npos); // the ada number travels as XDATA
+    CHECK(bytes.find("PIRICAD") != std::string::npos); // the ada number travels as XDATA
     CHECK(fs::exists(dir.file("tumu.prj")));
 
     Rig b;
@@ -5256,7 +5256,7 @@ TEST_CASE("IO: bağlar dosyaya yazılır ve okunur; yeniden açılan çizimde ya
     // The processing tools live in their own registry and this rig has the
     // builtins only, so the tools are registered for this case: the attachment
     // is made the way a user makes one, by the length tool over a line.
-    kentos::processing::register_processing_commands(written.reg);
+    piricad::processing::register_processing_commands(written.reg);
     REQUIRE(written.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
     REQUIRE(written.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
     REQUIRE(written.bus.execute_line("UZUNLUKYAZ nesneler=1 bicim=\"L={}\"", Origin::Test).ok());
@@ -5267,7 +5267,7 @@ TEST_CASE("IO: bağlar dosyaya yazılır ve okunur; yeniden açılan çizimde ya
     REQUIRE(saved.ok());
 
     Rig reloaded;
-    kentos::processing::register_processing_commands(reloaded.reg);
+    piricad::processing::register_processing_commands(reloaded.reg);
     auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
     if (!opened) FAIL_WITH("AÇ", opened.error().message);
     CHECK_EQ(reloaded.doc.content_hash(), hash);
@@ -5421,11 +5421,11 @@ TEST_CASE(
 TEST_CASE("IO: tarama bağı tohumları korpusta; bozuk bağ satırları uyarıyla atlanır")
 {
     // CLAUDE.md 6.7, for the hatch link block: written under
-    // KENTOS_TOHUM_UPDATE, read back on every build.
-    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    // PIRICAD_TOHUM_UPDATE, read back on every build.
+    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
     const fs::path good   = corpus / "11-tarama-baglari.pcad";
     const fs::path bad    = corpus / "12-tarama-bagi-bozuk.pcad";
-    if (std::getenv("KENTOS_TOHUM_UPDATE") != nullptr) {
+    if (std::getenv("PIRICAD_TOHUM_UPDATE") != nullptr) {
         Rig w;
         for (const char* line :
              {"ALAN 0,0 20,0 20,10 0,10", "ALAN 40,0 60,0 60,10 40,10",
@@ -5463,7 +5463,7 @@ TEST_CASE("IO: tarama bağı tohumları korpusta; bozuk bağ satırları uyarıy
         out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
     }
     if (!fs::exists(good) || !fs::exists(bad))
-        PENDING("Tarama bağı tohumları yok; KENTOS_TOHUM_UPDATE=1 ile yazılır.");
+        PENDING("Tarama bağı tohumları yok; PIRICAD_TOHUM_UPDATE=1 ile yazılır.");
 
     Rig a;
     auto opened = a.bus.execute_line("AÇ \"" + good.string() + "\"", Origin::Test);
@@ -5483,12 +5483,12 @@ TEST_CASE("IO: tarama bağı tohumları korpusta; bozuk bağ satırları uyarıy
 TEST_CASE("IO: köken tohumları korpusta; bozuk köken satırları uyarıyla atlanır")
 {
     // CLAUDE.md 6.7, for the lineage block (core/lineage.hpp): written under
-    // KENTOS_TOHUM_UPDATE — a parcel trimmed into a new piece, one copied and
+    // PIRICAD_TOHUM_UPDATE — a parcel trimmed into a new piece, one copied and
     // the copy's source erased — and read back on every build.
-    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
     const fs::path good   = corpus / "14-kokenler.pcad";
     const fs::path bad    = corpus / "15-koken-bozuk.pcad";
-    if (std::getenv("KENTOS_TOHUM_UPDATE") != nullptr) {
+    if (std::getenv("PIRICAD_TOHUM_UPDATE") != nullptr) {
         Rig w;
         for (const char* line : {"ÇİZGİ 0,0 20,0", "ÇİZGİ 10,-5 10,5", "BÖL nesne=1 nokta=5,0",
                                  "ALAN 40,0 60,0 60,10 40,10",
@@ -5526,7 +5526,7 @@ TEST_CASE("IO: köken tohumları korpusta; bozuk köken satırları uyarıyla at
         out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
     }
     if (!fs::exists(good) || !fs::exists(bad))
-        PENDING("Köken tohumları yok; KENTOS_TOHUM_UPDATE=1 ile yazılır.");
+        PENDING("Köken tohumları yok; PIRICAD_TOHUM_UPDATE=1 ile yazılır.");
 
     Rig a;
     auto opened = a.bus.execute_line("AÇ \"" + good.string() + "\"", Origin::Test);
@@ -5550,13 +5550,13 @@ TEST_CASE("IO: köken tohumları korpusta; bozuk köken satırları uyarıyla at
 TEST_CASE("IO: ölçü bağı tohumları korpusta; bozuk bağ satırları uyarıyla atlanır")
 {
     // CLAUDE.md 6.7: the link block ships its seeds with the format. Written by
-    // this case under KENTOS_TOHUM_UPDATE — the valid drawing through
+    // this case under PIRICAD_TOHUM_UPDATE — the valid drawing through
     // FARKLIKAYDET, the broken one from it with one fault per row — and read
     // back on every build.
-    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
     const fs::path good   = corpus / "09-olcu-baglari.pcad";
     const fs::path bad    = corpus / "10-olcu-bagi-bozuk.pcad";
-    if (std::getenv("KENTOS_TOHUM_UPDATE") != nullptr) {
+    if (std::getenv("PIRICAD_TOHUM_UPDATE") != nullptr) {
         Rig w;
         for (const char* line :
              {"ÇİZGİ 0,0 12,0", "ÇİZGİ 30,0 40,0", "ÖLÇÜ birinci=0,0 ikinci=12,0 konum=6,-2",
@@ -5597,7 +5597,7 @@ TEST_CASE("IO: ölçü bağı tohumları korpusta; bozuk bağ satırları uyarı
         out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
     }
     if (!fs::exists(good) || !fs::exists(bad))
-        PENDING("Ölçü bağı tohumları yok; KENTOS_TOHUM_UPDATE=1 ile yazılır.");
+        PENDING("Ölçü bağı tohumları yok; PIRICAD_TOHUM_UPDATE=1 ile yazılır.");
 
     Rig a;
     auto opened = a.bus.execute_line("AÇ \"" + good.string() + "\"", Origin::Test);
@@ -5779,7 +5779,7 @@ TEST_CASE("YAZDIRMA PROFİLİ: istek profili geçersiz kılar; dosya gidiş dön
 TEST_CASE("PDF ŞİFRELEME: qpdf varsa AES-256 ile şifreler, yoksa nedenini söyler")
 {
     if (!io::pdf_encryption_available())
-        PENDING("KENTOS_WITH_QPDF kapalı; PDF şifreleme sınanamıyor.");
+        PENDING("PIRICAD_WITH_QPDF kapalı; PDF şifreleme sınanamıyor.");
 
     // The smallest VALID PDF: one empty A4 page, with a real cross-reference
     // table. Written by hand rather than by Qt, because this test links no Qt
@@ -5820,7 +5820,7 @@ TEST_CASE("PDF ŞİFRELEME: qpdf varsa AES-256 ile şifreler, yoksa nedenini sö
     options.allow_print   = true;
     options.allow_copy    = false;
     options.allow_modify  = false;
-    options.author        = "KentOSCad";
+    options.author        = "PiriCAD";
 
     const std::string sealed = tmp.file("sifreli.pdf");
     auto sealed_ok           = io::pdf_encrypt(plain, sealed, options);
@@ -6747,7 +6747,7 @@ TEST_CASE("Hazırlama: yerine konamayan dosya adıyla söylenir, konan da söyle
 
 TEST_CASE("DXF: durdurulan dışa aktarım eski dosyayı bayt bayt bırakır (F-05)")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
 
     // THE REGRESSION: a cancel used to REMOVE the target — the half-written
     // file, and with it the good one it had replaced — so the user had neither.
@@ -6781,7 +6781,7 @@ TEST_CASE("DXF: durdurulan dışa aktarım eski dosyayı bayt bayt bırakır (F-
 
 TEST_CASE("GPKG: durdurulan dışa aktarım eski dosyayı bayt bayt bırakır (F-05)")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // THE REGRESSION: the GDAL path DELETED the target before creating the new
     // one, so a cancel — or a refusal half way — left no file at all.
@@ -6811,7 +6811,7 @@ TEST_CASE("GPKG: durdurulan dışa aktarım eski dosyayı bayt bayt bırakır (F
 
 TEST_CASE("Dışa aktarım: tekrar çağrı çoğaltmaz, eskisinin yerine yazar (F-05)")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
 
     // "TEKRAR ÇAĞRI ÇOĞALTMA YAPMAZ": the same export run twice leaves one file
     // with the drawing in it once — not appended, not beside a second copy.
@@ -7087,7 +7087,7 @@ std::vector<core::HatchDef> hatches_of(const core::Document& doc)
 TEST_CASE("DXF: tarama deseni çizim biriminde, kendi çizgileriyle gider; aynı aralıkla, aynı "
           "başlangıçla döner (TODOS C-11)")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-desen");
     const std::string path = dir.file("desen.dxf");
 
@@ -7141,7 +7141,7 @@ TEST_CASE("DXF: tarama deseni çizim biriminde, kendi çizgileriyle gider; aynı
 TEST_CASE("DXF: kendi deseniniz aralığıyla gider (grup 41), çapraz tarama iki çizgiyle; ikisi de "
           "geri gelir (TODOS C-11)")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-kendi-desen");
     const std::string path = dir.file("kendi.dxf");
 
@@ -7182,7 +7182,7 @@ TEST_CASE("DXF: kendi deseniniz aralığıyla gider (grup 41), çapraz tarama ik
 TEST_CASE("DXF: dosyadaki desen çizgileri okunur — katalogdaki desen kendi başlangıcıyla, "
           "bilinmeyen desen dosyadaki çizgileriyle; tutmayan satırlarda katalog (TODOS C-11)")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     Rig rig;
     const std::string said                = import_seed(rig, "23-tarama-desen-satirlari.dxf");
     const std::vector<core::HatchDef> got = hatches_of(rig.doc);
@@ -7221,7 +7221,7 @@ TEST_CASE("DXF: yalan söyleyen desen satırları okunmaz; katalog geçer, dosya
     // tests/fuzz/tohum/dxf/24: five records whose lines do not add up. Each is
     // refused on its own and the catalogue's ANSI31 stands in; none is allowed
     // to allocate what it announced, and the file still imports.
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     Rig rig;
     const std::string said                = import_seed(rig, "24-tarama-desen-bozuk.dxf");
     const std::vector<core::HatchDef> got = hatches_of(rig.doc);
@@ -7293,7 +7293,7 @@ std::string value_of(const std::vector<std::pair<int, std::string>>& groups, int
 TEST_CASE("DXF: çok satırlı yazı MTEXT olarak gider; hizası, satır aralığı, genişliği ve "
           "satırları aynı döner (TODOS C-12)")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-mtext");
     const std::string path = dir.file("yazi.dxf");
 
@@ -7335,7 +7335,7 @@ TEST_CASE("DXF: çok satırlı yazı MTEXT olarak gider; hizası, satır aralı�
 
 TEST_CASE("DXF: tek satırlı yazının dokuz hizası TEXT'in 72/73'üne gider ve aynı döner")
 {
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     TempDir dir("dxf-hiza");
     const std::string path = dir.file("hiza.dxf");
     const char* words[9]   = {"sol",      "orta",    "sag",      "merkez",  "ust_sol",
@@ -7388,7 +7388,7 @@ TEST_CASE("DXF: MTEXT paragrafları satır olur; alt çizgi anahtarı yazıyı y
     // an underline switched on and off, a colour with its argument, a stacked
     // fraction, escaped braces; a bottom-right MTEXT spaced twice; an ALIGNED
     // TEXT, whose two points are its two ends.
-    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    if (!io::dxf_backend_available()) PENDING("PIRICAD_WITH_DXFRW=OFF.");
     Rig rig;
     const std::string said = import_seed(rig, "25-cok-satirli-yazi.dxf");
     std::vector<core::EntityId> texts;

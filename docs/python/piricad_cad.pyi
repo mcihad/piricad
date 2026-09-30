@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN.  Yeniden üret: make reference
 #
-# `kentos.cad`'in tip taslağı. Program bu dosyayı ÇALIŞTIRMAZ: gerçek yüzey
+# `piricad.cad`'in tip taslağı. Program bu dosyayı ÇALIŞTIRMAZ: gerçek yüzey
 # çalışma anında komut kaydından kurulur. Bu taslak, betiği programın
 # dışında yazan bir düzenleyicinin tamamlama ve tip denetimi yapabilmesi
 # içindir.
@@ -2101,17 +2101,17 @@ def open(
     *,
     file: str = ...,
 ) -> int:
-    """Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar.
+    """Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar.
 
     Komut: core.open (AÇ)
-        file — Açılacak KentOSCad proje dosyasının yolu (.pcad)
+        file — Açılacak PiriCAD proje dosyasının yolu (.pcad)
     """
 
 def save(
     *,
     file: str = ...,
 ) -> int:
-    """Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder.
+    """Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder.
 
     Komut: core.save (KAYDET)
         file — Hedef yol; verilmezse çizimin bağlı olduğu dosyaya yazılır
@@ -2121,7 +2121,7 @@ def saveas(
     *,
     file: str = ...,
 ) -> int:
-    """Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.
+    """Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar.
 
     Komut: core.saveas (FARKLIKAYDET)
         file — Yeni proje dosyasının yolu (.pcad)

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the right-hand panel stack.
+// PiriCAD — app: the right-hand panel stack.
 //
 // Katmanlar and Öznitelikler share a tab group on the right and can be dragged to
 // the left edge, floated, or split apart. Both are read-only views onto the
 // document; anything they change goes out as a command (CLAUDE.md Article 1).
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
+#include "piricad/core/document.hpp"
 
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QEvent>
 #include <QIcon>
@@ -26,7 +26,7 @@ class QMenu;
 class QTreeWidget;
 class QTreeWidgetItem;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -41,7 +41,7 @@ class Controller;
 class LayerRowDelegate : public QStyledItemDelegate, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Which mark the pointer is over, so the row can answer a click.
@@ -73,7 +73,7 @@ private:
 class LayerPanel : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the panel over a controller, which outlives it.
@@ -113,7 +113,7 @@ public:
     /// Opens the REAL context menu of the row named `layerName` and fires the
     /// entry whose text is `entry`. Returns false when either is not there.
     ///
-    /// It exists for `KENTOS_LAYER_PROBE`, and for the reason `probeByHand`
+    /// It exists for `PIRICAD_LAYER_PROBE`, and for the reason `probeByHand`
     /// gives: calling a handler proves the handler works and says nothing about
     /// whether the menu a user opens can reach it. The menu it opens is built by
     /// the same function the right-click builds it with — there is no second
@@ -136,16 +136,16 @@ public:
     QStringList contextEntries(const QString& layerName, const QString& submenu = QString());
 
     /// Opens the row's context menu for `layerName` at `global`, not waiting on
-    /// it, for the screenshot run (`KENTOS_SHOT_DIR`): the same menu the right
+    /// it, for the screenshot run (`PIRICAD_SHOT_DIR`): the same menu the right
     /// click builds, which closes and deletes itself. False when no row has
     /// the name.
     bool popContextMenu(const QString& layerName, const QPoint& global);
 
-    /// Highlights exactly the rows named, for `KENTOS_LAYER_PROBE`: a menu that
+    /// Highlights exactly the rows named, for `PIRICAD_LAYER_PROBE`: a menu that
     /// acts on the selection can only be tested with a selection in place.
     void probeSelect(const QStringList& layerNames);
 
-    /// For `KENTOS_REALMOUSE_PROBE`: whether the group row named `group` shows
+    /// For `PIRICAD_REALMOUSE_PROBE`: whether the group row named `group` shows
     /// its layers seen — after a REAL click on its eye, with `click`. Empty when
     /// there is no such group row. A probe that set the layers itself would
     /// prove nothing about the eye a user presses.
@@ -255,4 +255,4 @@ private:
     QLabel* footer_{nullptr};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

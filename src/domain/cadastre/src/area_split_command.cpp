@@ -23,15 +23,15 @@
 // and which side keeps the parent's ada/parsel numbers, are regulatory questions
 // that belong in /data and need a harita mühendisi. This command does the
 // geometry and states what it did; it decides neither.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/units.hpp"
 
 #include "parcel_face.hpp"
 
@@ -41,7 +41,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// How many bisection steps. A parcel is at most a few kilometres across, and 60
@@ -313,7 +313,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(split_area)
+PIRICAD_COMMAND(split_area)
 {
     return CommandSpec{
         .id       = "core.split_area",
@@ -343,4 +343,4 @@ KENTOS_COMMAND(split_area)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

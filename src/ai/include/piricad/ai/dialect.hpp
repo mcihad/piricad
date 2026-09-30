@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: one conversation, four wire languages, one normalised event.
+// PiriCAD — ai: one conversation, four wire languages, one normalised event.
 //
 // WHAT A CODEC DOES. Two jobs and no others: it writes the REQUEST BODY for a
 // conversation plus the tool catalogue projected into its own tool shape, and it
@@ -67,12 +67,12 @@
 // leaked provider-internal blob at worst.
 #pragma once
 
-#include "kentos_cad/ai/provider.hpp"
-#include "kentos_cad/ai/sse.hpp"
-#include "kentos_cad/ai/tool.hpp"
-#include "kentos_cad/ai/transport.hpp"
+#include "piricad/ai/provider.hpp"
+#include "piricad/ai/sse.hpp"
+#include "piricad/ai/tool.hpp"
+#include "piricad/ai/transport.hpp"
 
-#include "kentos_cad/core/json.hpp"
+#include "piricad/core/json.hpp"
 
 #include <cstdint>
 #include <string>
@@ -80,7 +80,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// Declared here and defined in `chat.hpp`, which includes this file: a codec
 /// takes a whole conversation but the conversation is assembled from the events
@@ -320,4 +320,4 @@ private:
     DecodeState state_;
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

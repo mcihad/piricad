@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/sse.hpp"
+#include "piricad/ai/sse.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 /// The sentinel the OpenAI dialects end a stream with. It is not JSON, so a
@@ -145,4 +145,4 @@ std::optional<std::string> NdjsonParser::finish()
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

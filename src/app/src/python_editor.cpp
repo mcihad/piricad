@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/python_editor.hpp"
+#include "piricad/app/python_editor.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/widgets.hpp"
 
 #include <QAbstractItemView>
 #include <QCompleter>
@@ -18,7 +18,7 @@
 #include <QTextBlock>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 constexpr int kIndent         = 4;   ///< PEP 8, and the only indentation this offers
@@ -1312,4 +1312,4 @@ void PythonConsole::applyTheme(ThemeMode mode)
     prompt_->applyTheme(mode);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

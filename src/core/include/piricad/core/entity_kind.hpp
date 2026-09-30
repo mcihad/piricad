@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: entity kinds.
+// PiriCAD — core: entity kinds.
 //
 // .claude/model.md R22–R26. An entity kind is six free function pointers over
 // spans and nothing else. No vptr, no capture, no std::function, no virtual
@@ -17,10 +17,10 @@
 // disagree about what "core.polyline" means.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
@@ -28,7 +28,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 // `KindId`, `kNoKind` and the built-in kind ids live in identity.hpp, so a caller
 // who only asks "is this a circle?" need not include this header.
@@ -226,7 +226,7 @@ using KeyPointsFn = void (*)(const RingGeometry& geom, std::uint32_t slot, KeyPo
 /// One entity kind, declared once (R22).
 ///
 /// `size` leads the struct so a later ABI boundary can grow it by appending
-/// fields only, exactly as `kentos_host_vN` does (.claude/plugin-api.md).
+/// fields only, exactly as `piricad_host_vN` does (.claude/plugin-api.md).
 /// Names are `const char*` rather than std::string so the record stays a POD an
 /// out-of-process plugin can hand over by value.
 struct KindSpec
@@ -308,7 +308,7 @@ const KindTable& builtin_kinds();
 /// Declares a kind factory. One factory per kind, one line in the X-macro list,
 /// exactly like command/commands/builtin.cpp — one idiom in this codebase, not
 /// two (R25).
-#define KENTOS_KIND(sym) ::kentos::core::KindSpec kentos_kind_##sym()
+#define PIRICAD_KIND(sym) ::piricad::core::KindSpec piricad_kind_##sym()
 
 /// The drawable, pickable outline of ONE slot, for a kind whose stored vertices
 /// are not its outline.
@@ -326,19 +326,19 @@ bool curve_outline(KindId kind, const RingGeometry& geom, std::uint32_t slot, Em
 
 /// The built-in kinds, one factory each (R25). The first five live in
 /// entity_kind.cpp; every Phase 2 kind has its own file beside its geometry.
-KENTOS_KIND(polyline);
-KENTOS_KIND(circle);
-KENTOS_KIND(arc);
-KENTOS_KIND(point);
-KENTOS_KIND(ellipse);
-KENTOS_KIND(arc_polyline);
-KENTOS_KIND(spline);
-KENTOS_KIND(hatch);
-KENTOS_KIND(block_reference);
-KENTOS_KIND(dimension);
-KENTOS_KIND(leader);
+PIRICAD_KIND(polyline);
+PIRICAD_KIND(circle);
+PIRICAD_KIND(arc);
+PIRICAD_KIND(point);
+PIRICAD_KIND(ellipse);
+PIRICAD_KIND(arc_polyline);
+PIRICAD_KIND(spline);
+PIRICAD_KIND(hatch);
+PIRICAD_KIND(block_reference);
+PIRICAD_KIND(dimension);
+PIRICAD_KIND(leader);
 
 /// Where a `core.point` slot sits.
 Point2 point_position_of(const RingGeometry& geom, std::uint32_t slot);
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -18,17 +18,17 @@
 // off it. Each pair places a point; ESC and the right button end the run. With
 // `cizgi=evet` the points are joined in the order they were given, which is what
 // a kerb line or a building face is.
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -143,7 +143,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(perp_offset)
+PIRICAD_COMMAND(perp_offset)
 {
     return CommandSpec{
         .id       = "core.perp_offset",
@@ -173,4 +173,4 @@ KENTOS_COMMAND(perp_offset)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

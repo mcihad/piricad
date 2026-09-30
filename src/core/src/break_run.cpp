@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: breaking a path, KIR's cut. See break_run.hpp.
-#include "kentos_cad/core/break_run.hpp"
+// PiriCAD — core: breaking a path, KIR's cut. See break_run.hpp.
+#include "piricad/core/break_run.hpp"
 
 #include <cstring>
 #include <utility>
 
-namespace kentos::core {
+namespace piricad::core {
 
 Result<PathBreak> break_path(const CurvePath& path, Point2 a, Point2 b)
 {
@@ -71,4 +71,4 @@ Result<BreakGuide> decode_break_guide(std::span<const std::uint8_t> bytes)
     return guide;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

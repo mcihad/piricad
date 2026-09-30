@@ -15,13 +15,13 @@
 // PENDING SIGN-OFF (CLAUDE.md 6.11): a rule that decides those columns is a
 // regulatory rule, belongs in /data (5.13), and needs a harita mühendisi to
 // approve it. Until then this refuses to guess rather than guessing quietly.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/offset.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/offset.hpp"
 
 #include "parcel_face.hpp"
 
@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -172,7 +172,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(merge)
+PIRICAD_COMMAND(merge)
 {
     return CommandSpec{
         .id       = "core.merge",
@@ -180,7 +180,7 @@ KENTOS_COMMAND(merge)
         .title    = "Tevhit",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Birleştirilecek parseller; yoksa etkin seçim"}
+                           "Birleştirilecek parseller; yoksa etkin seçim"}
                          .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -190,4 +190,4 @@ KENTOS_COMMAND(merge)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

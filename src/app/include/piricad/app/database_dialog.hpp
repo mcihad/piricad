@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the PostGIS window.
+// PiriCAD — app: the PostGIS window.
 //
 // WHAT THIS WINDOW IS ALLOWED TO DO: collect arguments and show answers. Every
 // button on it builds a `VERİTABANI …` line and runs it through the controller,
@@ -18,7 +18,7 @@
 // file permissions — see `docs/komutlar/veritabani.md`.
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
+#include "piricad/app/dialog_chrome.hpp"
 
 #include <QString>
 
@@ -29,7 +29,7 @@ class QLabel;
 class QLineEdit;
 class QListWidget;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -110,4 +110,4 @@ private:
     bool connected_{false};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

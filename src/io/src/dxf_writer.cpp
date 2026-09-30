@@ -1,26 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: writing a DXF through libdxfrw.
+// PiriCAD — io: writing a DXF through libdxfrw.
 //
 // The library drives the file's sections and calls back here for the tables,
 // the blocks and the entities; this file answers from the document, kind by
 // kind: a circle is a CIRCLE, an arc an ARC, an ellipse an ELLIPSE, a caption a
 // TEXT — never a polygon standing in for a curve (the GDAL path's lasting
 // limitation, io.md R13). The DRW_* types stay inside this .cpp (io.md R2).
-#include "kentos_cad/io/dxf.hpp"
-#include "kentos_cad/io/staging.hpp"
+#include "piricad/io/dxf.hpp"
+#include "piricad/io/staging.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/spline.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/spline.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trig.hpp"
 
 #include "dxf_common.hpp"
 #include "dxf_units.hpp"
@@ -38,7 +38,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef KENTOS_HAVE_DXFRW
+#ifdef PIRICAD_HAVE_DXFRW
 #include <drw_entities.h>
 #include <drw_header.h>
 #include <drw_interface.h>
@@ -46,12 +46,12 @@
 #include <libdxfrw.h>
 #endif
 
-namespace kentos::io {
+namespace piricad::io {
 
 using core::err;
 using core::ErrorCode;
 
-#ifndef KENTOS_HAVE_DXFRW
+#ifndef PIRICAD_HAVE_DXFRW
 
 command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std::string path,
                                                   ExportOptions options, DxfVersion version,
@@ -63,7 +63,7 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
     (void)control;
     co_return err(ErrorCode::Unsupported,
                   "'" + path +
-                      "' libdxfrw ile yazılamaz: bu yapı KENTOS_WITH_DXFRW=OFF ile "
+                      "' libdxfrw ile yazılamaz: bu yapı PIRICAD_WITH_DXFRW=OFF ile "
                       "derlendi. " +
                       dxf_backend_status());
 }
@@ -367,7 +367,7 @@ public:
     void writeAppId() override
     {
         DRW_AppId a;
-        a.name = "KENTOSCAD";
+        a.name = "PIRICAD";
         out_.writeAppId(&a);
     }
 
@@ -384,7 +384,7 @@ public:
             if (!l.visible) out.color = -out.color; // negative colour = layer off
             out.lWeight  = l.appearance.width_um > 0
                                ? DRW_LW_Conv::dxfInt2lineWidth(
-                                    dxf::dxf_lineweight_from_um(l.appearance.width_um))
+                                     dxf::dxf_lineweight_from_um(l.appearance.width_um))
                                : DRW_LW_Conv::widthDefault;
             out.lineType = "CONTINUOUS";
             out.flags    = l.locked ? 4 : 0;
@@ -1030,10 +1030,10 @@ private:
         for (const auto& v : out.extData)
             if (v && v->code() == 1001)
                 open = v->type() == DRW_Variant::STRING && v->content.s != nullptr &&
-                       *v->content.s == "KENTOSCAD";
+                       *v->content.s == "PIRICAD";
         if (!open) {
             auto app = std::make_shared<DRW_Variant>();
-            app->addString(1001, "KENTOSCAD");
+            app->addString(1001, "PIRICAD");
             out.extData.push_back(app);
         }
         auto v = std::make_shared<DRW_Variant>();
@@ -1084,7 +1084,7 @@ private:
         }
 
         // Foreign data goes back as the XDATA it came from; this program's own
-        // attributes and the entity's key travel under the KENTOSCAD application
+        // attributes and the entity's key travel under the PIRICAD application
         // name, one `id=value` string each, so a GIS attribute survives a trip
         // through DXF and another program can read it.
         const std::uint32_t slot = ents.slot[e];
@@ -1112,7 +1112,7 @@ private:
         }
         if (!own.empty()) {
             auto app = std::make_shared<DRW_Variant>();
-            app->addString(1001, "KENTOSCAD");
+            app->addString(1001, "PIRICAD");
             out.extData.push_back(app);
             auto key = std::make_shared<DRW_Variant>();
             key->addString(1000, "anahtar=" + std::to_string(core::raw(ents.key[e])));
@@ -1444,6 +1444,6 @@ command::Task<core::Result<DxfReport>> export_dxf(const core::Document& doc, std
     co_return report;
 }
 
-#endif // KENTOS_HAVE_DXFRW
+#endif // PIRICAD_HAVE_DXFRW
 
-} // namespace kentos::io
+} // namespace piricad::io

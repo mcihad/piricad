@@ -17,16 +17,16 @@
 // The parsing lives in `/src/io` (io.md owns untrusted input); this is the
 // command, and it reaches the work through `Bus::on_file_request` for the reason
 // `İÇEAKTAR` does — Article 3.2 lets io depend on command and never the reverse.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -116,7 +116,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(points)
+PIRICAD_COMMAND(points)
 {
     return CommandSpec{
         .id       = "core.points",
@@ -141,4 +141,4 @@ KENTOS_COMMAND(points)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

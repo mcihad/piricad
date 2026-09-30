@@ -11,21 +11,21 @@
 // Symbol interned here, at commit, so the frame path reads one u32 (model.md
 // R14). What is stored is the definition (core/hatch.hpp): the loops and the
 // pattern, so the hatch goes out to DXF as a HATCH and comes back as one.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/construct.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/region_input.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/construct.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/region_input.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/hatch_link.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/hatch_link.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// A rational from a typed scale: six decimals, reduced. `2` is 2/1, `0.5` is 1/2.
@@ -604,7 +604,7 @@ Task<void> run_edit(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(hatch_edit)
+PIRICAD_COMMAND(hatch_edit)
 {
     return CommandSpec{
         .id       = "core.hatch_edit",
@@ -635,8 +635,8 @@ KENTOS_COMMAND(hatch_edit)
                             "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu")
                     .en("catalog"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizilmiş taramanın desenini, açısını, ölçeğini, aralığını, başlangıcını ya "
                    "da ada kuralını değiştirir; bağı ve sınırı korunur.",
         .run     = &run_edit,
@@ -644,7 +644,7 @@ KENTOS_COMMAND(hatch_edit)
     };
 }
 
-KENTOS_COMMAND(hatch)
+PIRICAD_COMMAND(hatch)
 {
     return CommandSpec{
         .id       = "core.hatch",
@@ -715,12 +715,12 @@ KENTOS_COMMAND(hatch)
                     .en("margin"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Kapalı nesnelerin, verilen köşelerin ya da içine tıklanan bölgenin içini "
                    "katalogdaki bir desenle tarar; gösterilen yazı ve simgeleri boş bırakır.",
-        .run = &run,
+        .run     = &run,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

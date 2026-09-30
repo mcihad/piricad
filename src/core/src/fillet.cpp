@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the corner between two objects. See fillet.hpp.
-#include "kentos_cad/core/fillet.hpp"
-#include "kentos_cad/core/precision.hpp"
+// PiriCAD — core: the corner between two objects. See fillet.hpp.
+#include "piricad/core/fillet.hpp"
+#include "piricad/core/precision.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <optional>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::int64_t kTurn = kUDegFullCircle;
@@ -519,4 +519,4 @@ Result<PairCornerGuide> decode_pair_corner_guide(std::span<const std::uint8_t> b
     return guide;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

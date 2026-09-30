@@ -4,18 +4,18 @@
 // The assertions are the two a surveyor checks on a contour set: are the LEVELS
 // the round numbers a plan sheet prints, and does a line stay at its own height
 // all the way along.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/domain/surface/contour.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/domain/surface/contour.hpp"
 
 #include <string>
 #include <vector>
 
-using namespace kentos;
+using namespace piricad;
 using command::Origin;
 
 namespace {

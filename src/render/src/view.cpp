@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/render/view.hpp"
+#include "piricad/render/view.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-namespace kentos::render {
+namespace piricad::render {
 
 ScreenPointF to_f(ScreenPoint p) noexcept
 {
@@ -103,4 +103,4 @@ double ViewTransform::scale_denominator(double dpi) const
     return mm_per_screen_mm;
 }
 
-} // namespace kentos::render
+} // namespace piricad::render

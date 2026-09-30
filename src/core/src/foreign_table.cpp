@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/foreign_table.hpp"
+#include "piricad/core/foreign_table.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 std::size_t ForeignTable::locate(std::uint32_t slot, std::string_view tag,
                                  bool& found) const noexcept
@@ -163,4 +163,4 @@ void ForeignTable::clear()
     pool_.clear();
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -64,7 +64,7 @@ nesne 6 katman=YOL stil=0 halka=1
   alan_mm2 142000000  cevre_mm 65656
   koken core.offset 5
 kapsam 0 -2000 61000 11000
-icerik-ozeti b458e322981668e3
+icerik-ozeti 22401366b271ff43
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"YOL"},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}
   {"seq":2,"cmd":"core.polyline","args":{"noktalar":[[0,0],[10000,0],[10000,10000]]},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}

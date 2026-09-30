@@ -6,19 +6,19 @@
 // 2" for as long as they existed. This file pins the command behind them: what
 // it changes, what it hands back to the layer, what it leaves alone in a symbol
 // stack, and what it refuses.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/colour.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/render/scene.hpp"
-#include "kentos_cad/render/view.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/colour.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/render/view.hpp"
 
 #include <string>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

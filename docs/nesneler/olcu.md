@@ -87,7 +87,7 @@ DXF'te ölçünün yazısı (grup 1): ölçülen değeri okuyan program kendisi 
 elle yazılmış yazı yazıldığı gibi gider; kendi birimi olan ölçünün — grad yazan her
 açı dahil — yazısı tam olarak yazılır, çünkü okuyan programın `<>`'si onu kendi
 biriminde, açıyı kendi derecesinde ölçerdi. Birimi ve yazının `<>`'li kalıbı bu
-programın kendi notunda (`KENTOSCAD` xdata grubunda `olcu.birim`, `olcu.yazi`) gider.
+programın kendi notunda (`PIRICAD` xdata grubunda `olcu.birim`, `olcu.yazi`) gider.
 Geri okunduğunda `<>` taşıyan yazı ölçülen değer olarak kalır, elle yazılmış yazı elle
 yazılmış olarak; tam yazılmış yazı da, başka bir program onu değiştirmediyse, kendi
 biriminde yeniden **ölçülen** değerdir.

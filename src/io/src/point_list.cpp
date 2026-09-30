@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/io/point_list.hpp"
-#include "kentos_cad/io/staging.hpp"
+#include "piricad/io/point_list.hpp"
+#include "piricad/io/staging.hpp"
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
 #include <sstream>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 constexpr std::size_t kMaxLine   = 4096;    ///< a point line is short; anything longer is not one
@@ -247,4 +247,4 @@ core::Status write_point_list(const std::string& path, const std::vector<SurveyP
     return place_staged(staged);
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — geodesy: the CRS resolver, installed on the command bus.
+// PiriCAD — geodesy: the CRS resolver, installed on the command bus.
 //
 // model.md R36 says a bare id string is not a CRS: a document has to carry its
 // epoch, its zone central meridian and its datum, because a TM30/TM33 mix-up is
@@ -17,14 +17,14 @@
 // does not know what TM30 is.
 #pragma once
 
-#include "kentos_cad/domain/geodesy/crs_catalog.hpp"
+#include "piricad/domain/geodesy/crs_catalog.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/crs.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/crs.hpp"
 
 #include <string>
 
-namespace kentos::domain::geodesy {
+namespace piricad::domain::geodesy {
 
 /// Installs a CRS resolver on a bus for as long as it lives.
 ///
@@ -60,4 +60,4 @@ private:
     CrsCatalog catalogue_;
 };
 
-} // namespace kentos::domain::geodesy
+} // namespace piricad::domain::geodesy

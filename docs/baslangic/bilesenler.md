@@ -1,11 +1,11 @@
 # Bileşenler
 
-KentOSCad'in pencerelerinde karşınıza çıkan düğme, girdi kutusu, onay kutusu, anahtar
+PiriCAD'in pencerelerinde karşınıza çıkan düğme, girdi kutusu, onay kutusu, anahtar
 ve etiketleri tanımak isteyen kullanıcı için; bu sayfayı bitirdiğinizde bir denetimin
 görünüşünden ne yaptığını, hangi durumda olduğunu ve klavyeyle nasıl kullanılacağını
 okuyabileceksiniz.
 
-KentOSCad'in her penceresi aynı bileşen setinden kurulur. Proje Ayarları'ndaki bir
+PiriCAD'in her penceresi aynı bileşen setinden kurulur. Proje Ayarları'ndaki bir
 düğme ile Veritabanı penceresindeki bir düğme aynı boyda, aynı köşe yuvarlağında ve
 aynı renklerde çizilir; bir pencerede öğrendiğiniz kural hepsinde geçerlidir.
 
@@ -174,7 +174,7 @@ konuşmacının her biri kendi zeminiyle çizilir:
 | **Siz** | mavi yıkama | — |
 | **Model** | panelin kendi yükseltilmiş zemini | `ÖNERİ`, her zaman |
 | **Araç** | çukur zemin, tek aralıklı yazı | `SONUÇ` |
-| **KentOSCad** | turuncu yıkama | — |
+| **PiriCAD** | turuncu yıkama | — |
 
 Model balonunun `ÖNERİ` rozeti, balon kurulurken — tek harf gelmeden — takılır. Rozet
 içeriğe verilmiş bir not değil, içeriğin ne olduğudur: model çizim yapmaz, komut önerir.
@@ -258,7 +258,7 @@ başlatırsanız her bileşeni her durumuyla gösteren pencere açılır, dökü
 resim verdiğiniz dizine `bilesenler.png` adıyla kaydedilir:
 
 ```bash
-KENTOS_WIDGETS_PROBE=/tmp/bilesenler build/dev/bin/kentos_cad
+PIRICAD_WIDGETS_PROBE=/tmp/bilesenler build/dev/bin/piricad
 ```
 
 Bu sayfadaki resim o dosyanın kopyasıdır; bileşenler değişince aynı komutla yeniden

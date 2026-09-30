@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#include "kentos_cad/ai/clients.hpp"
+#include "piricad/ai/clients.hpp"
 
 #include <algorithm>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 ClientRecord* ClientLedger::mutable_find(std::string_view label)
 {
@@ -113,4 +113,4 @@ std::vector<ClientRecord> ClientLedger::clients() const
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

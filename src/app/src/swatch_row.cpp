@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/swatch_row.hpp"
+#include "piricad/app/swatch_row.hpp"
 
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/tokens.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -13,7 +13,7 @@
 #include <QPainter>
 #include <QToolTip>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 const Tokens& tokensOf(ThemeMode mode)
@@ -159,4 +159,4 @@ bool SwatchRow::event(QEvent* event)
     return QWidget::event(event);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

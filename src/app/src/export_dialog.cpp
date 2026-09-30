@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/export_dialog.hpp"
+#include "piricad/app/export_dialog.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/widgets.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/selection.hpp"
-#include "kentos_cad/io/vector.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/widgets.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/selection.hpp"
+#include "piricad/io/vector.hpp"
 
 #include <QFileDialog>
 #include <QFileInfo>
@@ -15,7 +15,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 constexpr int kColumnGap = 26; ///< the form grammar's gutter, design.md §16.1
@@ -274,4 +274,4 @@ void ExportDialog::applyTheme(ThemeMode mode)
     DialogFrame::applyTheme(mode);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

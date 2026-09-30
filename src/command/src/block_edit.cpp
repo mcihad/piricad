@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/block_edit.hpp"
+#include "piricad/command/block_edit.hpp"
 
-#include "kentos_cad/command/transform_edit.hpp"
+#include "piricad/command/transform_edit.hpp"
 
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/text_fields.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/text_fields.hpp"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 core::Result<PlacedMember> place_member(Context& ctx, core::EntityId member, const core::Xform& x,
                                         core::EntityId reference)
@@ -197,4 +197,4 @@ core::Result<std::size_t> refresh_references(Context& ctx, core::BlockId block)
     return ctx.transaction().refresh_block_references(block);
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

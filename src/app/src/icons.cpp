@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/icons.hpp"
+#include "piricad/app/icons.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -13,7 +13,7 @@
 #include <QPixmap>
 #include <QString>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// Every glyph is authored on a 24×24 grid with a 2 px safe margin, then scaled.
@@ -3510,4 +3510,4 @@ QIcon icon(Glyph glyph, const QColor& colour, const QColor& accent, int size)
     return out;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

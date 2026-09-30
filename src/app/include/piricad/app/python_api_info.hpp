@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: what the editor knows about `kentos.cad`.
+// PiriCAD — app: what the editor knows about `piricad.cad`.
 //
 // A HEADER OF ITS OWN because two things need these shapes and neither should
 // pull the other in: the controller PRODUCES them from the registry, and the
@@ -17,7 +17,7 @@
 #include <QString>
 #include <QVector>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// One keyword of one Python callable.
 struct PythonArg
@@ -38,4 +38,4 @@ struct PythonCallable
     QVector<PythonArg> args; ///< in declaration order, which is the order shown
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

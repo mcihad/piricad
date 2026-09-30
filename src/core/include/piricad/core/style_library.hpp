@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the browsable symbol library.
+// PiriCAD — core: the browsable symbol library.
 //
 // WHAT THIS IS, and how it differs from `StyleCatalog` next door.
 //
@@ -24,10 +24,10 @@
 // indexes it (CLAUDE.md 5.13, data.md R1).
 #pragma once
 
-#include "kentos_cad/core/dash_store.hpp"
-#include "kentos_cad/core/image_store.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/core/style_rule.hpp"
+#include "piricad/core/dash_store.hpp"
+#include "piricad/core/image_store.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/core/style_rule.hpp"
 
 #include <functional>
 
@@ -37,7 +37,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// What kind of geometry a shelf entry is drawn on.
 ///
@@ -216,4 +216,4 @@ private:
     DashStore dashes_{};                  ///< the line types the shelf's symbols draw
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

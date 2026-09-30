@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# kentos_command — the command bus. Depends on core only.
+# piricad_command — the command bus. Depends on core only.
 # Constitution Article 1: every state mutation passes through this library.
 
-add_library(kentos_command STATIC
+add_library(piricad_command STATIC
     src/aids.cpp
     src/block_edit.cpp
     src/external_ref.cpp
@@ -96,61 +96,61 @@ add_library(kentos_command STATIC
     src/commands/view.cpp
 )
 
-target_include_directories(kentos_command PUBLIC include)
-target_link_libraries(kentos_command
-    PUBLIC  kentos_core
-    PRIVATE kentos_flags
+target_include_directories(piricad_command PUBLIC include)
+target_link_libraries(piricad_command
+    PUBLIC  piricad_core
+    PRIVATE piricad_flags
 )
 find_package(Threads REQUIRED)
-target_link_libraries(kentos_command PUBLIC Threads::Threads)
+target_link_libraries(piricad_command PUBLIC Threads::Threads)
 
 # PRIVATE: spdlog is an implementation detail of command/log.cpp. The facade in
 # command/log.hpp is what the rest of the product sees, so swapping the backend
 # again touches one file (Article 9).
-if(KENTOS_WITH_SPDLOG)
-    target_link_libraries(kentos_command PRIVATE spdlog::spdlog)
+if(PIRICAD_WITH_SPDLOG)
+    target_link_libraries(piricad_command PRIVATE spdlog::spdlog)
 endif()
 
-add_library(KentOSCad::command ALIAS kentos_command)
+add_library(PiriCAD::command ALIAS piricad_command)
 
 # The command reference is generated from the registry, never hand-written
 # (CLAUDE.md 5.10). The generator lives with the module that owns the registry,
 # so no new top-level directory is needed (Article 3.1).
-add_executable(kentos_docgen tools/docgen.cpp)
+add_executable(piricad_docgen tools/docgen.cpp)
 # The generator lists every command the program ships, and the processing
 # tools are commands: the module sits above command, so the executable links it
 # rather than the library reaching up (Article 3.2).
 # The generator walks EVERY registry the program has — builtin, processing and the
-# three domain modules — and projects the agent catalogue through `kentos_ai`. It
+# three domain modules — and projects the agent catalogue through `piricad_ai`. It
 # is an executable at the top of the graph, so it may link what the command
-# library must not (Article 3.2); nothing here makes `kentos_command` depend on
+# library must not (Article 3.2); nothing here makes `piricad_command` depend on
 # anything above it.
-target_link_libraries(kentos_docgen PRIVATE
-    kentos_command
-    kentos_processing
-    kentos_ai
-    kentos_script
-    kentos_domain_geodesy
-    kentos_domain_cadastre
-    kentos_domain_surface
-    kentos_flags)
-set_target_properties(kentos_docgen PROPERTIES
+target_link_libraries(piricad_docgen PRIVATE
+    piricad_command
+    piricad_processing
+    piricad_ai
+    piricad_script
+    piricad_domain_geodesy
+    piricad_domain_cadastre
+    piricad_domain_surface
+    piricad_flags)
+set_target_properties(piricad_docgen PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
 # The capability inventory, taken from the live registries rather than from a
-# grep of the tree. Same reasoning as `kentos_docgen`, same place in the graph:
+# grep of the tree. Same reasoning as `piricad_docgen`, same place in the graph:
 # it links everything and nothing links it (Article 3.2a).
-add_executable(kentos_envanter tools/envanter.cpp)
-target_link_libraries(kentos_envanter PRIVATE
-    kentos_command
-    kentos_processing
-    kentos_ai
-    kentos_domain_geodesy
-    kentos_domain_cadastre
-    kentos_domain_surface
-    kentos_flags)
-set_target_properties(kentos_envanter PROPERTIES
+add_executable(piricad_envanter tools/envanter.cpp)
+target_link_libraries(piricad_envanter PRIVATE
+    piricad_command
+    piricad_processing
+    piricad_ai
+    piricad_domain_geodesy
+    piricad_domain_cadastre
+    piricad_domain_surface
+    piricad_flags)
+set_target_properties(piricad_envanter PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
@@ -159,20 +159,20 @@ set_target_properties(kentos_envanter PROPERTIES
 # as well as everything the inventory links, because building one fixture
 # imports a DXF and one column round-trips the project file — and it is still an
 # executable at the top of the graph, with no Qt (Article 3.2a).
-add_executable(kentos_kapsam tools/kapsam.cpp)
-target_link_libraries(kentos_kapsam PRIVATE
-    kentos_command
-    kentos_io
-    kentos_processing
-    kentos_ai
-    kentos_domain_geodesy
-    kentos_domain_cadastre
-    kentos_domain_surface
-    kentos_flags)
-set_target_properties(kentos_kapsam PROPERTIES
+add_executable(piricad_kapsam tools/kapsam.cpp)
+target_link_libraries(piricad_kapsam PRIVATE
+    piricad_command
+    piricad_io
+    piricad_processing
+    piricad_ai
+    piricad_domain_geodesy
+    piricad_domain_cadastre
+    piricad_domain_surface
+    piricad_flags)
+set_target_properties(piricad_kapsam PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
 # The source tree's data, so a developer build finds the drawing catalogues with
 # no environment set (command/drawing_catalogs.hpp `resolve_catalog_path`).
-target_compile_definitions(kentos_command PRIVATE KENTOS_SOURCE_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
+target_compile_definitions(piricad_command PRIVATE PIRICAD_SOURCE_DATA_DIR="${CMAKE_SOURCE_DIR}/data")

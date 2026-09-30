@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/text_store.hpp"
+#include "piricad/core/text_store.hpp"
 
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/text_metrics.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/text_metrics.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 // THE SEED DOES NOT FOLLOW THE PRODUCT'S NAME, and must not. It is folded into
 // every content hash this program has ever computed — golden fixtures, journal
@@ -380,4 +380,4 @@ std::uint64_t TextTable::fold(std::uint64_t seed, std::span<const std::uint32_t>
     return h;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

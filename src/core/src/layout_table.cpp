@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/layout_table.hpp"
+#include "piricad/core/layout_table.hpp"
 
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/text_store.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/text_store.hpp"
 
 #include <algorithm>
 #include <map>
 #include <set>
 #include <utility>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// Ten to the `n`, for the small `n` a fixed-point figure needs.
@@ -450,7 +450,7 @@ Result<TableText> table_text(const Document& doc, const LayoutItem& item)
             const std::string_view word = table_source(column.source)->word;
             const auto whole            = [&](std::int64_t v) {
                 return format_fixed(v, 0, column.decimals < 0 ? 0 : column.decimals,
-                                               column.thousands, comma);
+                                    column.thousands, comma);
             };
             // THE ROW'S PLACE IS ITS PLACE IN THE TABLE, after the order: the
             // `Sıra` column counts down the page, whatever it was sorted by.
@@ -486,4 +486,4 @@ Result<TableText> table_text(const Document& doc, const LayoutItem& item)
     return out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -19,18 +19,18 @@
 // privilege for the window (ui.md P3). One argument names one layer here because
 // the command model has no list-of-text value; adding one would be a change to
 // the journal's value shapes, which is a bigger thing than this menu.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// What the verb does to the table.
@@ -183,7 +183,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(layer_visibility)
+PIRICAD_COMMAND(layer_visibility)
 {
     return CommandSpec{
         .id       = "core.layer_visibility",
@@ -210,8 +210,8 @@ KENTOS_COMMAND(layer_visibility)
         .summary = "Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da "
                    "gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters "
                    "çevirir.",
-        .run = &run,
+        .run     = &run,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

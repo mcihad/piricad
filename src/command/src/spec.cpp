@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/spec.hpp"
 
 #include <algorithm>
 #include <cstddef>
 #include <string>
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
-namespace kentos::command {
+namespace piricad::command {
 
 const char* category_name(Category c)
 {
@@ -304,4 +304,4 @@ std::string python_callable_name(const CommandSpec& spec)
     return out;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

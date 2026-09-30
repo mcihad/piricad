@@ -10,16 +10,16 @@
 // commits the figure. The original stays on screen until then; nothing is
 // written that is not the figure asked for. The arithmetic is core's
 // (core/area_edit.hpp), deterministic, in millimetres.
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/core/area_edit.hpp"
-#include "kentos_cad/core/offset.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/core/area_edit.hpp"
+#include "piricad/core/offset.hpp"
 
 #include <cmath>
 #include <string>
 
-namespace kentos::processing {
+namespace piricad::processing {
 namespace {
 
 core::Mm2 target_of(const command::Args& args)
@@ -97,8 +97,8 @@ public:
         request.key    = face.key;
         request.mode   = mode_of(mode);
         request.target = target;
-        auto picked = co_await ctx.point("nokta", mode == "kenar" ? "Çekilecek kenarı tıklayın"
-                                                                  : "Çekilecek köşeyi tıklayın");
+        auto picked    = co_await ctx.point("nokta", mode == "kenar" ? "Çekilecek kenarı tıklayın"
+                                                                     : "Çekilecek köşeyi tıklayın");
         if (!picked)
             co_return core::err(core::ErrorCode::InvalidArgument,
                                 std::string(mode == "kenar" ? "Kenar" : "Köşe") +
@@ -251,10 +251,10 @@ private:
 
 } // namespace
 
-KENTOS_PROCESSING_TOOL(area_edit)
+PIRICAD_PROCESSING_TOOL(area_edit)
 {
     static const AreaEdit tool;
     return tool;
 }
 
-} // namespace kentos::processing
+} // namespace piricad::processing

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: a curve path written back into the drawing (TODOS C-05).
+// PiriCAD — command: a curve path written back into the drawing (TODOS C-05).
 //
 // BÖL, KIR, UÇUCA, BUDA and UZAT all end the same way: pieces of a walked curve
 // (`core::CurvePath`) become objects again. What must not differ between them is
@@ -18,16 +18,16 @@
 //     rather than left to find them.
 #pragma once
 
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/parallel.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/parallel.hpp"
 
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// What one source object became: its key, and the keys of the objects that
 /// now hold it, in order along it. The source's own key is among them when the
@@ -84,4 +84,4 @@ core::Json edits_json(const std::vector<PathEdit>& edits);
 std::vector<core::CurvePath> split_at_points(const core::CurvePath& path,
                                              std::span<const core::Point2> points);
 
-} // namespace kentos::command
+} // namespace piricad::command

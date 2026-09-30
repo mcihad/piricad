@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/print_dialog.hpp"
+#include "piricad/app/print_dialog.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/layout_render.hpp"
-#include "kentos_cad/app/print_service.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/layout_render.hpp"
+#include "piricad/app/print_service.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/app/widgets.hpp"
 
 #include <QApplication>
 #include <QFileDialog>
@@ -24,7 +24,7 @@
 #include <cmath>
 #include <functional>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// THE SHEET ON ITS PASTEBOARD: the paper in its own proportion, a shadow under
 /// it, the profile's margin as a dashed guide and the centre the plot is placed
@@ -750,11 +750,11 @@ QString PrintDialog::commandLine() const
     QString line;
     if (from_frame_) {
         const core::Box2 box = window();
-        line                 = QStringLiteral("YAZDIR pencere=%1,%2 pencere=%3,%4")
+        line = QStringLiteral("YAZDIR pencere=%1,%2 pencere=%3,%4")
                    .arg(metres(box.min_x), metres(box.min_y), metres(box.max_x), metres(box.max_y));
     } else {
         const core::Point2 at = centre();
-        line                  = QStringLiteral("YAZDIR merkez=%1,%2 olcek=%3")
+        line = QStringLiteral("YAZDIR merkez=%1,%2 olcek=%3")
                    .arg(metres(at.x), metres(at.y), QString::number(denominator()));
     }
 
@@ -809,12 +809,12 @@ void PrintDialog::renderSheet()
     // drawing. The drawing itself cannot change under a modal window.
     const core::Box2 box = window();
     const QString key    = QStringLiteral("%1|%2,%3,%4,%5|%6")
-                            .arg(utf8(p.name))
-                            .arg(box.min_x)
-                            .arg(box.min_y)
-                            .arg(box.max_x)
-                            .arg(box.max_y)
-                            .arg(pixels);
+                               .arg(utf8(p.name))
+                               .arg(box.min_x)
+                               .arg(box.min_y)
+                               .arg(box.max_x)
+                               .arg(box.max_y)
+                               .arg(pixels);
     if (key == drawnFor_) return;
     drawnFor_ = key;
 
@@ -939,4 +939,4 @@ void PrintDialog::applyTheme(ThemeMode mode)
     DialogFrame::applyTheme(mode);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

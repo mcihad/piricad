@@ -3,7 +3,7 @@
 # The model-facing half: provider profiles, the four dialects, the stream
 # decoders and the conversation model. See sources_mcp.cmake for why this is a
 # separate file.
-set(KENTOS_AI_CHAT_SOURCES
+set(PIRICAD_AI_CHAT_SOURCES
     src/provider.cpp
     src/provider_catalog.cpp
     src/sse.cpp

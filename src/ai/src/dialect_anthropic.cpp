@@ -20,11 +20,11 @@
 // AND THE HEADERS ARE PART OF THE PROTOCOL. `x-api-key` rather than a bearer
 // token, and `anthropic-version: 2023-06-01` on every request — without the
 // version header the API refuses the call rather than choosing a default.
-#include "kentos_cad/ai/chat.hpp"
-#include "kentos_cad/ai/dialect.hpp"
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/chat.hpp"
+#include "piricad/ai/dialect.hpp"
+#include "piricad/ai/redact.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -512,4 +512,4 @@ const DialectCodec& anthropic_messages_codec()
     return kAnthropic;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

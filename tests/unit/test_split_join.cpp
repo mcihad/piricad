@@ -7,21 +7,21 @@
 // object by its key is told what the key became. Every expected length below
 // is a closed form — r·θ, a straight run — asserted to the millimetre a cut
 // may round.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <cstdlib>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: reading a drawing file into a scratch document, and loading
+// PiriCAD — io: reading a drawing file into a scratch document, and loading
 // external references from their files (TODOS C-14, model.md R45a).
 //
 // A private header of /src/io: the file service uses it for DIŞREFERANS and
@@ -7,20 +7,20 @@
 // a drawing holds when it opens.
 #pragma once
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/crs.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/io/project.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/crs.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/io/project.hpp"
 
 #include <cstdint>
 #include <stop_token>
 #include <string>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// `.dxf` by extension, case-folded.
 bool looks_like_dxf(const std::string& path);
@@ -90,4 +90,4 @@ command::Task<std::vector<Warning>> load_externals(command::Transaction& tx, std
                                                    command::Bus* host             = nullptr,
                                                    std::vector<std::string> chain = {});
 
-} // namespace kentos::io
+} // namespace piricad::io

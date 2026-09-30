@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: AutoCAD DWG, read only, through LibreDWG.
+// PiriCAD — io: AutoCAD DWG, read only, through LibreDWG.
 //
 // `.claude/io.md` R13 names LibreDWG and names it for a reason: it is the only
 // GPL-compatible DWG implementation there is. The ODA Drawings SDK is banned
@@ -13,11 +13,11 @@
 // produced by exporting DXF.
 #pragma once
 
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/io/diagnostics.hpp"
-#include "kentos_cad/io/options.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/io/diagnostics.hpp"
+#include "piricad/io/options.hpp"
 
 #include <cstddef>
 #include <stop_token>
@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// What one DWG read produced, and what it could not.
 struct DwgReport
@@ -64,4 +64,4 @@ std::string dwg_backend_status();
 command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std::string path,
                                                   ImportOptions options, std::stop_token stop);
 
-} // namespace kentos::io
+} // namespace piricad::io

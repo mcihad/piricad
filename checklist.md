@@ -1,4 +1,4 @@
-Mevcut KentOS CAD projesini baştan yazma. Önce mevcut mimariyi, kullanılan kütüphaneleri, veri modellerini, DXF import akışını, QGIS sembol motoru entegrasyonunu, Qt katmanını, GDAL/GEOS/PROJ kullanımını ve varsa kullanılan açık kaynak CAD/DXF kütüphanelerini ayrıntılı biçimde incele.
+Mevcut PiriCAD CAD projesini baştan yazma. Önce mevcut mimariyi, kullanılan kütüphaneleri, veri modellerini, DXF import akışını, QGIS sembol motoru entegrasyonunu, Qt katmanını, GDAL/GEOS/PROJ kullanımını ve varsa kullanılan açık kaynak CAD/DXF kütüphanelerini ayrıntılı biçimde incele.
 
 Amaç mevcut çalışan sistemi koruyarak DXF/CAD altyapısını profesyonel CAD uygulaması seviyesine yaklaştırmak, eksik veya hatalı mimari kararları düzeltmek, parçalı çözümleri standartlaştırmak ve ileride DXF export, DWG desteği, hassas çizim, snapping, topoloji, imar planlama ve Netcad/QGIS seviyesinde düzenleme özelliklerinin üzerine güvenle kurulabileceği sağlam bir CAD çekirdeği oluşturmaktır.
 
@@ -1148,7 +1148,7 @@ Layer hiyerarşisi uygulamaya ait ek bir özellik olacaksa DXF layer modelinden 
 
 ## 39. Z koordinatını gereksiz yere yok etme
 
-KentOS başlangıçta 2D ağırlıklı olabilir ancak DXF import sırasında Z değerlerini discard etme.
+PiriCAD başlangıçta 2D ağırlıklı olabilir ancak DXF import sırasında Z değerlerini discard etme.
 
 Canonical coordinate:
 
@@ -1357,10 +1357,10 @@ render
 
 İkinci yöntem yalnızca basit bir GIS DXF importer için yeterlidir; profesyonel CAD uygulamasının temeli olmamalıdır.
 
-KentOS CAD'in nihai mimarisi şu yaklaşımı izlemelidir:
+PiriCAD CAD'in nihai mimarisi şu yaklaşımı izlemelidir:
 
 ```text
-                     KentOS CAD
+                     PiriCAD CAD
 
                     Qt Application
                          │

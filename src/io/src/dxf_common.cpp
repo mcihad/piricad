@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "dxf_common.hpp"
 
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/wire.hpp"
-#include "kentos_cad/io/dxf.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/wire.hpp"
+#include "piricad/io/dxf.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <numeric>
 
-namespace kentos::io {
+namespace piricad::io {
 
 bool dxf_backend_available()
 {
-#ifdef KENTOS_HAVE_DXFRW
+#ifdef PIRICAD_HAVE_DXFRW
     return true;
 #else
     return false;
@@ -23,11 +23,11 @@ bool dxf_backend_available()
 
 std::string dxf_backend_status()
 {
-#ifdef KENTOS_HAVE_DXFRW
+#ifdef PIRICAD_HAVE_DXFRW
     return "DXF libdxfrw ile okunur ve yazılır: daire, yay, elips, blok ve XDATA olduğu gibi.";
 #else
-    return "DXF GDAL sürücüsüyle okunur ve yazılır (KENTOS_WITH_DXFRW=OFF): eğriler "
-           "parçalanır, bloklar açılır, XDATA düşer. Tam okuma için -DKENTOS_WITH_DXFRW=ON ile "
+    return "DXF GDAL sürücüsüyle okunur ve yazılır (PIRICAD_WITH_DXFRW=OFF): eğriler "
+           "parçalanır, bloklar açılır, XDATA düşer. Tam okuma için -DPIRICAD_WITH_DXFRW=ON ile "
            "yapılandırın (kaynak indirilebilir olmalı).";
 #endif
 }
@@ -260,7 +260,7 @@ bool arc_from_bulge(core::Point2 a, core::Point2 b, double bulge, core::Point2& 
     // the left; clockwise the other way round.
     const double sign = ccw ? 1.0 : -1.0;
     centre            = core::Point2{a.x + core::mm_round(mx + sign * d * nx),
-                          a.y + core::mm_round(my + sign * d * ny)};
+                                     a.y + core::mm_round(my + sign * d * ny)};
     radius            = core::mm_round(r);
     return radius > 0;
 }
@@ -685,7 +685,7 @@ std::string escape_mtext(std::string_view text)
     return out;
 }
 
-#ifdef KENTOS_HAVE_DXFRW
+#ifdef PIRICAD_HAVE_DXFRW
 
 // ----------------------------------------------------------------- XDATA ----
 
@@ -820,4 +820,4 @@ std::string acad_name(DRW::Version v)
 #endif
 
 } // namespace dxf
-} // namespace kentos::io
+} // namespace piricad::io

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io (internal): what the DXF reader and writer share.
+// PiriCAD — io (internal): what the DXF reader and writer share.
 //
 // The AutoCAD colour index, the lineweight table, the XDATA byte codec, the MTEXT
 // formatting codes, the arithmetic that turns a bulge into an arc and a spline
@@ -9,8 +9,8 @@
 // include it.
 #pragma once
 
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -20,11 +20,11 @@
 #include <utility>
 #include <vector>
 
-#ifdef KENTOS_HAVE_DXFRW
+#ifdef PIRICAD_HAVE_DXFRW
 #include <drw_base.h>
 #endif
 
-namespace kentos::io::dxf {
+namespace piricad::io::dxf {
 
 // ------------------------------------------------------------------ colour ----
 
@@ -166,7 +166,7 @@ std::string strip_mtext(std::string_view raw);
 /// same words.
 std::string escape_mtext(std::string_view text);
 
-#ifdef KENTOS_HAVE_DXFRW
+#ifdef PIRICAD_HAVE_DXFRW
 
 // ----------------------------------------------------------------- XDATA ----
 
@@ -186,4 +186,4 @@ std::string acad_name(DRW::Version v);
 
 #endif
 
-} // namespace kentos::io::dxf
+} // namespace piricad::io::dxf

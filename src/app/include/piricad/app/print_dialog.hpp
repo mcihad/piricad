@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the print preview window.
+// PiriCAD — app: the print preview window.
 //
 // WHAT IT IS. The sheet, drawn, and beside it the three things that are still
 // open once the frame has been aimed: which PROFILE the sheet is, where the
@@ -40,16 +40,16 @@
 // permissions instead (commands/print.cpp).
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/core/units.hpp"
-#include "kentos_cad/io/print_profiles.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/core/units.hpp"
+#include "piricad/io/print_profiles.hpp"
 
 #include <QString>
 
 class QLabel;
 class QScrollArea;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -214,4 +214,4 @@ private:
     Button* go_{nullptr};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

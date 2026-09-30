@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/attribute.hpp"
+#include "piricad/core/attribute.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <chrono>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::size_t kBitsPerWord = 64;
@@ -790,4 +790,4 @@ std::uint64_t AttrTable::fold_cells(std::uint64_t seed, std::size_t row) const
     return h;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -25,12 +25,12 @@ set -euo pipefail
 kok="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 exe=""
-for aday in build/dev/bin/kentos_cad build/release/bin/kentos_cad build/debug/bin/kentos_cad; do
+for aday in build/dev/bin/piricad build/release/bin/piricad build/debug/bin/piricad; do
     if [[ -x "$kok/$aday" ]]; then exe="$kok/$aday"; break; fi
 done
 
 if [[ -z "$exe" ]]; then
-    echo "arac-ailesi: kentos_cad bulunamadı — ATLANDI (uygulama derlenmemiş)"
+    echo "arac-ailesi: piricad bulunamadı — ATLANDI (uygulama derlenmemiş)"
     exit 0
 fi
 
@@ -43,7 +43,7 @@ fi
 cd "$kok"
 
 set +e
-cikti="$(KENTOS_DATA="$kok/data" KENTOS_FAMILY_PROBE=1 "$exe" 2>/dev/null)"
+cikti="$(PIRICAD_DATA="$kok/data" PIRICAD_FAMILY_PROBE=1 "$exe" 2>/dev/null)"
 rc=$?
 set -e
 

@@ -7,21 +7,21 @@
 // together, a circle rescaled. The figure is asserted to the millimetre,
 // because a dimension that says what a side used to be is a wrong number on a
 // signed sheet.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 
 namespace {

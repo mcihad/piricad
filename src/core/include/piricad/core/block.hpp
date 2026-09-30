@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: block definitions.
+// PiriCAD — core: block definitions.
 //
 // model.md R45. A block is a named group of entities drawn once and placed many
 // times: a manhole symbol, a north arrow, a title block. The DEFINITION's
@@ -14,9 +14,9 @@
 // layer names are.
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <string>
@@ -24,7 +24,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Dense index into the document's block table. Reaches the file (R45).
 using BlockId = std::uint32_t;
@@ -143,4 +143,4 @@ private:
     std::vector<BlockDef> defs_;
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

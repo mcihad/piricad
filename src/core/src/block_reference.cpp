@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/block_reference.hpp"
+#include "piricad/core/block_reference.hpp"
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/text_fields.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/wire.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/text_fields.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/wire.hpp"
 
 #include "kind_common.hpp"
 
@@ -17,7 +17,7 @@
 #include <numeric>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::size_t kPayloadBytes = kind::kHeaderBytes + std::size_t{4} + std::size_t{8} * 4 + 8 +
@@ -562,11 +562,11 @@ void br_key_points(const RingGeometry& geom, std::uint32_t slot, KeyPointSink& i
 
 } // namespace
 
-KENTOS_KIND(block_reference)
+PIRICAD_KIND(block_reference)
 {
     KindSpec s{};
-    s.id        = kBlockReferenceKind;
-    s.stable_id = "core.block_reference";
+    s.id         = kBlockReferenceKind;
+    s.stable_id  = "core.block_reference";
     s.summary_tr = "Bir blok tanımını noktaya, ölçekle, açıyla ve dizi olarak yerleştiren nesne.";
     s.names[0]   = "BLOKREFERANSI";
     s.names[1]   = "BLOKREFERANSI";
@@ -584,4 +584,4 @@ KENTOS_KIND(block_reference)
     return s;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

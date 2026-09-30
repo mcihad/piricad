@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: bytes that belong to another program.
+// PiriCAD — core: bytes that belong to another program.
 //
 // model.md R26a. A DXF carries XDATA — extended entity data another application
 // attached to an entity, in that application's own vocabulary. This program
@@ -16,7 +16,7 @@
 // fields; a foreign byte string is not a field).
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -25,7 +25,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The tag of DXF extended entity data. Stable; it reaches the file.
 inline constexpr std::string_view kForeignDxfXdata = "dxf.xdata";
@@ -125,4 +125,4 @@ private:
     std::vector<std::uint8_t> pool_;
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

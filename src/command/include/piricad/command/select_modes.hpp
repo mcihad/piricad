@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: SEÇ's modes, as a list a shell builds buttons from.
+// PiriCAD — command: SEÇ's modes, as a list a shell builds buttons from.
 //
 // The Seçim prompt tab (`.claude/ui.md` R48a) shows one button per mode a hand
 // can start while a command asks for objects. The buttons are read from THE
@@ -11,7 +11,7 @@
 #include <span>
 #include <string_view>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// One mode of `SEÇ` the Seçim tab offers.
 struct SelectModeInfo
@@ -26,4 +26,4 @@ struct SelectModeInfo
 /// Every mode the Seçim tab offers, in the order it shows them.
 std::span<const SelectModeInfo> select_modes();
 
-} // namespace kentos::command
+} // namespace piricad::command

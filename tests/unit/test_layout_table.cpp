@@ -7,23 +7,23 @@
 // the coordinate list a new table is, the corner two parcels share listed once,
 // a surveyed point's own number, the whole-number rounding a legal sheet needs,
 // the four column verbs of `ÇIKTIÖĞE` and the file that keeps all of it.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/layout_table.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/layout_table.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/processing/registry.hpp"
 
 #include <cstdio>
 #include <filesystem>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 namespace fs = std::filesystem;
 
 namespace {
@@ -100,7 +100,7 @@ class TempDir
 public:
     explicit TempDir(const char* tag)
     {
-        path_ = fs::temp_directory_path() / (std::string("kentoscad-tablo-") + tag);
+        path_ = fs::temp_directory_path() / (std::string("piricad-tablo-") + tag);
         std::error_code ec;
         fs::remove_all(path_, ec);
         fs::create_directories(path_);
@@ -308,7 +308,7 @@ TEST_CASE("Tablo: olmayan katman ya da sütun tabloyu reddeder, boş başlık ba
 
 TEST_CASE("Tablo: fuzz tohumları — sütunlu tablo okunur, öğesine uymayan tablo kaydı reddedilir")
 {
-    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
     if (!fs::exists(corpus)) PENDING("Fuzz tohum korpusu bulunamadı: " + corpus.string());
 
     Rig good;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: objects cut off from the drawing's majority (`KAPSAMDENETİM`).
+// PiriCAD — core: objects cut off from the drawing's majority (`KAPSAMDENETİM`).
 //
 // A drawing whose extent is the whole country is nearly always a drawing with a
 // handful of objects in the wrong place: a coordinate lost and fallen to 0,0, a
@@ -14,13 +14,13 @@
 // point — it has to be one a surveyor can predict (Article 2.7, stated here).
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstddef>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The drawing the check reads; core/document.hpp.
 class Document;
@@ -60,4 +60,4 @@ struct DetachedReport
 /// squares and square roots, which IEEE 754 rounds correctly (§7.3).
 DetachedReport find_detached(const Document& doc, int factor);
 
-} // namespace kentos::core
+} // namespace piricad::core

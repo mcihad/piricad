@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/job_templates.hpp"
+#include "piricad/ai/job_templates.hpp"
 
 #include <utility>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -143,4 +143,4 @@ core::Result<JobTemplateCatalog> JobTemplateCatalog::from_json(std::string_view 
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

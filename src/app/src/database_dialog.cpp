@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/database_dialog.hpp"
+#include "piricad/app/database_dialog.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/document.hpp"
 
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -19,7 +19,7 @@
 #include <QStyle>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// A value quoted for the command line.
@@ -220,11 +220,11 @@ QWidget* DatabaseDialog::buildContents()
     auto* rightRows = new QVBoxLayout(right);
     rightRows->setContentsMargins(8, 0, 0, 0);
     rightRows->setSpacing(8);
-    rightRows->addWidget(new FormSection(tr("Kayıtlı KentOSCad projeleri"), QString(), right));
+    rightRows->addWidget(new FormSection(tr("Kayıtlı PiriCAD projeleri"), QString(), right));
 
     projects_ = new QListWidget(right);
-    projects_->setToolTip(tr("Bu veritabanına kaydedilmiş KentOSCad projeleri."));
-    projects_->setAccessibleName(tr("Kayıtlı KentOSCad projeleri"));
+    projects_->setToolTip(tr("Bu veritabanına kaydedilmiş PiriCAD projeleri."));
+    projects_->setAccessibleName(tr("Kayıtlı PiriCAD projeleri"));
     projects_->setAlternatingRowColors(true);
     rightRows->addWidget(projects_, 1);
 
@@ -451,4 +451,4 @@ void DatabaseDialog::updateEnabled()
     style()->polish(status_);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

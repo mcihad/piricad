@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/domain/geodesy/crs_catalog.hpp"
+#include "piricad/domain/geodesy/crs_catalog.hpp"
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/text.hpp"
 
 #include <cmath>
 #include <fstream>
 #include <sstream>
 
-namespace kentos::domain::geodesy {
+namespace piricad::domain::geodesy {
 namespace {
 
 using core::ErrorCode;
@@ -119,4 +119,4 @@ const Tm3Zone* CrsCatalog::zone_by_name(std::string_view name) const
     return nullptr;
 }
 
-} // namespace kentos::domain::geodesy
+} // namespace piricad::domain::geodesy

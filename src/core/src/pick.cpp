@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/pick.hpp"
+#include "piricad/core/pick.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/outline.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/outline.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
+#include "piricad/core/entity_kind.hpp"
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/spatial_index.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/spatial_index.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <span>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 bool boxes_overlap(const Box2& a, const Box2& b) noexcept
@@ -1020,4 +1020,4 @@ bool text_quad(const Document& doc, EntityId e, std::array<Point2, 4>& out)
     return true;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

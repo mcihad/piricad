@@ -10,23 +10,23 @@
 // command answers in place (Article 1.2 — the GUI hosts it, a script does not);
 // a job stopped half way leaves no trace and claims no result; and a long check
 // with many findings says how many and which kinds before it lists any.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/domain/surface/contour.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/io/staging.hpp"
-#include "kentos_cad/io/vector.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/domain/surface/contour.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/io/staging.hpp"
+#include "piricad/io/vector.hpp"
 
 #include <algorithm>
 #include <array>
@@ -42,8 +42,8 @@
 #include <thread>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -419,7 +419,7 @@ TEST_CASE("UZUN İŞ: TOPOLOJİ ilerlemesini dört geçiş boyunca, geri gitmede
 
 TEST_CASE("UZUN İŞ: EŞYÜKSELTİ işte de yerinde de aynı çizimi ve aynı günlüğü bırakır")
 {
-    if (!domain::surface::available()) PENDING("KENTOS_WITH_CDT=OFF; EŞYÜKSELTİ sınanamıyor.");
+    if (!domain::surface::available()) PENDING("PIRICAD_WITH_CDT=OFF; EŞYÜKSELTİ sınanamıyor.");
     Rig direct;
     Rig hosted;
     level_grid(direct, 40);
@@ -437,7 +437,7 @@ TEST_CASE("UZUN İŞ: EŞYÜKSELTİ işte de yerinde de aynı çizimi ve aynı g
 
 TEST_CASE("UZUN İŞ: yarıda durdurulan EŞYÜKSELTİ ve HACİM iz bırakmaz")
 {
-    if (!domain::surface::available()) PENDING("KENTOS_WITH_CDT=OFF; EŞYÜKSELTİ sınanamıyor.");
+    if (!domain::surface::available()) PENDING("PIRICAD_WITH_CDT=OFF; EŞYÜKSELTİ sınanamıyor.");
     Rig r;
     level_grid(r, 150);
     const Mark before = mark(r);
@@ -462,8 +462,8 @@ TEST_CASE("UZUN İŞ: yarıda durdurulan EŞYÜKSELTİ ve HACİM iz bırakmaz")
 
 TEST_CASE("UZUN İŞ: DIŞAAKTAR işte yazar ve sayar; yarıda durdurulursa eski dosya kalır")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
-    const auto dir = std::filesystem::temp_directory_path() / "kentos-uzun-is-disaaktar";
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    const auto dir = std::filesystem::temp_directory_path() / "piricad-uzun-is-disaaktar";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
     const std::string target = (dir / "ada.gpkg").string();

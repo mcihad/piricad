@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the one projection from the command registry to a tool catalogue.
+// PiriCAD — ai: the one projection from the command registry to a tool catalogue.
 //
 // THE WHOLE AI SURFACE IS DERIVED, and this file is where the deriving happens
 // (.claude/ai.md R12: "The AI tool catalogue MUST be generated from `Registry`
@@ -23,12 +23,12 @@
 // person whose numbers come from their own instrument.
 #pragma once
 
-#include "kentos_cad/ai/tool.hpp"
+#include "piricad/ai/tool.hpp"
 
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/spec.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// Who the schema is being written for.
 enum class Style : std::uint8_t {
@@ -64,4 +64,4 @@ ToolDef tool_for(const command::CommandSpec& spec, Style style);
 /// Every `AiAccessible` command in the registry, sorted by wire name.
 Catalog build_catalog(const command::Registry& registry, const CatalogOptions& options = {});
 
-} // namespace kentos::ai
+} // namespace piricad::ai

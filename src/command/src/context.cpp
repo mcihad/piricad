@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/context.hpp"
+#include "piricad/command/context.hpp"
 
-#include "kentos_cad/command/aids.hpp"
+#include "piricad/command/aids.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/validation.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/validation.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/lineage.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/lineage.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Point2 to_point(const Value& v)
@@ -450,4 +450,4 @@ void Context::warn(std::string note) const
     session_.add_warning(std::move(note));
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

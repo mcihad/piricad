@@ -1,6 +1,6 @@
 # Komut Sistemi
 
-KentOSCad'i günlük işinde kullanan herkes için; bu sayfayı bitirdiğinizde arayüzde
+PiriCAD'i günlük işinde kullanan herkes için; bu sayfayı bitirdiğinizde arayüzde
 yaptığınız her şeyi neden betikle tekrarlayabildiğinizi ve komut günlüğünün size ne
 kazandırdığını bileceksiniz.
 

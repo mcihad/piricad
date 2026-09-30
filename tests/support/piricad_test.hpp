@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — the unit-test harness: doctest, plus the one thing doctest has no
+// PiriCAD — the unit-test harness: doctest, plus the one thing doctest has no
 // concept of.
 //
-// kentoscad.md §9.11 named doctest as the framework and Phase 0 shipped a 190-line
+// piricad.md §9.11 named doctest as the framework and Phase 0 shipped a 190-line
 // stand-in instead, on the grounds that the dependency was not available. It is
 // available; CLAUDE.md Article 2.7 and 5.16 say the mature library is used, so the
 // stand-in is gone and every assertion macro below comes from doctest.
@@ -10,7 +10,7 @@
 // WHAT THIS HEADER STILL ADDS, and why it is not upstream's job:
 //
 //   PENDING(reason) — a case that CANNOT RUN in this build, because an optional
-//   dependency behind a KENTOS_WITH_* option is off. `.claude/data.md`
+//   dependency behind a PIRICAD_WITH_* option is off. `.claude/data.md`
 //   (Enforcement) and CLAUDE.md Article 8.2 require such a case to "report as
 //   PENDING, never as passing": printing `ok` beside a case that asserted nothing
 //   is exactly the false report those rules forbid.
@@ -30,7 +30,7 @@
 // the option below has to be set before its first inclusion in every translation
 // unit; a TU that got the default would silently disagree with the rest.
 #ifdef DOCTEST_VERSION
-#error "doctest was included before kentos_test.hpp; include this header instead"
+#error "doctest was included before piricad_test.hpp; include this header instead"
 #endif
 
 // Without this, doctest stringifies `const char*` through its generic pointer
@@ -45,7 +45,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos_test {
+namespace piricad_test {
 
 /// One case that could not run, and the reason it could not.
 struct PendingCase
@@ -84,7 +84,7 @@ inline void mark_pending(std::string why)
 /// the coverage this run did not have rather than a green total that hides it.
 void report_pending();
 
-} // namespace kentos_test
+} // namespace piricad_test
 
 /// Reports the running case as pending and leaves it.
 ///
@@ -93,7 +93,7 @@ void report_pending();
 /// answer.
 #define PENDING(why)                                                                               \
     do {                                                                                           \
-        ::kentos_test::mark_pending(why);                                                          \
+        ::piricad_test::mark_pending(why);                                                         \
         return;                                                                                    \
     } while (false)
 
@@ -108,7 +108,7 @@ void report_pending();
 /// and pins the location to the call site rather than to this header.
 #define FAIL_WITH(what, detail) ADD_FAIL_CHECK_AT(__FILE__, __LINE__, what, "\n        ", detail)
 
-namespace kentos_test {
+namespace piricad_test {
 
 /// The sentence a refused call returned, after asserting that it WAS refused.
 ///
@@ -130,7 +130,7 @@ template<class Result> std::string refusal_of(const Result& result, const char* 
     return result.error().message;
 }
 
-} // namespace kentos_test
+} // namespace piricad_test
 
 /// Asserts `expr` was refused and yields its sentence; see `refusal_of`.
-#define REFUSED(expr) ::kentos_test::refusal_of((expr), __FILE__, __LINE__)
+#define REFUSED(expr) ::piricad_test::refusal_of((expr), __FILE__, __LINE__)

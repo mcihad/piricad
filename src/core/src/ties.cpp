@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/ties.hpp"
+#include "piricad/core/ties.hpp"
 
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/lineage.hpp"
-#include "kentos_cad/core/text_fields.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/lineage.hpp"
+#include "piricad/core/text_fields.hpp"
 
 #include <algorithm>
 #include <map>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// One ring of `slot`, copied out, and whether it closes.
@@ -77,9 +77,9 @@ std::optional<Tie> caption_tie(const Document& doc, EntityId e)
     const RingGeometry& geom = doc.geometry();
     const RingSpan rs        = geom.rings_of(slot);
     const bool placed        = rs.count == 1 && geom.ring_count[rs.first] == 2 &&
-                        geom.ring_role[rs.first] == RingRole::Open &&
-                        geom.vertex(rs.first, 0) == should->base[0] &&
-                        geom.vertex(rs.first, 1) == should->base[1];
+                               geom.ring_role[rs.first] == RingRole::Open &&
+                               geom.vertex(rs.first, 0) == should->base[0] &&
+                               geom.vertex(rs.first, 1) == should->base[1];
     if (!placed || should->text != texts.text(slot) || should->anchor != texts.anchor(slot)) {
         t.state   = TieState::Behind;
         t.changed = {a->source};
@@ -305,4 +305,4 @@ std::vector<Tie> every_tie(const Document& doc)
     return out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/tokens.hpp"
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// `design.md` §2, transcribed. The comment beside each is the specification's
@@ -200,4 +200,4 @@ const Tokens& lightTokens()
     return kLight;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

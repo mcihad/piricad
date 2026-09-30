@@ -14,21 +14,21 @@
 //
 // The finding is `core::find_redundant` — the same finder TOPOLOJİ reports
 // through, so the check and the repair can never disagree.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/cleanup.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/cleanup.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// An area in square metres to two decimals, divided in integers (Article 2.4).
@@ -258,7 +258,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(cleanup)
+PIRICAD_COMMAND(cleanup)
 {
     return CommandSpec{
         .id       = "core.cleanup",
@@ -283,4 +283,4 @@ KENTOS_COMMAND(cleanup)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

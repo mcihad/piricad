@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // AGPL because this file is the server (CLAUDE.md 2.1, §1); see the header.
-#include "kentos_cad/app/mcp_service.hpp"
+#include "piricad/app/mcp_service.hpp"
 
-#include "kentos_cad/app/ai_service.hpp"
+#include "piricad/app/ai_service.hpp"
 
 #include <QDateTime>
 #include <QEventLoop>
@@ -19,7 +19,7 @@
 #include <QTimer>
 #include <QUrl>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// Qt's status enum from a bare number, for the four statuses this server sends.
@@ -143,7 +143,7 @@ core::Result<QString> McpService::start(quint16 wanted)
     policy.require_token = require_token_;
 
     ai::ServerInfo info;
-    info.version = KENTOS_VERSION;
+    info.version = PIRICAD_VERSION;
 
     mcp_ =
         std::make_unique<ai::McpServer>(ai_, bus_.registry(), std::move(info), std::move(policy));
@@ -429,7 +429,7 @@ core::Result<QString> McpService::probe()
     if (!in.contains("\"tools\"") && !in.contains("protocolVersion"))
         return core::err(core::ErrorCode::ValidationFailed,
                          "127.0.0.1:" + std::to_string(port_) +
-                             " cevap verdi ama bu bir KentOSCad MCP sunucusu değil. Portu "
+                             " cevap verdi ama bu bir PiriCAD MCP sunucusu değil. Portu "
                              "başka bir program kullanıyor olabilir.");
 
     return QStringLiteral(
@@ -537,4 +537,4 @@ core::Result<std::string> McpService::handleVerb(const command::Bus::AiRequest& 
     return core::err(core::ErrorCode::Internal, "Bu istek MCP sunucusuna ait değil.");
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

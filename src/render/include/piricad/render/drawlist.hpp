@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — render: the backend-independent draw list.
+// PiriCAD — render: the backend-independent draw list.
 //
 // The scene builder produces this; a backend consumes it. Swapping the QPainter
 // backend for the QRhi backend must not touch anything above this header.
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -15,7 +15,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::render {
+namespace piricad::render {
 
 /// One symbol layer of one style, resolved to this frame's pixels.
 ///
@@ -367,4 +367,4 @@ struct DrawList
     void clear();
 };
 
-} // namespace kentos::render
+} // namespace piricad::render

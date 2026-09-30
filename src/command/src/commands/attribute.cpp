@@ -10,19 +10,19 @@
 // The renderer reads a StyleId, resolved at commit time. An attribute is what the
 // parcel IS; the style column is what the parcel LOOKS LIKE, and the second is
 // derived from the first by a rule, never looked up per frame.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/text.hpp"
 
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The one parser, in core, so the prompt and the attribute grid cannot disagree
@@ -142,7 +142,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(attribute)
+PIRICAD_COMMAND(attribute)
 {
     return CommandSpec{
         .id       = "core.attribute",
@@ -355,7 +355,7 @@ Task<void> run_column(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(column)
+PIRICAD_COMMAND(column)
 {
     return CommandSpec{
         .id       = "core.column",
@@ -388,11 +388,11 @@ KENTOS_COMMAND(column)
         // NOT undoable, and for the same reason a layer is not: the schema is what
         // rows are addressed against, and undoing a declaration would invalidate
         // every row index the journal already holds.
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Scriptable,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Scriptable,
         .summary = "Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler.",
-        .run = &run_column,
+        .run     = &run_column,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

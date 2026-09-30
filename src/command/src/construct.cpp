@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/construct.hpp"
+#include "piricad/command/construct.hpp"
 
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 using core::err;
@@ -41,8 +41,8 @@ core::Result<Point2> direction_crossing(Point2 a, double angle_a,
     // a point somewhere past the moon instead of refusing.
     const std::int64_t half = core::kUDegFullCircle / 2;
     std::int64_t apart      = (core::udeg_from_angle(angle_a, convention_a.unit) -
-                          core::udeg_from_angle(angle_b, convention_b.unit)) %
-                         half;
+                               core::udeg_from_angle(angle_b, convention_b.unit)) %
+                              half;
     if (apart < 0) apart += half;
 
     const auto both_angles = [&] {
@@ -157,4 +157,4 @@ core::Result<Point2> beyond(Point2 a, Point2 b, double distance_m)
     return Point2{b.x + core::mm_round(d * dx / len), b.y + core::mm_round(d * dy / len)};
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

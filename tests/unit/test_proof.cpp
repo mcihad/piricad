@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// THE PHASE-0 KEYSTONE PROOF (kentoscad.md §16.5).
+// THE PHASE-0 KEYSTONE PROOF (piricad.md §16.5).
 //
-// The Phase-0 proof kentoscad.md asks for: `ÇİZGİ` must run from the button, from
+// The Phase-0 proof piricad.md asks for: `ÇİZGİ` must run from the button, from
 // the command line and from a JSON file, and leave the same document behind.
 //
 // Three clients — a GUI button feeding mouse clicks, a typed command line, and a
@@ -11,23 +11,23 @@
 // being true, the architecture has been broken and the build must fail.
 #include <algorithm>
 #include <functional>
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/planar.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/planar.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/parser.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/parser.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <filesystem>
 #include <string>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -622,7 +622,7 @@ TEST_CASE("PROOF: undo collapses each client's run into exactly one step")
     ])")
               .ok());
 
-    // A whole script block is ONE undo step (kentoscad.md §2.5).
+    // A whole script block is ONE undo step (piricad.md §2.5).
     CHECK_EQ(scr.doc.live_entity_count(), std::size_t{3});
     CHECK_EQ(scr.undo.undo_depth(), std::size_t{1});
 
@@ -780,7 +780,7 @@ TEST_CASE("PROOF: DİKAYAK günlükten yeniden oynatılabilir")
     const std::uint64_t golden = live.doc.content_hash();
 
     // Replayed into an empty drawing from the journal's own JSON, which is what a
-    // crash recovery and a macro both do (kentoscad.md §16.5).
+    // crash recovery and a macro both do (piricad.md §16.5).
     Rig again;
     for (const auto& e : live.journal.entries()) {
         const auto ran = again.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
@@ -793,7 +793,7 @@ TEST_CASE("PROOF: DİKAYAK günlükten yeniden oynatılabilir")
 TEST_CASE("PROOF: replaying a journal reproduces the document exactly")
 {
     // This is the foundation of the nightly journal regression pack and of crash
-    // recovery (kentoscad.md §2.2, §14).
+    // recovery (piricad.md §2.2, §14).
     Rig original;
     CHECK(original.bus.execute_line("KATMAN ad=PARSEL", Origin::CommandLine).ok());
     CHECK(original.bus
@@ -801,7 +801,7 @@ TEST_CASE("PROOF: replaying a journal reproduces the document exactly")
               .ok());
     CHECK(original.bus.execute_line("ÇİZGİ @0,0 @25.5,-13.25", Origin::CommandLine).ok());
 
-    const auto path = std::filesystem::temp_directory_path() / "kentoscad-proof-journal.jsonl";
+    const auto path = std::filesystem::temp_directory_path() / "piricad-proof-journal.jsonl";
     std::filesystem::remove(path);
 
     {
@@ -842,7 +842,7 @@ TEST_CASE("PROOF: YENİ gui, komut satırı ve betikten aynı belgeyi ve aynı g
     // Article 6.4 for `core.new`. The setup is identical for the three clients on
     // purpose — it is not what is under test — and only the road the YENİ takes
     // differs: a session the window drives, a typed line, and a JSON script.
-    const auto path = std::filesystem::temp_directory_path() / "kentoscad-proof-new.pcad";
+    const auto path = std::filesystem::temp_directory_path() / "piricad-proof-new.pcad";
     std::filesystem::remove(path);
 
     // ---- client 1: the GUI. `Dosya ▸ Yeni`, Ctrl+N, or the `+` on the document
@@ -929,7 +929,7 @@ TEST_CASE("PROOF: YENİ günlükten yeniden oynatılabilir")
 TEST_CASE("YENİ: neyi sıfırlar, neyi bırakır")
 {
     FileRig rig;
-    const auto path = std::filesystem::temp_directory_path() / "kentoscad-new-reset.pcad";
+    const auto path = std::filesystem::temp_directory_path() / "piricad-new-reset.pcad";
     std::filesystem::remove(path);
     fill(rig, path.string(), Origin::Test);
 
@@ -1015,8 +1015,7 @@ TEST_CASE("PANO: taban noktalı kopya o noktayı gösterilen yere koyar; yaylı 
     // TODOS C-08. The payload is carried by the point the user picked when
     // copying — here the parcel's north-east corner — and a paste moves every
     // kind whole: an arc polyline's arc centres go with its vertices.
-    const auto clip =
-        (std::filesystem::temp_directory_path() / "kentoscad-pano-taban.pcad").string();
+    const auto clip = (std::filesystem::temp_directory_path() / "piricad-pano-taban.pcad").string();
     std::filesystem::remove(clip);
 
     FileRig source;
@@ -1063,8 +1062,7 @@ TEST_CASE("PANO: taban noktalı kopya o noktayı gösterilen yere koyar; yaylı 
 
 TEST_CASE("PANO: kopyala ve yapıştır aynı geometriyi yeni kimliklerle verir")
 {
-    const auto clip =
-        (std::filesystem::temp_directory_path() / "kentoscad-pano-kanit.pcad").string();
+    const auto clip = (std::filesystem::temp_directory_path() / "piricad-pano-kanit.pcad").string();
     std::filesystem::remove(clip);
 
     FileRig source;
@@ -1115,7 +1113,7 @@ TEST_CASE("PANO: kopyala ve yapıştır aynı geometriyi yeni kimliklerle verir"
 
 TEST_CASE("PANO: KES panoya alır ve siler, tek geri alma adımıyla")
 {
-    const auto clip = (std::filesystem::temp_directory_path() / "kentoscad-pano-kes.pcad").string();
+    const auto clip = (std::filesystem::temp_directory_path() / "piricad-pano-kes.pcad").string();
     std::filesystem::remove(clip);
 
     FileRig rig;
@@ -1155,7 +1153,7 @@ TEST_CASE("PANO: boş seçim ve boş pano reddedilir, sebebiyle")
     CHECK(nothing.error().message.find("nesne yok") != std::string::npos);
 
     const auto empty = rig.bus.execute_line(
-        "YAPIŞTIR yerinde=evet dosya=\"/tmp/kentoscad-boyle-bir-pano-yok.pcad\"", Origin::Test);
+        "YAPIŞTIR yerinde=evet dosya=\"/tmp/piricad-boyle-bir-pano-yok.pcad\"", Origin::Test);
     CHECK_FALSE(empty.ok());
     CHECK(empty.error().message.find("Panoda bir şey yok") != std::string::npos);
     CHECK_EQ(rig.doc.live_entity_count(), std::size_t{0});
@@ -1379,7 +1377,7 @@ TEST_CASE(
 
 TEST_CASE("PROOF: ALANÖLÇ yontem=ic gui, komut satırı ve betikten aynı bölgeyi ölçer")
 {
-    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
+    if (!core::network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; bölge sınanamıyor.");
     const char* kSides[] = {"ÇİZGİ 0,0 40,0", "ÇİZGİ 40,0 40,30", "ÇİZGİ 40,30 0,30",
                             "ÇİZGİ 0,30 0,0"};
     Rig gui;
@@ -2220,9 +2218,9 @@ TEST_CASE("PROOF: BUDA gui, komut satırı ve betikten aynı belgeyi ve aynı g�
     // the run records `hepsi`, the object and the click, which is what the
     // other two roads say in the first place.
     prove_verb(
-        {.name = "BUDA",
-         .id   = "core.trim",
-         .setup = {"ÇOKLUÇİZGİ 0,0 100,0", "ÇOKLUÇİZGİ 30,-20 30,20", "ÇOKLUÇİZGİ 70,-20 70,20"},
+        {.name     = "BUDA",
+         .id       = "core.trim",
+         .setup    = {"ÇOKLUÇİZGİ 0,0 100,0", "ÇOKLUÇİZGİ 30,-20 30,20", "ÇOKLUÇİZGİ 70,-20 70,20"},
          .objects  = {},
          .answers  = {Value::point(core::Point2{50'000, 0}), Value{}},
          .typed    = "BUDA hepsi=evet nesne=1 nokta=50,0",
@@ -2231,8 +2229,8 @@ TEST_CASE("PROOF: BUDA gui, komut satırı ve betikten aynı belgeyi ve aynı g�
 
     // NAMED EDGES, the highlighted ones, and a circle trimmed to the arc left.
     prove_verb(
-        {.name = "BUDA",
-         .id   = "core.trim",
+        {.name  = "BUDA",
+         .id    = "core.trim",
          .setup = {"DAİRE merkez=0,0 cevre=10,0", "ÇOKLUÇİZGİ 0,-20 0,20", "SEÇ NESNE nesneler=2"},
          .objects  = {},
          .answers  = {Value::point(core::Point2{-10'000, 0}), Value{}},
@@ -2259,9 +2257,9 @@ TEST_CASE("PROOF: BUDA çitle ve tutarak gui, komut satırı ve betikten aynı s
 
     // KEEPING the piece clicked: both ends past the roads go.
     prove_verb(
-        {.name = "BUDA tut=evet",
-         .id   = "core.trim",
-         .setup = {"ÇOKLUÇİZGİ 0,0 100,0", "ÇOKLUÇİZGİ 30,-20 30,20", "ÇOKLUÇİZGİ 70,-20 70,20"},
+        {.name     = "BUDA tut=evet",
+         .id       = "core.trim",
+         .setup    = {"ÇOKLUÇİZGİ 0,0 100,0", "ÇOKLUÇİZGİ 30,-20 30,20", "ÇOKLUÇİZGİ 70,-20 70,20"},
          .objects  = {},
          .answers  = {Value::point(core::Point2{50'000, 0}), Value{}},
          .typed    = "BUDA tut=evet hepsi=evet nesne=1 nokta=50,0",
@@ -2311,14 +2309,14 @@ TEST_CASE("PROOF: PATLAT gui, komut satırı ve betikten aynı belgeyi ve aynı 
     // their own kinds, turned, doubled and mirrored as the reference drew
     // them, on every road alike. Key 1 and 2 go into the block, 3 and 4 are
     // its members, 5 the reference BLOK leaves and 6 the one inserted.
-    prove_verb({.name  = "PATLAT",
-                .id    = "core.explode",
-                .setup = {"DAİRE merkez=1,1 cevre=2,1", "METİN noktalar=0,3 yazi=K yukseklik=400",
-                          "BLOK ad=B taban=0,0 nesneler=1 nesneler=2",
-                          "BLOKEKLE ad=B nokta=40,10 olcek=-2 olcek_y=2 aci=30"},
-                .objects  = {6},
-                .answers  = {},
-                .typed    = "PATLAT nesne=6",
+    prove_verb({.name    = "PATLAT",
+                .id      = "core.explode",
+                .setup   = {"DAİRE merkez=1,1 cevre=2,1", "METİN noktalar=0,3 yazi=K yukseklik=400",
+                            "BLOK ad=B taban=0,0 nesneler=1 nesneler=2",
+                            "BLOKEKLE ad=B nokta=40,10 olcek=-2 olcek_y=2 aci=30"},
+                .objects = {6},
+                .answers = {},
+                .typed   = "PATLAT nesne=6",
                 .scripted = R"({"ad":"PATLAT","komutlar":[{"cmd":"core.explode","args":{
                     "nesne":[6]}}]})"});
 }
@@ -2356,13 +2354,13 @@ TEST_CASE("PROOF: BLOKEKLE alan değeri gui'de sorulur, komut satırında ve bet
     // The block carries a `{no}` field: the hand is asked for it where the
     // caption will stand, the command line and the script give `deger=`.
     prove_verb(
-        {.name    = "BLOKEKLE ad=NOKTA",
-         .id      = "core.insert",
-         .setup   = {"METİN noktalar=0,1.5 yazi={no} yukseklik=500", "DAİRE merkez=0,0 cevre=1,0",
-                     "BLOK ad=NOKTA taban=0,0 nesneler=1 nesneler=2"},
-         .objects = {},
-         .answers = {Value::point(core::Point2{10'000, 0}), Value::text("K-1")},
-         .typed   = "BLOKEKLE ad=NOKTA nokta=10,0 deger=no:K-1",
+        {.name     = "BLOKEKLE ad=NOKTA",
+         .id       = "core.insert",
+         .setup    = {"METİN noktalar=0,1.5 yazi={no} yukseklik=500", "DAİRE merkez=0,0 cevre=1,0",
+                      "BLOK ad=NOKTA taban=0,0 nesneler=1 nesneler=2"},
+         .objects  = {},
+         .answers  = {Value::point(core::Point2{10'000, 0}), Value::text("K-1")},
+         .typed    = "BLOKEKLE ad=NOKTA nokta=10,0 deger=no:K-1",
          .scripted = R"({"ad":"BLOKEKLE","komutlar":[{"cmd":"core.insert","args":{
                     "ad":"NOKTA","nokta":[10000,0],"deger":["no:K-1"]}}]})"});
 }
@@ -2436,9 +2434,9 @@ TEST_CASE("PROOF: UÇUCA çizgi ve yayı yaylı çoklu çizgi yapar; üç yolda 
 {
     // TODOS C-05: the arc joins as an arc on every road, and the result is the
     // same new object with the same key.
-    prove_verb({.name = "UÇUCA",
-                .id   = "core.join",
-                .setup = {"ÇOKLUÇİZGİ -10,0 10,0", "YAY merkez=10,5 baslangic=10,0 bitis=10,10"},
+    prove_verb({.name     = "UÇUCA",
+                .id       = "core.join",
+                .setup    = {"ÇOKLUÇİZGİ -10,0 10,0", "YAY merkez=10,5 baslangic=10,0 bitis=10,10"},
                 .objects  = {1, 2},
                 .answers  = {},
                 .typed    = "UÇUCA nesne=1 nesne=2",
@@ -2696,7 +2694,7 @@ TEST_CASE("PROOF: DİZİ yol boyunca — arayüz, komut satırı, betik ve oynat
 TEST_CASE("PROOF: SINIR — arayüz, komut satırı, betik ve oynatma aynı sınırı çıkarır")
 {
     // TODOS C-09. The GUI clicks inside the parcel; the others name the point.
-    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; SINIR sınanamıyor.");
+    if (!core::network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; SINIR sınanamıyor.");
     const std::vector<std::string> setup{"ÇİZGİ 0,0 20,0", "ÇİZGİ 20,0 20,10", "ÇİZGİ 20,10 0,10",
                                          "ÇİZGİ 0,10 0,0", "DAİRE 10,5 12,5"};
     Rig gui;
@@ -2741,7 +2739,7 @@ TEST_CASE("PROOF: TARAMA yontem=ic — arayüz, komut satırı, betik ve oynatma
 {
     // N-03. The GUI clicks inside the yard; the others name the point. The
     // circle is the island the hatch stays out of.
-    if (!core::network_available()) PENDING("KENTOS_WITH_CGAL=OFF; bölge sınanamıyor.");
+    if (!core::network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; bölge sınanamıyor.");
     const std::vector<std::string> setup{"ÇİZGİ 0,0 20,0", "ÇİZGİ 20,0 20,10", "ÇİZGİ 20,10 0,10",
                                          "ÇİZGİ 0,10 0,0", "DAİRE 10,5 12,5"};
     Rig gui;
@@ -2786,7 +2784,7 @@ TEST_CASE("PROOF: TARAMA yontem=ic — arayüz, komut satırı, betik ve oynatma
 
 TEST_CASE("PROOF: TARAMA disarida= — arayüz, komut satırı, betik ve oynatma aynı taramayı çizer")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     // Plan open question 18. The parcel's number left free, half a metre round;
     // the GUI names the caption the way the ribbon's button does and clicks.
     const std::vector<std::string> setup{"ALAN 0,0 20,0 20,10 0,10", "METİN 8,4 \"101\" 1000"};
@@ -3494,7 +3492,7 @@ TEST_CASE("PROOF: DIŞREFERANS arayüz, komut satırı, betik ve oynatmadan ayn�
     // replay reads the same file again. Four roads, one drawing, one record —
     // and the reference's objects, read from its file, are the same objects.
     const std::filesystem::path dir =
-        std::filesystem::temp_directory_path() / "kentoscad-kanit-disreferans";
+        std::filesystem::temp_directory_path() / "piricad-kanit-disreferans";
     std::error_code ec;
     std::filesystem::remove_all(dir, ec);
     std::filesystem::create_directories(dir, ec);
@@ -3638,19 +3636,19 @@ TEST_CASE("PROOF: BUDA, UZAT, KIR ve BÖL elips ile spline'da arayüz, komut sat
     // spline cut at a line — on every road alike. The GUI clicks lie exactly
     // on the curve (the ellipse's top, the parabola's vertex): without a view
     // there is no pick aperture.
-    prove_verb({.name  = "BUDA",
-                .id    = "core.trim",
-                .setup = {"ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", "ÇOKLUÇİZGİ -20,3 20,3",
-                          "SEÇ NESNE nesneler=2"},
+    prove_verb({.name     = "BUDA",
+                .id       = "core.trim",
+                .setup    = {"ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", "ÇOKLUÇİZGİ -20,3 20,3",
+                             "SEÇ NESNE nesneler=2"},
                 .objects  = {},
                 .answers  = {Value::point(core::Point2{0, 5'000}), Value{}},
                 .typed    = "BUDA sinir=2 nesne=1 nokta=0,5",
                 .scripted = R"({"ad":"BUDA","komutlar":[{"cmd":"core.trim","args":{
                     "sinir":[2],"nesne":[1],"nokta":[[0,5000]]}}]})"});
-    prove_verb({.name  = "BUDA",
-                .id    = "core.trim",
-                .setup = {"SPLINE noktalar=0,0 5,10 10,0 derece=2", "ÇOKLUÇİZGİ -5,3.2 15,3.2",
-                          "SEÇ NESNE nesneler=2"},
+    prove_verb({.name     = "BUDA",
+                .id       = "core.trim",
+                .setup    = {"SPLINE noktalar=0,0 5,10 10,0 derece=2", "ÇOKLUÇİZGİ -5,3.2 15,3.2",
+                             "SEÇ NESNE nesneler=2"},
                 .objects  = {},
                 .answers  = {Value::point(core::Point2{5'000, 5'000}), Value{}},
                 .typed    = "BUDA sinir=2 nesne=1 nokta=5,5",
@@ -3711,14 +3709,14 @@ TEST_CASE("PROOF: ÇİFTÇİZGİ arayüz, komut satırı, betik ve oynatmadan ay
     // EVERY OPTION AT ONCE: the corner bevelled, the axis left out, the ends
     // closed, each side on a layer of its own — the widths already in the line
     // that starts the tool, so the hand is asked for the points only.
-    prove_verb({.name = "ÇİFTÇİZGİ sol=2.5 sag=0 kose=pah eksen=cizme uclar=kapali katman_sol=SOL",
-                .id      = "core.double_line",
-                .setup   = {"KATMAN ad=YOL"},
+    prove_verb({.name  = "ÇİFTÇİZGİ sol=2.5 sag=0 kose=pah eksen=cizme uclar=kapali katman_sol=SOL",
+                .id    = "core.double_line",
+                .setup = {"KATMAN ad=YOL"},
                 .objects = {},
                 .answers = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{20'000, 0}),
                             Value::point(core::Point2{20'000, 15'000}), Value{}},
-                .typed = "ÇİFTÇİZGİ noktalar=0,0 20,0 20,15 sol=2.5 sag=0 kose=pah eksen=cizme "
-                         "uclar=kapali katman_sol=SOL",
+                .typed   = "ÇİFTÇİZGİ noktalar=0,0 20,0 20,15 sol=2.5 sag=0 kose=pah eksen=cizme "
+                           "uclar=kapali katman_sol=SOL",
                 .scripted = R"({"ad":"ÇİFTÇİZGİ","komutlar":[{"cmd":"core.double_line","args":{
                     "noktalar":[[0,0],[20000,0],[20000,15000]],"sol":2.5,"sag":0,
                     "kose":"pah","eksen":"cizme","uclar":"kapali","katman_sol":"SOL"}}]})"});

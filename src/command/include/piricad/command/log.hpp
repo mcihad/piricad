@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: severity-tagged logging, backed by spdlog.
+// PiriCAD — command: severity-tagged logging, backed by spdlog.
 //
 // It lives HERE and not in /src/core because core.md P9 bans a logging sink in
 // core outright: a process-wide mutable sink is exactly the global state that
@@ -19,7 +19,7 @@
 #include <string>
 #include <string_view>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// Severity, in the order spdlog uses.
 enum class LogLevel : std::uint8_t { Trace, Debug, Info, Warn, Error };
@@ -66,4 +66,4 @@ inline void log_debug(std::string_view m)
     log_message(LogLevel::Debug, m);
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -20,7 +20,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-app="$root/src/app/include/kentos_cad/app"
+app="$root/src/app/include/piricad/app"
 fail=0
 
 if [[ ! -d "$app" ]]; then
@@ -34,7 +34,7 @@ declared="$(cat "$app"/*.hpp | python3 -c '
 import re, sys
 text = sys.stdin.read()
 for m in re.finditer(r"^class\s+(\w+)\s*:([^{]*)\{(.*?)^\};", text, re.S | re.M):
-    if "public Themed" in m.group(2) and "Q_INTERFACES(kentos::app::Themed)" in m.group(3):
+    if "public Themed" in m.group(2) and "Q_INTERFACES(piricad::app::Themed)" in m.group(3):
         print(m.group(1))
 ')"
 while IFS= read -r header; do
@@ -58,7 +58,7 @@ for match in re.finditer(r"^class\s+(\w+)\s*:([^{]*)\{(.*?)^\};", text, re.S | r
         continue
     if any(re.search(r"public\s+" + re.escape(base) + r"\b", bases) for base in declared):
         continue
-    if "public Themed" in bases and "Q_INTERFACES(kentos::app::Themed)" in body:
+    if "public Themed" in bases and "Q_INTERFACES(piricad::app::Themed)" in body:
         continue
 
     line = text[: match.start()].count("\n") + 1
@@ -68,7 +68,7 @@ for line, name in bad:
     print(f"themed: {name} paints from tokens but does not declare Themed"
           f" -> {path}:{line}", file=sys.stderr)
     print("themed:   add `, public Themed` to the bases and"
-          " `Q_INTERFACES(kentos::app::Themed)` to the body;", file=sys.stderr)
+          " `Q_INTERFACES(piricad::app::Themed)` to the body;", file=sys.stderr)
     print("themed:   without it `applyThemeToChildren` skips it and the widget"
           " keeps one theme's colours.", file=sys.stderr)
 

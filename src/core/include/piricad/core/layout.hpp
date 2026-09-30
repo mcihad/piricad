@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the output layout, as data.
+// PiriCAD — core: the output layout, as data.
 //
 // WHAT A LAYOUT IS. A named sheet composition: pages of a given size, and items
 // placed on them in PAPER coordinates — a map frame with its own ground extent
@@ -40,9 +40,9 @@
 // keeps flat (model.md, and `core` links nothing).
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -51,7 +51,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Read to resolve an atlas's targets; never written here.
 class Document;
@@ -932,4 +932,4 @@ std::vector<ReportGroup> report_groups(const Document& document, const Layout& l
 
 Layout default_layout(std::string name, Um width, Um height, Um margin);
 
-} // namespace kentos::core
+} // namespace piricad::core

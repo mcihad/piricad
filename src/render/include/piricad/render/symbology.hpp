@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — render: the geometry of a published gösterim, without a painter.
+// PiriCAD — render: the geometry of a published gösterim, without a painter.
 //
 // WHAT THIS IS FOR. MPYY's symbology is not lines and washes: of the 1 574 symbol
 // layers in `/data/catalogs/mpyy-vektor`, 816 are markers, marker lines and
@@ -17,12 +17,12 @@
 // testable in a suite that links no Qt.
 #pragma once
 
-#include "kentos_cad/core/style.hpp"
+#include "piricad/core/style.hpp"
 
 #include <cstdint>
 #include <vector>
 
-namespace kentos::render {
+namespace piricad::render {
 
 /// One glyph placement along a line: where, and which way it faces.
 ///
@@ -176,4 +176,4 @@ void pattern_points(const PixelBox& face, const PixelBox& clip, double step_x, d
 /// moment a style gives the point a marker layer, that marker is what draws.
 inline constexpr std::int32_t kDefaultPointSizeUm = 1600;
 
-} // namespace kentos::render
+} // namespace piricad::render

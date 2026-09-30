@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/plan.hpp"
+#include "piricad/ai/plan.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <cstdio>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 std::string format_id(std::uint64_t value)
@@ -131,7 +131,7 @@ std::vector<std::string> Plan::assumptions() const
 
 std::uint64_t Plan::content_fingerprint() const
 {
-    std::uint64_t h = core::fnv1a("kentos.ai.plan.content");
+    std::uint64_t h = core::fnv1a("piricad.ai.plan.content");
     for (const PlanStep& step : steps) {
         h = core::fnv1a(step.command_id, h);
         // THE ARGUMENTS, NOT THE LINE. The line is what a person reads; the
@@ -145,7 +145,7 @@ std::uint64_t Plan::content_fingerprint() const
 std::string PlanStore::add(Plan plan)
 {
     ++filed_;
-    std::uint64_t h = core::fnv1a("kentos.ai.plan");
+    std::uint64_t h = core::fnv1a("piricad.ai.plan");
     h               = core::fnv1a_int(static_cast<std::int64_t>(filed_), h);
     plan.id         = format_id(h);
     plan.state      = PlanState::Pending;
@@ -280,4 +280,4 @@ std::vector<const Plan*> PlanStore::pending() const
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

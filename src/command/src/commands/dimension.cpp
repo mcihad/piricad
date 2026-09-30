@@ -10,18 +10,18 @@
 //
 // LİDER is an arrowed line; its text, when given, is a separate METİN-like
 // entity at the last vertex, the way every CAD format keeps them.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <array>
@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The style the command draws with, in GROUND millimetres, or nothing after
@@ -463,13 +463,13 @@ Task<void> run_dimension(Context& ctx)
     // out on the click.
     auto where = co_await ctx.point(
         "konum",
-        angular ? "Ölçü yayının geçeceği nokta; yay hangi açının içindeyse o ölçülür"
-        : ordinate ? "Yazının geleceği yer; yana çekmek sağa, yukarı çekmek yukarı değerini okur"
+        angular     ? "Ölçü yayının geçeceği nokta; yay hangi açının içindeyse o ölçülür"
+        : ordinate  ? "Yazının geleceği yer; yana çekmek sağa, yukarı çekmek yukarı değerini okur"
         : radial    ? "Yazının yeri; yarıçap çizgisi ona doğru uzanır"
         : diametric ? "Yazının yeri; çap çizgisi ona doğru uzanır"
         : arclength ? "Yazının geleceği yer"
-        : linear ? "Ölçü çizgisinin yeri; üste ya da alta çekmek yatay, yana çekmek düşey ölçer"
-                 : "Ölçü çizgisinin yeri",
+        : linear    ? "Ölçü çizgisinin yeri; üste ya da alta çekmek yatay, yana çekmek düşey ölçer"
+                    : "Ölçü çizgisinin yeri",
         PointOptions{.rubber_band    = true,
                      .rubber_origin  = picks.front(),
                      .rubber_shape   = RubberShape::Dimension,
@@ -1263,7 +1263,7 @@ Task<void> run_dimension_baseline(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(dimension)
+PIRICAD_COMMAND(dimension)
 {
     return CommandSpec{
         .id       = "core.dimension",
@@ -1276,44 +1276,44 @@ KENTOS_COMMAND(dimension)
             // Every other type asks for them, and the body records them for all.
             Param{"birinci", ParamKind::Point, Arity::optional(),
                   "Birinci nokta; yarıçapta ve yayda merkez, çapta bir uç, açısal ölçüde "
-                    "birinci kolun ucu, koordinatta başlangıç"}
+                  "birinci kolun ucu, koordinatta başlangıç"}
                 .en("first"),
             Param{"ikinci", ParamKind::Point, Arity::optional(),
                   "İkinci nokta; yarıçapta çemberden bir nokta, çapta öbür uç, yayda "
-                    "başlangıç, açısal ölçüde ikinci kolun ucu"}
+                  "başlangıç, açısal ölçüde ikinci kolun ucu"}
                 .en("second"),
             Param::point("konum", "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta, "
-                                      "yarıçap ve çapta yazının yeri")
+                                  "yarıçap ve çapta yazının yeri")
                 .en("position"),
             Param{"nokta", ParamKind::Point, Arity::optional(),
                   "Yarıçap, çap ve yay uzunluğunda ölçülecek dairenin ya da yayın üstünde bir "
-                    "nokta: merkez, yarıçap ve yayın uçları ondan alınır; birinci ve ikinci "
-                    "verilmediğinde sorulur"}
+                  "nokta: merkez, yarıçap ve yayın uçları ondan alınır; birinci ve ikinci "
+                  "verilmediğinde sorulur"}
                 .en("point"),
             Param::text("tur", Arity::optional(),
-                          "hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, "
-                            "yay")
+                        "hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, "
+                        "yay")
                 .en("type"),
             Param::points("tepe", Arity::optional(), "Açısal ölçünün tepe noktası").en("apex"),
             Param::points("bitis", Arity::optional(), "Yay uzunluğu ölçüsünün bitiş noktası")
                 .en("end"),
             Param::text("stil", Arity::optional(),
-                          "Katalogdaki ölçü stili (ÖLÇÜSTİLİ listeler); verilmezse AYAR ölçü_stili")
+                        "Katalogdaki ölçü stili (ÖLÇÜSTİLİ listeler); verilmezse AYAR ölçü_stili")
                 .en("style"),
             Param::text("metin", Arity::optional(),
-                          "Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, "
-                            "<> taşımayan metin elle yazılmış sayılır")
+                        "Ölçülen değer yerine yazılacak metin; içindeki <> ölçülen değerdir, "
+                        "<> taşımayan metin elle yazılmış sayılır")
                 .en("text"),
             Param::text("katalog", Arity::optional(),
-                          "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
+                        "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
                 .en("catalog"),
             Param::boolean("bagla", Arity::optional(),
-                             "Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; "
-                               "bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet")
+                           "Tam denk geldiği köşe, merkez ya da yay ucuna bağlansın mı; "
+                           "bağlı ölçü kaynağı değişince güncellenir. Varsayılan evet")
                 .en("associate"),
             Param::draw_layer(),
         }),
-          .undo = UndoPolicy::SingleTransaction,
+        .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary =
             "İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.",
@@ -1321,7 +1321,7 @@ KENTOS_COMMAND(dimension)
     };
 }
 
-KENTOS_COMMAND(dimension_edit)
+PIRICAD_COMMAND(dimension_edit)
 {
     return CommandSpec{
         .id       = "core.dimension_edit",
@@ -1333,14 +1333,14 @@ KENTOS_COMMAND(dimension_edit)
                   "Düzenlenecek ölçüler; verilmezse seçim, o da boşsa sorulur"}
                 .en("objects"),
             Param::text("metin", Arity::optional(),
-                          "Yazı: <> ölçülen değerdir; <> taşımayan metin elle yazılmış sayılır ve "
-                            "öyle gösterilir. <> ya da boş metin ölçüye döndürür")
+                        "Yazı: <> ölçülen değerdir; <> taşımayan metin elle yazılmış sayılır ve "
+                        "öyle gösterilir. <> ya da boş metin ölçüye döndürür")
                 .en("text"),
             Param::text("stil", Arity::optional(),
-                          "Katalogdaki ölçü stili; ok, uzatma çizgileri, yazı ve ondalıklar ondan")
+                        "Katalogdaki ölçü stili; ok, uzatma çizgileri, yazı ve ondalıklar ondan")
                 .en("style"),
             Param::points("yazi_yeri", Arity::optional(),
-                            "Yazının yeri; elle yerleştirilen yazı ölçüyle birlikte taşınır")
+                          "Yazının yeri; elle yerleştirilen yazı ölçüyle birlikte taşınır")
                 .en("text_position"),
             Param::choice(
                 "sifirla", Arity{0, 8},
@@ -1348,19 +1348,19 @@ KENTOS_COMMAND(dimension_edit)
                 "Stile döndürülecekler; anahtar birden çok kez yazılabilir")
                 .en("reset"),
             Param::text("katalog", Arity::optional(),
-                          "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
+                        "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
                 .en("catalog"),
         }),
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, "
-                   "ondalıklarını, stilini ya da yazı yerini değiştirir.",
-        .run     = &run_dimension_edit,
-        .targets = Targets::Dimensions,
+        .summary  = "Çizilmiş ölçünün yazısını, önek ve sonekini, toleransını, birimini, "
+                    "ondalıklarını, stilini ya da yazı yerini değiştirir.",
+        .run      = &run_dimension_edit,
+        .targets  = Targets::Dimensions,
     };
 }
 
-KENTOS_COMMAND(dimension_refresh)
+PIRICAD_COMMAND(dimension_refresh)
 {
     return CommandSpec{
         .id       = "core.dimension_refresh",
@@ -1384,11 +1384,11 @@ KENTOS_COMMAND(dimension_refresh)
                             "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
                     .en("catalog"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Scriptable | Flags::AiAccessible,
         .summary = "Ölçüleri bir pafta ölçeğine uyarlar: oklar, uzatma çizgileri ve yazılar "
                    "kâğıtta aynı boyda kalır; yazılar çizimin birimiyle yeniden yazılır.",
-        .run = &run_dimension_refresh,
+        .run     = &run_dimension_refresh,
     };
 }
 
@@ -1409,7 +1409,7 @@ std::vector<Param> run_params(const char* points_help)
     };
 }
 
-KENTOS_COMMAND(dimension_continue)
+PIRICAD_COMMAND(dimension_continue)
 {
     return CommandSpec{
         .id       = "core.dimension_continue",
@@ -1419,13 +1419,13 @@ KENTOS_COMMAND(dimension_continue)
         .params   = run_params("Zincirin sonraki noktaları, her biri bir öncekinden ölçülür"),
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda "
-                   "ölçüler çizer; toplamı söyler.",
-        .run = &run_dimension_continue,
+        .summary  = "Son ölçünün ikinci noktasından başlayarak aynı çizgi üzerinde art arda "
+                    "ölçüler çizer; toplamı söyler.",
+        .run      = &run_dimension_continue,
     };
 }
 
-KENTOS_COMMAND(dimension_baseline)
+PIRICAD_COMMAND(dimension_baseline)
 {
     return CommandSpec{
         .id       = "core.dimension_baseline",
@@ -1435,13 +1435,13 @@ KENTOS_COMMAND(dimension_baseline)
         .params   = run_params("Tabandan ölçülecek noktalar; her biri ilk noktadan ölçülür"),
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste "
-                   "dizer.",
-        .run = &run_dimension_baseline,
+        .summary  = "Son ölçünün ilk noktasından ölçülen ölçüleri, stilin aralığıyla üst üste "
+                    "dizer.",
+        .run      = &run_dimension_baseline,
     };
 }
 
-KENTOS_COMMAND(dimension_style)
+PIRICAD_COMMAND(dimension_style)
 {
     return CommandSpec{
         .id       = "core.dimension_style",
@@ -1457,15 +1457,15 @@ KENTOS_COMMAND(dimension_style)
                             "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri")
                     .en("catalog"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Scriptable | Flags::ReadOnly | Flags::NoEffect | Flags::AiAccessible,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Scriptable | Flags::ReadOnly | Flags::NoEffect | Flags::AiAccessible,
         .summary = "Ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla listeler; hangisinin "
                    "varsayılan olduğunu söyler.",
-        .run = &run_dimension_style,
+        .run     = &run_dimension_style,
     };
 }
 
-KENTOS_COMMAND(leader)
+PIRICAD_COMMAND(leader)
 {
     return CommandSpec{
         .id       = "core.leader",
@@ -1493,4 +1493,4 @@ KENTOS_COMMAND(leader)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

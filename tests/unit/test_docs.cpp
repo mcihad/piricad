@@ -6,21 +6,21 @@
 // the shipped Markdown pages, extracts the fenced blocks, and executes them
 // through the same command bus a user would. There is no second copy of the
 // examples anywhere — the pages are the source.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/planar.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/json_runner.hpp"
-#if KENTOS_HAVE_PYTHON
-#include "kentos_cad/script/python_runner.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/planar.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/json_runner.hpp"
+#if PIRICAD_HAVE_PYTHON
+#include "piricad/script/python_runner.hpp"
 #endif
 
 #include <algorithm>
@@ -32,8 +32,8 @@
 #include <utility>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -46,7 +46,7 @@ struct Rig
     Journal journal;
     UndoStack undo;
     Bus bus{doc, reg, journal, undo};
-#if KENTOS_HAVE_PYTHON
+#if PIRICAD_HAVE_PYTHON
     // The manual's PYTHON lines run against a real interpreter when the build
     // carries one, through the same hook the program installs.
     script::PythonRunner python{bus, script::Sandbox::Safe};
@@ -55,7 +55,7 @@ struct Rig
     Rig()
     {
         register_builtin_commands(reg);
-#if KENTOS_HAVE_PYTHON
+#if PIRICAD_HAVE_PYTHON
         script::install(bus, python);
 #endif
 
@@ -78,7 +78,7 @@ struct Rig
 std::vector<fs::path> markdown_pages()
 {
     std::vector<fs::path> pages;
-    const fs::path root{KENTOS_DOCS_DIR};
+    const fs::path root{PIRICAD_DOCS_DIR};
     if (!fs::exists(root)) return pages;
 
     for (const auto& entry : fs::recursive_directory_iterator(root))
@@ -181,10 +181,10 @@ bool is_out_of_scope(const CommandSpec& spec)
     // about that build and says nothing about the manual. test_planar.cpp
     // reports those cases as pending.
     if ((spec.id == "core.boundary" || spec.id == "islem.alan_uret") &&
-        !kentos::core::network_available())
+        !piricad::core::network_available())
         return true;
 
-#if !KENTOS_HAVE_PYTHON
+#if !PIRICAD_HAVE_PYTHON
     // PYTHON needs an interpreter behind `Bus::on_run_python`. The rig attaches
     // one when the build has it; a build without one refuses the command, which
     // is the truth about that build and says nothing about the manual.
@@ -209,10 +209,10 @@ bool is_out_of_scope(const CommandSpec& spec)
 bool needs_arrangement(const CommandSpec& spec, const std::string& line)
 {
     // `disarida=` is the geometry kernel's cut (`core::hatch_without`).
-    if (spec.id == "core.hatch" && !kentos::core::kernel_available() &&
+    if (spec.id == "core.hatch" && !piricad::core::kernel_available() &&
         line.find("disarida=") != std::string::npos)
         return true;
-    if (kentos::core::network_available()) return false;
+    if (piricad::core::network_available()) return false;
     if (spec.id != "core.measure_area" && spec.id != "core.hatch") return false;
     return line.find("yontem=ic") != std::string::npos || line.find(" nokta=") != std::string::npos;
 }
@@ -359,7 +359,7 @@ TEST_CASE("DOKÜMAN: örnek betik dosyaları çalışır")
 {
     // Every script the manual points at must run, or the link is a promise the
     // product does not keep.
-    const fs::path journal_dir{KENTOS_JOURNAL_DIR};
+    const fs::path journal_dir{PIRICAD_JOURNAL_DIR};
     if (!fs::exists(journal_dir)) return;
 
     std::size_t ran = 0;

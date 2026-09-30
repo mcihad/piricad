@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/provider_service.hpp"
+#include "piricad/app/provider_service.hpp"
 
-#include "kentos_cad/app/data_root.hpp"
+#include "piricad/app/data_root.hpp"
 
-#include "kentos_cad/ai/chat.hpp"
-#include "kentos_cad/ai/dialect.hpp"
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/chat.hpp"
+#include "piricad/ai/dialect.hpp"
+#include "piricad/ai/redact.hpp"
 
 #include <QDir>
 #include <QElapsedTimer>
@@ -15,7 +15,7 @@
 
 #include <utility>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// How long an endpoint is given to answer a probe. Twenty seconds is long
@@ -468,4 +468,4 @@ command::Task<core::Result<std::string>> ProviderService::handle(command::AiProv
     co_return core::err(core::ErrorCode::Internal, "İşlenmemiş model sağlayıcı isteği.");
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

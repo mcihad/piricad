@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the command registry.
+// PiriCAD — command: the command registry.
 //
 // The one and only catalogue of commands. CLI completion, script bindings, AI tool
-// schemas and generated docs all read from here (kentoscad.md §2.3).
+// schemas and generated docs all read from here (piricad.md §2.3).
 #pragma once
 
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/core/result.hpp"
 
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 class Registry
 {
@@ -113,4 +113,4 @@ Registry& registry();
 /// Registers every built-in command. Idempotent.
 void register_builtin_commands(Registry& r);
 
-} // namespace kentos::command
+} // namespace piricad::command

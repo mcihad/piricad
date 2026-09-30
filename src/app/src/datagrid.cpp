@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/datagrid.hpp"
+#include "piricad/app/datagrid.hpp"
 
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/tokens.hpp"
 
 #include <QFont>
 #include <QIcon>
@@ -13,7 +13,7 @@
 
 #include <algorithm>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 // `design.md` §9, measured off `öznitelik_tablosu.png`.
@@ -185,13 +185,13 @@ QSize GridDelegate::sizeHint(const QStyleOptionViewItem& option, const QModelInd
 void GridDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
                          const QModelIndex& index) const
 {
-    const Tokens& t     = tokensOf(theme_);
-    const auto* grid    = qobject_cast<const DataGrid*>(option.widget);
-    const bool selected = (option.state & QStyle::State_Selected) != 0;
-    const bool hovered  = grid != nullptr && grid->hoverRow() == index.row();
-    const bool edited   = index.data(GridRole::Edited).toBool();
-    const bool isNull   = index.data(GridRole::Null).toBool() ||
-                        index.data(Qt::DisplayRole).toString() == QStringLiteral("—");
+    const Tokens& t       = tokensOf(theme_);
+    const auto* grid      = qobject_cast<const DataGrid*>(option.widget);
+    const bool selected   = (option.state & QStyle::State_Selected) != 0;
+    const bool hovered    = grid != nullptr && grid->hoverRow() == index.row();
+    const bool edited     = index.data(GridRole::Edited).toBool();
+    const bool isNull     = index.data(GridRole::Null).toBool() ||
+                            index.data(Qt::DisplayRole).toString() == QStringLiteral("—");
     const bool figure     = numeric(index);
     const bool hasCurrent = (option.state & QStyle::State_HasFocus) != 0 && grid != nullptr &&
                             grid->currentIndex() == index && grid->hasFocus();
@@ -395,4 +395,4 @@ void DataGrid::leaveEvent(QEvent* event)
     QTableView::leaveEvent(event);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

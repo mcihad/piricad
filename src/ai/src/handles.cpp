@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/handles.hpp"
+#include "piricad/ai/handles.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <cstdio>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 /// The handle id, as text: `@` and sixteen hex digits.
@@ -67,7 +67,7 @@ std::string HandleStore::next_id(HandleKind kind)
     // only ever looks in its own store and a handle from one session means
     // nothing in another.
     ++minted_;
-    std::uint64_t h = core::fnv1a("kentos.ai.handle");
+    std::uint64_t h = core::fnv1a("piricad.ai.handle");
     h               = core::fnv1a_int(static_cast<std::int64_t>(minted_), h);
     h               = core::fnv1a_int(static_cast<std::int64_t>(kind), h);
     return format_id(h);
@@ -255,4 +255,4 @@ const HandleStore* HandleScopes::peek(std::string_view requester) const
     return nullptr;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — script: the Python host (kentoscad.md §4.2, `.claude/script.md`).
+// PiriCAD — script: the Python host (piricad.md §4.2, `.claude/script.md`).
 //
 // A LANGUAGE AND NOTHING ELSE. `script.md` R3 says a host "MUST add a language
 // and nothing else", and this file is that sentence kept: the same `Bus`, the
@@ -55,11 +55,11 @@
 // .cpp (CLAUDE.md Article 9).
 #pragma once
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/script/host.hpp"
-#include "kentos_cad/script/json_runner.hpp"
-#include "kentos_cad/script/sandbox.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/script/host.hpp"
+#include "piricad/script/json_runner.hpp"
+#include "piricad/script/sandbox.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -67,7 +67,7 @@
 #include <string>
 #include <string_view>
 
-namespace kentos::script {
+namespace piricad::script {
 
 class PythonRunner
 {
@@ -133,4 +133,4 @@ void install(command::Bus& bus, PythonRunner& runner);
 /// document, to expose to an agent and to keep in step (CLAUDE.md 5.10).
 void install(command::Bus& bus, JsonRunner& json, PythonRunner& python);
 
-} // namespace kentos::script
+} // namespace piricad::script

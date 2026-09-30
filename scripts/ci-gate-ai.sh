@@ -156,8 +156,8 @@ fi
 # that they become a claim the model cannot make.
 surfaces=("$root/src/ai")
 for extra in "$root/src/app/src/chat_dock.cpp" "$root/src/app/src/suggestion_card.cpp" \
-             "$root/src/app/include/kentos_cad/app/chat_dock.hpp" \
-             "$root/src/app/include/kentos_cad/app/suggestion_card.hpp"; do
+             "$root/src/app/include/piricad/app/chat_dock.hpp" \
+             "$root/src/app/include/piricad/app/suggestion_card.hpp"; do
     [[ -f "$extra" ]] && surfaces+=("$extra")
 done
 while IFS= read -r hit; do

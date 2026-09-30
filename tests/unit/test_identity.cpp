@@ -10,25 +10,25 @@
 // it came from even after another column was dropped; and that a property of
 // something the drawing may not edit — a locked parcel, a member of an
 // external reference — is refused by name rather than changed.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/io/vector.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/io/vector.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <filesystem>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 
 namespace {
@@ -106,7 +106,7 @@ class TempDir
 public:
     explicit TempDir(const char* tag)
     {
-        path_ = fs::temp_directory_path() / (std::string("kentoscad-kimlik-") + tag);
+        path_ = fs::temp_directory_path() / (std::string("piricad-kimlik-") + tag);
         std::error_code ec;
         fs::remove_all(path_, ec);
         fs::create_directories(path_, ec);
@@ -403,7 +403,7 @@ std::vector<core::EntityId> members_of(const core::Document& doc, const std::str
 TEST_CASE("VERİ KAYNAĞI: bir CBS dosyası içe alınınca kopyalanır; bağlanınca salt okunur kalır ve "
           "her açılışta dosyasından okunur")
 {
-    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF; CBS dosyası okunamıyor.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF; CBS dosyası okunamıyor.");
     TempDir tmp("cbs");
     const std::string gpkg = tmp.file("parseller.gpkg");
     write_parcels(gpkg, 2);

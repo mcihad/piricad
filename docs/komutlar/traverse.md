@@ -225,7 +225,7 @@ doğrular.
 | `Açı kapanma hatası toleransı aşıyor: … cc ölçüldü, en çok … cc olabilir` | `f_β > c·√n` | Açıları kontrol edin ya da sınıfı gözden geçirin |
 | `Kenar kapanma hatası toleransı aşıyor: … m ölçüldü, en çok … m olabilir` | `f_s/[S] > 1/o` | Kenarları ve bitiş noktasını kontrol edin |
 | `Poligon sınıfı bulunamadı: '…'. Katalogdaki sınıflar: …` | `sinif=` katalogda yok | Listelenen sınıflardan birini verin |
-| `Poligon tolerans kataloğu okunamadı: …` | `/data` kurulu değil | `KENTOS_DATA` ile veri dizinini gösterin |
+| `Poligon tolerans kataloğu okunamadı: …` | `/data` kurulu değil | `PIRICAD_DATA` ile veri dizinini gösterin |
 
 Bütün hata mesajları: [Sorun giderme](../sorun-giderme.md).
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: a polyline whose edges may be arcs.
+// PiriCAD — core: a polyline whose edges may be arcs.
 //
 // What a DXF `LWPOLYLINE` with bulges is, and what a kerb line, a road edge and
 // a building with a rounded corner are in a Turkish cadastral drawing: straight
@@ -13,15 +13,15 @@
 // `arc_outline`, the same deterministic routine YAY uses (core/arc.hpp).
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The payload of a `core.arc_polyline` slot.
 struct ArcPolyline
@@ -68,4 +68,4 @@ void arc_polyline_points(std::span<const Point2> vertices, bool closed, const Ar
 bool arc_polyline_outline(const RingGeometry& geom, std::uint32_t slot, std::vector<Mm>& xs,
                           std::vector<Mm>& ys);
 
-} // namespace kentos::core
+} // namespace piricad::core

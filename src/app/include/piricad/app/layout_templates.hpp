@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the office's standard layouts.
+// PiriCAD — app: the office's standard layouts.
 //
 // A TEMPLATE IS A ÇIKTIYERLEŞİMİ THAT BELONGS TO NOBODY'S DRAWING. The firm's sheet — its
 // title block, its legend box, its grid settings — is used on every job, so it
@@ -19,12 +19,12 @@
 // template applied is an ordinary undoable edit (Article 1.1).
 #pragma once
 
-#include "kentos_cad/command/bus.hpp"
+#include "piricad/command/bus.hpp"
 
 #include <QObject>
 #include <QString>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The template folder, and the `ÇIKTIŞABLON` verbs over it.
 class LayoutTemplates : public QObject
@@ -63,4 +63,4 @@ private:
     QString folder_;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

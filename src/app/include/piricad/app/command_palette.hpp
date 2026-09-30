@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the command search, `design.md` §7 (`Ctrl+K`).
+// PiriCAD — app: the command search, `design.md` §7 (`Ctrl+K`).
 //
 // GENERATED FROM `Registry`, NEVER A LIST. CLAUDE.md 5.10 forbids a second
 // command list, and a search palette is exactly the shape that temptation takes:
@@ -8,7 +8,7 @@
 // command is searchable the moment it is declared and never a day later.
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QString>
 #include <QStringList>
@@ -20,18 +20,18 @@ class QLineEdit;
 class QListWidget;
 class QStyledItemDelegate;
 
-namespace kentos::command {
+namespace piricad::command {
 /// The one command list; the palette is generated from it.
 class Registry;
-} // namespace kentos::command
+} // namespace piricad::command
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// A centred overlay listing every command, filtered as the user types.
 class CommandPalette : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the palette over a registry, which outlives it.
@@ -45,7 +45,7 @@ public:
 
     void applyTheme(ThemeMode mode) override;
 
-    /// What the page is showing, for `KENTOS_HELP_PROBE`: how many command rows,
+    /// What the page is showing, for `PIRICAD_HELP_PROBE`: how many command rows,
     /// how many group headings, the selected command's name, and whether the
     /// list can be scrolled rather than running off the bottom of the screen.
     ///
@@ -123,4 +123,4 @@ private:
     QStyledItemDelegate* rows_delegate_ = nullptr;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

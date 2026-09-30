@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the single-source-of-truth command definition.
+// PiriCAD — command: the single-source-of-truth command definition.
 //
-// kentoscad.md §2.3: a command is defined in exactly ONE place. The command-line
+// piricad.md §2.3: a command is defined in exactly ONE place. The command-line
 // help, the script binding, the AI tool schema and the documentation are all
 // GENERATED from this definition. A second, hand-maintained list is a defect.
 #pragma once
 
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/value.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/value.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// The execution context handed to a command body; see context.hpp.
 class Context;
@@ -90,7 +90,7 @@ enum class ParamKind : std::uint8_t {
 /// Stable machine name for schemas and JSON. Not user-facing.
 const char* param_kind_name(ParamKind k);
 
-/// Turkish label for messages the user reads (kentoscad.md §3, §13).
+/// Turkish label for messages the user reads (piricad.md §3, §13).
 const char* param_kind_label(ParamKind k);
 
 /// How many values one parameter takes.
@@ -138,7 +138,7 @@ struct Param
     /// library is written in, and `cad.line(noktalar=[...])` is the worst of both
     /// — a Turkish keyword nobody can type without a Turkish keyboard, inside an
     /// English function call. The command line, the manual and the journal keep
-    /// the Turkish name; only `kentos.cad` uses this one (kentoscad.md §4.2).
+    /// the Turkish name; only `piricad.cad` uses this one (piricad.md §4.2).
     ///
     /// DECLARED HERE AND NOT IN A TABLE, and that distinction is the whole design.
     /// A table keyed by the Turkish word would have to answer `kenar` once, and
@@ -254,7 +254,7 @@ struct Param
 
 /// Bit flags. Flags::AiAccessible is the ONLY switch that puts a command into the
 /// AI tool catalogue — the catalogue is generated from it, never hand-written
-/// (kentoscad.md §2.3, §5.1).
+/// (piricad.md §2.3, §5.1).
 enum class Flags : std::uint32_t {
     None         = 0,
     Interactive  = 1u << 0, ///< can ask the user for input mid-run
@@ -364,7 +364,7 @@ constexpr bool has_flag(Flags v, Flags f)
     return (static_cast<std::uint32_t>(v) & static_cast<std::uint32_t>(f)) != 0;
 }
 
-/// kentoscad.md §2.5 — one command is one undo step by default.
+/// piricad.md §2.5 — one command is one undo step by default.
 enum class UndoPolicy : std::uint8_t {
     SingleTransaction, ///< default
     None,              ///< read-only or view-only commands
@@ -392,14 +392,14 @@ struct KnownName
 /// bindings, the AI tool schema, the menu and toolbar actions and the generated
 /// reference are all produced from it (Article 1.7, 5.10). Nothing about a command
 /// is written down twice.
-/// What this command is called in `kentos.cad`.
+/// What this command is called in `piricad.cad`.
 ///
 /// `core.line` is `line`; another namespace keeps its own with an underscore, so
 /// `geodesy.traverse` is `geodesy_traverse`; and a spec that declares
 /// `CommandSpec::python` gets that instead.
 ///
 /// IT LIVES IN `/src/command` AND NOT IN THE PYTHON HOST, because two callers
-/// need it and one of them is built when Python is not: `kentos_docgen` writes
+/// need it and one of them is built when Python is not: `piricad_docgen` writes
 /// `docs/python/referans.md` in every configuration, or the freshness gate would
 /// pass or fail depending on a build option (Article 6.14).
 std::string python_callable_name(const struct CommandSpec& spec);
@@ -410,7 +410,7 @@ struct CommandSpec
 
     /// THE NAME OF THIS COMMAND'S PYTHON CALLABLE, when the id does not give one.
     ///
-    /// The `kentos.cad` surface is projected from `Registry`, and the function
+    /// The `piricad.cad` surface is projected from `Registry`, and the function
     /// name is derived from the id: `core.line` becomes `cad.line`, and a
     /// namespace other than `core` is kept with an underscore, so
     /// `geodesy.traverse` would become `cad.geodesy_traverse`. That rule is
@@ -419,7 +419,7 @@ struct CommandSpec
     ///
     /// The exceptions are the commands whose id is Turkish — `islem.uzunluk_yaz`,
     /// `islem.kose_numarala` — and no rule of grammar turns those into English.
-    /// The Python API is English throughout (kentoscad.md §4.2), so they name
+    /// The Python API is English throughout (piricad.md §4.2), so they name
     /// their callable here: `label_length`, `number_vertices`.
     ///
     /// NOT A SECOND IDENTITY. The command id stays what it always was and is what
@@ -544,6 +544,6 @@ Args canonical_arguments(const CommandSpec& spec, Args args);
 /// Declares the factory for one built-in command. The body returns its CommandSpec.
 /// Registration happens in exactly one place (commands/builtin.cpp) from one list,
 /// which keeps the static-initialisation order defined and survives static linking.
-#define KENTOS_COMMAND(sym) ::kentos::command::CommandSpec kentos_command_##sym()
+#define PIRICAD_COMMAND(sym) ::piricad::command::CommandSpec piricad_command_##sym()
 
-} // namespace kentos::command
+} // namespace piricad::command

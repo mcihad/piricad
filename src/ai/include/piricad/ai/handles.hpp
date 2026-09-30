@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: where a coordinate is allowed to come from.
+// PiriCAD — ai: where a coordinate is allowed to come from.
 //
 // THE RULE THIS FILE IS. CLAUDE.md 5.8: "NEVER let a coordinate originate in
 // model text; every `Mm`/`Point2` in a generated command traces to a recorded
@@ -23,8 +23,8 @@
 // inventing it.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/json.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/json.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -34,7 +34,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// What a handle points at.
 enum class HandleKind : std::uint8_t {
@@ -176,4 +176,4 @@ private:
     std::vector<std::pair<std::string, HandleStore>> stores_;
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

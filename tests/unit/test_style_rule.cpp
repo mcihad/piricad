@@ -14,18 +14,18 @@
 // a `gösterim` value lives, because that value belongs in /data (CLAUDE.md 5.13).
 // The one test that reads /data asserts the shipped package's PROVENANCE, not its
 // contents.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
 #include <algorithm>
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/style_library.hpp"
-#include "kentos_cad/core/style_rule.hpp"
-#include "kentos_cad/render/scene.hpp"
-#include "kentos_cad/render/view.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/style_library.hpp"
+#include "piricad/core/style_rule.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/render/view.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <array>
 #include <filesystem>
@@ -34,8 +34,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -46,7 +46,7 @@ const char* kFixture = R"({
   "schema_version": 1,
   "package_version": "9.9.9",
   "id": "test-stil-paketi",
-  "source": "KentOSCad sınama paketi — mevzuat metni DEĞİLDİR",
+  "source": "PiriCAD sınama paketi — mevzuat metni DEĞİLDİR",
   "published": "2026-01-01",
   "licence": "test",
 
@@ -134,7 +134,7 @@ core::FeatureView area_feature(std::int64_t area_mm2)
 /// has to be exercised through a real file.
 fs::path fixture_file()
 {
-    const fs::path path = fs::temp_directory_path() / "kentoscad-stil-fixture.json";
+    const fs::path path = fs::temp_directory_path() / "piricad-stil-fixture.json";
     std::ofstream out(path, std::ios::binary);
     out << kFixture;
     return path;
@@ -964,7 +964,7 @@ TEST_CASE("STİL: katalog satırı boş katmana tam sembol olarak yazılır")
 
 TEST_CASE("STİL: seçilen MPYY sembolü boş katmandan tuvale görselleriyle ulaşır")
 {
-    const std::string package = std::string(KENTOS_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+    const std::string package = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
 
     Rig rig;
     REQUIRE(rig.bus.execute_line("KATMAN ad=OSB", Origin::Test).ok());
@@ -1162,7 +1162,7 @@ TEST_CASE("STİL: katalog yolu verilen çağrı da üç istemcide aynı sonucu v
         const std::string text = R"({"ad":"Stil","komutlar":[{"cmd":"core.style","args":{
             "katman":"PARSEL","paket":")" +
                                  package.string() + R"(","olcek":1000}}]})";
-        auto r = runner.run_text(text);
+        auto r                 = runner.run_text(text);
         CHECK(r.ok());
     }
 
@@ -1242,7 +1242,7 @@ TEST_CASE("STİL: hata belgeye hiç dokunmadan döner")
 
 TEST_CASE("VERİ: sevk edilen plan gösterim paketi künyesiyle birlikte yüklenir")
 {
-    const fs::path path = fs::path{KENTOS_DATA_DIR} / "catalogs" / "mpyy" / "plan-gosterim.json";
+    const fs::path path = fs::path{PIRICAD_DATA_DIR} / "catalogs" / "mpyy" / "plan-gosterim.json";
     REQUIRE(fs::exists(path));
 
     std::ifstream in(path, std::ios::binary);
@@ -1362,7 +1362,7 @@ TEST_CASE("SEMBOL: MPYY paketi kendi ağacıyla rafa giriyor")
     // The tree is the REGULATION's, not ours. MPYY EK-1 files its rows by annex
     // and then by a section path, and the shelf indexes that path rather than
     // inventing a taxonomy (CLAUDE.md 5.13).
-    const std::string path = std::string(KENTOS_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+    const std::string path = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
     std::ifstream in(path, std::ios::binary);
     REQUIRE(in.good());
 
@@ -1810,7 +1810,7 @@ TEST_CASE("SEMBOL: vektör paketinin her satırı katmanlarıyla rafa giriyor")
     // is loaded on top of the picture package in the shell, and a row it restates
     // replaces the picture — see main_window.cpp.
     const std::string path =
-        std::string(KENTOS_DATA_DIR) + "/catalogs/mpyy-vektor/plan-gosterim.json";
+        std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy-vektor/plan-gosterim.json";
     std::ifstream in(path, std::ios::binary);
     REQUIRE(in.good());
 
@@ -1868,7 +1868,7 @@ TEST_CASE("SEMBOL: yönetmeliğin öteki adı da aynı gösterime çıkıyor")
     // nothing and the parcel drew in the layer's default colour with no error
     // raised anywhere, which on a legal drawing is the worst way to be wrong.
     const std::string path =
-        std::string(KENTOS_DATA_DIR) + "/catalogs/mpyy-vektor/plan-gosterim.json";
+        std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy-vektor/plan-gosterim.json";
     std::ifstream in(path, std::ios::binary);
     REQUIRE(in.good());
 

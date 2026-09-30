@@ -12,20 +12,20 @@
 // negative scale, and as a grid. The transform is stored as rationals and
 // micro-degrees (core/block_reference.hpp); the drawn form is the members,
 // placed by exact integer arithmetic.
-#include "kentos_cad/command/block_edit.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/external_ref.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/block_edit.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/external_ref.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/text_fields.hpp"
-#include "kentos_cad/core/transform.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/text_fields.hpp"
+#include "piricad/core/transform.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 core::Ratio ratio_of(double v)
@@ -1001,7 +1001,7 @@ Task<void> run_block_edit(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(block)
+PIRICAD_COMMAND(block)
 {
     return CommandSpec{
         .id       = "core.block",
@@ -1027,7 +1027,7 @@ KENTOS_COMMAND(block)
     };
 }
 
-KENTOS_COMMAND(block_edit)
+PIRICAD_COMMAND(block_edit)
 {
     return CommandSpec{
         .id       = "core.block_edit",
@@ -1064,7 +1064,7 @@ KENTOS_COMMAND(block_edit)
     };
 }
 
-KENTOS_COMMAND(insert)
+PIRICAD_COMMAND(insert)
 {
     return CommandSpec{
         .id       = "core.insert",
@@ -1117,12 +1117,12 @@ KENTOS_COMMAND(insert)
                     .en("file"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle ya da yontem=2n ile eni "
                    "iki noktanın arasına oturacak biçimde yerleştirir.",
-        .run = &run_insert,
+        .run     = &run_insert,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

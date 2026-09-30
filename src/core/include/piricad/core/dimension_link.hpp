@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: which geometry a dimension measures, so it can follow it.
+// PiriCAD — core: which geometry a dimension measures, so it can follow it.
 //
 // A DIMENSION THAT DOES NOT FOLLOW ITS SOURCE IS A WRONG NUMBER WAITING
 // (TODOS C-10). A parcel's corner moves by a metre, and the dimension beside it
@@ -22,10 +22,10 @@
 // its fingerprint and its bytes.
 #pragma once
 
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <map>
@@ -33,7 +33,7 @@
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The document the table lives in; the lookups below read it.
 class Document;
@@ -149,4 +149,4 @@ struct DimCurve
 /// and the radius of what it measures, for every client alike (Article 1.2).
 std::optional<DimCurve> dim_curve_at(const Document& doc, Point2 p, Mm reach, bool arcs_only);
 
-} // namespace kentos::core
+} // namespace piricad::core

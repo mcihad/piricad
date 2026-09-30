@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/hatch.hpp"
+#include "piricad/core/hatch.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/wire.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/wire.hpp"
 
 #include "kind_common.hpp"
 
@@ -10,7 +10,7 @@
 #include <string>
 #include <utility>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::uint16_t kFlagSolid    = 1u << 0;
@@ -243,7 +243,7 @@ Mm hatch_family_spacing_mm(const HatchDef& def, const HatchDef::Family& family) 
     return mul_div_round(across, def.scale.num, def.scale.den * 1000);
 }
 
-KENTOS_KIND(hatch)
+PIRICAD_KIND(hatch)
 {
     KindSpec s{};
     s.id         = kHatchKind;
@@ -264,4 +264,4 @@ KENTOS_KIND(hatch)
     return s;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -162,9 +162,9 @@ Geri almayla 1 nesne silindi.
 | Yol | Nasıl |
 |---|---|
 | Komut satırından | `BETİK tests/journal/ornek-parsel.json` |
-| Arayüzden | **KentOS CAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
-| Çalıştırmadan önizleyerek | `BETİK tests/journal/ornek-parsel.json onizle=evet` ya da **KentOS CAD ▸ Betiği Önizle…** ([ÖNİZLE](../komutlar/preview.md)) |
-| Açılışta | `kentos_cad --betik <dosya>` |
+| Arayüzden | **PiriCAD CAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
+| Çalıştırmadan önizleyerek | `BETİK tests/journal/ornek-parsel.json onizle=evet` ya da **PiriCAD CAD ▸ Betiği Önizle…** ([ÖNİZLE](../komutlar/preview.md)) |
+| Açılışta | `piricad --betik <dosya>` |
 | Make ile | `make run-script SCRIPT=<dosya>` |
 
 Ayrıntı: [BETİK komutu](../komutlar/script.md).
@@ -246,7 +246,7 @@ Betiklerin dosya sistemine ve ağa erişimi üç seviyeyle sınırlanır:
 | Seviye | İzin | Ne zaman |
 |---|---|---|
 | `güvenli` | Dosya sistemi yok, ağ yok | Varsayılan; güvenilmeyen betik |
-| `proje` | Yalnız proje dizini | KentOSCad uygulamasının kullandığı seviye |
+| `proje` | Yalnız proje dizini | PiriCAD uygulamasının kullandığı seviye |
 | `tam` | Sınırsız | Kullanıcının açık onayı gerekir |
 
 `güvenli` seviyede bir dosya açmaya çalışan betik şu yanıtı alır:
@@ -280,7 +280,7 @@ Bu sayfanın anlattığı JSON biçimi düz bir komut dizisidir: değişken, dö
 fonksiyon yoktur. Beş yerine beş yüz çizgi çizmek gerektiğinde beş yüz satır yazmanız
 gerekir.
 
-Bunun için gömülü **Python** motoru vardır — `KENTOS_WITH_PYTHON=ON` ile derlenir ve
+Bunun için gömülü **Python** motoru vardır — `PIRICAD_WITH_PYTHON=ON` ile derlenir ve
 varsayılan yapıda kapalıdır:
 
 ```python

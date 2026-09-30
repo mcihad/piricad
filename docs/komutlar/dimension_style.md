@@ -75,7 +75,7 @@ AYAR ölçü_stili ISO-35
 ### Arayüz
 
 **Açıklama ▸ Ölçü ▸ Ölçü Stilleri** listeyi Geçmiş paneline yazar. Varsayılanı aynı
-sekmedeki **Stil** kutusu ya da **KentOS CAD ▸ Proje Ayarları…** penceresinin **Plot ve
+sekmedeki **Stil** kutusu ya da **PiriCAD CAD ▸ Proje Ayarları…** penceresinin **Plot ve
 Çıktı** bölümündeki **ölçü_stili** değiştirir; ikisi de aynı `AYAR` satırını çalıştırır.
 
 ### Betik

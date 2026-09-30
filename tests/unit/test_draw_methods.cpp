@@ -6,24 +6,24 @@
 // drawing, when the ghost under the cursor is the object the click makes, and
 // when every method gives the same object whether it is pointed at or typed.
 // This file pins those, by driving each command the way the canvas does.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/aids.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/ghost.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/polygon.hpp"
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/core/spline.hpp"
+#include "piricad/command/aids.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/ghost.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/polygon.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/core/spline.hpp"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

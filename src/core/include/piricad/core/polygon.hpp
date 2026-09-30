@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the corners a regular polygon has, a rectangle built on an
+// PiriCAD — core: the corners a regular polygon has, a rectangle built on an
 // edge or by its measures, and the fourth corner three measured ones fix.
 //
 // WHY THIS IS IN `core` AND NOT IN THE COMMAND THAT DRAWS IT.
@@ -23,9 +23,9 @@
 // user likes to read angles, but the direction the parameter sweeps does.
 #pragma once
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -33,7 +33,7 @@
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The fewest and the most sides a regular polygon may have.
 ///
@@ -192,9 +192,9 @@ std::optional<PolygonGuide> decode_polygon_guide(std::span<const std::uint8_t> b
 /// records for it, and the corners those numbers draw.
 struct PolygonPick
 {
-    double measured{0.0}; ///< the fit's measurement, metres — what the size parameter records
-    bool angle_pointed{false};   ///< the rotation came from the point, and `aci` records it
-    double angle{0.0};           ///< that rotation, in the convention's unit
+    double measured{0.0};      ///< the fit's measurement, metres — what the size parameter records
+    bool angle_pointed{false}; ///< the rotation came from the point, and `aci` records it
+    double angle{0.0};         ///< that rotation, in the convention's unit
     std::vector<Point2> corners; ///< counter-clockwise in the drawing, as ÇOKGEN writes them
 };
 
@@ -209,4 +209,4 @@ struct PolygonPick
 bool polygon_from_guide(const PolygonGuide& guide, Point2 centre, Point2 at,
                         AngleConvention convention, PolygonPick& out);
 
-} // namespace kentos::core
+} // namespace piricad::core

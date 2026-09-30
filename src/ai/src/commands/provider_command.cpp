@@ -23,21 +23,21 @@
 // (bus.hpp) exactly as printing lives behind `Bus::on_print_request`. This file
 // owns the command, its parameters and what the journal records: every profile
 // field as it was resolved, and no credential.
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/ai/provider.hpp"
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/ai/provider.hpp"
+#include "piricad/ai/redact.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using command::Arity;
@@ -322,12 +322,12 @@ CommandSpec detail::provider_command_spec()
         // choosing — is a model editing the boundary it is confined by. The
         // provider choice belongs to the person at the workstation
         // (CLAUDE.md 2.8, ai.md R13).
-        .flags = Flags::Interactive | Flags::Scriptable,
+        .flags   = Flags::Interactive | Flags::Scriptable,
         .summary = "Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan "
                    "yapar ya da bağlantısını dener; profil adresi, lehçesi, modeli ve anahtar "
                    "adını taşır.",
-        .run = &run_provider,
+        .run     = &run_provider,
     };
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

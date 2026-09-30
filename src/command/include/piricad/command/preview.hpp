@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: what steps WOULD do, with the drawing untouched (TODOS F-05).
+// PiriCAD — command: what steps WOULD do, with the drawing untouched (TODOS F-05).
 //
 // ONE PREVIEW FOR EVERY CLIENT. A suggestion card, a dry-run of a script, the
 // command line asking "what would this do" — each wanted the same answer and
@@ -22,18 +22,18 @@
 // dashed.
 #pragma once
 
-#include "kentos_cad/command/changes.hpp"
-#include "kentos_cad/command/ghost.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/changes.hpp"
+#include "piricad/command/ghost.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// One object as the previewed steps would leave it.
 struct PreviewShape
@@ -91,4 +91,4 @@ class Context;
 /// both say, from one place.
 void answer_preview(Context& ctx, const Preview& p, bool with_shapes);
 
-} // namespace kentos::command
+} // namespace piricad::command

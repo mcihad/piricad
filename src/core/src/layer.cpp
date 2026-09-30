@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/layer.hpp"
+#include "piricad/core/layer.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
-namespace kentos::core {
+namespace piricad::core {
 
 // Defined in style.cpp. The appearance mixing has to exist exactly once: a second
 // copy would drift from the first and silently change every golden fixture that
@@ -199,4 +199,4 @@ std::uint64_t LayerTable::fold(std::uint64_t seed) const
     return h;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

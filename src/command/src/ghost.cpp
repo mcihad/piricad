@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/ghost.hpp"
+#include "piricad/command/ghost.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/parallel.hpp"
-#include "kentos_cad/core/polygon.hpp"
-#include "kentos_cad/core/spline.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/parallel.hpp"
+#include "piricad/core/polygon.hpp"
+#include "piricad/core/spline.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// A run from a kind's flat outline arrays.
@@ -223,4 +223,4 @@ std::vector<GhostRun> ghost_outline(const Prompt& prompt, core::Point2 at,
     }
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

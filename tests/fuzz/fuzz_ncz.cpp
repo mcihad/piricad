@@ -15,12 +15,12 @@
 // its box — the path is fuzzed either way.
 //
 // Build:
-//   cmake --preset dev -DKENTOS_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
-//   ./build/dev/bin/kentos_fuzz_ncz build/dev/fuzz-corpus/ncz tests/fuzz/tohum/ncz \
+//   cmake --preset dev -DPIRICAD_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
+//   ./build/dev/bin/piricad_fuzz_ncz build/dev/fuzz-corpus/ncz tests/fuzz/tohum/ncz \
 //       -max_total_time=300
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/io/service.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/io/service.hpp"
 
 #ifdef _WIN32
 #include <process.h>
@@ -48,7 +48,7 @@ const std::string& scratch_path()
         const auto pid = ::getpid();
 #endif
         const auto p = std::filesystem::temp_directory_path() /
-                       ("kentoscad-fuzz-ncz-" + std::to_string(pid) + ".ncz");
+                       ("piricad-fuzz-ncz-" + std::to_string(pid) + ".ncz");
         return p.string();
     }();
     return path;
@@ -65,21 +65,21 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         out.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(size));
     }
 
-    kentos::core::Document doc;
-    kentos::command::Registry registry;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, registry, journal, undo};
-    kentos::io::FileService files{bus};
+    piricad::core::Document doc;
+    piricad::command::Registry registry;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, registry, journal, undo};
+    piricad::io::FileService files{bus};
 
-    kentos::command::register_builtin_commands(registry);
+    piricad::command::register_builtin_commands(registry);
     bus.on_echo = [](std::string_view) {};
 
     const std::uint64_t before = doc.content_hash();
 
     // Every column as well, so the attribute half of the mapping is reached.
     auto imported = bus.execute_line("İÇEAKTAR \"" + scratch_path() + "\" alanlar=*",
-                                     kentos::command::Origin::Test);
+                                     piricad::command::Origin::Test);
     if (!imported) {
         // io.md R17/P11: a failed import rolls back to EXACTLY the pre-import
         // document. Not "close enough" — the same fingerprint.
@@ -88,7 +88,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     }
 
     (void)doc.content_hash();
-    for (kentos::core::EntityId e = 0; e < doc.entities().size(); ++e) {
+    for (piricad::core::EntityId e = 0; e < doc.entities().size(); ++e) {
         (void)doc.entity_area(e);
         if (doc.entities().layer[e] >= doc.layers().size()) __builtin_trap();
     }

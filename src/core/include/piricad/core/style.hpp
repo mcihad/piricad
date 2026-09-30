@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: appearance and the interned style column.
+// PiriCAD — core: appearance and the interned style column.
 //
 // .claude/model.md R13–R19. The reconciliation between CAD and GIS, stated once:
 //
@@ -7,7 +7,7 @@
 //     Style is never derived at frame time.**
 //
 // CAD gives every object its own colour and linetype; GIS derives appearance
-// from a per-layer renderer over feature attributes. KentOSCad needs both, and the
+// from a per-layer renderer over feature attributes. PiriCAD needs both, and the
 // way to have both without paying for it every frame is to resolve at commit
 // time inside a Transaction and materialise the answer into one u32 per entity.
 // The renderer then reads an index; it never evaluates a rule, an expression or
@@ -16,9 +16,9 @@
 // This is Esri's RuleID column, and Esri ships it at cadastral scale.
 #pragma once
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/image_store.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/image_store.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -28,7 +28,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Where a single appearance property gets its value. In memory the cascade is
 /// this enum; the wire sentinels (DXF 62 == 256, 370 == -1, "BYLAYER") exist
@@ -185,7 +185,7 @@ enum class SymbolLayerType : std::uint8_t {
     /// `cami`, a line type for `il sınırı` — and drawing the published picture is
     /// the only faithful answer until each one has a vector definition a harita
     /// mühendisi has signed off (CLAUDE.md 6.11). The bytes travel inside the
-    /// document; see `kentos_cad/core/image_store.hpp` for why.
+    /// document; see `piricad/core/image_store.hpp` for why.
     RasterFill,   ///< the image tiled into the interior — a MPYY tarama
     RasterMarker, ///< the image as a glyph — a MPYY sembol
     RasterLine,   ///< the image repeated along the line — a MPYY çizgi tipi
@@ -540,4 +540,4 @@ private:
 /// COMMIT time by the command that changed something, never per frame (R14).
 Appearance resolve_appearance(const Appearance& own, const Appearance& layer_default);
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: what an import wants the user to know, in one shape.
+// PiriCAD — io: what an import wants the user to know, in one shape.
 //
 // io.md P11/P13: a loss is REPORTED, never silent and never silently repaired.
 // Every reader used to say it its own way — a bare count and a first reason on
@@ -16,7 +16,7 @@
 // by a flood of notes.
 #pragma once
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -25,7 +25,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// How serious one line is. The order is the order the wizard lists them in.
 enum class Severity : std::uint8_t {
@@ -147,4 +147,4 @@ struct ImportDiagnostics
     std::string type_summary() const;
 };
 
-} // namespace kentos::io
+} // namespace piricad::io

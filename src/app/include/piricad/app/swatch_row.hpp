@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the row of colour swatches in the colour menu.
+// PiriCAD — app: the row of colour swatches in the colour menu.
 //
 // `RENK`'s named colours, drawn as one row at the head of the menu the ribbon's
 // colour boxes open (`MainWindow::openColourMenu`). Every swatch is one of the
 // command's own words, so a colour picked here is the colour the command paints.
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QColor>
 #include <QRectF>
@@ -20,7 +20,7 @@ class QKeyEvent;
 class QMouseEvent;
 class QPaintEvent;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// One row of colour swatches, the first thing in the colour menu the ribbon's
 /// colour boxes open: a click paints with that colour.
@@ -33,7 +33,7 @@ namespace kentos::app {
 class SwatchRow : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// One colour in the row.
@@ -85,4 +85,4 @@ private:
     ThemeMode theme_ = ThemeMode::Dark;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

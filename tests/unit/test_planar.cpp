@@ -6,17 +6,17 @@
 // a 2 m pool in it, a 5 cm gap at a corner — and every one is asserted to the
 // millimetre or the square millimetre, because a boundary found a millimetre
 // off is a boundary that does not meet its neighbour (§7.3).
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/cleanup.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/planar.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/cleanup.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/planar.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
 
 #include <algorithm>
 #include <array>
@@ -24,12 +24,12 @@
 #include <string>
 #include <vector>
 
-using namespace kentos::core;
+using namespace piricad::core;
 
 namespace {
 
 #define NEEDS_NETWORK()                                                                            \
-    if (!network_available()) PENDING("KENTOS_WITH_CGAL=OFF; düzlemsel ağ sınanamıyor.")
+    if (!network_available()) PENDING("PIRICAD_WITH_CGAL=OFF; düzlemsel ağ sınanamıyor.")
 
 NetworkPiece seg(Point2 a, Point2 b, std::uint32_t source)
 {
@@ -460,29 +460,31 @@ namespace {
 struct Rig
 {
     Document doc;
-    kentos::command::Registry reg;
-    kentos::command::Journal journal;
-    kentos::command::UndoStack undo;
-    kentos::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
     std::string said;
-    std::vector<kentos::command::MeasureMark> marks;
+    std::vector<piricad::command::MeasureMark> marks;
 
     Rig()
     {
-        kentos::command::register_builtin_commands(reg);
+        piricad::command::register_builtin_commands(reg);
         bus.on_echo         = [this](std::string_view s) { said.append(s).append("\n"); };
-        bus.on_measure_mark = [this](const kentos::command::MeasureMark& m) { marks.push_back(m); };
+        bus.on_measure_mark = [this](const piricad::command::MeasureMark& m) {
+            marks.push_back(m);
+        };
     }
 
     void run(const std::string& line)
     {
-        auto r = bus.execute_line(line, kentos::command::Origin::Test);
+        auto r = bus.execute_line(line, piricad::command::Origin::Test);
         REQUIRE_MESSAGE(r.ok(), line << ": " << (r.ok() ? std::string() : r.error().message));
     }
 
     std::string refused(const std::string& line)
     {
-        auto r = bus.execute_line(line, kentos::command::Origin::Test);
+        auto r = bus.execute_line(line, piricad::command::Origin::Test);
         REQUIRE_FALSE(r.ok());
         return r.error().message;
     }
@@ -578,7 +580,7 @@ TEST_CASE(
     CHECK(why.find("5 cm") != std::string::npos);
     CHECK(why.find("bosluk=") != std::string::npos);
     REQUIRE_FALSE(r.marks.empty());
-    CHECK_EQ(r.marks.front().shape, kentos::command::MeasureMark::Shape::Gap);
+    CHECK_EQ(r.marks.front().shape, piricad::command::MeasureMark::Shape::Gap);
     CHECK_EQ(r.doc.live_entity_count(), std::size_t{4}); // nothing written
 
     r.run("SINIR nokta=5,5 bosluk=100");
@@ -701,7 +703,7 @@ TEST_CASE("TOPOLOJİ: aynı çekirdekten yinelenen, boş, tekrarlanan köşe ve 
     r.run("ÇİZGİ 70,0 70,10");         // 5
     r.run("ÇİZGİ 70,10 60,10");        // 6
     r.run("ÇİZGİ 60,10 60,0.5");       // 7: stops 50 cm short of the corner
-    kentos::domain::cadastre::register_cadastre_commands(r.reg);
+    piricad::domain::cadastre::register_cadastre_commands(r.reg);
     r.run("TOPOLOJİ");
     CHECK(r.said.find("Nesne 2, nesne 1'in aynısı (yinelenen; TEMİZLE islem=onar siler).") !=
           std::string::npos);
@@ -715,7 +717,7 @@ TEST_CASE("TOPOLOJİ: kılavuzdaki çizgi ağı örneği kelimesi kelimesine")
 {
     NEEDS_NETWORK();
     Rig r;
-    kentos::domain::cadastre::register_cadastre_commands(r.reg);
+    piricad::domain::cadastre::register_cadastre_commands(r.reg);
     r.run("ÇİZGİ 60,0 70,0");
     r.run("ÇİZGİ 70,0 70,10");
     r.run("ÇİZGİ 70,10 60,10");

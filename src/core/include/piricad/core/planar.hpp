@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: linework as a planar network, and the faces it encloses.
+// PiriCAD — core: linework as a planar network, and the faces it encloses.
 //
 // ONE ANSWER TO "WHICH GROUND DOES THIS LINEWORK CLOSE?" (TODOS C-09). A click
 // inside a parcel drawn as loose lines, a network of boundary lines turned into
@@ -7,7 +7,7 @@
 // ask the same question of the same drawing, and they must not disagree about
 // where a face is, which island is a hole in it, or which end is open.
 //
-// THE ARRANGEMENT IS CGAL'S (Article 2.7, kentoscad.md §9.2 names it for
+// THE ARRANGEMENT IS CGAL'S (Article 2.7, piricad.md §9.2 names it for
 // exactly this). Noding a set of segments and arcs — every crossing, every
 // T-junction, every overlap — and walking the faces that result, with the
 // islands inside each face as its holes, is the textbook case of a problem with
@@ -34,10 +34,10 @@
 // §7.3).
 #pragma once
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -46,10 +46,10 @@
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Whether this build can build networks at all: false when it was configured
-/// without CGAL (`KENTOS_WITH_CGAL=OFF`), in which case `Network::build` says so.
+/// without CGAL (`PIRICAD_WITH_CGAL=OFF`), in which case `Network::build` says so.
 bool network_available() noexcept;
 
 /// One piece of linework and where it came from.
@@ -252,4 +252,4 @@ Result<RegionPreview> decode_region_preview(std::span<const std::uint8_t> bytes)
 /// gathered — so the answer depends on the drawing alone, never on the view.
 Result<Region> region_at(const Document& doc, const RegionQuery& query);
 
-} // namespace kentos::core
+} // namespace piricad::core

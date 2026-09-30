@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: a suggestion, and the fact that it is only a suggestion.
+// PiriCAD — ai: a suggestion, and the fact that it is only a suggestion.
 //
 // WHAT HAPPENS WHEN AN AGENT CALLS A WRITE TOOL. Nothing is applied. The call is
 // compiled into a `Plan` — command ids with resolved arguments, and the exact
@@ -22,19 +22,19 @@
 // (Article 1.6).
 #pragma once
 
-#include "kentos_cad/ai/handles.hpp"
+#include "piricad/ai/handles.hpp"
 
-#include "kentos_cad/command/changes.hpp"
-#include "kentos_cad/command/value.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/changes.hpp"
+#include "piricad/command/value.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// Where a plan is in its short life.
 enum class PlanState : std::uint8_t {
@@ -62,9 +62,9 @@ const char* plan_state_name(PlanState state);
 /// One command inside a plan.
 struct PlanStep
 {
-    std::string command_id; ///< a registered id, resolved from the tool name
-    command::Args args;     ///< arguments with every handle already resolved
-    std::string line;       ///< the command line a person reads, e.g. `ÇİZGİ 0,0 10,10`
+    std::string command_id;           ///< a registered id, resolved from the tool name
+    command::Args args;               ///< arguments with every handle already resolved
+    std::string line;                 ///< the command line a person reads, e.g. `ÇİZGİ 0,0 10,10`
     std::vector<std::string> handles; ///< which handles the arguments came from
     /// The relative points among them: the base handle and the dimension it was
     /// moved by (`@….0 + doğu 10000, kuzey 0 mm`), for the audit record.
@@ -267,4 +267,4 @@ private:
     std::uint64_t filed_{0};
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

@@ -20,18 +20,18 @@
 // point functions of the one grammar (`construct.hpp`): the same answer, the
 // same choice of the two solutions, and the same Turkish refusal whether the
 // work was typed or clicked (CLAUDE.md 5.10, Article 1.2).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/construct.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/construct.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 // ------------------------------------------------------ KESİŞİMNOKTA ----
@@ -232,7 +232,7 @@ Task<void> run_along(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(intersect_point)
+PIRICAD_COMMAND(intersect_point)
 {
     return CommandSpec{
         .id       = "core.intersect_point",
@@ -271,15 +271,15 @@ KENTOS_COMMAND(intersect_point)
                     .en("intersection"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar.",
-        .run    = &run_intersect,
-        .effect = Effect::DocumentEdit,
+        .run     = &run_intersect,
+        .effect  = Effect::DocumentEdit,
     };
 }
 
-KENTOS_COMMAND(point_along)
+PIRICAD_COMMAND(point_along)
 {
     return CommandSpec{
         .id       = "core.point_along",
@@ -301,13 +301,13 @@ KENTOS_COMMAND(point_along)
                     .en("count"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta "
                    "koyar.",
-        .run    = &run_along,
-        .effect = Effect::DocumentEdit,
+        .run     = &run_along,
+        .effect  = Effect::DocumentEdit,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

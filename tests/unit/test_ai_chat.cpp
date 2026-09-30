@@ -13,19 +13,19 @@
 // that loses the tail of an event split across two `on_chunk` calls: the answer
 // then arrives with a hole in it and nothing anywhere reports an error. Every
 // dialect is therefore decoded twice — once whole, once one byte at a time.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/catalog.hpp"
-#include "kentos_cad/ai/chat.hpp"
-#include "kentos_cad/ai/dialect.hpp"
-#include "kentos_cad/ai/handles.hpp"
-#include "kentos_cad/ai/provider.hpp"
-#include "kentos_cad/ai/redact.hpp"
-#include "kentos_cad/ai/sse.hpp"
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/ai/catalog.hpp"
+#include "piricad/ai/chat.hpp"
+#include "piricad/ai/dialect.hpp"
+#include "piricad/ai/handles.hpp"
+#include "piricad/ai/provider.hpp"
+#include "piricad/ai/redact.hpp"
+#include "piricad/ai/sse.hpp"
+#include "piricad/command/registry.hpp"
 
-using namespace kentos;
-using kentos::core::Json;
+using namespace piricad;
+using piricad::core::Json;
 
 namespace {
 
@@ -1099,7 +1099,7 @@ TEST_CASE("Redaksiyon: anahtar hiçbir yoldan geçip gitmez")
                        {"Authorization", "Bearer " + key},
                        {"x-api-key", ant_key},
                        {"Cookie", "session=abc123"},
-                       {"X-Title", "KentOSCad"},
+                       {"X-Title", "PiriCAD"},
                        {"X-Portal-Auth", key}};
 
     const ai::HttpRequest safe = ai::redact_request(request);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the machinery behind `ÖNERİ` and the agent surface.
+// PiriCAD — app: the machinery behind `ÖNERİ` and the agent surface.
 //
 // `/src/ai` is sans-IO on purpose: it knows how to project the command
 // catalogue, how to compile a tool call into a plan, how to resolve a handle and
@@ -23,17 +23,17 @@
 // their state, and applies one when — and only when — that click has happened.
 #pragma once
 
-#include "kentos_cad/ai/audit.hpp"
-#include "kentos_cad/ai/catalog.hpp"
-#include "kentos_cad/ai/dispatcher.hpp"
-#include "kentos_cad/ai/endpoint.hpp"
-#include "kentos_cad/ai/gate.hpp"
-#include "kentos_cad/ai/handles.hpp"
-#include "kentos_cad/ai/plan.hpp"
-#include "kentos_cad/ai/policy_path.hpp"
+#include "piricad/ai/audit.hpp"
+#include "piricad/ai/catalog.hpp"
+#include "piricad/ai/dispatcher.hpp"
+#include "piricad/ai/endpoint.hpp"
+#include "piricad/ai/gate.hpp"
+#include "piricad/ai/handles.hpp"
+#include "piricad/ai/plan.hpp"
+#include "piricad/ai/policy_path.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/preview.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/preview.hpp"
 
 #include <QObject>
 #include <QString>
@@ -43,7 +43,7 @@
 #include <optional>
 #include <string>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// Owns the plan store, the audit log, the handles and the catalogue, and is the
 /// one door from the AI layer to the running document.
@@ -251,4 +251,4 @@ private:
     std::string shown_preview_plan_{};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

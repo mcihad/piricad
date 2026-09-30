@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core (private to curve_path.cpp): a piece of a path as the exact
+// PiriCAD — core (private to curve_path.cpp): a piece of a path as the exact
 // curve it is, and the numerical questions an ellipse or a spline needs
 // answered (TODOS C-01).
 //
@@ -14,13 +14,13 @@
 // written here and not taken from a library is said in curve_path.hpp.
 #pragma once
 
-#include "kentos_cad/core/curve_path.hpp"
+#include "piricad/core/curve_path.hpp"
 
 #include <cstdint>
 #include <utility>
 #include <vector>
 
-namespace kentos::core::curve {
+namespace piricad::core::curve {
 
 /// A vector in metres.
 struct Vec
@@ -151,4 +151,4 @@ Meets meets(const PathPiece& p, const PathPiece& q);
 /// The box the piece's curve occupies, in the drawing.
 Box2 bounds(const PathPiece& piece);
 
-} // namespace kentos::core::curve
+} // namespace piricad::core::curve

@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/render/scene.hpp"
-#include "kentos_cad/render/symbology.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/render/symbology.hpp"
 
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/spatial_index.hpp"
-#include "kentos_cad/core/text_fields.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/spatial_index.hpp"
+#include "piricad/core/text_fields.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <string_view>
 #include <vector>
 
-namespace kentos::render {
+namespace piricad::render {
 namespace {
 
 bool box_contains(const Box2& outer, const Box2& inner)
@@ -105,7 +105,7 @@ PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images,
     // its ring reaches the polygon batch even though the layer places a glyph.
     ps.wants_stroke = core::draws_stroke(sl.type) || core::draws_marker(sl.type);
     ps.wants_fill   = core::draws_fill(sl.type) || sl.type == core::SymbolLayerType::CentroidFill ||
-                    sl.type == core::SymbolLayerType::RasterMarker;
+                      sl.type == core::SymbolLayerType::RasterMarker;
 
     // A fixed word needs neither the line nor the ring: it is placed from the
     // entity's own bounding box, which the cull test already has.
@@ -720,7 +720,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
 
     // The index narrows five million parcels to the handful sharing a leaf with
     // the viewport; entities added since it was last packed are a short tail that
-    // is cheaper to scan than to repack (kentoscad.md §10.5).
+    // is cheaper to scan than to repack (piricad.md §10.5).
     const core::SpatialIndex& index = doc.spatial_index();
 
     // Zoomed far enough out that everything is on screen: the tree can only answer
@@ -747,4 +747,4 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     finish();
 }
 
-} // namespace kentos::render
+} // namespace piricad::render

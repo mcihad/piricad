@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — render: the mark an input aid draws where it fired.
+// PiriCAD — render: the mark an input aid draws where it fired.
 //
 // WHY THIS IS A FUNCTION AND NOT A `switch` IN THE CANVAS.
 //
@@ -19,12 +19,12 @@
 // without a mark now breaks the build instead of shipping invisible.
 #pragma once
 
-#include "kentos_cad/render/view.hpp"
+#include "piricad/render/view.hpp"
 
 #include <cstdint>
 #include <vector>
 
-namespace kentos::render {
+namespace piricad::render {
 
 /// One stroke of a marker: a run of points, closed or open.
 struct MarkerRun
@@ -53,4 +53,4 @@ struct Marker
 /// moved must never look like a point it left alone.
 Marker snap_marker(std::uint32_t mode, float x, float y, float h);
 
-} // namespace kentos::render
+} // namespace piricad::render

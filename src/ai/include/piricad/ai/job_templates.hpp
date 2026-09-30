@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the shape of a job template. The templates themselves are DATA.
+// PiriCAD — ai: the shape of a job template. The templates themselves are DATA.
 //
 // WHAT A TEMPLATE IS AND IS NOT. It is a named, versioned sequence of COMMAND
 // LINES with the places a caller fills in marked. It is not a macro, not a
@@ -27,15 +27,15 @@
 // plausible-looking lines that do not run would be worse than no template.
 #pragma once
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// One blank a caller fills in.
 struct JobParam
@@ -98,4 +98,4 @@ struct JobTemplateCatalog
 /// The package's path under `/data`, as the settings and the manual print it.
 inline constexpr const char* kJobTemplatePath = "catalogs/ai/is-sablonlari.json";
 
-} // namespace kentos::ai
+} // namespace piricad::ai

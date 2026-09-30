@@ -11,7 +11,7 @@ Bir kenarın uzunluğunu söyleyen yazı o kenar **hakkında** bir cümledir; ke
 yazı yerinde kalırsa yanlış yerde yanlış sayıyı söyler. Bir köşenin numarası da köşeye
 aittir, yazıldığı koordinata değil.
 
-KentOSCad bu ilişkiyi bir **bağ** olarak kaydeder. Bağlı nesne (**bağımlı**) kaynağını
+PiriCAD bu ilişkiyi bir **bağ** olarak kaydeder. Bağlı nesne (**bağımlı**) kaynağını
 (**kaynak**), kaynağın hangi özelliğine bağlı olduğunu — bir halkanın bir **köşesi**, bir
 **kenarı** ya da nesnenin **ortası** — nasıl yerleştiğini (hangi yan, ne kadar açıkta),
 sözünün ne olduğunu (kendi yazısı, kenarın **uzunluğu**, ya da nesneden doldurulan bir

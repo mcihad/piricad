@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/catalog.hpp"
+#include "piricad/ai/catalog.hpp"
 
-#include "kentos_cad/ai/arguments.hpp"
+#include "piricad/ai/arguments.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -362,24 +362,24 @@ ToolDef tool_for(const command::CommandSpec& spec, Style style)
 
     const bool no_effect = has_flag(spec.flags, command::Flags::NoEffect);
     tool.annotations     = ToolAnnotations{
-            .read_only   = no_effect,
-            .destructive = !no_effect,
-            .idempotent  = no_effect,
+        .read_only   = no_effect,
+        .destructive = !no_effect,
+        .idempotent  = no_effect,
         // Only a command that reaches the disk or the network touches anything
         // outside this program.
-            .open_world = spec.category == command::Category::File,
+        .open_world = spec.category == command::Category::File,
     };
 
     Json meta;
-    meta.set("cad.kentos/commandId", Json::string(spec.id));
-    meta.set("cad.kentos/category", Json::string(command::category_name(spec.category)));
+    meta.set("cad.piricad/commandId", Json::string(spec.id));
+    meta.set("cad.piricad/category", Json::string(command::category_name(spec.category)));
     // `policy`: the user's approval policy decides — a card, or at once. What
-    // happened to a call is in its answer (`cad.kentos/approval` there).
-    meta.set("cad.kentos/approval", Json::string(tool.mutates ? "policy" : "none"));
+    // happened to a call is in its answer (`cad.piricad/approval` there).
+    meta.set("cad.piricad/approval", Json::string(tool.mutates ? "policy" : "none"));
     Json aliases = Json::array({});
     for (const std::string& name : spec.names)
         aliases.push(Json::string(name));
-    meta.set("cad.kentos/names", std::move(aliases));
+    meta.set("cad.piricad/names", std::move(aliases));
     tool.meta = std::move(meta);
 
     return tool;
@@ -441,4 +441,4 @@ std::size_t Catalog::mutating_count() const
     return n;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

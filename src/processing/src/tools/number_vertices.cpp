@@ -11,14 +11,14 @@
 // ATTACHED to the corner it names (core/attach.hpp): the command that later moves
 // the corner — KÖŞETAŞI, TAŞI, DÖNDÜR — re-places the number beside it. The text
 // itself stays what it was; a corner keeps its number when it moves.
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/units.hpp"
 
 #include <string>
 
-namespace kentos::processing {
+namespace piricad::processing {
 namespace {
 
 /// `number` as `prefix + padded digits + suffix`.
@@ -147,10 +147,10 @@ public:
 
 private:
     const ToolSpec spec_{
-        .id     = "islem.kose_numarala",
-        .python = "number_vertices",
-        .names  = {"KÖŞENUMARALA", "KOSENUMARALA", "NUMBERVERTICES", "KNM"},
-        .title  = "Köşeleri numarala",
+        .id      = "islem.kose_numarala",
+        .python  = "number_vertices",
+        .names   = {"KÖŞENUMARALA", "KOSENUMARALA", "NUMBERVERTICES", "KNM"},
+        .title   = "Köşeleri numarala",
         .summary = "Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak "
                    "sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, "
                    "köşe taşınınca izler.",
@@ -191,10 +191,10 @@ private:
 
 } // namespace
 
-KENTOS_PROCESSING_TOOL(number_vertices)
+PIRICAD_PROCESSING_TOOL(number_vertices)
 {
     static const NumberVertices tool;
     return tool;
 }
 
-} // namespace kentos::processing
+} // namespace piricad::processing

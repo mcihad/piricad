@@ -1,16 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# kentos_io — format I/O. Depends on core + command + format libraries, nothing else.
+# piricad_io — format I/O. Depends on core + command + format libraries, nothing else.
 #
 # .claude/io.md R3: no Qt anywhere in this module, and the link list is
-# kentos_core, kentos_command and the format libraries. Article 3.2 makes
+# piricad_core, piricad_command and the format libraries. Article 3.2 makes
 # `io -> command` one-way; nothing in /src/command may include a piricad/io header,
 # and scripts/ci-gate-layering.sh fails the build if one does.
 #
 # .claude/io.md R2/P2: gdal*.h, ogr*.h and cpl_*.h appear only in .cpp files here.
 # They are never in the link INTERFACE either — PRIVATE below is what keeps a GDAL
-# header off the include path of everything that links kentos_io.
+# header off the include path of everything that links piricad_io.
 
-add_library(kentos_io STATIC
+add_library(piricad_io STATIC
     src/adopt.cpp
     src/block_view.cpp
     src/xref.cpp
@@ -39,36 +39,36 @@ add_library(kentos_io STATIC
     src/dxf_multileader.hpp
 )
 
-target_include_directories(kentos_io
+target_include_directories(piricad_io
     PUBLIC  include
     PRIVATE src            # block_view.hpp / mapped_file.hpp are NOT public (R1)
 )
 
-target_link_libraries(kentos_io
-    PUBLIC  kentos_core kentos_command
-    PRIVATE kentos_flags
+target_link_libraries(piricad_io
+    PUBLIC  piricad_core piricad_command
+    PRIVATE piricad_flags
 )
 
-set_target_properties(kentos_io PROPERTIES
+set_target_properties(piricad_io PROPERTIES
     EXPORT_NAME io
-    OUTPUT_NAME kentos_io
+    OUTPUT_NAME piricad_io
 )
 
-add_library(KentOSCad::io ALIAS kentos_io)
+add_library(PiriCAD::io ALIAS piricad_io)
 
 # ------------------------------------------------------------------ GDAL ----
-# io.md R22 and CLAUDE.md Article 8.2: behind KENTOS_WITH_GDAL, hard-failing with
+# io.md R22 and CLAUDE.md Article 8.2: behind PIRICAD_WITH_GDAL, hard-failing with
 # an actionable message when ON but missing. When OFF, İÇEAKTAR and DIŞAAKTAR
 # return an Error that names this option and the install command — they never
 # silently succeed and never silently return an empty layer (data.md Enforcement).
 
-include(KentOSCadGdalDrivers)
+include(PiriCADGdalDrivers)
 
-target_compile_definitions(kentos_io PRIVATE
-    KENTOS_GDAL_DRIVERS="${KENTOS_GDAL_DRIVERS_STRING}"
+target_compile_definitions(piricad_io PRIVATE
+    PIRICAD_GDAL_DRIVERS="${PIRICAD_GDAL_DRIVERS_STRING}"
 )
 
-if(KENTOS_WITH_GDAL)
+if(PIRICAD_WITH_GDAL)
     find_package(GDAL 3.8 CONFIG QUIET)
     if(NOT GDAL_FOUND)
         # Deprecated upstream, but still the only route on older distributions.
@@ -77,73 +77,73 @@ if(KENTOS_WITH_GDAL)
     if(NOT GDAL_FOUND)
         find_package(PkgConfig QUIET)
         if(PkgConfig_FOUND)
-            pkg_check_modules(KENTOS_GDAL_PC IMPORTED_TARGET gdal>=3.8)
+            pkg_check_modules(PIRICAD_GDAL_PC IMPORTED_TARGET gdal>=3.8)
         endif()
     endif()
 
     if(TARGET GDAL::GDAL)
-        target_link_libraries(kentos_io PRIVATE GDAL::GDAL)
-    elseif(TARGET PkgConfig::KENTOS_GDAL_PC)
-        target_link_libraries(kentos_io PRIVATE PkgConfig::KENTOS_GDAL_PC)
+        target_link_libraries(piricad_io PRIVATE GDAL::GDAL)
+    elseif(TARGET PkgConfig::PIRICAD_GDAL_PC)
+        target_link_libraries(piricad_io PRIVATE PkgConfig::PIRICAD_GDAL_PC)
     else()
         message(FATAL_ERROR
-            "KENTOS_WITH_GDAL=ON but GDAL 3.8+ was not found.\n"
+            "PIRICAD_WITH_GDAL=ON but GDAL 3.8+ was not found.\n"
             "  Debian/Ubuntu: sudo apt install libgdal-dev\n"
             "  macOS:         brew install gdal\n"
             "  Windows:       vcpkg install gdal   (the 'gdal' feature in /vcpkg.json)\n"
-            "  Or configure with -DKENTOS_WITH_GDAL=OFF; İÇEAKTAR and DIŞAAKTAR then\n"
+            "  Or configure with -DPIRICAD_WITH_GDAL=OFF; İÇEAKTAR and DIŞAAKTAR then\n"
             "  report that the backend is off instead of silently doing nothing.")
     endif()
 
-    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_GDAL=1)
-    message(STATUS "  GDAL ..... etkin (izinli sürücüler: ${KENTOS_GDAL_DRIVERS_STRING})")
+    target_compile_definitions(piricad_io PRIVATE PIRICAD_HAVE_GDAL=1)
+    message(STATUS "  GDAL ..... etkin (izinli sürücüler: ${PIRICAD_GDAL_DRIVERS_STRING})")
 else()
     message(STATUS "  GDAL ..... kapalı (İÇEAKTAR/DIŞAAKTAR hata döndürecek)")
 endif()
 
-if(KENTOS_WITH_DWG)
+if(PIRICAD_WITH_DWG)
     # PRIVATE, like every format library here: `dwg.h` is a twelve-thousand-line C
     # header that defines `restrict` and a hundred BITCODE_* macros, and it must
-    # not reach the include path of everything that links kentos_io (io.md R2/P2).
+    # not reach the include path of everything that links piricad_io (io.md R2/P2).
     # The whole dependency lives inside src/dwg.cpp.
-    target_link_libraries(kentos_io PRIVATE redwg)
-    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_DWG=1)
+    target_link_libraries(piricad_io PRIVATE redwg)
+    target_compile_definitions(piricad_io PRIVATE PIRICAD_HAVE_DWG=1)
 
     # LibreDWG generates its own config header into the build tree and keeps the
     # public ones in `include/`; neither is exported as a target property.
-    target_include_directories(kentos_io PRIVATE
+    target_include_directories(piricad_io PRIVATE
         "${libredwg_SOURCE_DIR}/include" "${libredwg_BINARY_DIR}")
 
     message(STATUS "  DWG ...... etkin (LibreDWG, salt okunur)")
 else()
-    message(STATUS "  DWG ...... kapalı (-DKENTOS_WITH_DWG=ON ile açılır)")
+    message(STATUS "  DWG ...... kapalı (-DPIRICAD_WITH_DWG=ON ile açılır)")
 endif()
 
-if(KENTOS_WITH_DXFRW)
+if(PIRICAD_WITH_DXFRW)
     # PRIVATE, like every format library here (io.md R2/P2): the DRW_* headers
     # reach dxf_reader.cpp, dxf_writer.cpp and dxf_common.cpp, and nothing else.
     # libdxfrw's target exports no build-tree include directory (only the install
     # interface), so its source directory is named here.
-    target_link_libraries(kentos_io PRIVATE dxfrw)
-    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_DXFRW=1)
-    target_include_directories(kentos_io SYSTEM PRIVATE "${libdxfrw_SOURCE_DIR}/src")
+    target_link_libraries(piricad_io PRIVATE dxfrw)
+    target_compile_definitions(piricad_io PRIVATE PIRICAD_HAVE_DXFRW=1)
+    target_include_directories(piricad_io SYSTEM PRIVATE "${libdxfrw_SOURCE_DIR}/src")
     message(STATUS "  DXF ...... etkin (libdxfrw, okuma ve yazma)")
 else()
     message(STATUS "  DXF ...... libdxfrw kapalı; DXF GDAL sürücüsüyle okunur/yazılır")
 endif()
 
-if(KENTOS_WITH_POSTGIS)
+if(PIRICAD_WITH_POSTGIS)
     # PRIVATE, like every format library here: a pqxx header must not reach the
-    # include path of everything that links kentos_io (io.md R2/P2). The whole
+    # include path of everything that links piricad_io (io.md R2/P2). The whole
     # dependency lives inside src/postgis.cpp, behind the pimpl in its header.
-    target_link_libraries(kentos_io PRIVATE libpqxx::pqxx)
-    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_POSTGIS=1)
+    target_link_libraries(piricad_io PRIVATE libpqxx::pqxx)
+    target_compile_definitions(piricad_io PRIVATE PIRICAD_HAVE_POSTGIS=1)
 endif()
 
-if(KENTOS_WITH_QPDF)
+if(PIRICAD_WITH_QPDF)
     # PRIVATE, like every library here: a qpdf header stays inside
     # src/pdf_encrypt.cpp; the facade in io/pdf_encrypt.hpp is what the product
     # sees (io.md R2/P2, CLAUDE.md Article 9).
-    target_link_libraries(kentos_io PRIVATE qpdf::libqpdf)
-    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_QPDF=1)
+    target_link_libraries(piricad_io PRIVATE qpdf::libqpdf)
+    target_compile_definitions(piricad_io PRIVATE PIRICAD_HAVE_QPDF=1)
 endif()

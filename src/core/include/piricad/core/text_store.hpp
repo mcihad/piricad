@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the text store.
+// PiriCAD — core: the text store.
 //
 // A drawing is not only geometry. A pafta carries ada and parsel numbers, plan
 // notes, north arrows and legend captions, and every one of them is a CAD entity
@@ -21,8 +21,8 @@
 // and alignment points, and it does it for the same reasons.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -32,7 +32,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Where the anchor point sits on the text: which corner, edge or centre of it.
 ///
@@ -236,4 +236,4 @@ private:
     std::unordered_map<std::string, std::uint32_t> intern_;
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: parallel geometry (offset).
+// PiriCAD — core: parallel geometry (offset).
 //
 // The operation a surveyor calls "ofset" and a planner calls "çekme mesafesi":
 // a curve parallel to another at a fixed distance. It is the single most-used
@@ -19,13 +19,13 @@
 // answer is the same on every platform (Article 2.4, §7.3).
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// How a parallel turns an outside corner.
 enum class JoinStyle : std::uint8_t {
@@ -231,4 +231,4 @@ Polygon half_plane(Point2 a, Point2 b, const Box2& box, bool left);
 /// doing that through the entity table would mean building an entity first.
 Mm2 ring_area(const std::vector<Point2>& ring) noexcept;
 
-} // namespace kentos::core
+} // namespace piricad::core

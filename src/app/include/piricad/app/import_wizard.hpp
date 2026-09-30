@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the import window.
+// PiriCAD — app: the import window.
 //
 // WHAT THIS WINDOW IS ALLOWED TO DO, stated once, because it is the same rule
 // `database_dialog.hpp` opens with. It collects three arguments — a path, a list
@@ -25,15 +25,15 @@
 // read, and the layers and the fields are two panes of one column beside it.
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/app/widgets.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/render/drawlist.hpp"
-#include "kentos_cad/render/scene.hpp"
-#include "kentos_cad/render/view.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/app/widgets.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/render/drawlist.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/render/view.hpp"
 
 #include <memory>
 #include <stop_token>
@@ -54,12 +54,12 @@ class QPushButton;
 class QStackedWidget;
 class QTimer;
 
-namespace kentos::render {
+namespace piricad::render {
 /// The renderer this window draws its preview through; see `backend.hpp`.
 class Backend;
-} // namespace kentos::render
+} // namespace piricad::render
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see `controller.hpp`.
 class Controller;
@@ -109,7 +109,7 @@ private:
 class ImportPreview : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty preview pointing at no document.
@@ -320,4 +320,4 @@ private:
     QString line_;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

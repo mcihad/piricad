@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — geodesy: coordinate transformation.
+// PiriCAD — geodesy: coordinate transformation.
 //
 // PROJ does the mathematics. What this wrapper exists for is the ONE thing PROJ
 // will not decide for you, and getting it wrong produces a coordinate that is
@@ -7,7 +7,7 @@
 //
 //   **Axis order.** EPSG:5254 (TUREF/TM30) declares AXIS["northing (X)"] first
 //   and AXIS["easting (Y)"] second — Turkish surveying convention, the inverse of
-//   the mathematical one. KentOSCad stores easting in Point2::x. Every transform is
+//   the mathematical one. PiriCAD stores easting in Point2::x. Every transform is
 //   therefore created through proj_normalize_for_visualization(), which forces
 //   (easting, northing) regardless of what the CRS declares.
 //
@@ -15,15 +15,15 @@
 // below one nanometre, which is nine orders under the millimetre we store.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <memory>
 #include <span>
 #include <string>
 #include <vector>
 
-namespace kentos::domain::geodesy {
+namespace piricad::domain::geodesy {
 
 /// A prepared transformation between two coordinate reference systems.
 ///
@@ -92,4 +92,4 @@ private:
     bool target_angular_{false};
 };
 
-} // namespace kentos::domain::geodesy
+} // namespace piricad::domain::geodesy

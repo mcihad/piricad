@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the layout designer.
+// PiriCAD — app: the layout designer.
 //
 // WHAT IT IS. A drafting table for one sheet: a tool strip along the top, the
 // pages and the items on the left, the paper in the middle — zoomed and panned
@@ -24,10 +24,10 @@
 // is ONE batch (`Controller::runLines`), so it is one Ctrl+Z (ui.md R40).
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/core/layout.hpp"
+#include "piricad/core/layout.hpp"
 
 #include <QImage>
 #include <QString>
@@ -47,7 +47,7 @@ class QScrollArea;
 class QStyledItemDelegate;
 class QVBoxLayout;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -64,7 +64,7 @@ using ItemFrame = std::pair<QString, core::PaperRect>;
 class LayoutCanvas : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty canvas; `setSheet` gives it something to draw.
@@ -148,7 +148,7 @@ signals:
     void itemMoved(const QString& id, core::PaperRect frame);
 
     /// Several boxes changed in one gesture: a group drag or a nudge.
-    void itemsMoved(const QVector<kentos::app::ItemFrame>& frames);
+    void itemsMoved(const QVector<piricad::app::ItemFrame>& frames);
 
     /// A box was drawn with a tool. An EMPTY frame is a click: the window
     /// places the kind's own default size about `frame.x`, `frame.y`.
@@ -339,7 +339,7 @@ public:
     /// here (`Ana pencereden al`). Empty hides the button.
     void setViewWindow(core::Box2 window);
 
-    /// Drives the window the way a hand would, for `KENTOS_LAYOUT_PROBE`: picks
+    /// Drives the window the way a hand would, for `PIRICAD_LAYOUT_PROBE`: picks
     /// an item, drags it, retypes a property and reports what the document ended
     /// up with.
     QStringList probeDrive();
@@ -560,4 +560,4 @@ private:
     bool filling_{false};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

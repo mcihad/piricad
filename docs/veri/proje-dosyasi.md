@@ -1,8 +1,8 @@
-# KentOSCad Proje Dosyası (`.pcad`)
+# PiriCAD Proje Dosyası (`.pcad`)
 
 Çizimini kaydeden, arşivleyen ya da başka bir kuruma teslim eden kullanıcı için;
 bu sayfayı bitirdiğinizde `.pcad` dosyasının içinde ne olduğunu, neyin
-korunduğunu, neyin korunmadığını ve bir dosya bozulduğunda KentOSCad'in ne
+korunduğunu, neyin korunmadığını ve bir dosya bozulduğunda PiriCAD'in ne
 söyleyeceğini bileceksiniz.
 
 Kaydetme ve açma komutları için: [AÇ](../komutlar/open.md),
@@ -10,7 +10,7 @@ Kaydetme ve açma komutları için: [AÇ](../komutlar/open.md),
 
 ## Ne işe yarar
 
-`.pcad`, KentOSCad'in kendi proje dosyasıdır. Çizimin tamamını **kayıpsız** taşır:
+`.pcad`, PiriCAD'in kendi proje dosyasıdır. Çizimin tamamını **kayıpsız** taşır:
 geometri, katmanlar, stiller, nesne kimlikleri ve proje ayarları. DXF ya da
 GeoPackage'a dışa aktarmak her zaman bir şeyler kaybeder — proje dosyası
 kaybetmez. Çalışmanızı `.pcad` olarak saklayın, dış biçimleri teslim için
@@ -62,19 +62,19 @@ Ayrıntı: [Koordinat sistemleri](koordinat-sistemleri.md).
 
 ## Sürümler ve uyumluluk
 
-Dosyanın ilk 32 baytı üç şey söyler: bunun bir KentOSCad dosyası olduğu, hangi
+Dosyanın ilk 32 baytı üç şey söyler: bunun bir PiriCAD dosyası olduğu, hangi
 sürümün yazdığı ve **okumak için en az hangi sürümün gerektiği**.
 
-| Durum | KentOSCad ne yapar |
+| Durum | PiriCAD ne yapar |
 |---|---|
 | Dosya bu sürümün yazdığından eski | Açar. Eski dosyalar açılmaya devam eder |
 | Dosyada tanımadığı bir veri bloğu var | Açar, bloğu atlar ve size kaç blok atladığını söyler |
 | Dosya daha yeni bir okuyucu istiyor | **Açmaz.** Gereken sürümü söyler ve yarım yüklemez |
 
 Üçüncü satır önemlidir: yarım açılmış bir proje, açılmamış bir projeden çok daha
-tehlikelidir. KentOSCad ya tamamını okur ya da hiçbirini.
+tehlikelidir. PiriCAD ya tamamını okur ya da hiçbirini.
 
-Yeni bir özellik geldiğinde dosyaya yeni bir blok eklenir; eski KentOSCad o bloğu
+Yeni bir özellik geldiğinde dosyaya yeni bir blok eklenir; eski PiriCAD o bloğu
 atlayarak dosyayı açmaya devam eder. Gereken okuyucu sürümü ancak var olan bir
 bloğun **anlamı** değişirse yükselir: bugüne kadar bir kez oldu, açılı kılavuz
 çizgisi taşıyan çizimler için (en az 2. sürüm okuyucu). Kılavuzu olmayan ya da
@@ -103,7 +103,7 @@ kaybolmuş olan XDATA geri gelmez. 3. biçim dosyalar önceki sürümlerde de a�
 4. biçim bir [dış referans](../komutlar/xref.md) taşıyan
 çizimde dosya, dış referansın adını, yolunu (proje dosyasının klasörüne göre) ve
 boşaltılıp boşaltılmadığını tutar; **nesnelerini tutmaz** — onlar her açılışta kendi
-dosyalarından okunur. Böyle bir dosya en az 4. sürüm okuyucu ister: eski bir KentOSCad
+dosyalarından okunur. Böyle bir dosya en az 4. sürüm okuyucu ister: eski bir PiriCAD
 onu açmaz ve bunu söyler. Dış referansı olmayan bir çizimin dosyası önceki sürümlerde de
 açılır.
 
@@ -111,7 +111,7 @@ açılır.
 
 Bu sürüm dosyayı **5. biçimle** yazar. [BLOKKIRP](../komutlar/block_clip.md) ile kırpılmış
 bir blok referansı ya da dış referans, sınırının köşelerini kendi kaydında taşır; böyle bir
-referansı olan dosya en az 5. sürüm okuyucu ister, eski bir KentOSCad onu açmaz ve bunu
+referansı olan dosya en az 5. sürüm okuyucu ister, eski bir PiriCAD onu açmaz ve bunu
 söyler. Kırpılmış referansı olmayan bir çizimin dosyası önceki sürümlerde de açılır —
 kırpmayı kaldırıp kaydettiğinizde dosya yeniden eski okuyuculara açılır.
 
@@ -124,11 +124,11 @@ bırakılmaz.
 
 ## Dosya bozulursa
 
-KentOSCad dosyadaki hiçbir sayıya güvenmez: her uzunluk, her konum ve her sayaç
+PiriCAD dosyadaki hiçbir sayıya güvenmez: her uzunluk, her konum ve her sayaç
 dosyanın gerçek boyutuna karşı denetlenir. Bozuk bir dosya **çökme değil, hata
 mesajı** üretir, ve mesaj neyin bozuk olduğunu söyler.
 
-KentOSCad bozuk bir dosyayı **kendiliğinden onarmaz**. Onarım ayrı ve açıkça
+PiriCAD bozuk bir dosyayı **kendiliğinden onarmaz**. Onarım ayrı ve açıkça
 istenen bir iştir; sessizce "düzeltilmiş" bir kadastro dosyası, bozuk olduğu
 bilinen bir dosyadan kötüdür.
 
@@ -136,8 +136,8 @@ bilinen bir dosyadan kötüdür.
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `io.not_a_project: '...' bir KentOSCad proje dosyası değil.` | Dosya `.pcad` değil ya da başka bir program yazmış | Dış biçimler için [İÇEAKTAR](../komutlar/import.md) kullanın |
-| `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor` | Dosyayı daha yeni bir KentOSCad yazmış | Mesajdaki sürüme yükseltin |
+| `io.not_a_project: '...' bir PiriCAD proje dosyası değil.` | Dosya `.pcad` değil ya da başka bir program yazmış | Dış biçimler için [İÇEAKTAR](../komutlar/import.md) kullanın |
+| `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor` | Dosyayı daha yeni bir PiriCAD yazmış | Mesajdaki sürüme yükseltin |
 | `io.truncated: '...' N bayt olduğunu bildiriyor, ama M bayt.` | Dosya yarım kopyalanmış ya da kesilmiş | Yedeğinden geri alın; kopyalamayı yeniden yapın |
 | `io.bad_block: ... 8 baytlık hizaya oturmuyor. Dosya bozuk.` | Dosyanın iç yerleşimi bozulmuş | Yedeğinden geri alın |
 | `io.inconsistent: ... sütunu N öğe taşıyor, belge kaydı M bildiriyor.` | Dosyanın iki yeri birbirini tutmuyor | Yedeğinden geri alın |
@@ -149,7 +149,7 @@ bilinen bir dosyadan kötüdür.
 
 Uyarılar hata değildir ve dosya yine açılır; transkriptte `uyarı:` ile başlarlar.
 "Dosyada bu sürümün tanımadığı N veri bloğu var" uyarısı, dosyayı **daha yeni** bir
-KentOSCad yazdığında görülür. Önceki sürümler bu uyarıyı blok tanımı, kılavuz, çıktı
+PiriCAD yazdığında görülür. Önceki sürümler bu uyarıyı blok tanımı, kılavuz, çıktı
 yerleşimi ya da öznitelik sütunu taşıyan her dosyada yanlışlıkla veriyordu; bu sürüm
 okuduğu hiçbir bloğu tanınmayan diye bildirmez.
 
@@ -195,5 +195,5 @@ Tanımadığınız bir blok kimliğini uzunluğuna bakarak atlayın; biçim bunu
 kasten böyle tasarlandı.
 
 Blok kimliklerinin tam listesi ve kayıt yerleşimleri
-`src/io/include/kentos_cad/io/format.hpp` dosyasındadır ve bu sayfayla aynı anda
+`src/io/include/piricad/io/format.hpp` dosyasındadır ve bu sayfayla aynı anda
 güncellenir.

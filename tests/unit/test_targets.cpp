@@ -6,27 +6,27 @@
 // when every object in it is one the tool takes. The ribbon greys by this
 // (`.claude/ui.md` R54); the reference says it; the class a parcel with an arc
 // edge is in must not change because its kind did (model.md R9b).
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/catalog.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/targets.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/ai/catalog.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/targets.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/processing/registry.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -162,7 +162,7 @@ TEST_CASE("HEDEF: BİRLEŞTİR yaylı kenarlı alanı yayını koruyarak birleş
     // unioned by the geometry kernel, and the arc comes back with the centre
     // and radius it had — where the union over vertex rings would have handed
     // it back as its chord, which is why this used to refuse.
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ALAN 0,0 20,0 20,10 0,10");
     r.run("ALAN 20,0 40,0 40,10 20,10");
@@ -204,7 +204,7 @@ TEST_CASE("HEDEF: BİRLEŞTİR yaylı kenarlı alanı yayını koruyarak birleş
 
 TEST_CASE("HEDEF: BİRLEŞTİR yaylı çizgiyi uç uca ekliyor, yayı yay kalıyor")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ÇOKLUÇİZGİ 0,0 20,0 20,10");
     r.run("YUVARLA nesne=1 nokta=20,0 yaricap=2");
@@ -228,7 +228,7 @@ TEST_CASE("HEDEF: BİRLEŞTİR yaylı çizgiyi uç uca ekliyor, yayı yay kalıy
     const core::Point2 a = path->pieces.front().from;
     const core::Point2 b = path->pieces.back().to;
     const bool ends      = (a == core::Point2{20'000, 20'000} && b == core::Point2{0, 0}) ||
-                      (a == core::Point2{0, 0} && b == core::Point2{20'000, 20'000});
+                           (a == core::Point2{0, 0} && b == core::Point2{20'000, 20'000});
     CHECK(ends);
 }
 

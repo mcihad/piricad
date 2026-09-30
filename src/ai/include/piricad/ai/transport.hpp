@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the outbound seam, and the reason there is no socket in here.
+// PiriCAD — ai: the outbound seam, and the reason there is no socket in here.
 //
 // WHY AN INTERFACE AND NOT A NETWORK CLIENT. The same two reasons `Dispatcher`
 // gives for the inbound direction, in the other direction.
@@ -23,7 +23,7 @@
 // `redact.hpp` exists: what the transport logs must pass through it first.
 #pragma once
 
-#include "kentos_cad/ai/provider.hpp"
+#include "piricad/ai/provider.hpp"
 
 #include <memory>
 #include <string>
@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// One HTTP request, as data — so a test can assert on it and an audit record can
 /// quote it (after `redact_request`).
@@ -116,4 +116,4 @@ public:
                                                StreamSink& sink) = 0;
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

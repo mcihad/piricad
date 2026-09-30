@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: slot and key identity.
+// PiriCAD — core: slot and key identity.
 //
 // .claude/model.md R1–R5. Two id kinds exist and confusing them is the single
 // most expensive mistake available in this codebase, so they are different types
@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <limits>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Which KIND of thing an entity is — `KindSpec::id`, and the reason two entities
 /// holding the same two vertices can be a line and a circle.
@@ -164,4 +164,4 @@ private:
     std::uint64_t next_layer_{1};
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

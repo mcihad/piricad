@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# kentos_ai — the AI layer, and it is SANS-IO.
+# piricad_ai — the AI layer, and it is SANS-IO.
 #
 # Everything here is computation over data: the tool catalogue projected from the
 # command registry, the two generated documents, and (as they land) the MCP
@@ -16,7 +16,7 @@
 include(sources_mcp.cmake)
 include(sources_chat.cmake)
 
-add_library(kentos_ai STATIC
+add_library(piricad_ai STATIC
     src/catalog.cpp
     src/policy.cpp
     src/policy_path.cpp
@@ -30,14 +30,14 @@ add_library(kentos_ai STATIC
     src/commands/read_tools.cpp
     src/commands/ai_commands.cpp
     src/commands/provider_command.cpp
-    ${KENTOS_AI_MCP_SOURCES}
-    ${KENTOS_AI_CHAT_SOURCES}
+    ${PIRICAD_AI_MCP_SOURCES}
+    ${PIRICAD_AI_CHAT_SOURCES}
 )
 
-target_include_directories(kentos_ai PUBLIC include)
+target_include_directories(piricad_ai PUBLIC include)
 
 # UP TO command AND core ONLY (Article 3.2: `ai -> command`). Not io, not render,
 # not script, not domain, not app.
-target_link_libraries(kentos_ai PUBLIC kentos_command PRIVATE kentos_flags)
+target_link_libraries(piricad_ai PUBLIC piricad_command PRIVATE piricad_flags)
 
-add_library(KentOSCad::ai ALIAS kentos_ai)
+add_library(PiriCAD::ai ALIAS piricad_ai)

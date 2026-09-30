@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/io/print_profiles.hpp"
+#include "piricad/io/print_profiles.hpp"
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <array>
@@ -10,7 +10,7 @@
 #include <iterator>
 #include <sstream>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 constexpr std::int64_t kMinDpi = 72;
@@ -281,4 +281,4 @@ core::Status PrintProfiles::save(const std::string& path) const
     return core::ok();
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — surface: contours from a levelling survey.
+// PiriCAD — surface: contours from a levelling survey.
 //
 // WHAT A SURVEYOR ACTUALLY WANTS. A crew levels a site and comes back with a few
 // hundred numbered points, each with a Z. The deliverable is not the triangulation
@@ -19,13 +19,13 @@
 // predicates, which 5.4 already requires.
 #pragma once
 
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
 
 #include <vector>
 
-namespace kentos::domain::surface {
+namespace piricad::domain::surface {
 
 /// One levelled point: where it is and how high it is.
 struct Level
@@ -91,4 +91,4 @@ struct Earthwork
 core::Result<Earthwork> earthwork(const std::vector<Level>& points, core::Mm level,
                                   const command::JobControl& control = {});
 
-} // namespace kentos::domain::surface
+} // namespace piricad::domain::surface

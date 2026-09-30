@@ -22,11 +22,11 @@
 //   NO CALL ID. Ollama matches a result back to its call by NAME, so the id below
 //   is minted locally and deterministically from the call's position; a test and
 //   a replay must produce the same one twice.
-#include "kentos_cad/ai/chat.hpp"
-#include "kentos_cad/ai/dialect.hpp"
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/chat.hpp"
+#include "piricad/ai/dialect.hpp"
+#include "piricad/ai/redact.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -308,4 +308,4 @@ const DialectCodec& ollama_native_codec()
     return kOllama;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/ai_transport.hpp"
+#include "piricad/app/ai_transport.hpp"
 
-#include "kentos_cad/ai/redact.hpp"
-#include "kentos_cad/app/secret_resolver.hpp"
+#include "piricad/ai/redact.hpp"
+#include "piricad/app/secret_resolver.hpp"
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -12,7 +12,7 @@
 
 #include <utility>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// What a cancelled turn is called on the sink. One string, because a cancel that
@@ -256,4 +256,4 @@ std::shared_ptr<ai::Cancellation> AiTransport::send(const ai::EndpointPermit& pe
     return handle;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/precision.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/precision.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/wire.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/wire.hpp"
 
 #include "kind_common.hpp"
 
@@ -13,7 +13,7 @@
 #include <cmath>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::uint16_t kFlagConstantWidth = 1u << 0;
@@ -402,7 +402,7 @@ bool arc_polyline_outline(const RingGeometry& geom, std::uint32_t slot, std::vec
     return v.closed;
 }
 
-KENTOS_KIND(arc_polyline)
+PIRICAD_KIND(arc_polyline)
 {
     KindSpec s{};
     s.id         = kArcPolylineKind;
@@ -424,4 +424,4 @@ KENTOS_KIND(arc_polyline)
     return s;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

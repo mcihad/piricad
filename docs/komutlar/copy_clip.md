@@ -28,7 +28,7 @@ gösterdiğiniz yere gelir. Şeritteki **Giriş ▸ Pano ▸ Taban Noktasıyla K
 ## Pano nerede
 
 `dosya=` verilmezse kullanıcı başına ortak bir pano dosyası kullanılır
-(`kentoscad-pano.pcad`, geçici dizinde). Bu, bu programın **iki penceresinin**
+(`piricad-pano.pcad`, geçici dizinde). Bu, bu programın **iki penceresinin**
 aynı panoyu paylaşması ve bir çökmenin yükü kaybetmek yerine yerinde bırakması
 demektir.
 

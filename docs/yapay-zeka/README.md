@@ -1,6 +1,6 @@
 # Yapay Zeka ve Ajanlar
 
-KentOSCad'i bir yapay zeka modeline ya da bir ajana kullandırmak isteyen harita
+PiriCAD'i bir yapay zeka modeline ya da bir ajana kullandırmak isteyen harita
 mühendisi ve şehir plancısı için; bu bölümü bitirdiğinizde bir ajanın neyi kendi başına
 yapabildiğini, neyi yapamadığını, kararın nerede verildiğini ve bunun neden böyle
 olduğunu bileceksiniz.
@@ -16,7 +16,7 @@ olduğunu bileceksiniz.
 
 **Yapay zeka geometri üretmez; komut üretir.**
 
-KentOSCad'de programın durumunu değiştiren her şey bir komuttur ve arayüz, komut satırı,
+PiriCAD'de programın durumunu değiştiren her şey bir komuttur ve arayüz, komut satırı,
 betik ile yapay zeka aynı komut veri yolunun **eşit istemcileridir**. Yapay zekanın
 ayrıcalıklı bir yolu, hızlı bir geçidi ya da kendine ait bir "çiz" işlevi yoktur. Bir
 model bir çizgi çizmek istiyorsa, sizin de yazabileceğiniz `ÇİZGİ` komutunu üretir.
@@ -97,7 +97,7 @@ Bağlanan bir istemci, programın kullanım kılavuzunu **programın kendisinden
 
 İkisi de **üretilmiş dosyalardır**: kaynakları komut kataloğudur ve `make reference` ile
 yeniden üretilirler. Elle düzenlenmezler; düzenlenirse CI kapısı fark eder. Bir ajan
-aynı metni sunucudan `kentoscad://llms.txt` kaynağı ya da `llms_txt` aracı olarak da
+aynı metni sunucudan `piricad://llms.txt` kaynağı ya da `llms_txt` aracı olarak da
 alabilir.
 
 Neden ayrı bir kılavuz: bir JSON şeması "bu bir tam sayıdır" der ama "bu tam sayı

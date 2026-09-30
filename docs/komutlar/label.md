@@ -117,7 +117,7 @@ ad bir sütun değil, geometriden ölçülen bir sayıdır: `{#alan}` (m², iki 
 `{#cevre}` ve `{#uzunluk}` (m, iki ondalık). Başka bir `{#...}` olduğu gibi kalır.
 
 CLAUDE.md 5.11 bu projeye tam olarak bir dilbilgisi tanıyor
-(`kentos_cad/command/parser.hpp`) ve bunların herhangi biri ikinci bir dilbilgisi
+(`piricad/command/parser.hpp`) ve bunların herhangi biri ikinci bir dilbilgisi
 olurdu. Bunu genişletmek bir yama değil, bir anayasa değişikliğidir.
 
 Tanımlı olmayan bir sütun adı **olduğu gibi kalır**, süslü parantezleriyle

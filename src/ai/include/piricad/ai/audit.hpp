@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the record that answers "why is this line here?"
+// PiriCAD — ai: the record that answers "why is this line here?"
 //
-// WHAT IT IS FOR. kentoscad.md §5.2.3 and .claude/ai.md R6: every AI turn leaves
+// WHAT IT IS FOR. piricad.md §5.2.3 and .claude/ai.md R6: every AI turn leaves
 // a record carrying the prompt, the model's identity and version, the provider
 // and endpoint, the command sequence, the user's decision and a UTC timestamp —
 // for approvals AND for rejections. R7 goes one step further: every entity an
@@ -22,17 +22,17 @@
 // to anything that came off the wire before it can reach this file.
 #pragma once
 
-#include "kentos_cad/ai/plan.hpp"
+#include "piricad/ai/plan.hpp"
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// One decision, with the six fields R6 demands.
 struct AuditRecord
@@ -138,4 +138,4 @@ private:
     std::uint64_t written_{0};
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

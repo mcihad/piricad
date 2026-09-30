@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io (internal): a Netcad map sheet (`pafta`) drawn as the sheet it is.
+// PiriCAD — io (internal): a Netcad map sheet (`pafta`) drawn as the sheet it is.
 //
 // A MapSheet record holds two points and the sheet's name, and nothing else. The
 // reference plugin reads the two points as opposite corners of an axis-aligned
@@ -35,7 +35,7 @@
 #include <optional>
 #include <string>
 
-namespace kentos::io::ncz {
+namespace piricad::io::ncz {
 
 /// Map sheet frames in the projection one file declares.
 class SheetFrames
@@ -67,4 +67,4 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-} // namespace kentos::io::ncz
+} // namespace piricad::io::ncz

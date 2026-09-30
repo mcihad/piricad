@@ -8,16 +8,16 @@
 //
 // Qt-free by construction — `ai::build_catalog` is a pure function over a
 // registry (.claude/test.md: a protocol is proved by a function, not a socket).
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/arguments.hpp"
-#include "kentos_cad/ai/catalog.hpp"
-#include "kentos_cad/ai/llmstxt.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/ai/arguments.hpp"
+#include "piricad/ai/catalog.hpp"
+#include "piricad/ai/llmstxt.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/processing/registry.hpp"
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -216,7 +216,7 @@ TEST_CASE("Her araç dört annotation taşır ve onay kuralını söyler")
 
         const core::Json* meta = entry.find("_meta");
         REQUIRE(meta != nullptr);
-        const core::Json* approval = meta->find("cad.kentos/approval");
+        const core::Json* approval = meta->find("cad.piricad/approval");
         REQUIRE(approval != nullptr);
         CHECK_EQ(approval->as_string(), std::string(tool.mutates ? "policy" : "none"));
     }

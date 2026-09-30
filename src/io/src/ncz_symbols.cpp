@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io (internal): the drawing of a Netcad 8 SmartObject.
+// PiriCAD — io (internal): the drawing of a Netcad 8 SmartObject.
 //
 // See ncz_symbols.hpp for what each symbol looks like and where that was
 // learned. The proportions below are fractions of the symbol's radius, measured
@@ -7,8 +7,8 @@
 // metres at an object size of one.
 #include "ncz_symbols.hpp"
 
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -18,7 +18,7 @@
 #include <string_view>
 #include <system_error>
 
-namespace kentos::io::ncz {
+namespace piricad::io::ncz {
 namespace {
 
 /// The symbol's radius at an object size of one, in metres.
@@ -519,4 +519,4 @@ std::string rtf_text(std::string_view rtf)
     return out.substr(lead);
 }
 
-} // namespace kentos::io::ncz
+} // namespace piricad::io::ncz

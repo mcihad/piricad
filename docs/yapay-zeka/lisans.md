@@ -1,6 +1,6 @@
 # Lisans ve Ağ Yükümlülüğü
 
-KentOSCad'i değiştirip dağıtan, kurum içinde derleyen ya da MCP sunucusunu başkalarının
+PiriCAD'i değiştirip dağıtan, kurum içinde derleyen ya da MCP sunucusunu başkalarının
 erişebileceği bir makinede çalıştıran herkes için; bu sayfayı bitirdiğinizde programın
 iki lisansının hangi dosyaları kapsadığını, ağ yükümlülüğünün ne zaman doğduğunu ve
 bunun sizi bağlayıp bağlamadığını bileceksiniz.
@@ -10,7 +10,7 @@ Bu sayfa bir hukuk görüşü değil, deponun kendi durumunun tarifidir. Bağlay
 
 ## İki lisans, bilinçli bir ayrım
 
-KentOSCad'in tamamı **GPL-3.0-or-later** ile lisanslıdır — bir istisna dışında.
+PiriCAD'in tamamı **GPL-3.0-or-later** ile lisanslıdır — bir istisna dışında.
 
 Program, yapay zeka ajanlarının çalışan bir oturuma bağlanabilmesi için bir **MCP
 sunucusu gömer**. Bir sunucu bileşeni, projenin anayasasında **AGPL-3.0-or-later** ile
@@ -18,10 +18,10 @@ lisanslanır (`CLAUDE.md` Article 2.1), ve o sunucu **olan** dosyalar da öyle
 lisanslanmıştır:
 
 ```text
-src/ai/include/kentos_cad/ai/jsonrpc.hpp    src/ai/src/jsonrpc.cpp
-src/ai/include/kentos_cad/ai/endpoint.hpp   src/ai/src/endpoint.cpp
-src/ai/include/kentos_cad/ai/mcp.hpp        src/ai/src/mcp.cpp
-src/app/include/kentos_cad/app/mcp_service.hpp
+src/ai/include/piricad/ai/jsonrpc.hpp    src/ai/src/jsonrpc.cpp
+src/ai/include/piricad/ai/endpoint.hpp   src/ai/src/endpoint.cpp
+src/ai/include/piricad/ai/mcp.hpp        src/ai/src/mcp.cpp
+src/app/include/piricad/app/mcp_service.hpp
 src/app/src/mcp_service.cpp
 tests/unit/test_ai_mcp.cpp
 ```
@@ -68,7 +68,7 @@ soketi ve pencereleri uygulama tarafı sağlar.
 ## Model sağlayıcılarının lisansı ayrı bir konudur
 
 Bir model sağlayıcısına bağlanmak, o sağlayıcının **kendi koşullarına** tabidir ve
-KentOSCad'in lisansı onları değiştirmez. Kurum verisinin bir bulut sağlayıcısına
+PiriCAD'in lisansı onları değiştirmez. Kurum verisinin bir bulut sağlayıcısına
 gitmesi çoğu zaman bir lisans sorusu değil, bir **veri koruma** sorusudur; programın
 buna verdiği cevap yereldir ve hassasiyet işareti bunu zorlar
 ([Model sağlayıcıları](modeller.md)).

@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — generates the command reference from the command registry.
+// PiriCAD — generates the command reference from the command registry.
 //
 // CLAUDE.md 5.10 forbids a second, hand-maintained command list. The user manual
 // still needs a complete reference table, so it is GENERATED from `Registry`
 // here and written into /docs. Editing the output by hand is a defect; the gate
 // scripts/ci-gate-docs.sh regenerates it and fails on any difference.
-#include "kentos_cad/ai/catalog.hpp"
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/ai/llmstxt.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/python_doc.hpp"
+#include "piricad/ai/catalog.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/ai/llmstxt.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/python_doc.hpp"
 
 #include <cstdio>
 #include <exception>
@@ -24,7 +24,7 @@
 
 namespace {
 
-using namespace kentos::command;
+using namespace piricad::command;
 
 std::string slug(const std::string& id)
 {
@@ -73,7 +73,7 @@ std::string build(const Registry& reg)
     std::string out;
 
     out += "<!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->\n";
-    out += "<!-- Kaynak: kentos::command::Registry.  Yeniden üret: make reference -->\n";
+    out += "<!-- Kaynak: piricad::command::Registry.  Yeniden üret: make reference -->\n";
     out += "<!-- Bir komutun burada görünmesi için tek yapılması gereken onu kaydetmektir; -->\n";
     out += "<!-- projede elle tutulan ikinci bir komut listesi yoktur (CLAUDE.md 5.10). -->\n\n";
 
@@ -155,9 +155,9 @@ std::string build(const Registry& reg)
     // (.claude/ai.md P7), so that one is gone and this is the survivor.
     out += "## AI araç kataloğu\n\n";
     out += "AI'ın görebildiği komutlar `Flags::AiAccessible` bayrağından üretilir.\n";
-    out += "Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).\n\n";
+    out += "Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).\n\n";
     out += "```json\n";
-    out += kentos::ai::build_catalog(reg).to_tools_list().dump_pretty(2);
+    out += piricad::ai::build_catalog(reg).to_tools_list().dump_pretty(2);
     out += "\n```\n";
 
     return out;
@@ -167,9 +167,9 @@ std::string build(const Registry& reg)
 
 /// The page slug of a kind: its Turkish name, folded to ASCII and lowered.
 /// `ÇOKLUÇİZGİ` becomes `coklucizgi`, which is the file under docs/nesneler/.
-std::string kind_slug(const kentos::core::KindSpec& spec)
+std::string kind_slug(const piricad::core::KindSpec& spec)
 {
-    std::string folded = kentos::core::turkish_fold_key(spec.names[0]);
+    std::string folded = piricad::core::turkish_fold_key(spec.names[0]);
     for (char& c : folded)
         if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
     return folded;
@@ -182,7 +182,7 @@ std::string build_kinds()
 {
     std::string out;
     out += "<!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->\n";
-    out += "<!-- Kaynak: kentos::core::builtin_kinds().  Yeniden üret: make reference -->\n";
+    out += "<!-- Kaynak: piricad::core::builtin_kinds().  Yeniden üret: make reference -->\n";
     out += "<!-- Bir nesne türünün burada görünmesi için tek yapılması gereken onu kaydetmektir; "
            "-->\n";
     out += "<!-- projede elle tutulan ikinci bir tür listesi yoktur (model.md R25). -->\n\n";
@@ -194,7 +194,7 @@ std::string build_kinds()
 
     out += "| Tür | Kimlik | Adlar | Açıklama |\n";
     out += "|---|---|---|---|\n";
-    for (const kentos::core::KindSpec& spec : kentos::core::builtin_kinds().all()) {
+    for (const piricad::core::KindSpec& spec : piricad::core::builtin_kinds().all()) {
         out += "| [`" + std::string(spec.stable_id) + "`](" + kind_slug(spec) + ".md) | " +
                std::to_string(spec.id) + " | ";
         bool first = true;
@@ -216,7 +216,7 @@ int run(int argc, char** argv)
 {
     if (argc < 2) {
         (void)std::fprintf(stderr,
-                           "kullanım: kentos_docgen <komut-referans.md> [<nesne-referans.md>] "
+                           "kullanım: piricad_docgen <komut-referans.md> [<nesne-referans.md>] "
                            "[<llms.txt>] [<llms-full.txt>]\n");
         return 2;
     }
@@ -232,16 +232,16 @@ int run(int argc, char** argv)
     // (Article 3.2).
     Registry reg;
     register_builtin_commands(reg);
-    kentos::processing::register_processing_commands(reg);
-    kentos::domain::geodesy::register_geodesy_commands(reg);
-    kentos::domain::cadastre::register_cadastre_commands(reg);
-    kentos::domain::surface::register_surface_commands(reg);
+    piricad::processing::register_processing_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+    piricad::domain::cadastre::register_cadastre_commands(reg);
+    piricad::domain::surface::register_surface_commands(reg);
     // AND THE AI LAYER'S OWN COMMANDS: the five read tools plus ÖNERİ and
     // MCPSUNUCU. They are commands like any others (Article 1.2), so they belong
     // in the reference a user reads and in the catalogue an agent reads — and
     // `llms.txt` would be describing a surface that lacked its own read tools
     // without them.
-    kentos::ai::register_ai_commands(reg);
+    piricad::ai::register_ai_commands(reg);
 
     std::ofstream out(argv[1], std::ios::out | std::ios::binary);
     if (!out) {
@@ -260,7 +260,7 @@ int run(int argc, char** argv)
         }
         kinds << build_kinds();
         (void)std::fprintf(stdout, "docgen: %zu nesne türü -> %s\n",
-                           kentos::core::builtin_kinds().size(), argv[2]);
+                           piricad::core::builtin_kinds().size(), argv[2]);
     }
 
     // THE TWO DOCUMENTS A MODEL READS. Generated from the same registry as the
@@ -273,7 +273,7 @@ int run(int argc, char** argv)
             (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[3]);
             return 1;
         }
-        llms << kentos::ai::llms_txt(reg);
+        llms << piricad::ai::llms_txt(reg);
         (void)std::fprintf(stdout, "docgen: llms.txt -> %s\n", argv[3]);
     }
     if (argc >= 5) {
@@ -282,7 +282,7 @@ int run(int argc, char** argv)
             (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[4]);
             return 1;
         }
-        full << kentos::ai::llms_full_txt(reg);
+        full << piricad::ai::llms_full_txt(reg);
         (void)std::fprintf(stdout, "docgen: llms-full.txt -> %s\n", argv[4]);
     }
 
@@ -293,7 +293,7 @@ int run(int argc, char** argv)
     // half of it).
     //
     // Written in EVERY configuration, including one built without Python.
-    // `kentos_script` compiles `python_doc.cpp` unconditionally, so the freshness
+    // `piricad_script` compiles `python_doc.cpp` unconditionally, so the freshness
     // check does not depend on a build option — a gate that passes on one machine
     // and fails on another has not checked anything.
     if (argc >= 6) {
@@ -302,7 +302,7 @@ int run(int argc, char** argv)
             (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[5]);
             return 1;
         }
-        py << kentos::script::python_reference(reg);
+        py << piricad::script::python_reference(reg);
         (void)std::fprintf(stdout, "docgen: Python referansı -> %s\n", argv[5]);
     }
     if (argc >= 7) {
@@ -311,7 +311,7 @@ int run(int argc, char** argv)
             (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[6]);
             return 1;
         }
-        stub << kentos::script::python_stub(reg);
+        stub << piricad::script::python_stub(reg);
         (void)std::fprintf(stdout, "docgen: Python tip taslağı -> %s\n", argv[6]);
     }
     return 0;

@@ -1,4 +1,4 @@
-# KentOSCad — Çizim, yakalama ve CAD araçları planı
+# PiriCAD — Çizim, yakalama ve CAD araçları planı
 
 Plan tarihi: **21 Eylül 2026**. Ana referans: yerel `main`, **`d294809`**.
 Bu belge mevcut çizim/yakalama/düzenleme yüzeyinin incelemesini, Netcad ve AutoCAD araç setleriyle
@@ -22,7 +22,7 @@ kullanıcısının refleks olarak aradığı inşa/düzenleme fiillerini, hepsin
 
 | Ne | Nerede | Kullan |
 |---|---|---|
-| Yakalama motoru, 18 mod (UÇ ORTA MERKEZ AĞIRLIK KESİŞİM DİK YAKIN DÜĞÜM UZANTI PARALEL UZATILMIŞ-KESİŞİM KILAVUZ EKLEME + ızgara/kutupsal/dik/adım/normal) | `src/core/include/kentos_cad/core/snap.hpp`, `core/src/snap.cpp` | Yeni bit = enum + `snap_mode_id/label` + `SnapObjectMask`; idempotens şart |
+| Yakalama motoru, 18 mod (UÇ ORTA MERKEZ AĞIRLIK KESİŞİM DİK YAKIN DÜĞÜM UZANTI PARALEL UZATILMIŞ-KESİŞİM KILAVUZ EKLEME + ızgara/kutupsal/dik/adım/normal) | `src/core/include/piricad/core/snap.hpp`, `core/src/snap.cpp` | Yeni bit = enum + `snap_mode_id/label` + `SnapObjectMask`; idempotens şart |
 | Yardımcıların uygulandığı tek yol | `command/aids.hpp`, `context.hpp` `InputAwaiter<Point2>::await_resume` | Nokta fonksiyonları buradan ÖNCE, ayrıştırma anında çözülür |
 | Tek gramer: mutlak, `@dx,dy`, `@d<a`, ifadeler, `anahtar=değer(iç içe)` | `src/command/src/parser.cpp` (`Token::Kind::Absolute/Relative/Polar/KeyValue`, `ExprParser`; `Polar` çözümü `parser.cpp:821-824`) | Fonksiyon sözdizimi `KeyValue`'nun iç içe mekanizmasını genişletir |
 | Geometri yardımcıları | `core/pick.hpp`: `line_intersection`, `closest_point_on_line`, `segment_intersection`, `ring_contains` | Elle yeniden yazma yok |
@@ -58,7 +58,7 @@ kullanıcısının refleks olarak aradığı inşa/düzenleme fiillerini, hepsin
    komutu çağırır, komut jesti taklit etmez. Gerekli bir bileşen setin dışındaysa `widgets.cpp`
    /`fields.cpp`'ye girer ve 6.13'e göre canlı standarda, kapı envanterine ve
    `docs/baslangic/bilesenler.md`'ye aynı değişiklikte eklenir.
-7. **Bitti** = command.md DoD + Article 6: `KENTOS_COMMAND` tek beyan · `make reference` + dört üretilmiş
+7. **Bitti** = command.md DoD + Article 6: `PIRICAD_COMMAND` tek beyan · `make reference` + dört üretilmiş
    dosya aynı commit'te (6.14) · `docs/komutlar/<slug>.md` sekiz bölüm + `docs/README.md` satırı (6.12) ·
    `test_proof.cpp` eşitlik kanıtı + günlük replay (6.4) · iptal testi (boş undo deltası) · `Value`
    gidiş-dönüş · gramer değiştiyse fuzz korpusu (6.7) · CHANGELOG · `make check` yeşil (clang-tidy ağaç
@@ -71,7 +71,7 @@ kullanıcısının refleks olarak aradığı inşa/düzenleme fiillerini, hepsin
 
 **Neden bir paket:** kullanıcı araç kutusundaki araçları fareyle çalıştıramadı — *"toolbox
 üzerindeki araçlar da mouse ile çalıştıramadım mesela blok blokekle, ölçüm araçları ve diğerleri
-çok kötü ve çalışmıyorlar"*. Ölçüldü, tahmin edilmedi (`KENTOS_TOOL_PROBE`): **97 komutun 33'ü
+çok kötü ve çalışmıyorlar"*. Ölçüldü, tahmin edilmedi (`PIRICAD_TOOL_PROBE`): **97 komutun 33'ü
 yalnız adını yazarak başlatılabiliyordu.** Fare kullanıcısının o komutları hiç yoktu. Bu 5.15'in
 aynadaki hâli ve 1.2'nin (GUI eşit istemci) ihlali; ayrıca elle tutulan bir menü tablosu 5.10'un
 yasakladığı ikinci komut listesidir.
@@ -472,7 +472,7 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
       taşıyor (bir elin yapıştırmaktan anladığı şey), `yerinde=evet` her koordinatı olduğu gibi
       bırakıyor (aynı sistemdeki iki çizim arasında kopyalamanın istediği şey). Tek undo adımı.
 - [x] **Pano nerede:** `dosya=` verilmezse kullanıcı başına ortak bir dosya
-      (`kentoscad-pano.pcad`), yani bu programın iki penceresi aynı panoyu paylaşıyor ve bir çökme
+      (`piricad-pano.pcad`), yani bu programın iki penceresi aynı panoyu paylaşıyor ve bir çökme
       yükü kaybetmek yerine yerinde bırakıyor. `dosya=` betiğin ve başsız çalıştırmanın yolu ve
       AYNI yol (Article 1.2).
 - [x] **`main_window.cpp` yer tutucuları gerçek oldu:** üçü de komutu çalıştırıyor, `Ctrl+X`/`C`/`V`
@@ -484,13 +484,13 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
       sebebiyle reddediliyor).
 - [x] **İŞLETİM SİSTEMİ PANOSU (`QClipboard`) bağlandı.** Kanca `io::FileService` üzerinde iki
       `std::function`: `on_clipboard_written` (yazılan dosyayı app okur ve
-      `application/x-kentoscad-project` türüyle sisteme sunar) ve `on_clipboard_wanted` (yapıştırma
+      `application/x-piricad-project` türüyle sisteme sunar) ve `on_clipboard_wanted` (yapıştırma
       öncesi app, sistemde bizim türümüzden bir yük varsa onu okuyucunun bakacağı yola yazar).
       `/src/io` Qt bağlamamaya devam ediyor (Article 3.2); Qt tarafı `Controller`'da, yani pencere
       katmanında. **Sistemde tutulan yük kazanır**: başka bir pencerede kopyalayan kullanıcı ONU
       bekler, bu sürecin temp dizininde bıraktığı eski yükü değil. Kullanıcı bir dosya adı verdiyse
       panoya dokunulmaz — istemediği bir yan etki olurdu.
-      `KENTOS_CLIP_PROBE` + `os-clipboard` ctest'i uçtan uca kanıtlıyor: kopyaladıktan sonra
+      `PIRICAD_CLIP_PROBE` + `os-clipboard` ctest'i uçtan uca kanıtlıyor: kopyaladıktan sonra
       **geçici dosya siliniyor**, yani geri gelen yük yalnız sistem panosundan gelebilir.
 
 ## P7 — Sorgu ve araç çubuğu artıkları
@@ -575,7 +575,7 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   noktadan daire çizemiyordu. Komut bir düğmede olduğu için `probeReach` memnundu, yöntem değildi —
   5.15'in bir düzey aşağıdaki hâli. Her yöntem artık ailesinde kendi satırı: `MainWindow::methodTool`
   **tam satırı** `kToolCommand`'a koyuyor, yani kartın sağ kolonu `YAY yontem=3n` yazıyor ve kart
-  aynı zamanda komut satırını öğretiyor. Aile üyesi 26'dan **37'ye** çıktı, `KENTOS_FLYOUT_PROBE`
+  aynı zamanda komut satırını öğretiyor. Aile üyesi 26'dan **37'ye** çıktı, `PIRICAD_FLYOUT_PROBE`
   hepsini fareyle basıyor: 0 kusur. `arayuz.md`'de aile tablosu ve kendi bölümü.
 
 Plan belgesinin her satırı TODOS'a karşı okundu; TODOS'a hiç girmemiş üç madde çıktı.
@@ -678,7 +678,7 @@ Plan belgesinin her satırı TODOS'a karşı okundu; TODOS'a hiç girmemiş üç
 ## Gerçek kullanım raporu — Mac, gerçek fare (2026-09-22)
 
 Kullanıcının kendi Mac'inde derleyip çizerken bildirdiği altı şikâyet. Her biri önce
-`KENTOS_REALMOUSE_PROBE` ile gerçek pencerede kırmızı üretildi, sonra düzeltildi; probe artık
+`PIRICAD_REALMOUSE_PROBE` ile gerçek pencerede kırmızı üretildi, sonra düzeltildi; probe artık
 yedi bölümle bunları sürekli tutuyor.
 
 - [x] **"Yeni çizim öğeleri seçilince menüde seçili kalmıyor / seçim bırakılıyor."** Kök neden
@@ -703,7 +703,7 @@ yedi bölümle bunları sürekli tutuyor.
 - [x] **Kart probe'u** (`tool-flyouts` ctest) "çalıştı"yı üç hâlle tanımlıyor: bekleyen oturum,
   yanan düğme ya da dökümde cevap. `BLOKEKLE`'nin reddi üçüncüsü.
 - [x] **İŞLETİM SİSTEMİ DÜZEYİNDE TIKLAMA YAPILDI ve altı şikâyetin hepsi gerçek fare/klavye
-  olaylarıyla doğrulandı.** Kullanıcı erişilebilirlik iznini verdi; `KENTOS_OSCLICK_PROBE` ile
+  olaylarıyla doğrulandı.** Kullanıcı erişilebilirlik iznini verdi; `PIRICAD_OSCLICK_PROBE` ile
   pencere açık tutuluyor, her düğmenin ekran konumu yazılıyor, sonra dışarıdan gerçek olaylar
   sürülüyor ve probe ne olduğunu satır satır bildiriyor (tetiklenen eylem, oturum, istem, nesne
   sayısı, döküm satırı, açılan kart). Gerçek olaylarla alınan kayıt:
@@ -729,7 +729,7 @@ yedi bölümle bunları sürekli tutuyor.
   "işaretli" demesi yanan düğmenin sesli karşılığıdır. Aynı partide klavye yolu da geldi: kolon
   tek Tab durağı, ok tuşları gezer, Boşluk/Enter çalıştırır, → aile kartını açar. Gerçek macOS
   basışıyla doğrulandı (`tetiklendi METİN` → `oturum core.text bekliyor=1`), kapısı
-  `tool-accessible` ctest'i (`KENTOS_ACCESS_PROBE`), eski davranışta 19 iddia kırmızı.
+  `tool-accessible` ctest'i (`PIRICAD_ACCESS_PROBE`), eski davranışta 19 iddia kırmızı.
 - [ ] **Aile kartının kendisi erişilebilirlik ağacında yok.** `ToolFlyout` elle çizilir, yani
   satırları birer widget değil; ekran okuyucu kartı açabilir (→ ya da köşe işareti) ama
   içindeki on üyeyi okuyamaz. `ui.md` R22'nin "her elle çizilen widget `QAccessibleInterface`
@@ -748,7 +748,7 @@ yedi bölümle bunları sürekli tutuyor.
 
 Kullanıcının ikinci raporu: "döndürülmüş dikdörtgen çiziyor ama kılavuz yok; düzgün çokgende hiçbir
 aksiyon yok; dıştan/kenardan aynı; kenar sayısını girecek yer yok; polygon araçlarını komple elden
-geçir." Hepsi `KENTOS_OSCLICK_PROBE` + `scripts/os-tikla.sh` ile gerçek olaylarla doğrulandı.
+geçir." Hepsi `PIRICAD_OSCLICK_PROBE` + `scripts/os-tikla.sh` ile gerçek olaylarla doğrulandı.
 
 - [x] **Ortak geometri `core/polygon.hpp`'ye çıktı**: `regular_polygon_corners`,
   `polygon_circumradius`/`polygon_measurement` (birbirinin tersi), `polygon_half_step_turns`,
@@ -790,7 +790,7 @@ Rapor: "çizim yaptıktan sonra varsayılan araç seçiliyor tekrardan." İki ay
 - [x] **Tekrar, ailenin ilk üyesini kuruyordu.** `onInteractiveFinished` tam satırı komut adı diye
   çözüyor, bulamıyor, döngü devam edip düz üyeyi buluyordu. Artık önce `armedLine()` ile tam satır,
   sonra ilk sözcük; `armedLine_` sinyalden sonra temizleniyor. `rearm()` ortak gövde oldu.
-- [x] **Probe 8. bölüm** (`KENTOS_REALMOUSE_PROBE`): Enter'dan sonra oturum yeniden soruyor, yanan
+- [x] **Probe 8. bölüm** (`PIRICAD_REALMOUSE_PROBE`): Enter'dan sonra oturum yeniden soruyor, yanan
   düğme hâlâ ÇİZGİ; yöntem aracıyla çizimden sonra yanan düğme hâlâ `ÇOKGEN yontem=dis`. Offscreen
   ve gerçek pencerede 0 kusur.
 - [ ] **Tekrar her seferinde kenar sayısını yeniden soruyor.** Şimdi araç elde kaldığı için görünür

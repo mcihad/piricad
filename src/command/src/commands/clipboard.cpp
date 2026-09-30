@@ -17,15 +17,15 @@
 // `AÇ` and `KAYDET` do, and `io::FileService` owns the bytes. The OS clipboard is
 // the window layer's job because Qt is; `dosya=` is the road a script and a
 // headless run take, and it is the same road (Article 1.2).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The keys the caller means: the named ones, else the live selection, else
@@ -208,7 +208,7 @@ Task<void> run_paste(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(copy_clip)
+PIRICAD_COMMAND(copy_clip)
 {
     return CommandSpec{
         .id       = "core.copy_clip",
@@ -241,7 +241,7 @@ KENTOS_COMMAND(copy_clip)
     };
 }
 
-KENTOS_COMMAND(cut)
+PIRICAD_COMMAND(cut)
 {
     return CommandSpec{
         .id       = "core.cut",
@@ -271,7 +271,7 @@ KENTOS_COMMAND(cut)
     };
 }
 
-KENTOS_COMMAND(paste)
+PIRICAD_COMMAND(paste)
 {
     return CommandSpec{
         .id       = "core.paste",
@@ -298,4 +298,4 @@ KENTOS_COMMAND(paste)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

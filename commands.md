@@ -1,10 +1,10 @@
 # Şerit araçları
 
-Bu liste KentOSCad şeridindeki araçları, şeritte göründükleri ad ve sırayla, sekme sekme ve sekme içinde grup grup sıralar.
+Bu liste PiriCAD şeridindeki araçları, şeritte göründükleri ad ve sırayla, sekme sekme ve sekme içinde grup grup sıralar.
 
-## KentOS CAD menüsü
+## PiriCAD CAD menüsü
 
-Sekme satırının en solundaki KentOS CAD düğmesi, dosyayla yapılan işleri toplayan uygulama menüsünü açar; sağ bölme varsayılan olarak son kullanılan belgeleri, Yazdır, Çıktı Yerleşimleri ve Diğer Komutlar satırlarının üstündeyken onların seçeneklerini gösterir.
+Sekme satırının en solundaki PiriCAD CAD düğmesi, dosyayla yapılan işleri toplayan uygulama menüsünü açar; sağ bölme varsayılan olarak son kullanılan belgeleri, Yazdır, Çıktı Yerleşimleri ve Diğer Komutlar satırlarının üstündeyken onların seçeneklerini gösterir.
 
 ### Komut arama
 
@@ -13,7 +13,7 @@ Sekme satırının en solundaki KentOS CAD düğmesi, dosyayla yapılan işleri 
 ### Sol sütun
 
 - **Yeni** -> Boş bir çizim açar; ekrandaki çizimin yerine geçer, kaydedilmemiş değişiklik varsa önce kaydetmek isteyip istemediğinizi sorar (Ctrl+N)
-- **Aç…** -> Bir KentOSCad proje dosyasını seçtirir, açar ve çizimin tamamına yakınlaşır (Ctrl+O)
+- **Aç…** -> Bir PiriCAD proje dosyasını seçtirir, açar ve çizimin tamamına yakınlaşır (Ctrl+O)
 - **Kaydet** -> Çizimi bağlı olduğu proje dosyasına yazar; çizim henüz bir dosyaya bağlı değilse dosya adı sorar (Ctrl+S)
 - **Farklı Kaydet…** -> Çizimi yeni bir proje dosyasına yazar ve çizimi o dosyaya bağlar (Ctrl+Shift+S)
 - **İçe Aktar…** -> Dış bir veri dosyasını (DXF, DWG, Shapefile, GeoPackage, Netcad NCZ) mevcut çizime ekler; tek işlemdir, bir öğe okunamazsa hepsi geri alınır
@@ -44,7 +44,7 @@ Sekme satırının en solundaki KentOS CAD düğmesi, dosyayla yapılan işleri 
 - **Komut Listesi** -> Bütün komutları, adlarını ve kısaltmalarını gösteren komut listesi sayfasını açar (F1)
 - **Hakkında** -> Sürüm, lisans ve kaynak kodu bilgisini gösterir
 - **Seçenekler…** -> Bildirilen her ayarı kapsamına göre gösteren pencereyi açar; her değişiklik bir komut olarak işlenir (Ctrl+,)
-- **Çıkış** -> KentOS CAD'i kapatır; kaydedilmemiş değişiklik varsa sorar
+- **Çıkış** -> PiriCAD CAD'i kapatır; kaydedilmemiş değişiklik varsa sorar
 
 ## Hızlı erişim
 
@@ -53,7 +53,7 @@ Sekme satırında, uygulama düğmesinin yanında durur ve her sekmeden erişili
 ### Hızlı erişim satırı
 
 - **Yeni** -> Boş bir çizim açar (Ctrl+N)
-- **Aç…** -> Bir KentOSCad proje dosyasını açar (Ctrl+O)
+- **Aç…** -> Bir PiriCAD proje dosyasını açar (Ctrl+O)
 - **Kaydet** -> Çizimi bağlı olduğu proje dosyasına yazar (Ctrl+S)
 - **Yazdır** -> Bölünmüş düğme: yüzü yazdırma çerçevesini açar, ikinci basış önizlemeye geçer (Ctrl+P); oku çizimin çıktı yerleşimlerini listeler
   - **Yeni Çıktı Yerleşimi…** -> Başlık, harita çerçevesi, ölçek çubuğu ve kuzey oku ile gelen yeni bir çıktı yerleşimi açar

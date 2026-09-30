@@ -29,17 +29,17 @@
 // `core`'s (`depth_rectangle_corners`, `box_corners`), for the reason
 // `edge_rectangle_corners` is: one answer for the command and for anything that
 // previews it.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/polygon.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/polygon.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -49,7 +49,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// A length as a surveyor reads one: metres, three decimals, the Turkish comma.
@@ -382,7 +382,7 @@ Task<void> run(Context& ctx)
     // from it exactly as they do for a line. Dik mod does NOT: locked to an axis
     // the opposite corner makes a rectangle with no width or no height, so the
     // aids leave it out of every rectangle's corner (`command::aids_for`).
-    // Nothing here is a private input path (kentoscad.md §2.4).
+    // Nothing here is a private input path (piricad.md §2.4).
     auto second = co_await ctx.point(
         "noktalar", by_edge ? "Aynı kenarın öteki köşesi" : "Karşı köşe",
         PointOptions{.rubber_band   = true,
@@ -481,7 +481,7 @@ std::string sheet_paper_list()
 
 } // namespace
 
-KENTOS_COMMAND(rectangle)
+PIRICAD_COMMAND(rectangle)
 {
     return CommandSpec{
         .id       = "core.rectangle",
@@ -536,12 +536,12 @@ KENTOS_COMMAND(rectangle)
                     .en("angle"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Karşılıklı iki köşeden, bir kenar ve yükseklikten ya da derinlikten, ya da "
                    "bir köşe ve ölçüden (en, boy, kâğıt boyu) dört köşeli kapalı bir alan çizer.",
-        .run = &run,
+        .run     = &run,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

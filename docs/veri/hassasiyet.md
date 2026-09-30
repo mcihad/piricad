@@ -1,12 +1,12 @@
 # Sayısal Doğruluk ve Toleranslar
 
-Harita mühendisi ve planlamacı için; bu sayfayı bitirdiğinizde KentOSCad'de hangi
+Harita mühendisi ve planlamacı için; bu sayfayı bitirdiğinizde PiriCAD'de hangi
 sayının neye karar verdiğini, hangisini değiştirebileceğinizi ve bir sonucun ne kadar
 doğru olduğunu bileceksiniz.
 
 ## Beş ayrı büyüklük
 
-Bir CAD/CBS programında "tolerans" sözcüğü beş ayrı şeyi anlatır. KentOSCad bunları
+Bir CAD/CBS programında "tolerans" sözcüğü beş ayrı şeyi anlatır. PiriCAD bunları
 birbirine karıştırmaz: her birinin tek bir yeri, tek bir birimi ve tek bir görevi vardır.
 
 | Büyüklük | Neye karar verir | Değer | Nereden değişir |
@@ -55,11 +55,11 @@ adımda bir kez milimetreye yuvarlar; noktalar yerlerine en çok 1 mm yakın dö
 
 ## Milimetre altı: karar
 
-KentOSCad **milimetre** çözünürlükte kalır; saklama biçimi değişmez ve bir biçim göçü
+PiriCAD **milimetre** çözünürlükte kalır; saklama biçimi değişmez ve bir biçim göçü
 gerekmez. Karar bir örnek çizim üzerinde verildi: milimetre biriminde çizilmiş, saklama
 çözünürlüğünden ince bir detay (`tests/fuzz/tohum/dxf/29-milimetre-alti.dxf`).
 
-| Çizimdeki | KentOSCad'de |
+| Çizimdeki | PiriCAD'de |
 |---|---|
 | 12,345 mm'lik çizgi | 12 mm |
 | Çizgiden sonra 0,3 mm'lik boşluk | 1 mm |
@@ -69,7 +69,7 @@ gerekmez. Karar bir örnek çizim üzerinde verildi: milimetre biriminde çizilm
 İçe aktarma bunu her seferinde söyler:
 
 ```text
-not: 4 değer milimetrenin altında ayrıntı taşıyordu; KentOSCad milimetre çözünürlükte
+not: 4 değer milimetrenin altında ayrıntı taşıyordu; PiriCAD milimetre çözünürlükte
 saklar ve bunları en çok 0,50 mm kaydırarak yuvarladı. Milimetreden küçük bir ayrıntı
 bu çözünürlükte kaybolur.
 ```
@@ -77,7 +77,7 @@ bu çözünürlükte kaybolur.
 Kayıp yalnız milimetreden küçük **ayrıntılarda** ortaya çıkar: bir makine parçası ya da
 milimetre biriminde çizilmiş bir mimari detay. Metre biriminde, milimetresine kadar
 çizilmiş bir harita ya da kadastro paftası hiçbir şey kaybetmez ve bu not görünmez.
-KentOSCad'in işi haritacılık, kadastro, imar ve arazi işidir; bu işlerde milimetre
+PiriCAD'in işi haritacılık, kadastro, imar ve arazi işidir; bu işlerde milimetre
 yeterlidir.
 
 Daha ince bir çözünürlük (mikrometre) bugünkü aralığı taşıyabilirdi; ama kaydedilmiş her

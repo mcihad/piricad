@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/io/diagnostics.hpp"
+#include "piricad/io/diagnostics.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <utility>
 
-namespace kentos::io {
+namespace piricad::io {
 
 const char* severity_prefix(Severity level) noexcept
 {
@@ -179,14 +179,13 @@ std::vector<Diagnostic> ImportDiagnostics::lines() const
         std::string w(worst);
         for (char& ch : w)
             if (ch == '.') ch = ',';
-        out.push_back(
-            Diagnostic{Severity::Info,
-                       std::to_string(sub_mm_rounded) +
-                           " değer milimetrenin altında ayrıntı taşıyordu; KentOSCad milimetre "
-                           "çözünürlükte saklar ve bunları en çok " +
-                           w +
-                           " mm kaydırarak yuvarladı. Milimetreden küçük bir ayrıntı bu "
-                           "çözünürlükte kaybolur."});
+        out.push_back(Diagnostic{
+            Severity::Info, std::to_string(sub_mm_rounded) +
+                                " değer milimetrenin altında ayrıntı taşıyordu; PiriCAD milimetre "
+                                "çözünürlükte saklar ve bunları en çok " +
+                                w +
+                                " mm kaydırarak yuvarladı. Milimetreden küçük bir ayrıntı bu "
+                                "çözünürlükte kaybolur."});
     }
 
     if (paper_space_skipped != 0)
@@ -240,4 +239,4 @@ std::string ImportDiagnostics::transcript() const
     return out;
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

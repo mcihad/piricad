@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the only door from this module to the running document.
+// PiriCAD — ai: the only door from this module to the running document.
 //
 // WHY AN INTERFACE AND NOT A `Bus&`. Two reasons, and both are structural.
 //
@@ -22,18 +22,18 @@
 // commands that change nothing.
 #pragma once
 
-#include "kentos_cad/ai/plan.hpp"
-#include "kentos_cad/ai/policy.hpp"
-#include "kentos_cad/ai/tool.hpp"
+#include "piricad/ai/plan.hpp"
+#include "piricad/ai/policy.hpp"
+#include "piricad/ai/tool.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/result.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// What a command answered: its prose, its structured report, and whether it
 /// changed anything.
@@ -156,4 +156,4 @@ public:
     virtual const Catalog& catalog() const = 0;
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

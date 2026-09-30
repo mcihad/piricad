@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/measure_text.hpp"
+#include "piricad/app/measure_text.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/entity_kind.hpp"
 
 #include <span>
 
 #include <QCoreApplication>
 
-namespace kentos::app::measure {
+namespace piricad::app::measure {
 namespace {
 
 /// `Q_DECLARE_TR_FUNCTIONS` is a CLASS macro — it emits `public:` — and these are
 /// free functions in a namespace. `QCoreApplication::translate` is the same
 /// mechanism `tr()` compiles down to and `lupdate` reads it the same way, so the
-/// strings still reach `kentos_tr.ts` (Article 6.9).
+/// strings still reach `piricad_tr.ts` (Article 6.9).
 QString tr(const char* text)
 {
-    return QCoreApplication::translate("kentos::app::measure", text);
+    return QCoreApplication::translate("piricad::app::measure", text);
 }
 
 } // namespace
@@ -133,4 +133,4 @@ QString sizeSummary(const core::Document& doc, core::EntityId entity)
     return {};
 }
 
-} // namespace kentos::app::measure
+} // namespace piricad::app::measure

@@ -23,32 +23,32 @@
 // is the angle at this corner — and its answer is written under the session's own
 // convention (TODOS-CAD P0-4), so what it prints and what `@mesafe<açı` reads are
 // one setting pair.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/construct.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/construct.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/hatch_link.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/lineage.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/hatch_link.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/lineage.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <cstdio>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// An area in square metres to two decimals — the precision a tapu carries.
@@ -543,7 +543,7 @@ Task<void> run_measure_angle(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(entity_info)
+PIRICAD_COMMAND(entity_info)
 {
     return CommandSpec{
         .id       = "core.entity_info",
@@ -551,18 +551,18 @@ KENTOS_COMMAND(entity_info)
         .title    = "Nesne Bilgisi",
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Bilgisi istenen nesneler"}
+                           "Bilgisi istenen nesneler"}
                          .en("objects")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly | Flags::NoEffect |
-                 Flags::AiAccessible,
-        .summary = "Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve "
-                   "özniteliklerini bildirir.",
-        .run     = &run_entity_info,
+                    Flags::AiAccessible,
+        .summary  = "Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve "
+                    "özniteliklerini bildirir.",
+        .run      = &run_entity_info,
     };
 }
 
-KENTOS_COMMAND(measure_angle)
+PIRICAD_COMMAND(measure_angle)
 {
     return CommandSpec{
         .id = "core.measure_angle",
@@ -578,13 +578,13 @@ KENTOS_COMMAND(measure_angle)
                 Param::point("birinci", "Birinci kolun üzerinde bir nokta").en("first"),
                 Param::point("ikinci", "İkinci kolun üzerinde bir nokta").en("second"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly | Flags::NoEffect |
-                 Flags::AiAccessible,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly | Flags::NoEffect |
+                   Flags::AiAccessible,
         .summary = "Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla "
                    "yazar.",
-        .run = &run_measure_angle,
+        .run     = &run_measure_angle,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

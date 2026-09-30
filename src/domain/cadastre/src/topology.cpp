@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/domain/cadastre/topology.hpp"
+#include "piricad/domain/cadastre/topology.hpp"
 
-#include "kentos_cad/core/cleanup.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/planar.hpp"
-#include "kentos_cad/core/spatial_index.hpp"
+#include "piricad/core/cleanup.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/planar.hpp"
+#include "piricad/core/spatial_index.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
 #include <algorithm>
 #include <array>
@@ -21,7 +21,7 @@
 #include <span>
 #include <string>
 
-namespace kentos::domain::cadastre {
+namespace piricad::domain::cadastre {
 namespace {
 
 /// Reads one entity's rings out as a polygon, or returns false when it has none
@@ -93,7 +93,7 @@ core::Result<std::vector<Defect>> check_topology(const core::Document& doc,
     constexpr std::size_t kPairStride = 256;
     const auto stopped                = [] {
         return core::err(core::ErrorCode::Cancelled,
-                                        "Topoloji denetimi durduruldu; sonuç verilmedi, çizim değişmedi.");
+                         "Topoloji denetimi durduruldu; sonuç verilmedi, çizim değişmedi.");
     };
 
     std::vector<Defect> found;
@@ -342,11 +342,11 @@ std::string describe(const core::Document& doc, const Defect& d)
     return "Bilinmeyen kusur.";
 }
 
-} // namespace kentos::domain::cadastre
+} // namespace piricad::domain::cadastre
 
 // ---------------------------------------------------------------- TOPOLOJİ ---
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// One kind of defect as the summary and the structured answer name it.
@@ -537,7 +537,7 @@ Task<void> run_topology(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(topology)
+PIRICAD_COMMAND(topology)
 {
     return CommandSpec{
         .id       = "core.topology",
@@ -545,14 +545,14 @@ KENTOS_COMMAND(topology)
         .title    = "Topoloji Denetimi",
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim"}
+                           "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim"}
                          .en("objects")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly | Flags::LongRunning,
-        .summary = "Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş "
-                   "nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.",
-        .run = &run_topology,
+        .summary  = "Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş "
+                    "nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.",
+        .run      = &run_topology,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

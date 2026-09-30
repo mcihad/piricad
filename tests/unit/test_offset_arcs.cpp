@@ -7,27 +7,27 @@
 // answers both: an arc polyline's parallel has concentric arcs, a round corner
 // is a true arc about the corner. The figures are closed forms: a quarter
 // circle of radius r cut from a corner square leaves r² − πr²/4.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/kernel.hpp"
-#include "kentos_cad/core/parallel.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/kernel.hpp"
+#include "piricad/core/parallel.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <cmath>
 #include <numbers>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::CurvePath;
 using core::PathPiece;
 using core::Point2;
@@ -95,7 +95,7 @@ constexpr double kPi = std::numbers::pi;
 
 TEST_CASE("OFSET YAY: yaylı parselin dış paraleli aynı merkezli yayla, alanı kapalı biçimden")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     rounded_parcel(r);
     r.said.clear();
@@ -130,7 +130,7 @@ TEST_CASE("OFSET YAY: yaylı parselin dış paraleli aynı merkezli yayla, alan�
 
 TEST_CASE("OFSET YAY: iç paralelde yay küçülüyor; yarıçaptan derine inince yay kalkıyor")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     rounded_parcel(r);
     r.run("OFSET nesneler=1 mesafe=1000 taraf=ic kose=KÖŞE");
@@ -152,7 +152,7 @@ TEST_CASE("OFSET YAY: iç paralelde yay küçülüyor; yarıçaptan derine ininc
 
 TEST_CASE("OFSET YAY: düz dikdörtgenin yuvarlak köşeli paraleli köşelerde gerçek yay")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ALAN 0,0 20,0 20,10 0,10");
     r.run("OFSET nesneler=1 mesafe=1000 taraf=dis kose=YUVARLAK");
@@ -178,7 +178,7 @@ TEST_CASE("OFSET YAY: düz dikdörtgenin yuvarlak köşeli paraleli köşelerde 
 
 TEST_CASE("OFSET YAY: açık L'nin dış yanı köşede yay, iç yanı keskin köşe")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ÇOKLUÇİZGİ 0,0 10,0 10,10"); // east, then north: the corner's outside is the right
     r.run("OFSET nesneler=1 mesafe=1000 taraf=sag kose=YUVARLAK");
@@ -203,7 +203,7 @@ TEST_CASE("OFSET YAY: açık L'nin dış yanı köşede yay, iç yanı keskin k�
 
 TEST_CASE("OFSET YAY: açık yaylı çizginin iki yanı aynı merkezli iki yay")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ÇOKLUÇİZGİ 0,0 20,0 20,10");
     r.run("YUVARLA nesne=1 nokta=20,0 yaricap=2"); // the bend turns left: centre (18, 2)
@@ -227,7 +227,7 @@ TEST_CASE("OFSET YAY: açık yaylı çizginin iki yanı aynı merkezli iki yay")
 
 TEST_CASE("OFSET YAY: önizleme sonucun kendisi — tuvalin çağırdığı paralel yazılanla aynı yol")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     rounded_parcel(r);
     auto shown = core::entity_parallel(r.doc, r.slot(1), 1'000, core::ParallelSide::Outside,
@@ -242,7 +242,7 @@ TEST_CASE("OFSET YAY: önizleme sonucun kendisi — tuvalin çağırdığı para
 
 TEST_CASE("OFSET YAY: arayüz, komut satırı ve betik aynı belge, aynı günlük")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     // THE HAND: the distance typed, the side shown with the cursor outside.
     Rig gui;
     rounded_parcel(gui);
@@ -292,7 +292,7 @@ TEST_CASE("OFSET YAY: arayüz, komut satırı ve betik aynı belge, aynı günl�
 
 TEST_CASE("OFSET YAY: yaylı çizginin pahlı paraleli köşede düz kiriş, kendi yayı yay")
 {
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     // A rectangle rounded at one corner and offset out with bevelled corners:
     // the three square corners are cut straight, the arc stays an arc.
     Rig r;
@@ -333,7 +333,7 @@ TEST_CASE("OFSET YAY: iki noktalı düz çizginin yuvarlak köşeli paraleli dü
     // ONE STRAIGHT EDGE DEFINES NO PLANE, and the kernel's planar offset was
     // refused on it: OFSET kose=YUVARLAK on a two-point line said "ofset
     // çizilemiyor" where the polygon road had always drawn it (TODOS O-4).
-    if (!core::kernel_available()) PENDING("KENTOS_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    if (!core::kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
     Rig r;
     r.run("ÇOKLUÇİZGİ 0,0 20,0");
     r.run("OFSET nesneler=1 mesafe=2000 taraf=sol kose=YUVARLAK");

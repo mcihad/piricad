@@ -8,20 +8,20 @@
 // buffer takes the arc as drawn, and the area editor, which moves straight
 // edges, says it passes the parcel over rather than carrying an arc's ends away
 // from its centre. The figures are closed forms: π · r / 2 for a quarter arc.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/processing/tool.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/processing/tool.hpp"
 
 #include <algorithm>
 #include <array>
@@ -29,8 +29,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

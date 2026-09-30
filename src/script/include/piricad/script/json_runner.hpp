@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — script: the Phase-0 script host.
+// PiriCAD — script: the Phase-0 script host.
 //
-// kentoscad.md §4 describes the eventual two-layer design: Lua (sol2) for the hot
+// piricad.md §4 describes the eventual two-layer design: Lua (sol2) for the hot
 // path and Python (pybind11) as an optional ecosystem module. Neither dependency
 // is present in Phase 0, so the shipped host is a JSON command-array runner.
 //
@@ -13,14 +13,14 @@
 //   * the script never receives a pointer into the document (§4.3)
 #pragma once
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/script/host.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/script/host.hpp"
 
 #include <string>
 #include <string_view>
 
-namespace kentos::script {
+namespace piricad::script {
 
 class JsonRunner
 {
@@ -57,4 +57,4 @@ private:
 /// reverse (Constitution Article 3).
 void install(command::Bus& bus, JsonRunner& runner);
 
-} // namespace kentos::script
+} // namespace piricad::script

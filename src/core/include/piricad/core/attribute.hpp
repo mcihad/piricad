@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: attribute columns.
+// PiriCAD — core: attribute columns.
 //
 // .claude/model.md R27–R29. The schema belongs to the COLLECTION, not to the
 // object: this is OGRFeatureDefn and Blender's CustomData, and it is never a
@@ -17,9 +17,9 @@
 // column, row, previous value — so a new attribute adds ZERO Op variants.
 #pragma once
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -29,7 +29,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Dense column index inside one AttrTable. Not persisted: the stable identity
 /// of an attribute is its `AttrSpec::id` string, which comes from /data.
@@ -479,4 +479,4 @@ private:
     std::size_t rows_{0};
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

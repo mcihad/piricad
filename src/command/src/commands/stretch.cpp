@@ -32,22 +32,22 @@
 // THE PREVIEW IS THE SAME CALL. The last prompt carries the window, and the
 // canvas draws every object it catches through `core::stretch_entity` at the
 // cursor's offset — so what the drag shows is what the click writes.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/grips.hpp"
-#include "kentos_cad/core/pick.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/grips.hpp"
+#include "piricad/core/pick.hpp"
 
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The box two corners make, whichever way round they were given.
@@ -213,7 +213,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(stretch)
+PIRICAD_COMMAND(stretch)
 {
     return CommandSpec{
         .id       = "core.stretch",
@@ -238,4 +238,4 @@ KENTOS_COMMAND(stretch)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

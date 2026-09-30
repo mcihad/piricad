@@ -4,7 +4,7 @@
 # clang-tidy over THE COMPILE DATABASE, not over every .cpp on disk.
 #
 # `find src -name '*.cpp' | xargs clang-tidy` analyses files the build never
-# compiled — `script/lua_runner.cpp` with `KENTOS_WITH_LUA=OFF`, every backend
+# compiled — `script/lua_runner.cpp` with `PIRICAD_WITH_LUA=OFF`, every backend
 # behind an option that is off — and clang-tidy then runs them with no flags at
 # all. The result is not a finding, it is a parse failure dressed as one:
 #     lua_runner.cpp:6:10: error: 'sol/sol.hpp' file not found
@@ -63,12 +63,12 @@ fi
 if [[ "${1:-}" == "--bir" ]]; then
     tidy="$(tidy_bul)" || { echo "tidy: clang-tidy bulunamadı" >&2; exit 2; }
     ekstra=()
-    [[ -n "${KENTOS_TIDY_SYSROOT:-}" ]] && ekstra+=("--extra-arg=-isysroot${KENTOS_TIDY_SYSROOT}")
+    [[ -n "${PIRICAD_TIDY_SYSROOT:-}" ]] && ekstra+=("--extra-arg=-isysroot${PIRICAD_TIDY_SYSROOT}")
     # clang-tidy answers nonzero for a finding it reported — including one this
     # filter then drops — so its status is discarded and awk's is the answer.
     set +e
-    "$tidy" -p "${KENTOS_TIDY_DB:?}" --quiet "${ekstra[@]}" "$2" 2>&1 |
-        awk -v src="${KENTOS_TIDY_SRC:?}/" '
+    "$tidy" -p "${PIRICAD_TIDY_DB:?}" --quiet "${ekstra[@]}" "$2" 2>&1 |
+        awk -v src="${PIRICAD_TIDY_SRC:?}/" '
             /^\/[^ :]*:[0-9]+:[0-9]+: (error|warning): / {
                 yol = $0
                 sub(/:[0-9]+:[0-9]+: .*/, "", yol)
@@ -140,7 +140,7 @@ echo "tidy: $("$tidy" --version 2>/dev/null | sed -n 's/.*LLVM version \(.*\)/LL
 # status is mapped rather than passed through. Each child is this same script in
 # `--bir` mode, so it filters its own output rather than several of them writing
 # interleaved diagnostics into one stream to be sorted out afterwards.
-export KENTOS_TIDY_DB="$yapi" KENTOS_TIDY_SYSROOT="$sysroot" KENTOS_TIDY_SRC="$kok/src"
+export PIRICAD_TIDY_DB="$yapi" PIRICAD_TIDY_SYSROOT="$sysroot" PIRICAD_TIDY_SRC="$kok/src"
 if printf '%s\0' "${dosyalar[@]}" |
         xargs -0 -n 1 -P "$is" "${BASH_SOURCE[0]}" --bir; then
     exit 0

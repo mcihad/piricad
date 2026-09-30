@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/crs.hpp"
+#include "piricad/core/crs.hpp"
 
-namespace kentos::core {
+namespace piricad::core {
 
 std::string crs_unit_problem(const Crs& crs)
 {
@@ -16,13 +16,12 @@ std::string crs_unit_problem(const Crs& crs)
     // a hundred metres; a foot read as a metre is a third too long.
     std::string said;
     if (crs.unit() == CrsUnit::Degree)
-        said = named +
-               " coğrafi bir koordinat sistemi: koordinatlarını derece olarak sayar. "
-               "KentOSCad çizim koordinatlarını metre olarak, milimetre çözünürlükte saklar; "
-               "bir dereceyi metre saymak her köşeyi yüz metrelik bir ızgaraya oturtur.";
+        said = named + " coğrafi bir koordinat sistemi: koordinatlarını derece olarak sayar. "
+                       "PiriCAD çizim koordinatlarını metre olarak, milimetre çözünürlükte saklar; "
+                       "bir dereceyi metre saymak her köşeyi yüz metrelik bir ızgaraya oturtur.";
     else
         said = named + " koordinatlarını " + unit +
-               " birimiyle sayar. KentOSCad çizim koordinatlarını metre olarak saklar; başka "
+               " birimiyle sayar. PiriCAD çizim koordinatlarını metre olarak saklar; başka "
                "bir birimdeki sayıyı metre saymak her uzunluğu ve her alanı yanlış ölçekler.";
 
     return said;
@@ -37,4 +36,4 @@ std::string crs_metric_hint()
            "(EPSG:5253–5259).";
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

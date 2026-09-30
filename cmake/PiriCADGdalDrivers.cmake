@@ -8,7 +8,7 @@
 #
 # GDAL ships well over a hundred vector drivers. Most of them are formats this
 # product has no business opening, several reach the network, and every one of
-# them is parser attack surface that /tests/fuzz does not cover. So KentOSCad never
+# them is parser attack surface that /tests/fuzz does not cover. So PiriCAD never
 # asks GDAL to guess: this list is handed to `GDALOpenEx` as `papszAllowedDrivers`
 # and to the file dialogs as the filter, from the same string, so the two can
 # never disagree.
@@ -28,7 +28,7 @@
 # value and the new driver silently does not appear — the import then fails with
 # `io.no_driver` and nothing points at the cache. After editing, run:
 #
-#     cmake -U KENTOS_GDAL_DRIVER_ALLOWLIST -S . -B build/dev
+#     cmake -U PIRICAD_GDAL_DRIVER_ALLOWLIST -S . -B build/dev
 #
 # ADDING A DRIVER is a reviewed change. Before adding one:
 #   1. it must have a libFuzzer harness and a seed corpus in /tests/fuzz;
@@ -43,7 +43,7 @@
 #
 # It is a MULTI-FILE format: `.shp` carries the geometry, `.shx` the index, `.dbf`
 # the attributes and `.prj` the coordinate system. All four travel together, and
-# `/docs/veri/dis-formatlar.md` says which of them KentOSCad requires.
+# `/docs/veri/dis-formatlar.md` says which of them PiriCAD requires.
 #
 # READ ONLY, and that is the FORMAT's limit rather than ours. A shapefile holds
 # exactly ONE geometry type: a drawing with parcels, boundaries, monuments and
@@ -67,11 +67,11 @@
 #         unvalidated PlanGML export is a file that fails on e-Plan upload.
 #   Anything with a network path  io.md P14. /vsicurl, /vsis3 and friends are
 #         refused in src/io/src/vector.cpp before GDAL sees the path.
-set(KENTOS_GDAL_DRIVER_ALLOWLIST
+set(PIRICAD_GDAL_DRIVER_ALLOWLIST
     "DXF:.dxf:rw:AutoCAD DXF çizim dosyası"
     "ESRI Shapefile:.shp:r:ESRI Shapefile"
     "GPKG:.gpkg:rw:OGC GeoPackage veri tabanı"
     CACHE STRING "Allow-listed OGR drivers (io.md P7). Editing this is a reviewed change.")
 
 # One string for the compile definition, because a C++ literal cannot be a list.
-string(JOIN "|" KENTOS_GDAL_DRIVERS_STRING ${KENTOS_GDAL_DRIVER_ALLOWLIST})
+string(JOIN "|" PIRICAD_GDAL_DRIVERS_STRING ${PIRICAD_GDAL_DRIVER_ALLOWLIST})

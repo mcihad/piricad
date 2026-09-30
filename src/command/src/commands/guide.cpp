@@ -18,21 +18,21 @@
 // what `@mesafe<açı` means and what a guide's direction means are one setting pair
 // (TODOS-CAD P0-4). A second word for "the angled kind" would have been a second
 // way to say one thing.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/guide.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/guide.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 std::string axis_name(core::GuideAxis a)
@@ -271,7 +271,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(guide)
+PIRICAD_COMMAND(guide)
 {
     return CommandSpec{
         .id       = "core.guide",
@@ -303,4 +303,4 @@ KENTOS_COMMAND(guide)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io (internal): the Netcad NCZ drawing format, parsed.
+// PiriCAD — io (internal): the Netcad NCZ drawing format, parsed.
 //
 // Copyright (C) 2026 Erdinç Örsan ÜNAL
 //     The NCZ parser this file ports: `ncz_pure.py` of his QGIS plugin
 //     "NCZ Reader", version 1.4.3,
 //     https://github.com/erdincunal/Jeomatik-NCZ-Reader — licensed GPL-2.0-or-later.
-// Copyright (C) 2026 KentOSCad contributors
+// Copyright (C) 2026 PiriCAD contributors
 //     The C++ port, 28 September 2026 (GPLv3 §5a: this is a modified version).
 //
 // This program is free software: you can redistribute it and/or modify it under
@@ -21,7 +21,7 @@
 // places this port differs on purpose.
 #include "ncz_format.hpp"
 
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -33,7 +33,7 @@
 #include <system_error>
 #include <unordered_set>
 
-namespace kentos::io::ncz {
+namespace piricad::io::ncz {
 namespace {
 
 constexpr std::uint8_t kLayerTable       = 6;
@@ -1796,4 +1796,4 @@ std::optional<std::vector<AttributeTable>> attribute_tables(std::span<const std:
     return out;
 }
 
-} // namespace kentos::io::ncz
+} // namespace piricad::io::ncz

@@ -1,5 +1,5 @@
 <!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->
-<!-- Kaynak: kentos::command::Registry.  Yeniden üret: make reference -->
+<!-- Kaynak: piricad::command::Registry.  Yeniden üret: make reference -->
 <!-- Bir komutun burada görünmesi için tek yapılması gereken onu kaydetmektir; -->
 <!-- projede elle tutulan ikinci bir komut listesi yoktur (CLAUDE.md 5.10). -->
 
@@ -110,9 +110,9 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.undo`](undo.md) | Geri Al | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
 | [`core.redo`](redo.md) | Yinele | `YİNELE`, `YINELE`, `REDO` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Geri alınan işlemi yineler. |
 | [`core.new`](new.md) | Yeni | `YENİ`, `YENI`, `NEW` | Dosya | geri alınmaz | betiklenebilir | Boş bir çizim açar; ekrandaki çizimin yerine geçer. |
-| [`core.open`](open.md) | Aç | `AÇ`, `AC`, `OPEN` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar. |
-| [`core.save`](save.md) | Kaydet | `KAYDET`, `SAVE`, `KYD` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder. |
-| [`core.saveas`](saveas.md) | Farklı Kaydet | `FARKLIKAYDET`, `SAVEAS`, `FKAYDET` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar. |
+| [`core.open`](open.md) | Aç | `AÇ`, `AC`, `OPEN` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar. |
+| [`core.save`](save.md) | Kaydet | `KAYDET`, `SAVE`, `KYD` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder. |
+| [`core.saveas`](saveas.md) | Farklı Kaydet | `FARKLIKAYDET`, `SAVEAS`, `FKAYDET` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar. |
 | [`core.import`](import.md) | İçe Aktar | `İÇEAKTAR`, `ICEAKTAR`, `IMPORT`, `IAKTAR` | Dosya | tek işlem | etkileşimli, betiklenebilir, uzun iş | Dış bir veri dosyasını çizime ekler. |
 | [`core.export`](export.md) | Dışa Aktar | `DIŞAAKTAR`, `DISAAKTAR`, `EXPORT`, `DAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur, uzun iş | Çizimi dış bir veri biçimine yazar. |
 | [`core.script`](script.md) | Betik Çalıştır | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
@@ -1710,17 +1710,17 @@ Ayrıntılı kullanım: [YENİ](new.md)
 
 ### `core.open` — AÇ (Aç)
 
-Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar.
+Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `dosya` | text | 1 | Açılacak KentOSCad proje dosyasının yolu (.pcad) |
+| `dosya` | text | 1 | Açılacak PiriCAD proje dosyasının yolu (.pcad) |
 
 Ayrıntılı kullanım: [AÇ](open.md)
 
 ### `core.save` — KAYDET (Kaydet)
 
-Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder.
+Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1730,7 +1730,7 @@ Ayrıntılı kullanım: [KAYDET](save.md)
 
 ### `core.saveas` — FARKLIKAYDET (Farklı Kaydet)
 
-Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.
+Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -2301,7 +2301,7 @@ sorunun yanıtıdır ya da bu programda başka bir komutun adıdır. Komut Ara
 ## AI araç kataloğu
 
 AI'ın görebildiği komutlar `Flags::AiAccessible` bayrağından üretilir.
-Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
+Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
 
 ```json
 [
@@ -2597,10 +2597,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.align",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.align",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "HİZALA",
         "HIZALA",
         "ALIGN",
@@ -2741,10 +2741,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.annulus",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.annulus",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "HALKA",
         "ANNULUS",
         "HLK"
@@ -3043,10 +3043,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.arc_draw",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.arc_draw",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "YAY",
         "ARC",
         "YY"
@@ -3139,10 +3139,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.area",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.area",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ALAN",
         "AREA",
         "AL"
@@ -3320,10 +3320,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.array",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.array",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "DİZİ",
         "DIZI",
         "ARRAY",
@@ -3369,10 +3369,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.attribute",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.attribute",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÖZNİTELİK",
         "OZNITELIK",
         "ATTRIBUTE",
@@ -3456,10 +3456,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.block",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.block",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BLOK",
         "BLOK",
         "BLOCK",
@@ -3567,10 +3567,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.block_clip",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.block_clip",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BLOKKIRP",
         "BLOKKIRP",
         "XCLIP",
@@ -3661,10 +3661,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.block_edit",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.block_edit",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BLOKDÜZENLE",
         "BLOKDUZENLE",
         "BEDIT",
@@ -3748,10 +3748,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.boundary",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.boundary",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "SINIR",
         "BOUNDARY",
         "SNR"
@@ -3871,10 +3871,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.break",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.break",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KIR",
         "BREAK",
         "KR"
@@ -3997,10 +3997,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.chamfer",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.chamfer",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "PAH",
         "CHAMFER",
         "PH"
@@ -4380,10 +4380,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.circle_draw",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.circle_draw",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "DAİRE",
         "DAIRE",
         "CIRCLE",
@@ -4430,10 +4430,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.cleanup",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.cleanup",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "TEMİZLE",
         "TEMIZLE",
         "OVERKILL",
@@ -4480,10 +4480,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.colour",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.colour",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "RENK",
         "COLOR",
         "COLOUR",
@@ -4522,10 +4522,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.combine",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.combine",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BİRLEŞTİR",
         "BIRLESTIR",
         "COMBINE",
@@ -4550,10 +4550,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.context",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.context",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "BAĞLAM",
         "BAGLAM",
         "CONTEXT",
@@ -4600,10 +4600,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.contour",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.contour",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "EŞYÜKSELTİ",
         "ESYUKSELTI",
         "CONTOUR",
@@ -4672,10 +4672,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.coordinate",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.coordinate",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KOORDİNAT",
         "KOORDINAT",
         "XYZSOR",
@@ -4798,10 +4798,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.copy",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.copy",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KOPYALA",
         "COPY",
         "KP"
@@ -4880,10 +4880,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": true
     },
     "_meta": {
-      "cad.kentos/commandId": "core.copy_clip",
-      "cad.kentos/category": "Dosya",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.copy_clip",
+      "cad.piricad/category": "Dosya",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "PANOYAKOPYALA",
         "PANOKOPYALA",
         "COPYCLIP",
@@ -4963,10 +4963,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.cut",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.cut",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KES",
         "CUT",
         "KS"
@@ -5014,10 +5014,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.dependency",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.dependency",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BAĞIMLILIK",
         "BAGIMLILIK",
         "DEPENDENCY",
@@ -5352,10 +5352,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.dimension",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.dimension",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÖLÇÜ",
         "OLCU",
         "DIMENSION",
@@ -5448,10 +5448,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.dimension_baseline",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.dimension_baseline",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BAZÖLÇÜ",
         "BAZOLCU",
         "DIMBASELINE",
@@ -5545,10 +5545,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.dimension_continue",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.dimension_continue",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ZİNCİRÖLÇÜ",
         "ZINCIROLCU",
         "DIMCONTINUE",
@@ -5714,10 +5714,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.dimension_edit",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.dimension_edit",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÖLÇÜDÜZENLE",
         "OLCUDUZENLE",
         "DIMEDIT",
@@ -5773,10 +5773,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.dimension_refresh",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.dimension_refresh",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÖLÇÜYENİLE",
         "OLCUYENILE",
         "DIMREFRESH",
@@ -5811,10 +5811,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.dimension_style",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.dimension_style",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "ÖLÇÜSTİLİ",
         "OLCUSTILI",
         "DIMSTYLE",
@@ -5876,10 +5876,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.divide",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.divide",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BÖLÜMLE",
         "BOLUMLE",
         "DIVIDE",
@@ -6009,10 +6009,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.double_line",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.double_line",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÇİFTÇİZGİ",
         "CIFTCIZGI",
         "DOUBLELINE",
@@ -6053,10 +6053,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.earthwork",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.earthwork",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "HACİM",
         "HACIM",
         "EARTHWORK",
@@ -6175,10 +6175,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.edge_kind",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.edge_kind",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KENARTÜRÜ",
         "KENARTURU",
         "EDGEKIND",
@@ -6248,10 +6248,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.edittext",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.edittext",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "YAZIDÜZENLE",
         "YAZIDUZENLE",
         "EDITTEXT",
@@ -6493,10 +6493,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.ellipse_draw",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.ellipse_draw",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ELİPS",
         "ELIPS",
         "ELLIPSE",
@@ -6527,10 +6527,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.entity_info",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.entity_info",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "NESNEBİLGİ",
         "NESNEBILGI",
         "OBJINFO",
@@ -6569,10 +6569,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.erase",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.erase",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "SİL",
         "SIL",
         "ERASE",
@@ -6611,10 +6611,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.explode",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.explode",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "PATLAT",
         "AYRIŞTIR",
         "AYRISTIR",
@@ -6767,10 +6767,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.extend",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.extend",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "UZAT",
         "EXTEND",
         "UZ"
@@ -6794,10 +6794,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.extent_check",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.extent_check",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "KAPSAMDENETİM",
         "KAPSAMDENETIM",
         "EXTENTCHECK",
@@ -6917,10 +6917,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.fillet",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.fillet",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "YUVARLA",
         "KÖŞEYUVARLAT",
         "KOSEYUVARLAT",
@@ -6986,10 +6986,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.find_replace",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.find_replace",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BULDEĞİŞTİR",
         "BULDEGISTIR",
         "FINDREPLACE",
@@ -7080,10 +7080,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.fit",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.fit",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "OTURT",
         "FIT",
         "GEOREF",
@@ -7175,10 +7175,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.fourth_corner",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.fourth_corner",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "DÖRDÜNCÜKÖŞE",
         "DORDUNCUKOSE",
         "FOURTHCORNER",
@@ -7280,10 +7280,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.guide",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.guide",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KILAVUZ",
         "GUIDE",
         "KLV"
@@ -7505,10 +7505,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.hatch",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.hatch",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "TARAMA",
         "TARAMA",
         "HATCH",
@@ -7627,10 +7627,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.hatch_edit",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.hatch_edit",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "TARAMADÜZENLE",
         "TARAMADUZENLE",
         "HATCHEDIT",
@@ -7798,10 +7798,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.insert",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.insert",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BLOKEKLE",
         "BLOKEKLE",
         "INSERT",
@@ -8142,10 +8142,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.intersect_point",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.intersect_point",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KESİŞİMNOKTA",
         "KESISIMNOKTA",
         "INTERSECTPT",
@@ -8185,10 +8185,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.job_template",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.job_template",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "İŞŞABLONU",
         "ISSABLONU",
         "JOBTEMPLATE",
@@ -8239,10 +8239,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.join",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.join",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "UÇUCA",
         "UCUCA",
         "JOIN",
@@ -8302,10 +8302,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.label",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.label",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ETİKET",
         "ETIKET",
         "LABEL",
@@ -8361,10 +8361,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.layer",
-      "cad.kentos/category": "Katman",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.layer",
+      "cad.piricad/category": "Katman",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KATMAN",
         "LAYER",
         "KAT"
@@ -8407,10 +8407,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.layer_visibility",
-      "cad.kentos/category": "Katman",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.layer_visibility",
+      "cad.piricad/category": "Katman",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KATMANGÖRÜNÜM",
         "KATMANGORUNUM",
         "LAYERVIEW",
@@ -8543,10 +8543,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": true
     },
     "_meta": {
-      "cad.kentos/commandId": "core.layout",
-      "cad.kentos/category": "Dosya",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.layout",
+      "cad.piricad/category": "Dosya",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÇIKTIYERLEŞİMİ",
         "CIKTIYERLESIMI",
         "LAYOUT",
@@ -8965,10 +8965,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": true
     },
     "_meta": {
-      "cad.kentos/commandId": "core.layout_item",
-      "cad.kentos/category": "Dosya",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.layout_item",
+      "cad.piricad/category": "Dosya",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÇIKTIÖĞE",
         "CIKTIOGE",
         "LAYOUTITEM",
@@ -9023,10 +9023,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": true
     },
     "_meta": {
-      "cad.kentos/commandId": "core.layout_template",
-      "cad.kentos/category": "Dosya",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.layout_template",
+      "cad.piricad/category": "Dosya",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÇIKTIŞABLON",
         "CIKTISABLON",
         "LAYOUTTEMPLATE",
@@ -9126,10 +9126,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.leader",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.leader",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "LİDER",
         "LIDER",
         "LEADER",
@@ -9188,10 +9188,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.lengthen",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.lengthen",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "UZUNLUK",
         "LENGTHEN",
         "UZN"
@@ -9277,10 +9277,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.line",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.line",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÇİZGİ",
         "CIZGI",
         "LINE",
@@ -9375,10 +9375,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.local_copy",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.local_copy",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "YERELKOPYA",
         "LOCALCOPY",
         "YK"
@@ -9454,10 +9454,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.match_style",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.match_style",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "STİLKOPYALA",
         "STILKOPYALA",
         "BİÇİMBOYA",
@@ -9612,10 +9612,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.measure",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.measure",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÖLÇ",
         "OLC",
         "MEASURE",
@@ -9744,10 +9744,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.measure_angle",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.measure_angle",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "AÇIÖLÇ",
         "ACIOLC",
         "MEASUREANGLE",
@@ -9882,10 +9882,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.measure_area",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.measure_area",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ALANÖLÇ",
         "ALANOLC",
         "ALANSOR",
@@ -9925,10 +9925,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.merge",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.merge",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "TEVHİT",
         "TEVHIT",
         "MERGE",
@@ -10040,10 +10040,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.mirror",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.mirror",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "AYNALA",
         "MIRROR",
         "AYN"
@@ -10150,10 +10150,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.move",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.move",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "TAŞI",
         "TASI",
         "MOVE",
@@ -10275,10 +10275,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.offset",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.offset",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "OFSET",
         "PARALEL",
         "OFFSET",
@@ -10381,10 +10381,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.pan",
-      "cad.kentos/category": "Görünüm",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.pan",
+      "cad.piricad/category": "Görünüm",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KAYDIR",
         "PAN",
         "KY"
@@ -10472,10 +10472,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.paste",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.paste",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "YAPIŞTIR",
         "YAPISTIR",
         "PASTE",
@@ -10528,10 +10528,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.pedit",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.pedit",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÇİZGİDÜZENLE",
         "CIZGIDUZENLE",
         "PEDIT",
@@ -10651,10 +10651,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.perp_offset",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.perp_offset",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "DİKAYAK",
         "DIKAYAK",
         "YANNOKTA",
@@ -10780,10 +10780,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.point_along",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.point_along",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ARANOKTA",
         "POINTALONG",
         "ARN"
@@ -10869,10 +10869,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.point_draw",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.point_draw",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "NOKTA",
         "POINT",
         "NK"
@@ -10924,10 +10924,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": true
     },
     "_meta": {
-      "cad.kentos/commandId": "core.points",
-      "cad.kentos/category": "Dosya",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.points",
+      "cad.piricad/category": "Dosya",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "NOKTALAR",
         "POINTS",
         "NKL"
@@ -11074,10 +11074,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.polygon_regular",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.polygon_regular",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÇOKGEN",
         "COKGEN",
         "POLYGONREG",
@@ -11165,10 +11165,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.polyline",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.polyline",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÇOKLUÇİZGİ",
         "COKLUCIZGI",
         "ÇOKLUDOĞRU",
@@ -11209,10 +11209,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.preview",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.preview",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "ÖNİZLE",
         "ONIZLE",
         "PREVIEW",
@@ -11398,10 +11398,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": true
     },
     "_meta": {
-      "cad.kentos/commandId": "core.print",
-      "cad.kentos/category": "Dosya",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.print",
+      "cad.piricad/category": "Dosya",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "YAZDIR",
         "ÇİZDİR",
         "CIZDIR",
@@ -11543,10 +11543,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.rectangle",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.rectangle",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "DİKDÖRTGEN",
         "DIKDORTGEN",
         "RECTANGLE",
@@ -11591,10 +11591,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.reproject",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.reproject",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "DÖNÜŞTÜR",
         "DONUSTUR",
         "REPROJECT",
@@ -11781,10 +11781,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.rotate",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.rotate",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "DÖNDÜR",
         "DONDUR",
         "ROTATE",
@@ -11979,10 +11979,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.scale",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.scale",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÖLÇEKLE",
         "OLCEKLE",
         "SCALE",
@@ -12124,10 +12124,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.sector",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.sector",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "DİLİM",
         "DILIM",
         "SECTOR",
@@ -12172,10 +12172,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.set_layer",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.set_layer",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KATMANAT",
         "KATMANATA",
         "TABAKADEĞİŞTİR",
@@ -12272,10 +12272,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.spline",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.spline",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "SPLINE",
         "SPLINE",
         "SPLINE",
@@ -12414,10 +12414,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.split",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.split",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BÖL",
         "BOL",
         "OBJEBÖL",
@@ -12513,10 +12513,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.split_area",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.split_area",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ALANİFRAZ",
         "ALANIFRAZ",
         "SPLITAREA",
@@ -12602,10 +12602,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.split_parcel",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.split_parcel",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "İFRAZ",
         "IFRAZ",
         "SUBDIVIDE",
@@ -12726,10 +12726,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.stakeout",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.stakeout",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "APLİKASYON",
         "APLIKASYON",
         "STAKEOUT",
@@ -12872,10 +12872,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.station_offset",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.station_offset",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "PRİZMA",
         "PRIZMA",
         "STATIONOFFSET",
@@ -13032,10 +13032,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.stretch",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.stretch",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ESNET",
         "STRETCH",
         "ES"
@@ -13198,10 +13198,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.style",
-      "cad.kentos/category": "Katman",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.style",
+      "cad.piricad/category": "Katman",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "STİL",
         "STIL",
         "STYLE",
@@ -13251,10 +13251,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.suggestion",
-      "cad.kentos/category": "Sistem",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.suggestion",
+      "cad.piricad/category": "Sistem",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ÖNERİ",
         "ONERI",
         "SUGGESTION",
@@ -13386,10 +13386,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.survey_polar",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.survey_polar",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ALIM",
         "SURVEY",
         "ALM"
@@ -13438,10 +13438,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.symbol",
-      "cad.kentos/category": "Katman",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.symbol",
+      "cad.piricad/category": "Katman",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "SEMBOL",
         "SEMBOLLER",
         "SYMBOL",
@@ -13593,10 +13593,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.text",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.text",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "METİN",
         "METIN",
         "YAZI",
@@ -13636,10 +13636,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.to_area",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.to_area",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ALANAÇEVİR",
         "ALANACEVIR",
         "TOAREA",
@@ -13686,10 +13686,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.tool_search",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.tool_search",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "ARAÇARA",
         "ARACARA",
         "TOOLSEARCH",
@@ -13728,10 +13728,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.topology",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.topology",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "TOPOLOJİ",
         "TOPOLOJI",
         "TOPOLOGY",
@@ -13808,10 +13808,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.tracking",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.tracking",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "İZ",
         "IZ",
         "TRACK",
@@ -13967,10 +13967,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.trim",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.trim",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BUDA",
         "TRIM",
         "BD"
@@ -14080,10 +14080,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.vertex_delete",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.vertex_delete",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KÖŞESİL",
         "KOSESIL",
         "DELVERTEX",
@@ -14196,10 +14196,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.vertex_insert",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.vertex_insert",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KÖŞEEKLE",
         "KOSEEKLE",
         "ADDVERTEX",
@@ -14344,10 +14344,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.vertex_move",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.vertex_move",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KÖŞETAŞI",
         "KOSETASI",
         "MOVEVERTEX",
@@ -14444,10 +14444,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": true
     },
     "_meta": {
-      "cad.kentos/commandId": "core.xref",
-      "cad.kentos/category": "Dosya",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.xref",
+      "cad.piricad/category": "Dosya",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "DIŞREFERANS",
         "DISREFERANS",
         "XREF",
@@ -14598,10 +14598,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.zoom",
-      "cad.kentos/category": "Görünüm",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.zoom",
+      "cad.piricad/category": "Görünüm",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "YAKINLAŞ",
         "YAKINLAS",
         "LİMİTBUL",
@@ -14833,10 +14833,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "geodesy.traverse",
-      "cad.kentos/category": "Çizim",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "geodesy.traverse",
+      "cad.piricad/category": "Çizim",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "POLİGON",
         "POLIGON",
         "TRAVERSE",
@@ -14861,10 +14861,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.view_info",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.view_info",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "GÖRÜNÜMBİLGİSİ",
         "GORUNUMBILGISI",
         "VIEWINFO",
@@ -15016,10 +15016,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "islem.alan_duzenle",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "islem.alan_duzenle",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ALANDÜZENLE",
         "ALANDUZENLE",
         "ADJUSTAREA",
@@ -15121,10 +15121,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "islem.alan_uret",
-      "cad.kentos/category": "İşlem",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "islem.alan_uret",
+      "cad.piricad/category": "İşlem",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "ALANÜRET",
         "ALANURET",
         "POLYGONIZE",
@@ -15218,10 +15218,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "islem.bag_coz",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "islem.bag_coz",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BAĞÇÖZ",
         "BAGCOZ",
         "DETACH",
@@ -15368,10 +15368,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "islem.bagla",
-      "cad.kentos/category": "Düzenleme",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "islem.bagla",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "BAĞLA",
         "BAGLA",
         "ATTACH",
@@ -15547,10 +15547,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "islem.kose_numarala",
-      "cad.kentos/category": "İşlem",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "islem.kose_numarala",
+      "cad.piricad/category": "İşlem",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "KÖŞENUMARALA",
         "KOSENUMARALA",
         "NUMBERVERTICES",
@@ -15670,10 +15670,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "islem.tampon",
-      "cad.kentos/category": "İşlem",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "islem.tampon",
+      "cad.piricad/category": "İşlem",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "TAMPON",
         "BUFFER",
         "TMP"
@@ -15827,10 +15827,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "islem.uzunluk_yaz",
-      "cad.kentos/category": "İşlem",
-      "cad.kentos/approval": "policy",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "islem.uzunluk_yaz",
+      "cad.piricad/category": "İşlem",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
         "UZUNLUKYAZ",
         "UZUNLUKYAZ",
         "LABELLENGTH",
@@ -15855,10 +15855,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.layers",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.layers",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "KATMANLAR",
         "LAYERS",
         "KTL"
@@ -15901,10 +15901,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.object_points",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.object_points",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "NESNENOKTALARI",
         "OBJECTPOINTS",
         "NNK"
@@ -15928,10 +15928,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.attr_schema",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.attr_schema",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "ÖZNİTELİKŞEMASI",
         "OZNITELIKSEMASI",
         "ATTRSCHEMA",
@@ -15956,10 +15956,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.selection_info",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.selection_info",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "SEÇİMBİLGİSİ",
         "SECIMBILGISI",
         "SELECTIONINFO",
@@ -16003,10 +16003,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "openWorldHint": false
     },
     "_meta": {
-      "cad.kentos/commandId": "core.query",
-      "cad.kentos/category": "Sorgu",
-      "cad.kentos/approval": "none",
-      "cad.kentos/names": [
+      "cad.piricad/commandId": "core.query",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "none",
+      "cad.piricad/names": [
         "SORGULA",
         "QUERY",
         "SRG"

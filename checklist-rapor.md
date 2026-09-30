@@ -1,6 +1,6 @@
 # checklist.md Denetim Raporu
 
-*KentOSCad — DXF/CAD çekirdeği, 9 Eylül 2026. `checklist.md`'nin 45 maddesi kod tabanına karşı,
+*PiriCAD — DXF/CAD çekirdeği, 9 Eylül 2026. `checklist.md`'nin 45 maddesi kod tabanına karşı,
 dosya:satır kanıtıyla denetlendi. Bu bir rapordur; §1'in "doğrudan geliştirmeye geç" talimatı
 bu turda uygulanmadı, çünkü istenen rapordu.*
 
@@ -37,17 +37,17 @@ modelde değil, **io katmanında** hâlâ geçerli.
 Dört paralel tarama (içe aktarma yolu, çekirdek model, render/stil, test/bağımlılık) ve ardından
 en ağır bulguların elle doğrulanması. Her satırdaki kanıt `dosya:satır` biçiminde; satır
 numaraları bugünkü ağaca aittir. Kural kitapları (`model.md`, `io.md`, `core.md`, `render.md`,
-`kentoscad.md` §7/§9/§10) hakem olarak okundu.
+`piricad.md` §7/§9/§10) hakem olarak okundu.
 
 ## 1. Mevcut mimari — checklist §1'in soruları
 
 | Soru | Cevap | Kanıt |
 |---|---|---|
-| DXF hangi kütüphaneyle okunuyor? | Yalnız GDAL/OGR DXF sürücüsü; hiçbir DXF açma seçeneği verilmiyor (`DXF_INLINE_BLOCKS`, `DXF_TRANSLATE_ESCAPE_SEQUENCES`, `OGR_ARC_STEPSIZE` … hepsi GDAL varsayılanında) | `cmake/KentOSCadGdalDrivers.cmake:71`; `src/io/src/vector.cpp:638` (open options = `nullptr`) |
-| libdxfrw / dxflib / LibreCAD? | Yok | depo genelinde yalnız `checklist.md` ve `kentoscad.md` içinde geçiyor |
-| DWG? | LibreDWG, salt okunur, **varsayılan KAPALI**; 6 nesne türü (LINE, LWPOLYLINE, POLYLINE 2D/3D, POINT, CIRCLE, ARC, TEXT); kalanı adıyla sayılıp atlanıyor | `cmake/KentOSCadOptions.cmake` (`KENTOS_WITH_DWG OFF`); `src/io/src/dwg.cpp:220-368` |
+| DXF hangi kütüphaneyle okunuyor? | Yalnız GDAL/OGR DXF sürücüsü; hiçbir DXF açma seçeneği verilmiyor (`DXF_INLINE_BLOCKS`, `DXF_TRANSLATE_ESCAPE_SEQUENCES`, `OGR_ARC_STEPSIZE` … hepsi GDAL varsayılanında) | `cmake/PiriCADGdalDrivers.cmake:71`; `src/io/src/vector.cpp:638` (open options = `nullptr`) |
+| libdxfrw / dxflib / LibreCAD? | Yok | depo genelinde yalnız `checklist.md` ve `piricad.md` içinde geçiyor |
+| DWG? | LibreDWG, salt okunur, **varsayılan KAPALI**; 6 nesne türü (LINE, LWPOLYLINE, POLYLINE 2D/3D, POINT, CIRCLE, ARC, TEXT); kalanı adıyla sayılıp atlanıyor | `cmake/PiriCADOptions.cmake` (`PIRICAD_WITH_DWG OFF`); `src/io/src/dwg.cpp:220-368` |
 | Entity doğrudan GIS geometrisine mi çevriliyor? | Hayır: hedef `core::Document`; QGIS tipi yalnız `src/app/src/qgis_backend.cpp` içinde | `src/render/src/scene.cpp:112`; katmanlama kapısı `scripts/ci-gate-layering.sh` |
-| Bağımsız CAD belge modeli var mı? | Var: `Document` = entity tablosu (SoA) + `RingGeometry` + `StyleTable` + `LayerTable` + `DashStore` + `ImageStore` + `TextTable` + `AttrTable` + `Crs` + ayarlar | `src/core/include/kentos_cad/core/document.hpp:53-95` |
+| Bağımsız CAD belge modeli var mı? | Var: `Document` = entity tablosu (SoA) + `RingGeometry` + `StyleTable` + `LayerTable` + `DashStore` + `ImageStore` + `TextTable` + `AttrTable` + `Crs` + ayarlar | `src/core/include/piricad/core/document.hpp:53-95` |
 | ARC/CIRCLE/SPLINE korunuyor mu? | Daire ve yay evet (tanım olarak); elips evet; **spline yok** | `core/circle.hpp:4-13`, `core/arc.hpp:4-19`, `core/ellipse.hpp:11-16`; `src/` içinde spline/nurbs/knot yok |
 | BLOCK/INSERT? | Yok; "Faz 2 teslimi" diye yazılı | `src/core/src/style.cpp:409-411` |
 | DXF stil bilgisi nasıl tutuluyor? | Modelde `Appearance` + `Source{Explicit, ByLayer, ByBlock}` (R19); **içe aktarmada hiç okunmuyor** (renk, çizgi tipi, kalınlık atılıyor) | `core/style.hpp:36-73`; `vector.cpp:1016` (stil dizgesi yalnız yazı yüksekliği için) |
@@ -85,7 +85,7 @@ Durum sütunu: **Var** · **Kısmen** · **Yok** · **Uygulanmaz** · **Çatış
 | 12 | Drawing unit ≠ CRS | Kısmen | `Crs` zengin (id, epsg, epoch, meridyen, jeoit, düşey datum; epoch şimdilik boş); PROJ yalnız jeodezi modülünde. **`core.cizim.birim` ayarının tek tüketicisi yok**, içe aktarma metre varsayıyor (`$INSUNITS` okunmuyor), dışa aktarma metreye sabit | `crs.hpp:29-114`; `settings.cpp:1008-1024`; `vector.cpp:211, 226, 1415` |
 | 13 | OCS / WCS | Yok | Ortak dönüşüm altyapısı yok; `core/transform.hpp` 2B afin; DWG yolunda extrusion uygulanmıyor | `dwg.cpp:78-81` |
 | 14 | Tüm koordinatlarda double | **Çatışır** | Anayasa 2.4 ve `model.md` R21/P8 `int64` mm ister; hiçbir alanda float saklanmıyor, geçici `double` var. Sonuç: 1 mm kuantalama, mm-altı ayrıntı yok. GPU için floating origin **var** ve kapıyla korunuyor; R3'ün 1 km yeniden demirlemesi yok (önbellek olmadığı için sorun çıkmıyor) | `units.hpp:20`; `view.cpp:79-87`; `ci-gate-render.sh:36-45`; `test_jitter.cpp` |
-| 15 | GEOS'u CAD çekirdeği yapma | Var | GEOS bağlı değil; boolean/offset Clipper2 ile int64 üzerinde (`offset.hpp` cephesi); yakalama/kesişim/dik çekirdekte analitik. **`core.md` R8'in istediği Shewchuk `predicates.c` ağaçta yok** | `KentOSCadOptions.cmake` (`KENTOS_WITH_GEOS OFF`); `core/offset.cpp:4`; `find -name "predicates*"` boş |
+| 15 | GEOS'u CAD çekirdeği yapma | Var | GEOS bağlı değil; boolean/offset Clipper2 ile int64 üzerinde (`offset.hpp` cephesi); yakalama/kesişim/dik çekirdekte analitik. **`core.md` R8'in istediği Shewchuk `predicates.c` ağaçta yok** | `PiriCADOptions.cmake` (`PIRICAD_WITH_GEOS OFF`); `core/offset.cpp:4`; `find -name "predicates*"` boş |
 | 16 | Ortak entity kontratı | Var | `KindSpec`: bbox, outline, hit, area, perimeter, read, write serbest fonksiyon işaretçileri, batch başına dispatch, render'dan bağımsız. Yakalama noktaları `KindSpec` içinde değil `snap.cpp` içinde tür dallanmasıyla | `entity_kind.hpp:136-169, 225` |
 | 17 | Snapping altyapısı | Var | 17 kip: uç, orta, merkez, kesişim, dik, yakın, ızgara, kutupsal, düğüm, uzantı, paralel, uzatılmış kesişim, kılavuz, ağırlık merkezi, yüzey normali… Eğrilerde merkez+yarıçap ile analitik. Eksik: çeyrek (quadrant), teğet, ekleme noktası (blok yok) | `snap.hpp:59-147, 226`; `snap.cpp:165, 243-256, 729-733` |
 | 18 | Spatial index | Var | STR-paketlenmiş R-tree, tembel kurulum, `index_stale_` disiplini; seçim/yakalama `pick_candidates` ile daraltıyor | `spatial_index.hpp:28-83`; `pick.hpp:129-154`; `document.cpp:188` |
@@ -96,12 +96,12 @@ Durum sütunu: **Var** · **Kısmen** · **Yok** · **Uygulanmaz** · **Çatış
 | 23 | Model Space / Paper Space | Yok | Kavram yok; DXF'te kâğıt alanı çizime karışıyor, belge "alınmaz" diyor | `vector.cpp:747-766`; `docs/veri/dis-formatlar.md:51` |
 | 24 | Handle ve referanslar | Yok | İç kimlik doğru (slot/key ayrımı, monoton `EntityKey`); `sourceHandle` için yer yok, `EntityHandle` alanı okunmuyor | `identity.hpp:49-60, 81-157`; `vector.cpp:317, 789` |
 | 25 | Açık kaynak CAD kütüphanesi adaptörü | Kısmen | GDAL yalnız `vector.cpp` içinde görünür (io.md R2, kapıyla), LibreDWG yalnız `dwg.cpp` — adaptör sınırı doğru. Ama GDAL adaptörü "GIS kipi": CAD semantiğini geçirmiyor | `ci-gate-layering.sh`; `vector.cpp`; `dwg.cpp` |
-| 26 | GDAL'ın rolünü sınırla | Kısmen | GDAL Shapefile/GeoPackage için doğru yerde; **DXF için tek yol** ve "CAD olarak aç / GIS olarak aktar" ayrımı yok | `KentOSCadGdalDrivers.cmake:70-74` |
+| 26 | GDAL'ın rolünü sınırla | Kısmen | GDAL Shapefile/GeoPackage için doğru yerde; **DXF için tek yol** ve "CAD olarak aç / GIS olarak aktar" ayrımı yok | `PiriCADGdalDrivers.cmake:70-74` |
 | 27 | Importer'ı katmanlara böl | Kısmen | `vector.cpp` ≈1 500 satır: açma, alan planı, geometri, yazı, daire uydurma ve dışa aktarma bir dosyada; DWG ayrı dosyada. Header/Table/Block/Entity okuyucu ayrımı yok | `src/io/src/vector.cpp` |
 | 28 | Import uyarı sistemi | Kısmen | DXF: `notes` (en çok 8) + tek sayaç + ilk neden; DWG: tür → sayı haritası (ilk 5 gösterilir). Seviye yok. **Sessiz düşürmeler**: tarama→yüzey, elips→çokluçizgi, ölçü→parça, Z atıldı, birim varsayıldı, renk/çizgi tipi atıldı — hiçbiri not üretmiyor (io.md P11/P13) | `vector.hpp:99-105`; `dwg.hpp:42-45`; `service.cpp:333-338` |
 | 29 | Test altyapısı | Kısmen | 5 DXF tohum (01 ≡ 02 bayt bayt aynı), 0 DWG; checklist'in 22 fixture'ından **3'ü** var (line, arc, circle) + büyük koordinat; bulge/XDATA/kâğıt alanı/Türkçe metin/blok/ölçü yok. Testler tür, sayı, katman adı, mm ölçü doğruluyor; stil/blok/metadata doğrulamıyor | `tests/fuzz/tohum/dxf/`; `test_io.cpp:1414-1416, 1720-1731` |
 | 30 | Round-trip | Kısmen | Tek bir ÇİZGİ ile gidiş-dönüş testi var; daire/yay/yazı/nokta dönmez (dışa aktarma tür-kör). Altın DXF çıktısı yok | `test_io.cpp:1016-1053`; `vector.cpp:1409-1431` |
-| 31 | Performans | Kısmen | SoA, arena, 32-bit indeks, toplu R-tree, kapasite koruyan DrawList, 16 ms kapısı (sahne kurucu 0,0035 ms; tam kapsam 78,9 ms kapısız). Eksik: tessellation/blok/geometri önbelleği yok, LOD yok, `KENTOS_BUILD_BENCH` kapalı olduğundan bench `ctest`'te değil, 200 MB DWG ölçümü "beklemede" | `bench_render.cpp:135-147`; `temel-degerler.json`; `bench_pending.cpp:8-15` |
+| 31 | Performans | Kısmen | SoA, arena, 32-bit indeks, toplu R-tree, kapasite koruyan DrawList, 16 ms kapısı (sahne kurucu 0,0035 ms; tam kapsam 78,9 ms kapısız). Eksik: tessellation/blok/geometri önbelleği yok, LOD yok, `PIRICAD_BUILD_BENCH` kapalı olduğundan bench `ctest`'te değil, 200 MB DWG ölçümü "beklemede" | `bench_render.cpp:135-147`; `temel-degerler.json`; `bench_pending.cpp:8-15` |
 | 32 | Threading | Yok | Sihirbazın ön okuması `QThread`'de; **gerçek İÇEAKTAR UI iş parçacığında** (`runLine` → `Session::resume_once` → `import_vector`), `io.md` P3'e aykırı; `stop_token` bağlı ama gerçek içe aktarmada kimse `request_stop` çağırmıyor; TSan işi yok | `main_window.cpp:2860` → `controller.cpp:187` → `session.cpp:44-70`; `service.cpp:158-165` |
 | 33 | Undo/Redo'ya uygun model | Var | 14 `Op`, ters işlem kaydı, `UndoStack`, doğrulama başarısızlığında tam geri alma (bus.cpp), `UndoPolicy` 3 seçenek (`Custom` kullanılmıyor). Nesne başına sürüm yok, yalnız belge `revision()` | `document.hpp:99-158`; `transaction.hpp:33-213`; `bus.cpp:428-487` |
 | 34 | Selection ≠ render | Var | `command::Selection` anahtar listesi, belge dışı, kapıyla korunuyor; vurgu Overlay'de çiziliyor. Hover yalnız widget yerelinde, EditSession kavramı yok | `selection.hpp:4-63`; `ci-gate-model.sh:166-170`; `map_canvas.cpp:350-399` |
@@ -111,8 +111,8 @@ Durum sütunu: **Var** · **Kısmen** · **Yok** · **Uygulanmaz** · **Çatış
 | 38 | Layer modeli | Kısmen | key, name, folded, description, group yolu, visible, locked, plottable, appearance, style, min/max ölçek, opacity, catalog_ref. Yok: frozen, plot style. **opacity, plottable ve ölçek görünürlüğü saklanıyor ama hiç çizilmiyor**; katman ağacı ayrı yapı değil, dizge (R31 bekliyor) | `layer.hpp:28-72`; `scene.cpp:385-395` |
 | 39 | Z koordinatı | **Çatışır** | Belge 2B (`model.md` R9); Z bilinçli atılıyor, yükseklik yalnız `kot` öznitelik sütunu; DXF/DWG'de Z atıldığında **not yazılmıyor** | `dwg.cpp:277-279`; `vector.cpp:1005-1006`; `contour_command.cpp:58` |
 | 40 | Qt/QGIS/GDAL/GEOS/PROJ sınırları | Var | 39 kapı; core Qt'siz, io yalnız GDAL/LibreDWG, render Qt'siz (8.5), QGIS yalnız app backend'inde, PROJ yalnız jeodezide | `ci-gate-layering.sh:22-43`; `ci-gate-core-purity.sh` |
-| 41 | Kod kalitesi | Var | C++20, kayıtlarda sanal/`std::function`/işaretçi yok, `Result<T>`, RAII, katı FP bayrakları iki kez korunuyor. **`-Werror`/`/WX` hiçbir hedefte yok** (`build.md` R14); tidy'de 3 aile hata | `KentOSCadFlags.cmake:28-36`; `.clang-tidy:57` |
-| 42 | Lisans uyumluluğu | Var | `NOTICE` ayrıntılı; GPLv3 çıkış; GPLv2-only yok (QGIS GPL-2.0-**or-later**, libdxfrw GPLv2+). Eksik: CycloneDX SBOM yok (6.10); `vcpkg.json` bağımlılık listesi boş, gerçek mekanizma SHA-pinli FetchContent (`build.md` R11 ile çelişki); `CLAUDE.md` 8.2 "pinli ama bağlı değil" derken Clipper2 ve CDT **bağlı** | `NOTICE:19-273`; `vcpkg.json:18`; `KentOSCadDependencies.cmake:242-315` |
+| 41 | Kod kalitesi | Var | C++20, kayıtlarda sanal/`std::function`/işaretçi yok, `Result<T>`, RAII, katı FP bayrakları iki kez korunuyor. **`-Werror`/`/WX` hiçbir hedefte yok** (`build.md` R14); tidy'de 3 aile hata | `PiriCADFlags.cmake:28-36`; `.clang-tidy:57` |
+| 42 | Lisans uyumluluğu | Var | `NOTICE` ayrıntılı; GPLv3 çıkış; GPLv2-only yok (QGIS GPL-2.0-**or-later**, libdxfrw GPLv2+). Eksik: CycloneDX SBOM yok (6.10); `vcpkg.json` bağımlılık listesi boş, gerçek mekanizma SHA-pinli FetchContent (`build.md` R11 ile çelişki); `CLAUDE.md` 8.2 "pinli ama bağlı değil" derken Clipper2 ve CDT **bağlı** | `NOTICE:19-273`; `vcpkg.json:18`; `PiriCADDependencies.cmake:242-315` |
 | 43 | Yeniden icat etme | Var | Bu raporun yöntemi | — |
 | 44 | Aşamalı değişiklik | — | Bölüm 6'daki sıra | — |
 | 45 | Öncelikler | — | P0: daire/yay/nokta/çokluçizgi/katman/ByLayer/double(int64)/slot-key **var**; elips içe aktarımı, spline, bulge, blok, OCS, handle **yok**. P1: yazı kısmen, çizgi tipi kısmen, tarama kısmen, XDATA yok, index **var**, snap **var**, diagnostics kısmen. P2: hepsi yok | — |
@@ -193,7 +193,7 @@ tüketimi, DWG kapsam korpusu ve raporu, TSan işi, SBOM.
 ## 7. Bu denetim sırasında düzeltilenler
 
 İki tutarsızlık dün bıraktığım değişiklikten kalmıştı; düzeltildi:
-`cmake/KentOSCadOptions.cmake` içindeki "ON BY DEFAULT" yorum bloğu artık gerçek varsayılanı
-(OFF) ve gerekçesini anlatıyor, kullanılmayan `KENTOS_DWG_AVAILABLE` sondası kaldırıldı;
+`cmake/PiriCADOptions.cmake` içindeki "ON BY DEFAULT" yorum bloğu artık gerçek varsayılanı
+(OFF) ve gerekçesini anlatıyor, kullanılmayan `PIRICAD_DWG_AVAILABLE` sondası kaldırıldı;
 `docs/veri/dis-formatlar.md`'nin ¹ dipnotu DWG'nin kapalı geldiğini ve nasıl açıldığını söylüyor.
 Belge ve ön ayar kapıları yeşil.

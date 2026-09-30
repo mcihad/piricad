@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — script: what every script host shares.
+// PiriCAD — script: what every script host shares.
 //
 // A host is a LANGUAGE, not an architecture. The JSON runner, the Lua runner and
 // the Python module of §4.2 differ in how a script is written and in nothing
@@ -10,13 +10,13 @@
 // objection about report shapes).
 #pragma once
 
-#include "kentos_cad/command/changes.hpp"
-#include "kentos_cad/script/sandbox.hpp"
+#include "piricad/command/changes.hpp"
+#include "piricad/script/sandbox.hpp"
 
 #include <cstddef>
 #include <string>
 
-namespace kentos::script {
+namespace piricad::script {
 
 /// What a finished run has to say for itself.
 struct RunReport
@@ -28,4 +28,4 @@ struct RunReport
     std::string said;               ///< the batch's own sentence: commands, step, changes
 };
 
-} // namespace kentos::script
+} // namespace piricad::script

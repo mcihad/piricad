@@ -20,21 +20,21 @@
 // core/angle.hpp, shared with ÖLÇ and the canvas readout, so there is one copy.
 //
 // READ-ONLY. It computes and reports; it changes nothing.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// Metres with three decimals, in integers, the way ÖLÇ prints one.
@@ -173,7 +173,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(stakeout)
+PIRICAD_COMMAND(stakeout)
 {
     return CommandSpec{
         .id       = "core.stakeout",
@@ -197,4 +197,4 @@ KENTOS_COMMAND(stakeout)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

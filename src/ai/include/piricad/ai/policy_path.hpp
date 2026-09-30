@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: applying a plan on permission given beforehand.
+// PiriCAD — ai: applying a plan on permission given beforehand.
 //
 // THE SECOND OF TWO SANCTIONED ROADS. See `policy_path.cpp` for why there are
 // two, why the count is enforced by a CI gate, and why the thing that makes this
 // safe lives one layer below (CLAUDE.md 5.23).
 #pragma once
 
-#include "kentos_cad/ai/gate.hpp"
-#include "kentos_cad/ai/plan.hpp"
-#include "kentos_cad/ai/policy.hpp"
+#include "piricad/ai/gate.hpp"
+#include "piricad/ai/plan.hpp"
+#include "piricad/ai/policy.hpp"
 
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <string>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// What the policy road did with one plan.
 struct PolicyOutcome
@@ -48,4 +48,4 @@ core::Result<PolicyOutcome> decide_by_policy(Gate& gate, const Plan& plan,
                                              const std::string& operator_name, std::int64_t utc_ms,
                                              bool overwrites = false);
 
-} // namespace kentos::ai
+} // namespace piricad::ai

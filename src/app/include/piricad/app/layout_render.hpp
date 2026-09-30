@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: drawing an output layout.
+// PiriCAD — app: drawing an output layout.
 //
 // ONE PAINTER FOR THE THREE PLACES A SHEET APPEARS: the designer's page, the
 // print preview and the exported PDF. They differ only in the paint device and
@@ -14,7 +14,7 @@
 // map frame. Nothing below `/src/app` learns that a layout can be painted.
 #pragma once
 
-#include "kentos_cad/core/layout.hpp"
+#include "piricad/core/layout.hpp"
 
 #include <QString>
 
@@ -24,11 +24,11 @@
 class QPainter;
 class QRectF;
 
-namespace kentos::core {
+namespace piricad::core {
 class Document; ///< read to draw the map frames; never written here
-} // namespace kentos::core
+} // namespace piricad::core
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// What the `<...>` placeholders in a label resolve to.
 ///
@@ -89,4 +89,4 @@ void paint_paper_shadow(QPainter& painter, const QRectF& paper);
 QString resolve_placeholders(const QString& text, const core::Layout& layout,
                              const core::LayoutItem* map, const LayoutFacts& facts);
 
-} // namespace kentos::app
+} // namespace piricad::app

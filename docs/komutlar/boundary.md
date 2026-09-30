@@ -184,7 +184,7 @@ istemcilerine şu raporu da döndürür: `nesne` (yeni nesnenin kimliği), `alan
 | `Nokta bir çizginin üstünde; …` | Tıklama tam bir çizginin üzerine düştü | Bölgenin içine, çizgiden uzağa tıklayın |
 | `Köprülenecek boşluk eksi olamaz; …` | `bosluk` eksi verildi | 0 ya da daha büyük bir milimetre değeri verin |
 | `Nesne bulunamadı veya silinmiş: N` | `nesneler` içinde olmayan bir kimlik var | Kimlikleri denetleyin |
-| `Bu derleme CGAL olmadan yapıldı; …` | Program CGAL kütüphanesi olmadan derlenmiş | CGAL'ı kurup `KENTOS_WITH_CGAL=ON` ile derleyin |
+| `Bu derleme CGAL olmadan yapıldı; …` | Program CGAL kütüphanesi olmadan derlenmiş | CGAL'ı kurup `PIRICAD_WITH_CGAL=ON` ile derleyin |
 
 ## İlgili
 

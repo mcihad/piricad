@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: what an arc is, and how one is drawn.
+// PiriCAD — core: what an arc is, and how one is drawn.
 //
 // Like a circle, AN ARC IS ITS DEFINITION, NOT ITS PICTURE. `RingGeometry` holds
 // one Open ring of exactly four vertices:
@@ -19,16 +19,16 @@
 // declares even when the measured ends round to a millimetre either side of it.
 #pragma once
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The radius of the arc in `slot`, in millimetres. Never negative.
 Mm arc_radius_of(const RingGeometry& geom, std::uint32_t slot);
@@ -170,4 +170,4 @@ bool arc_by_radius(Point2 a, Point2 b, Mm radius, bool to_right, Point2& centre,
 bool arc_from_guide(const ArcGuide& guide, std::span<const Point2> chain, Point2 cursor,
                     Point2& centre, Mm& radius, Point2& start, Point2& end) noexcept;
 
-} // namespace kentos::core
+} // namespace piricad::core

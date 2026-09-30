@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: a Netcad NCZ drawing, read into the document.
+// PiriCAD — io: a Netcad NCZ drawing, read into the document.
 //
 // Copyright (C) 2026 Erdinç Örsan ÜNAL
 //     The reading of an NCZ this file follows: `ncz_reader.py` and `ncz_pure.py`
 //     of his QGIS plugin "NCZ Reader", version 1.4.3,
 //     https://github.com/erdincunal/Jeomatik-NCZ-Reader — licensed GPL-2.0-or-later.
-// Copyright (C) 2026 KentOSCad contributors
+// Copyright (C) 2026 PiriCAD contributors
 //     This reader, 28 September 2026 (GPLv3 §5a: a modified version).
 //
 // This program is free software: you can redistribute it and/or modify it under
@@ -27,15 +27,15 @@
 //
 // The plugin's seventeen attribute fields are offered as columns (`alanlar=`),
 // a field written on an entity only where the parser read it for that kind.
-#include "kentos_cad/io/ncz.hpp"
+#include "piricad/io/ncz.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include "dxf_common.hpp"
 #include "mapped_file.hpp"
@@ -58,7 +58,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 using core::ErrorCode;
@@ -557,7 +557,7 @@ private:
     {
         const std::uint64_t key = (argb ? (std::uint64_t{1} << 63) | *argb : 0) ^
                                   (static_cast<std::uint64_t>(width_um) << 32);
-        auto found = styles_.find(key);
+        auto found              = styles_.find(key);
         if (found == styles_.end()) {
             core::Appearance a{};
             if (argb) {
@@ -1201,7 +1201,7 @@ private:
             if (degrees)
                 return core::err(ErrorCode::ValidationFailed,
                                  "Dosya coğrafi koordinatlarda (" + report_.declared +
-                                     ") ve bütün koordinatları derece aralığında. KentOSCad "
+                                     ") ve bütün koordinatları derece aralığında. PiriCAD "
                                      "metre sayan bir sistemde milimetre saklar; çizimi Netcad'de "
                                      "bir TM ya da UTM dilimine dönüştürüp yeniden aktarın.");
             diag_.note(Severity::Warning,
@@ -1318,7 +1318,7 @@ command::Task<core::Result<NczReport>> import_ncz(command::Transaction& tx, std:
     if (path.rfind("/vsi", 0) == 0)
         co_return core::err(ErrorCode::InvalidArgument,
                             "'" + path +
-                                "' sanal dosya sistemi yolu. KentOSCad bir veri dosyasının ağdan "
+                                "' sanal dosya sistemi yolu. PiriCAD bir veri dosyasının ağdan "
                                 "ya da arşivin içinden okunmasına izin vermez; dosyayı diske alıp "
                                 "yeniden deneyin.");
     if (stop.stop_requested())
@@ -1360,4 +1360,4 @@ command::Task<core::Result<NczReport>> import_ncz(command::Transaction& tx, std:
     co_return report;
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

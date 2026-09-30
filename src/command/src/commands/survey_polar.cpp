@@ -21,17 +21,17 @@
 // GRAD AND CLOCKWISE FROM NORTH by default (`core.aci.birim`, `core.aci.kural`),
 // because that is what a Turkish field book is written in and what `@mesafe<açı`
 // reads too (TODOS-CAD P0).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/angle.hpp"
+#include "piricad/core/angle.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -144,7 +144,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(survey_polar)
+PIRICAD_COMMAND(survey_polar)
 {
     return CommandSpec{
         .id = "core.survey_polar",
@@ -185,4 +185,4 @@ KENTOS_COMMAND(survey_polar)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

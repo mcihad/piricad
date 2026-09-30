@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: what a circle is, and how one is drawn.
+// PiriCAD — core: what a circle is, and how one is drawn.
 //
 // A CIRCLE IS ITS DEFINITION, NOT ITS PICTURE. `RingGeometry` holds one Open ring
 // of exactly two vertices:
@@ -24,8 +24,8 @@
 // perfectly good.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -33,7 +33,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// The radius of the circle in `slot`, in millimetres. Never negative.
 Mm circle_radius_of(const RingGeometry& geom, std::uint32_t slot);
@@ -134,4 +134,4 @@ std::optional<CircleGuide> decode_circle_guide(std::span<const std::uint8_t> byt
 bool circle_from_guide(const CircleGuide& guide, std::span<const Point2> chain, Point2 cursor,
                        Point2& centre, Mm& radius) noexcept;
 
-} // namespace kentos::core
+} // namespace piricad::core

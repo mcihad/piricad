@@ -12,16 +12,16 @@
 // like every other appearance (model.md R13): a drawing with a thousand red
 // lines holds one red record. `katman` hands the property back to the layer,
 // which is how a plan sheet is meant to be coloured in the first place.
-#include "kentos_cad/command/colour.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/colour.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/layer.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/layer.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/core/text.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -29,7 +29,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// What one colour argument asks for.
@@ -340,7 +340,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(colour)
+PIRICAD_COMMAND(colour)
 {
     return CommandSpec{
         .id       = "core.colour",
@@ -359,12 +359,12 @@ KENTOS_COMMAND(colour)
                             "Dolgu rengi: #RRGGBB, yok (dolgusuz) ya da katman")
                     .en("fill"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Seçili nesnelerin çizgi ve dolgu rengini değiştirir ya da katmanın rengine "
                    "döndürür.",
-        .run = &run,
+        .run     = &run,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

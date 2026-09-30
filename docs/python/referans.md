@@ -1,5 +1,5 @@
 <!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->
-<!-- Kaynak: kentos::command::Registry.  Yeniden üret: make reference -->
+<!-- Kaynak: piricad::command::Registry.  Yeniden üret: make reference -->
 <!-- Python yüzeyi de aynı kayıttan üretilir; elle yazılan ikinci bir -->
 <!-- bağlama listesi yoktur (CLAUDE.md 5.10, 5.20). -->
 
@@ -190,9 +190,9 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.undo`](#cadundo) | `core.undo` | `GERİAL` | Son işlemi geri alır. |
 | [`cad.redo`](#cadredo) | `core.redo` | `YİNELE` | Geri alınan işlemi yineler. |
 | [`cad.new`](#cadnew) | `core.new` | `YENİ` | Boş bir çizim açar; ekrandaki çizimin yerine geçer. |
-| [`cad.open`](#cadopen) | `core.open` | `AÇ` | Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar. |
-| [`cad.save`](#cadsave) | `core.save` | `KAYDET` | Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder. |
-| [`cad.saveas`](#cadsaveas) | `core.saveas` | `FARKLIKAYDET` | Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar. |
+| [`cad.open`](#cadopen) | `core.open` | `AÇ` | Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar. |
+| [`cad.save`](#cadsave) | `core.save` | `KAYDET` | Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder. |
+| [`cad.saveas`](#cadsaveas) | `core.saveas` | `FARKLIKAYDET` | Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar. |
 | [`cad.import`](#cadimport) | `core.import` | `İÇEAKTAR` | Dış bir veri dosyasını çizime ekler. |
 | [`cad.export`](#cadexport) | `core.export` | `DIŞAAKTAR` | Çizimi dış bir veri biçimine yazar. |
 | [`cad.script`](#cadscript) | `core.script` | `BETİK` | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
@@ -3030,7 +3030,7 @@ cad.new() -> int
 
 ### `cad.open`
 
-Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar.
+Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar.
 
 Komut: `core.open` — `AÇ`
 
@@ -3042,13 +3042,13 @@ cad.open(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `file` | `str` | `dosya` | Açılacak KentOSCad proje dosyasının yolu (.pcad) |
+| `file` | `str` | `dosya` | Açılacak PiriCAD proje dosyasının yolu (.pcad) |
 
 [Komut sayfası](../komutlar/open.md)
 
 ### `cad.save`
 
-Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder.
+Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder.
 
 Komut: `core.save` — `KAYDET`
 
@@ -3066,7 +3066,7 @@ cad.save(
 
 ### `cad.saveas`
 
-Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.
+Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar.
 
 Komut: `core.saveas` — `FARKLIKAYDET`
 

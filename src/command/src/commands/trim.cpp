@@ -10,23 +10,23 @@
 // not this one: it needs the circle-line intersection, and a command that silently
 // treated an arc as its chord would move a road curve by however much the chord
 // misses the arc. That is a wrong drawing, not a coarse one (§12).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/construct.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/path_edit.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/construct.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/path_edit.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/break_run.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trim_curve.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/break_run.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trim_curve.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -37,7 +37,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 // ------------------------------------------------------------------ BÖL ----
@@ -684,10 +684,10 @@ Task<void> run_cut(Context& ctx, bool extend)
                 why = "Nesne bulunamadı veya silinmiş: " + std::to_string(named);
             else if (extend)
                 why = "Tıklanan yerde uzatılacak bir nesne yok. Bir çizginin, yayın ya da elips "
-                        "yayının ucuna tıklayın.";
+                      "yayının ucuna tıklayın.";
             else
                 why = "Tıklanan yerde budanacak bir nesne yok. Bir çizginin, yayın, dairenin, "
-                        "elipsin ya da spline'ın atılacak parçasına tıklayın.";
+                      "elipsin ya da spline'ın atılacak parçasına tıklayın.";
             ctx.refuse(core::ErrorCode::NotFound, std::move(why));
             return false;
         }
@@ -701,28 +701,28 @@ Task<void> run_cut(Context& ctx, bool extend)
             core::path_of(doc, slot, core::PathScope::Curves);
         if (!path) {
             ctx.refuse(core::ErrorCode::Unsupported,
-                         "Nesne " + std::to_string(key) +
-                             " bu komutun işleyebileceği bir tür değil; " + verb +
-                             " çizgi, yay, daire, elips ve spline'da çalışır.");
+                       "Nesne " + std::to_string(key) +
+                           " bu komutun işleyebileceği bir tür değil; " + verb +
+                           " çizgi, yay, daire, elips ve spline'da çalışır.");
             return false;
         }
         if (path->closed && kind == core::kPolylineKind) {
             ctx.refuse(core::ErrorCode::Unsupported,
-                         "Nesne " + std::to_string(key) +
-                             (extend ? " kapalı bir alan; ucu olmayan bir şekil uzatılmaz."
-                                     : " kapalı bir alan; alanın bir parçası budanmaz. Alanı "
-                                       "ikiye ayırmak için BÖL kullanın."));
+                       "Nesne " + std::to_string(key) +
+                           (extend ? " kapalı bir alan; ucu olmayan bir şekil uzatılmaz."
+                                   : " kapalı bir alan; alanın bir parçası budanmaz. Alanı "
+                                     "ikiye ayırmak için BÖL kullanın."));
             return false;
         }
         const std::vector<core::CurvePath> edges = core::cutting_edges(doc, slot, guide);
         if (edges.empty()) {
             ctx.refuse(core::ErrorCode::InvalidArgument,
-                         std::string(verb) +
-                             (extend ? " için ulaşılacak sınır yok: " : " için kesecek sınır yok: ") +
-                             (guide.every ? "tıklanan nesnenin yakınında başka bir çizgi, yay, "
-                                            "daire, elips ya da spline yok."
-                                          : "sınır olarak verilen nesneler tıklanan nesnenin kendisi "
-                                            "ya da çizgi, yay, daire, elips veya spline değil."));
+                       std::string(verb) +
+                           (extend ? " için ulaşılacak sınır yok: " : " için kesecek sınır yok: ") +
+                           (guide.every ? "tıklanan nesnenin yakınında başka bir çizgi, yay, "
+                                          "daire, elips ya da spline yok."
+                                        : "sınır olarak verilen nesneler tıklanan nesnenin kendisi "
+                                          "ya da çizgi, yay, daire, elips veya spline değil."));
             return false;
         }
 
@@ -803,7 +803,7 @@ Task<void> run_extend(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(split)
+PIRICAD_COMMAND(split)
 {
     return CommandSpec{
         .id       = "core.split",
@@ -855,7 +855,7 @@ KENTOS_COMMAND(split)
     };
 }
 
-KENTOS_COMMAND(trim)
+PIRICAD_COMMAND(trim)
 {
     return CommandSpec{
         .id       = "core.trim",
@@ -906,7 +906,7 @@ KENTOS_COMMAND(trim)
     };
 }
 
-KENTOS_COMMAND(extend)
+PIRICAD_COMMAND(extend)
 {
     return CommandSpec{
         .id       = "core.extend",
@@ -950,4 +950,4 @@ KENTOS_COMMAND(extend)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

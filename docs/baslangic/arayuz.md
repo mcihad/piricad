@@ -1,6 +1,6 @@
 # Arayüz
 
-KentOSCad penceresini yeni açan kullanıcı için; bu sayfayı bitirdiğinizde şeridin,
+PiriCAD penceresini yeni açan kullanıcı için; bu sayfayı bitirdiğinizde şeridin,
 panellerin ve tuvalin ne işe yaradığını, nasıl taşınacağını ve fareyle klavyeyle neyin
 nasıl yapılacağını bileceksiniz.
 
@@ -9,7 +9,7 @@ nasıl yapılacağını bileceksiniz.
 ```text
 ┌ sistem başlık çubuğu (işletim sistemi çizer) ─────────────────────────── ─ □ ✕ ┐
 ├ şerit · sekme satırı 40 px ─────────────────────────────────────────────────────┤
-│ [KentOS CAD] Giriş  Çizim  Değiştir … Çıktı  Yazı   📄📂💾🖨▾ ↶↷ ⌃ [🔍 Komut ara…] │
+│ [PiriCAD CAD] Giriş  Çizim  Değiştir … Çıktı  Yazı   📄📂💾🖨▾ ↶↷ ⌃ [🔍 Komut ara…] │
 ├ şerit · paneller 91 px ─────────────────────────────────────────────────────────┤
 │  ➤  │ ╱  ⌇  ◯▾  ◠▾ ▭▾ ⬠▾ │ ✥ Taşı  ↻ Döndür▾ ✂ Buda▾ ⌫ │ … │ [👁 ▪ 0      ▾] │ … │
 │ Seç │         Çizim     ↘ │           Değiştir          │   │  Katmanlar     ↘ │   │
@@ -32,7 +32,7 @@ genişliğindedir. Şeridin altında doğrudan tuval başlar. Bu ölçüler tasa
 macOS ve Linux'ta değişmez. **Pencere çerçevesi bu ölçülerin dışındadır:** çerçeveyi,
 başlık çubuğunu ve pencere düğmelerini işletim sistemi çizer, dolayısıyla onlar her
 masaüstünde o masaüstünün alışıldık görünümündedir. Başlık çubuğunda
-`<belge adı> — KentOSCad <sürüm>` yazar.
+`<belge adı> — PiriCAD <sürüm>` yazar.
 
 ## Şerit
 
@@ -339,9 +339,9 @@ aracı "işaretli" diye söyler ve bölünmüş düğmede iki eylem sunar: **Bas
 çalıştırır, **Menüyü göster** listeyi açar. Erişilebilirlik katmanından basmak — VoiceOver'da
 **Ctrl+Option+Boşluk** — aracı gerçekten **çalıştırır**.
 
-## KentOS CAD menüsü
+## PiriCAD CAD menüsü
 
-Sekme satırının en solundaki **KentOS CAD** düğmesi uygulama menüsünü açar. Solda dosyayla
+Sekme satırının en solundaki **PiriCAD CAD** düğmesi uygulama menüsünü açar. Solda dosyayla
 yapılan işler büyük satırlar halinde, her birinin altında ne yaptığı yazar: **Yeni**
 (**Ctrl+N**), **Aç…** (**Ctrl+O**), **Kaydet** (**Ctrl+S**), **Farklı Kaydet…**
 (**Ctrl+Shift+S**), **İçe Aktar…**, **Dışa Aktar…**, **Yazdır** (**Ctrl+P**), **Çıktı
@@ -377,7 +377,7 @@ bir mühendisin çizmeye başlamadan önce baktığı okuma budur.
 
 ### Komut listesi — `Ctrl+K`
 
-Sekme satırının sağındaki **Komut ara…** kutucuğuna tıklayın, **Ctrl+K**'ya basın, **KentOS CAD** menüsünün altındaki **Komut Listesi**'ni (`F1`) seçin
+Sekme satırının sağındaki **Komut ara…** kutucuğuna tıklayın, **Ctrl+K**'ya basın, **PiriCAD CAD** menüsünün altındaki **Komut Listesi**'ni (`F1`) seçin
 ya da komut satırına `YARDIM` yazın: dördü de aynı sayfayı açar. Üstte süzgeç, solda
 kategori başlıkları altında bütün komutlar, sağda imlecin üzerinde olduğu komutun
 aldığı parametreler.
@@ -474,7 +474,7 @@ varsayılan değerlerle. Değerleri değiştirmek için aynı işlemi **Araçlar
 ## Tek belge, sekmesiz
 
 Tuvalin üstünde belge sekmesi yoktur: bir anda **tek çizim** açıktır ve adı pencerenin
-başlık çubuğunda yazar (`ada-112.pcad — KentOSCad 0.1.0`). Sekme şeridi, tek sekmesiyle
+başlık çubuğunda yazar (`ada-112.pcad — PiriCAD 0.1.0`). Sekme şeridi, tek sekmesiyle
 tuvalden 30 piksel alıyordu; birden çok çizimi aynı anda açmak geldiğinde (Faz 2) geri
 gelecek. Bugün [`YENİ`](../komutlar/new.md) açık çizimin yerine boş bir çizim koyar;
 kaydedilmemiş değişikliğiniz varsa önce **Kaydet / Atla / Vazgeç** sorusu gelir.
@@ -545,7 +545,7 @@ da ortada durur; boyu `seçim_toleransı` tercihinden (**Seçenekler ▸ Çizim 
 Hiçbir komut çalışmıyorken sol fare tuşu seçim yapar. **Soldan sağa** sürüklerseniz
 kutuya **tamamen giren** nesneler seçilir ve çerçeve düz çizilir; **sağdan sola**
 sürüklerseniz kutuya **değen** her nesne seçilir ve çerçeve kesik çizilir. Bu, CAD
-dünyasının kırk yıllık ayrımıdır ve KentOSCad'de de aynıdır.
+dünyasının kırk yıllık ayrımıdır ve PiriCAD'de de aynıdır.
 
 Seçili nesneler kalın ve renkli çizilir. [Kırpılmış](../komutlar/block_clip.md) bir blok
 ya da dış referans seçiliyken kırpma sınırı da ince, kesikli çizilir — yalnız ekranda;
@@ -1026,7 +1026,7 @@ ona göre) ve kaç nesne, kaç referans olduğu.
 | `BULUNAMADI` | Dosyası kayıtlı yerinde de proje klasöründe de yok |
 | `BOŞ` | Dosyası var ama ondan çizime bir şey gelmedi |
 
-Bir dosya başka bir programda ya da başka bir KentOSCad penceresinde kaydedildiğinde
+Bir dosya başka bir programda ya da başka bir PiriCAD penceresinde kaydedildiğinde
 program bunu fark eder: satır `DEĞİŞTİ` olur, sekmenin üstünde **Kaynak dosya değişti**
 bandı ve durum çubuğunda bir satır belirir. Banttaki **Yenile** değişen dosyaları yeniden
 okur.
@@ -1113,7 +1113,7 @@ Linux'ta aynı pencere, aynı ölçüler, aynı renkler.
 
 ## Klavyeyle tam kullanım
 
-KentOSCad faresiz tam çalışabilir olacak şekilde tasarlanır. Bugün klavyeyle
+PiriCAD faresiz tam çalışabilir olacak şekilde tasarlanır. Bugün klavyeyle
 yapabilecekleriniz:
 
 | Tuş | İşlev |

@@ -105,6 +105,13 @@ def has_doc(lines, index):
         if text.startswith(('///', '//', '*', '/*')):
             return True
 
+        # A `#define` clang-format wrapped continues the line above with a
+        # backslash: the declaration begins at the directive, so the doc comment
+        # sits above the `#define`, not between it and its own continuation.
+        if lines[j].rstrip().endswith('\\'):
+            j -= 1
+            continue
+
         # A sibling declaration: keep walking, but not forever. A run longer than
         # this is not a documented group, it is an undocumented block with one
         # lucky comment somewhere above it.
@@ -246,7 +253,7 @@ for source in sources:
             continue
 
         # A quotation may WRAP, with either mark. A backticked term split across
-        # two lines is one quotation and so is a block quote from kentoscad.md, and
+        # two lines is one quotation and so is a block quote from piricad.md, and
         # demanding that prose never wrap to keep a checker happy would be the
         # checker dictating the writing.
         body = text.lstrip('/* ')

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <cmath>
 #include <cstring>
 #include <utility>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 struct Unit
@@ -458,4 +458,4 @@ bool arc_from_guide(const ArcGuide& guide, std::span<const Point2> chain, Point2
     return false;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

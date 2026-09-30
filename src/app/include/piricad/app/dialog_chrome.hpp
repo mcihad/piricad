@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the chrome every dialog in `design.md` wears.
+// PiriCAD — app: the chrome every dialog in `design.md` wears.
 //
 // Screens 2, 3 and 4 are the same window with different contents: a body and a
 // footer of buttons under the system's own title bar. Writing that three times is
@@ -14,8 +14,8 @@
 // left end of the footer.
 #pragma once
 
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QAbstractButton>
 #include <QDialog>
@@ -25,13 +25,13 @@
 class QHBoxLayout;
 class QVBoxLayout;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// A dialog with the §7–§10 chrome: a system frame, a body and a footer.
 class DialogFrame : public QDialog, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty frame: nothing above a footer holding one stretch. The
@@ -92,7 +92,7 @@ private:
 class SectionList : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty list. Sections are added by the window that owns it.
@@ -160,7 +160,7 @@ private:
 class ToggleSwitch : public QAbstractButton, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an off switch, checkable and keyboard-reachable.
@@ -179,4 +179,4 @@ private:
     ThemeMode theme_ = ThemeMode::Dark;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

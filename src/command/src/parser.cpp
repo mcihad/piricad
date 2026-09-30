@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/parser.hpp"
+#include "piricad/command/parser.hpp"
 
 #include "point_function.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -11,7 +11,7 @@
 #include <locale>
 #include <sstream>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// Appends the character an escape sequence names, and returns how far to advance.
@@ -75,7 +75,7 @@ struct ExprParser
         if (!failed && i != s.size()) {
             failed = true;
             why    = "beklenmeyen '" + std::string(1, s[i]) + "' karakteri (konum " +
-                  std::to_string(i) + ")";
+                     std::to_string(i) + ")";
         }
         return v;
     }
@@ -907,4 +907,4 @@ std::string describe(const Token& t)
     return "?";
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -18,14 +18,14 @@
 // THE ATTRIBUTES ARE COPIED TO BOTH SIDES, unchanged. That is not a rule about
 // what an ifraz means — the new ada/parsel numbers come from TKGM — it is the
 // only non-destructive thing to do with what was there, and the command says so.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/offset.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/offset.hpp"
 
 #include "parcel_face.hpp"
 
@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 core::Mm2 abs_area(core::Mm2 v)
@@ -167,7 +167,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(split_parcel)
+PIRICAD_COMMAND(split_parcel)
 {
     return CommandSpec{
         .id       = "core.split_parcel",
@@ -195,4 +195,4 @@ KENTOS_COMMAND(split_parcel)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — geodesy: the CRS catalogue.
+// PiriCAD — geodesy: the CRS catalogue.
 //
-// kentoscad.md §12 opens with TUREF/ITRF96, the TM 3° zones and ED50. Those
+// piricad.md §12 opens with TUREF/ITRF96, the TM 3° zones and ED50. Those
 // parameters are a BÖHHBÜY table, so they live in /data/crs as DATA and are
 // loaded, never compiled in (CLAUDE.md 5.13). A legislation change is a data
 // release, not a rebuild.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace kentos::domain::geodesy {
+namespace piricad::domain::geodesy {
 
 /// One TM 3° zone as declared in data/crs/tm3-dilimleri.json.
 struct Tm3Zone
@@ -65,4 +65,4 @@ private:
     std::string package_version_;
 };
 
-} // namespace kentos::domain::geodesy
+} // namespace piricad::domain::geodesy

@@ -10,13 +10,13 @@
 // symbology catalogue decides whether that draws as a cross, a triangle or a
 // numbered monument (model.md R14). A command that drew a cross would be putting
 // a gösterim in C++, which Article 5.13 forbids.
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -48,7 +48,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(point_draw)
+PIRICAD_COMMAND(point_draw)
 {
     return CommandSpec{
         .id       = "core.point_draw",
@@ -68,4 +68,4 @@ KENTOS_COMMAND(point_draw)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

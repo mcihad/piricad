@@ -8,15 +8,15 @@
 // backend drew it, and a backend is exactly what this suite cannot construct.
 // The same function answers the GPU canvas and the QPainter path the PDF is
 // printed through (render/text_layout.hpp).
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/render/text_layout.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/render/text_layout.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <array>
 #include <cmath>
@@ -24,8 +24,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 using core::TextAnchor;
 

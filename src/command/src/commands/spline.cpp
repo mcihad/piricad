@@ -6,16 +6,16 @@
 // point and ends at the last. What is stored is the definition (core/spline.hpp):
 // the points, the degree, the knots. The drawn curve is de Boor's algorithm over
 // them, the same on every machine.
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/spline.hpp"
+#include "piricad/core/spline.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -104,7 +104,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(spline)
+PIRICAD_COMMAND(spline)
 {
     return CommandSpec{
         .id       = "core.spline",
@@ -128,4 +128,4 @@ KENTOS_COMMAND(spline)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

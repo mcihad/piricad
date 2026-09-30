@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the application menu, what the `KentOS CAD` button opens.
+// PiriCAD — app: the application menu, what the `PiriCAD CAD` button opens.
 //
 // AUTOCAD'S APPLICATION MENU, not a list (`design.md` §7, `.claude/ui.md` R50).
 // Three regions under a search chip:
@@ -25,7 +25,7 @@
 // recent document is opened by the line `AÇ` is (CLAUDE.md Article 1.2).
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <functional>
 
@@ -37,7 +37,7 @@
 class QAction;
 class QVBoxLayout;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The painted row the menu is built from (`app_menu.cpp`) and the component
 /// set's button its foot uses (`widgets.hpp`).
@@ -49,7 +49,7 @@ class Button;
 class ApplicationMenu : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// One verb of the left column.
@@ -134,4 +134,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

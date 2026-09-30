@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: objects that FOLLOW other objects.
+// PiriCAD — core: objects that FOLLOW other objects.
 //
 // A length written along a parcel edge is not a free caption: it is a statement
 // ABOUT that edge, and the moment the edge moves the statement is standing in the
@@ -21,11 +21,11 @@
 // dependent's entity row, folded into the content hash, written to the file.
 #pragma once
 
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/text_store.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/text_store.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -34,7 +34,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Which feature of the source a dependent hangs off.
 enum class AttachAnchor : std::uint8_t {
@@ -263,4 +263,4 @@ private:
     std::size_t live_{0};
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

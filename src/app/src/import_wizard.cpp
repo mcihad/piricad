@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/import_wizard.hpp"
+#include "piricad/app/import_wizard.hpp"
 
-#include "kentos_cad/app/backend_factory.hpp"
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/map_canvas.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/io/dwg.hpp"
-#include "kentos_cad/io/vector.hpp"
-#include "kentos_cad/render/backend.hpp"
+#include "piricad/app/backend_factory.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/map_canvas.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/io/dwg.hpp"
+#include "piricad/io/vector.hpp"
+#include "piricad/render/backend.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -41,7 +41,7 @@
 #include <QVBoxLayout>
 #include <QWheelEvent>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// `1 482` — the thin-space thousands `panels.cpp` prints an entity count with.
@@ -1474,4 +1474,4 @@ void ImportWizard::refreshLine()
     go_->setEnabled(!line.isEmpty());
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

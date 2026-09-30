@@ -16,11 +16,11 @@
 // figures (`command.md` R19).
 #pragma once
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// Which of the two solutions a two-distance intersection has.
 ///
@@ -72,4 +72,4 @@ core::Result<core::Point2> beyond(core::Point2 a, core::Point2 b, double distanc
 /// Metres with three decimals, in integers, for a refusal that names a figure.
 std::string metres_text(core::Mm v);
 
-} // namespace kentos::command
+} // namespace piricad::command

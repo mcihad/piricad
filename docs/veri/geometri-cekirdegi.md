@@ -1,13 +1,13 @@
 # Geometri çekirdeği: OpenCASCADE
 
 Bir parselin köşesi yuvarlatıldığında, bir yolun kenarı kavis yaptığında ya da bir
-tampon bölge çizildiğinde çizimde **yay** vardır. Bu sayfa, KentOS CAD'in bu tür
+tampon bölge çizildiğinde çizimde **yay** vardır. Bu sayfa, PiriCAD CAD'in bu tür
 geometriyi hangi çekirdekle hesapladığını, sonuçların neden her bilgisayarda aynı
 milimetreyi verdiğini ve bunun hangi işlemlere hangi aşamada geldiğini anlatır.
 
 ## OpenCASCADE nedir, neden kullanılır
 
-KentOS CAD'in geometri çekirdeği **OpenCASCADE Technology**'dir (OCCT). OCCT, CAD
+PiriCAD CAD'in geometri çekirdeği **OpenCASCADE Technology**'dir (OCCT). OCCT, CAD
 yazılımlarında kullanılan olgun ve açık kaynaklı bir geometri çekirdeğidir.
 Doğrularla olduğu kadar **yaylarla, elipslerle ve spline'larla** da tam hesap
 yapar.
@@ -78,7 +78,7 @@ paketin eksik olduğunu söyleyerek durur.
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Bu yapıda geometri çekirdeği (OpenCASCADE) yok; KENTOS_WITH_OCCT=ON ile derleyin.` | Program çekirdeksiz derlenmiş (`-DKENTOS_WITH_OCCT=OFF`) | OCCT'yi kurup programı yeniden derleyin |
+| `Bu yapıda geometri çekirdeği (OpenCASCADE) yok; PIRICAD_WITH_OCCT=ON ile derleyin.` | Program çekirdeksiz derlenmiş (`-DPIRICAD_WITH_OCCT=OFF`) | OCCT'yi kurup programı yeniden derleyin |
 | `Geometri çekirdeği bu alan işlemini tamamlayamadı; sınırlardan biri kendini kesiyor ya da açık olabilir.` | Verilen sınırlardan biri geçerli bir yüz değil | Sınırı [`TOPOLOJİ`](../komutlar/topology.md) ile denetleyin |
 | `Elips ve spline kenarları geometri çekirdeğine bu aşamada verilmiyor; yalnız doğru ve yay kenarları.` | İşlem bir elips ya da spline kenarı içeriyor | O-5 aşamasına kadar bu kenarları çizgiye çevirerek (`PATLAT`) işleyin |
 | `Sonuçtaki alanın hem yay kenarı hem içinde boşluğu var; yaylı kenarlı bir alan bu sürümde boşluk taşıyamaz.` | Bir birleşim, yay kenarlı ve ortasında boşluk kalan bir alan veriyor | Boşluğu çevreleyen parselleri ayrı ayrı birleştirin |

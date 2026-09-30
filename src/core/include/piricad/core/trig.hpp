@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: deterministic sine and cosine over micro-degrees.
+// PiriCAD — core: deterministic sine and cosine over micro-degrees.
 //
 // WHY THIS EXISTS, because "we wrote our own trigonometry" needs a reason.
 //
-// kentoscad.md §7.3 and core.md R9 require bit-identical results across Linux,
+// piricad.md §7.3 and core.md R9 require bit-identical results across Linux,
 // Windows and macOS. `std::sin`, `std::cos` and `std::atan2` cannot give that:
 // IEEE-754 does not specify them, every libm implements them differently, and two
 // conforming platforms may return results one ulp apart. That is invisible in a
@@ -36,12 +36,12 @@
 // one-off script.
 #pragma once
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <cstdint>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// π to the precision a double can hold. Written out rather than computed so the
 /// constant is the same token on every platform and in every build.
@@ -375,4 +375,4 @@ constexpr Mm2 circular_segment_area(Mm radius, std::int64_t sweep_udeg) noexcept
     return truncated;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

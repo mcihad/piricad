@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/arguments.hpp"
+#include "piricad/ai/arguments.hpp"
 
 #include <locale>
 #include <optional>
@@ -7,7 +7,7 @@
 #include <string>
 #include <utility>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -234,7 +234,7 @@ CompiledArguments compile_arguments(const command::CommandSpec& spec, const Json
     CompiledArguments out;
     if (!arguments.is_object()) {
         out.protocol_fault = true;
-        out.refusal = "Araç argümanları bir nesne olmalı; gelen: " + arguments.dump() + ".";
+        out.refusal        = "Araç argümanları bir nesne olmalı; gelen: " + arguments.dump() + ".";
         return out;
     }
 
@@ -354,14 +354,14 @@ CompiledArguments compile_arguments(const command::CommandSpec& spec, const Json
                 if (!given->is_array()) {
                     out.protocol_fault = true;
                     out.refusal        = "`" + param.name +
-                                  "` tam sayı dizisi bekler; gelen: " + given->dump() + ".";
+                                         "` tam sayı dizisi bekler; gelen: " + given->dump() + ".";
                     return out;
                 }
                 command::Value::Ints ids;
                 for (const Json& element : given->as_array()) {
                     if (!element.is_int()) {
                         out.protocol_fault = true;
-                        out.refusal        = "`" + param.name +
+                        out.refusal = "`" + param.name +
                                       "` yalnız tam sayı taşır; gelen: " + element.dump() + ".";
                         return out;
                     }
@@ -443,11 +443,11 @@ CompiledArguments compile_arguments(const command::CommandSpec& spec, const Json
         if (!declared) {
             out.protocol_fault = true;
             out.refusal        = "Bilinmeyen parametre: `" + key +
-                          "`. Bu araç yalnız şemasında yazan parametreleri kabul eder.";
+                                 "`. Bu araç yalnız şemasında yazan parametreleri kabul eder.";
             return out;
         }
     }
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

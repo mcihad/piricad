@@ -6,18 +6,18 @@
 // equation — a parabola as a quadratic spline, a quarter circle as a rational
 // one, an ellipse by x²/a² + y²/b² = 1 — so the tests check the solve against
 // the geometry, not against itself.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/spline.hpp"
-#include "kentos_cad/core/stroke.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/spline.hpp"
+#include "piricad/core/stroke.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
+using namespace piricad;
 using core::CurvePath;
 using core::PathPiece;
 using core::Point2;

@@ -3,7 +3,7 @@
 #
 # GATE: the document model stays the shape .claude/model.md settled on.
 #
-# kentoscad.md §10.2 / §10.3 / §12 — every rule below costs something measurable, and
+# piricad.md §10.2 / §10.3 / §12 — every rule below costs something measurable, and
 # every one of them is cheaper than the failure it prevents:
 #
 #   R21/P8  No stored field is floating point. A coordinate, a width, an angle or a
@@ -48,7 +48,7 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
-core_inc="$root/src/core/include/kentos_cad/core"
+core_inc="$root/src/core/include/piricad/core"
 
 scene_file="$root/src/render/src/scene.cpp"
 
@@ -210,7 +210,7 @@ done < <(find "$root/src/core" -name '*.hpp' -o -name '*.cpp' | sort)
 # "kilavuz ekseni sutununun oge boyu 4, beklenen 1" — a corrupt-file message
 # about a file that is fine. It cost exactly that once; the numbers are listed in
 # one header, so checking them is one line.
-dosya="$root/src/io/include/kentos_cad/io/format.hpp"
+dosya="$root/src/io/include/piricad/io/format.hpp"
 if [[ -f "$dosya" ]]; then
     while IFS= read -r yinelenen; do
         echo "model: file block id used twice (io/format.hpp) -> $yinelenen" >&2

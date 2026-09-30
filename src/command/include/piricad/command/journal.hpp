@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the append-only command journal.
+// PiriCAD — command: the append-only command journal.
 //
-// kentoscad.md §2.2 — walking this log forward and backward is undo/redo; writing it
+// piricad.md §2.2 — walking this log forward and backward is undo/redo; writing it
 // to a file is macro recording; replaying it is the regression suite and crash
 // recovery; receiving it over a socket is the remote API.
 //
@@ -9,10 +9,10 @@
 // waits on a disk flush.
 #pragma once
 
-#include "kentos_cad/command/input.hpp"
-#include "kentos_cad/command/value.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/command/input.hpp"
+#include "piricad/command/value.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/result.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -23,14 +23,14 @@
 #include <thread>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// One line of the journal: everything needed to replay one command.
 ///
 /// The journal is the audit record of a legal document, so an entry carries the
 /// CONTEXT a replay needs and not only the call: which CRS the coordinates were
 /// in and which layer was active, because both change what the same arguments
-/// mean (kentoscad.md §2.2).
+/// mean (piricad.md §2.2).
 struct JournalEntry
 {
     std::uint64_t seq{0};         ///< position in the journal, from 1
@@ -98,7 +98,7 @@ public:
 
     /// Deterministic, timestamp-free rendering. Two runs of the same commands from
     /// different clients must produce byte-identical output — that equality is the
-    /// Phase-0 keystone proof (kentoscad.md §16.5).
+    /// Phase-0 keystone proof (piricad.md §16.5).
     std::string canonical() const;
 
     /// Opens an async JSONL sink. Writes happen on the journal's own thread.
@@ -128,4 +128,4 @@ private:
     std::thread writer_;
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

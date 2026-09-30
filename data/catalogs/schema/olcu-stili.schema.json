@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kentoscad.org/data/catalogs/schema/olcu-stili.schema.json",
-  "title": "KentOSCad ölçü stili kataloğu",
+  "$id": "https://piricad.org/data/catalogs/schema/olcu-stili.schema.json",
+  "title": "PiriCAD ölçü stili kataloğu",
   "description": "ÖLÇÜ ve LİDER komutlarının ok, uzatma ve yazı ölçüleri, kâğıt mikrometresi (model.md R20). Komut AYAR plan_ölçeği ile zemine indirir.",
   "type": "object",
   "required": ["schema_version", "package_version", "id", "source", "published", "licence", "stiller"],

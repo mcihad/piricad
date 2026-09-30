@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the key store, asked from a thread that is allowed to wait.
+// PiriCAD — app: the key store, asked from a thread that is allowed to wait.
 //
 // WHY THIS EXISTS, AND IT IS NOT A CACHE FOR SPEED. `SecretStore::read`
 // (secret_store.hpp) is a call into the platform's key store, and all three of
@@ -43,9 +43,9 @@
 // thread would buy.
 #pragma once
 
-#include "kentos_cad/app/secret_store.hpp"
+#include "piricad/app/secret_store.hpp"
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <QObject>
 #include <QString>
@@ -58,7 +58,7 @@
 
 class QThread;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// Resolves a `key_ref` to the secret it names without ever blocking the caller.
 ///
@@ -188,4 +188,4 @@ private:
     std::set<QString> asking_;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

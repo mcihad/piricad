@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/panels.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/app/panels.hpp"
+#include "piricad/core/text.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/symbol_preview.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/render/backend.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/symbol_preview.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/render/backend.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -29,7 +29,7 @@
 #include <QTreeWidgetItemIterator>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {} // namespace
 
 /// `1 482` — thin-space thousands, the way the reference prints an entity count.
@@ -984,4 +984,4 @@ QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
     return owned;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

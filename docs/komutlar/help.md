@@ -108,7 +108,7 @@ Arayüzde sayfa da `DİKDÖRTGEN`'in üzerinde açılır.
 
 ### Arayüz
 
-**KentOS CAD ▸ Komut Listesi** (`F1`) ve `Ctrl+K` aynı sayfayı açar; komut satırına `YARDIM`
+**PiriCAD CAD ▸ Komut Listesi** (`F1`) ve `Ctrl+K` aynı sayfayı açar; komut satırına `YARDIM`
 yazmak da aynı sayfayı açar. Üçü de aynı komutu çalıştırır, ayrı bir yol yoktur.
 
 Sayfanın düzeni:
@@ -123,7 +123,7 @@ Sayfanın düzeni:
 Tuşlar: `↑` `↓` gezinir, `Enter` seçili komutu komut satırına yazar (parametrelerini
 orada tamamlarsınız), `Esc` kapatır. Süzgeç alanındaki imleç hiç oradan ayrılmaz.
 
-**KentOS CAD ▸ Hakkında** penceresi en üstte PiriCAD logosunu taşır; koyu temada
+**PiriCAD CAD ▸ Hakkında** penceresi en üstte PiriCAD logosunu taşır; koyu temada
 logonun lacivert kısımları temanın yazı rengiyle çizilir, sudaki mavi olduğu gibi
 kalır. Altında sürüm, Qt, çizim motoru, platform ve komut sayısı yazar; **Bileşenler**
 sayfası programın üzerine kurulduğu açık kaynak bileşenleri, **Lisans** sayfası lisans

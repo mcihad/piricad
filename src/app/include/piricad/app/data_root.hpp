@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: where the shipped data packages are.
+// PiriCAD — app: where the shipped data packages are.
 //
 // THE CATALOGUES SHIP WITH THE PROGRAM. MPYY's gösterimler, the TM3 dilim table
 // and every other package under `/data` are what make this a Turkish planning
@@ -18,13 +18,13 @@
 
 #include <string>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The directory the shipped `/data` tree lives in, or empty when none was found.
 ///
 /// Searched in this order, first hit wins:
 ///
-///   1. `$KENTOS_DATA` — an explicit answer always beats a guess, and it is what
+///   1. `$PIRICAD_DATA` — an explicit answer always beats a guess, and it is what
 ///      a packager, a test rig and a developer running two trees all need.
 ///   2. `<exe>/../share/piricad/data` — the installed layout.
 ///   3. `<exe>/data` — a portable directory, the binary and its data side by side.
@@ -43,4 +43,4 @@ std::string data_root();
 /// not exist, which says what is wrong, instead of reporting nothing at all.
 std::string data_path(const std::string& relative);
 
-} // namespace kentos::app
+} // namespace piricad::app

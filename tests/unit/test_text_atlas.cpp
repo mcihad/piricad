@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The SDF glyph atlas (`.claude/render.md` R8). Compiled only when
-// `KENTOS_WITH_TEXT=ON`.
+// `PIRICAD_WITH_TEXT=ON`.
 //
 // THIS IS WHY THE ATLAS IS QT-FREE. A backend cannot be constructed in a suite
 // that links no Qt (CLAUDE.md 3.4), so if the shaping and the field generation
@@ -9,13 +9,13 @@
 // exactly the kind of thing a screenshot does not show: a Turkish letter that
 // quietly became a box, a run whose kerning collapsed, a field with no gradient
 // in it.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/render/backend.hpp"
+#include "piricad/render/backend.hpp"
 
 #include <string>
 
-using namespace kentos;
+using namespace piricad;
 
 TEST_CASE("TEXT: yazısız bir yapı bunu söylüyor")
 {
@@ -28,7 +28,7 @@ TEST_CASE("TEXT: yazısız bir yapı bunu söylüyor")
     //
     // Written to hold in BOTH configurations, because the one that matters is the
     // one this suite is usually not built in.
-#if KENTOS_HAVE_TEXT
+#if PIRICAD_HAVE_TEXT
     CHECK(render::text_backend_status().empty());
 #else
     const std::string said = render::text_backend_status();
@@ -36,16 +36,16 @@ TEST_CASE("TEXT: yazısız bir yapı bunu söylüyor")
 
     // It names the switch and both packages, because "text is missing" without
     // them is a fact the reader can do nothing with.
-    CHECK(said.find("KENTOS_WITH_TEXT") != std::string::npos);
+    CHECK(said.find("PIRICAD_WITH_TEXT") != std::string::npos);
     CHECK(said.find("FreeType") != std::string::npos);
     CHECK(said.find("HarfBuzz") != std::string::npos);
 #endif
 }
 
-#if KENTOS_HAVE_TEXT
+#if PIRICAD_HAVE_TEXT
 
-#include "kentos_cad/core/text_metrics.hpp"
-#include "kentos_cad/render/text_atlas.hpp"
+#include "piricad/core/text_metrics.hpp"
+#include "piricad/render/text_atlas.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -53,13 +53,13 @@ TEST_CASE("TEXT: yazısız bir yapı bunu söylüyor")
 #include <string_view>
 #include <vector>
 
-using namespace kentos;
+using namespace piricad;
 
 namespace {
 
 std::string fonts()
 {
-    return std::string(KENTOS_DATA_DIR) + "/fonts";
+    return std::string(PIRICAD_DATA_DIR) + "/fonts";
 }
 
 /// The atlas, opened once. Building five faces is the expensive part and every
@@ -334,7 +334,7 @@ bool accented(std::string_view utf8)
 
 TEST_CASE("TEXT: the core's table is the face — its grid, its cap and every letter alone")
 {
-    // `kentos_yazi_olcusu` wrote the table from this very atlas, and the gate
+    // `piricad_yazi_olcusu` wrote the table from this very atlas, and the gate
     // regenerates it; this holds the two together inside the suite too, over
     // everything a Turkish sheet writes and then some.
     CHECK_EQ(shared().units_per_em(render::Face::Sans), core::text_face().units_per_em);
@@ -448,4 +448,4 @@ TEST_CASE("TEXT: a drawing's text is exactly as wide as the core measures it, le
           doctest::Approx(static_cast<double>(core::text_run_advance("Ada 1284"))));
 }
 
-#endif // KENTOS_HAVE_TEXT
+#endif // PIRICAD_HAVE_TEXT

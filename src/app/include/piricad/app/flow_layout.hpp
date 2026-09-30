@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: a reflowing layout for icon palettes.
+// PiriCAD — app: a reflowing layout for icon palettes.
 //
 // Qt ships no QFlowLayout — the wrapping layout is documented as an example, not
 // as API — so this is the one place the project writes what a library would
@@ -16,7 +16,7 @@
 #include <QSize>
 #include <QStyle>
 
-namespace kentos::app {
+namespace piricad::app {
 
 class FlowLayout : public QLayout
 {
@@ -60,4 +60,4 @@ private:
     int vspace_;
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

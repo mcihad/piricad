@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the serialisable command argument.
+// PiriCAD — command: the serialisable command argument.
 //
-// kentoscad.md §2.2: a command invocation must be SERIALISABLE. That one decision
+// piricad.md §2.2: a command invocation must be SERIALISABLE. That one decision
 // is what makes undo/redo, macro recording, scripting, AI, regression replay,
 // crash recovery, remote API and future multi-user editing fall out of the same
 // machinery instead of being written five times.
 #pragma once
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
@@ -17,7 +17,7 @@
 #include <variant>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 using core::Point2;
 
@@ -143,7 +143,7 @@ public:
 
     /// Canonical serialisation. Coordinates go out as integer millimetres —
     /// never as a formatted double — so a journal round-trip is lossless and
-    /// byte-identical across platforms (kentoscad.md §7.3).
+    /// byte-identical across platforms (piricad.md §7.3).
     core::Json to_json() const;
 
     /// The inverse of `to_json`, and the reason a journal can be replayed. Fails
@@ -247,4 +247,4 @@ private:
     std::vector<std::pair<std::string, Value>> items_;
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

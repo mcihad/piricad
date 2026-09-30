@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/layout_render.hpp"
+#include "piricad/app/layout_render.hpp"
 
-#include "kentos_cad/app/backend_factory.hpp"
-#include "kentos_cad/app/symbol_preview.hpp"
+#include "piricad/app/backend_factory.hpp"
+#include "piricad/app/symbol_preview.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/layout_table.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/render/backend.hpp"
-#include "kentos_cad/render/scene.hpp"
-#include "kentos_cad/render/view.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/layout_table.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/render/backend.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/render/view.hpp"
 
 #include <QDir>
 #include <QFileInfo>
@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 constexpr double kMmPerInch = 25.4;
@@ -1015,4 +1015,4 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
     painter.restore();
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

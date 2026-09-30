@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/domain/geodesy/crs_service.hpp"
+#include "piricad/domain/geodesy/crs_service.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
-#ifdef KENTOS_HAVE_PROJ
+#ifdef PIRICAD_HAVE_PROJ
 #include <proj.h>
 #endif
 
@@ -12,7 +12,7 @@
 #include <string>
 #include <utility>
 
-namespace kentos::domain::geodesy {
+namespace piricad::domain::geodesy {
 namespace {
 
 /// Strips a leading authority prefix and any surrounding whitespace.
@@ -65,7 +65,7 @@ bool local_grid(std::string_view id)
     return core::turkish_iequals(word, "YEREL") || core::turkish_iequals(word, "LOCAL");
 }
 
-#ifdef KENTOS_HAVE_PROJ
+#ifdef PIRICAD_HAVE_PROJ
 
 /// A PROJ handle that releases itself: every early return below would leak one.
 struct Owned
@@ -166,7 +166,7 @@ std::pair<core::CrsUnit, std::string> unit_of(std::string_view definition)
     return answer;
 }
 
-#endif // KENTOS_HAVE_PROJ
+#endif // PIRICAD_HAVE_PROJ
 
 } // namespace
 
@@ -201,7 +201,7 @@ core::Crs CrsService::resolve(std::string_view id) const
         if (local_grid(id)) {
             crs.set_unit(core::CrsUnit::Metre, "metre");
         } else {
-#ifdef KENTOS_HAVE_PROJ
+#ifdef PIRICAD_HAVE_PROJ
             auto [unit, name] = unit_of(id);
             crs.set_unit(unit, std::move(name));
 #endif
@@ -223,4 +223,4 @@ core::Crs CrsService::resolve(std::string_view id) const
     return crs;
 }
 
-} // namespace kentos::domain::geodesy
+} // namespace piricad::domain::geodesy

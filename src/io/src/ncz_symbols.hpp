@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io (internal): the drawing of a Netcad 8 SmartObject.
+// PiriCAD — io (internal): the drawing of a Netcad 8 SmartObject.
 //
 // Netcad calls these "akıllı nesne": the settlement, construction, road-width,
 // plan-note and function-name symbols its Planet module places on a zoning
@@ -30,14 +30,14 @@
 
 #include "ncz_format.hpp"
 
-#include "kentos_cad/core/text_store.hpp"
+#include "piricad/core/text_store.hpp"
 
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
-namespace kentos::io::ncz {
+namespace piricad::io::ncz {
 
 /// One stroke of a symbol, in the symbol's own space (metres, anchor at 0, 0).
 struct Stroke
@@ -80,4 +80,4 @@ std::string rtf_text(std::string_view rtf);
 /// Base64, as `rtfData` is kept; empty for text that is not.
 std::string base64_decode(std::string_view in);
 
-} // namespace kentos::io::ncz
+} // namespace piricad::io::ncz

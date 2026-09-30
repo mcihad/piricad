@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/dimension_link.hpp"
+#include "piricad/core/dimension_link.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/spatial_index.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/spatial_index.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 // A NEW seed, so it carries the program's present name (CLAUDE.md 0.5a froze the
 // seeds that were already folded into fixtures, not the ones still to come).
-constexpr std::uint64_t kDimLinkSeed = fnv1a("kentos.core.dimlink");
+constexpr std::uint64_t kDimLinkSeed = fnv1a("piricad.core.dimlink");
 
 // The record as the undo op carries it: every field, fixed width.
 constexpr std::size_t kLinkBytes = 1 + 1 + 2 + 4 + 8 + 1;
@@ -318,4 +318,4 @@ std::optional<DimCurve> dim_curve_at(const Document& doc, Point2 p, Mm reach, bo
     return best;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

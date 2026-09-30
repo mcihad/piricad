@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the PARALLEL of one object, whatever its kind (TODOS C-03).
+// PiriCAD — core: the PARALLEL of one object, whatever its kind (TODOS C-03).
 //
 // `offset.hpp` knows rings; this knows what a ring MEANS. An open line's
 // parallel is an open line beside it, on the side asked for. A face's is a face,
@@ -28,11 +28,11 @@
 // draws the same call under the cursor, so the preview is the result.
 #pragma once
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/result.hpp"
 
 #include <array>
 #include <cstdint>
@@ -41,7 +41,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Which side of an object its parallel goes to.
 enum class ParallelSide : std::uint8_t {
@@ -230,4 +230,4 @@ std::vector<std::uint8_t> encode_parallel_preview(const ParallelPreview& preview
 /// The preview back, refused when the bytes are not what the encoder writes.
 Result<ParallelPreview> decode_parallel_preview(std::span<const std::uint8_t> bytes);
 
-} // namespace kentos::core
+} // namespace piricad::core

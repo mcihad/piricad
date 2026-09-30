@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// libFuzzer harness for THE grammar — kentos_cad/command/parser.hpp.
+// libFuzzer harness for THE grammar — piricad/command/parser.hpp.
 //
 // test.md R9 names `command/parser.hpp` among the parsers that must have a target
 // here, and CLAUDE.md 6.7 ships the harness with the change that touched the
@@ -32,11 +32,11 @@
 // must refuse rather than reach for a document that is not there.
 //
 // Build:
-//   cmake --preset dev -DKENTOS_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
-//   ./build/dev/bin/kentos_fuzz_komut build/dev/fuzz-corpus/komut tests/fuzz/tohum/komut \
+//   cmake --preset dev -DPIRICAD_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
+//   ./build/dev/bin/piricad_fuzz_komut build/dev/fuzz-corpus/komut tests/fuzz/tohum/komut \
 //       -max_total_time=300
-#include "kentos_cad/command/parser.hpp"
-#include "kentos_cad/core/angle.hpp"
+#include "piricad/command/parser.hpp"
+#include "piricad/core/angle.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -53,16 +53,16 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
 
     const std::string_view text(reinterpret_cast<const char*>(data), size);
 
-    using kentos::core::AngleConvention;
-    using kentos::core::AngleRule;
-    using kentos::core::AngleUnit;
-    using kentos::core::Point2;
+    using piricad::core::AngleConvention;
+    using piricad::core::AngleRule;
+    using piricad::core::AngleUnit;
+    using piricad::core::Point2;
 
     // A stand-in drawing for `n(1284)`: three numbered points and nothing else,
     // so a hit and a miss are both one call away. The real one walks the
     // document (`Bus::numbered_point`); what the grammar sees is this shape.
     const auto context = [](AngleConvention convention) {
-        kentos::command::ResolveContext ctx;
+        piricad::command::ResolveContext ctx;
         ctx.convention  = convention;
         ctx.named_point = [](std::int64_t number) -> std::optional<Point2> {
             switch (number) {
@@ -75,27 +75,27 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         // AND FOR `nesne(k)`, THREE PATHS: a 20 m arc, a straight 100 m segment
         // and a closed 10 m square — a curve, a line and a ring to walk along —
         // and a refusal for every other key.
-        ctx.object_path = [](std::int64_t key) -> kentos::core::Result<kentos::core::CurvePath> {
-            kentos::core::CurvePath path;
+        ctx.object_path = [](std::int64_t key) -> piricad::core::Result<piricad::core::CurvePath> {
+            piricad::core::CurvePath path;
             if (key == 1) {
-                path.pieces.push_back(kentos::core::arc_piece(Point2{0, 0}, 20000, Point2{20000, 0},
-                                                              Point2{-20000, 0}, true));
+                path.pieces.push_back(piricad::core::arc_piece(
+                    Point2{0, 0}, 20000, Point2{20000, 0}, Point2{-20000, 0}, true));
             } else if (key == 2) {
-                kentos::core::PathPiece line;
+                piricad::core::PathPiece line;
                 line.from = Point2{0, 0};
                 line.to   = Point2{100000, 0};
                 path.pieces.push_back(line);
             } else if (key == 3) {
                 const Point2 corners[] = {{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}};
                 for (std::size_t i = 0; i < 4; ++i) {
-                    kentos::core::PathPiece side;
+                    piricad::core::PathPiece side;
                     side.from = corners[i];
                     side.to   = corners[(i + 1) % 4];
                     path.pieces.push_back(side);
                 }
                 path.closed = true;
             } else {
-                return kentos::core::err(kentos::core::ErrorCode::NotFound, "yok");
+                return piricad::core::err(piricad::core::ErrorCode::NotFound, "yok");
             }
             return path;
         };
@@ -103,40 +103,40 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     };
 
     // ---- 1. a line, and every coordinate on it under every convention ----
-    if (auto parsed = kentos::command::parse_line(text)) {
+    if (auto parsed = piricad::command::parse_line(text)) {
         Point2 last{};
-        for (const kentos::command::Token& token : parsed.value().tokens) {
-            (void)kentos::command::describe(token);
-            if (!kentos::command::is_coordinate(token)) continue;
+        for (const piricad::command::Token& token : parsed.value().tokens) {
+            (void)piricad::command::describe(token);
+            if (!piricad::command::is_coordinate(token)) continue;
             for (int unit = 0; unit < 3; ++unit)
                 for (int rule = 0; rule < 2; ++rule) {
                     const AngleConvention convention{static_cast<AngleUnit>(unit),
                                                      static_cast<AngleRule>(rule)};
-                    if (auto p = kentos::command::resolve_point(token, last, context(convention)))
+                    if (auto p = piricad::command::resolve_point(token, last, context(convention)))
                         last = p.value();
                 }
         }
     }
 
     // ---- 2. the expression grammar on the whole input ----
-    (void)kentos::command::evaluate_expression(text);
+    (void)piricad::command::evaluate_expression(text);
 
     // ---- 3. the predicate grammar, against a row that has one NULL cell ----
-    const kentos::command::FieldReader row =
+    const piricad::command::FieldReader row =
         [](std::string_view column) -> std::optional<std::string> {
         if (column == "beyan") return std::nullopt;
         return std::string("1284");
     };
-    (void)kentos::command::evaluate_predicate(text, row);
+    (void)piricad::command::evaluate_predicate(text, row);
 
     // ---- 4. one coordinate as text, the script path ----
-    (void)kentos::command::parse_point(text, Point2{}, context(AngleConvention{}));
+    (void)piricad::command::parse_point(text, Point2{}, context(AngleConvention{}));
 
     // ---- 5. the same text with NO document behind it ----
     //
     // The headless case: `ResolveContext::named_point` is empty, `n()` must say
     // so and every other function must be unaffected.
-    (void)kentos::command::parse_point(text, Point2{}, kentos::command::ResolveContext{});
+    (void)piricad::command::parse_point(text, Point2{}, piricad::command::ResolveContext{});
 
     return 0;
 }

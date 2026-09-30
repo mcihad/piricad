@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/drawing_catalogs.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -12,7 +12,7 @@
 #include <iterator>
 #include <sstream>
 
-namespace kentos::command {
+namespace piricad::command {
 
 using core::err;
 using core::ErrorCode;
@@ -72,16 +72,16 @@ std::string resolve_catalog_path(std::string_view configured)
     if (given.empty()) return {};
     if (fs::exists(given, ec)) return given;
 
-    // The manual prints `data/catalogs/...`; the shipped tree is `$KENTOS_DATA`
+    // The manual prints `data/catalogs/...`; the shipped tree is `$PIRICAD_DATA`
     // or the source tree's `data`, and either holds the part after `data/`.
     const std::string tail = given.rfind("data/", 0) == 0 ? given.substr(5) : given;
-    if (const char* env = std::getenv("KENTOS_DATA"); env != nullptr && *env != '\0') {
+    if (const char* env = std::getenv("PIRICAD_DATA"); env != nullptr && *env != '\0') {
         const fs::path candidate = fs::path(env) / tail;
         if (fs::exists(candidate, ec)) return candidate.string();
     }
-#ifdef KENTOS_SOURCE_DATA_DIR
+#ifdef PIRICAD_SOURCE_DATA_DIR
     {
-        const fs::path candidate = fs::path(KENTOS_SOURCE_DATA_DIR) / tail;
+        const fs::path candidate = fs::path(PIRICAD_SOURCE_DATA_DIR) / tail;
         if (fs::exists(candidate, ec)) return candidate.string();
     }
 #endif
@@ -94,7 +94,7 @@ core::Result<std::string> read_catalog_text(std::string_view configured)
     if (path.empty())
         return err(ErrorCode::NotFound,
                    "Veri paketi bulunamadı: '" + std::string(configured) +
-                       "'. Kurulumda eksikse KENTOS_DATA ile dizini gösterin.");
+                       "'. Kurulumda eksikse PIRICAD_DATA ile dizini gösterin.");
 
     std::ifstream in(path, std::ios::binary);
     if (!in) return err(ErrorCode::IoFailure, "'" + path + "' açılamadı.");
@@ -246,11 +246,11 @@ core::Symbol hatch_symbol(const core::HatchDef& def, std::uint32_t ink_rgba)
         // is where the renderer anchors them (`PassStyle::anchor_x`).
         const core::SinCos turn = core::sin_cos_udeg(def.angle_udeg);
         const double k          = static_cast<double>(def.scale.num) /
-                         (static_cast<double>(def.scale.den) * 1000.0); // pattern µm -> mm
-        const double bx = static_cast<double>(f.base_x_um) * k;
-        const double by = static_cast<double>(f.base_y_um) * k;
-        const double wx = static_cast<double>(def.origin.x) + bx * turn.cos - by * turn.sin;
-        const double wy = static_cast<double>(def.origin.y) + bx * turn.sin + by * turn.cos;
+                                  (static_cast<double>(def.scale.den) * 1000.0); // pattern µm -> mm
+        const double bx         = static_cast<double>(f.base_x_um) * k;
+        const double by         = static_cast<double>(f.base_y_um) * k;
+        const double wx         = static_cast<double>(def.origin.x) + bx * turn.cos - by * turn.sin;
+        const double wy         = static_cast<double>(def.origin.y) + bx * turn.sin + by * turn.cos;
         const core::SinCos across = core::sin_cos_udeg(angle);
         double phase = std::fmod(-wx * across.sin + wy * across.cos, static_cast<double>(spacing));
         if (phase < 0.0) phase += static_cast<double>(spacing);
@@ -265,4 +265,4 @@ core::Symbol hatch_symbol(const core::HatchDef& def, std::uint32_t ink_rgba)
     return sym;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

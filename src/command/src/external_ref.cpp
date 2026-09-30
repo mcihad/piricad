@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/external_ref.hpp"
+#include "piricad/command/external_ref.hpp"
 
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/text.hpp"
 
 #include <filesystem>
 #include <string>
@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 bool is_external_reference(const core::Document& doc, core::BlockId block)
 {
@@ -110,4 +110,4 @@ core::Result<std::size_t> empty_external(Transaction& tx, core::BlockId block)
     return gone;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

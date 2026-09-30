@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: a curve walked piece by piece. See curve_path.hpp.
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/precision.hpp"
+// PiriCAD — core: a curve walked piece by piece. See curve_path.hpp.
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/precision.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include "curve_eval.hpp"
 
@@ -18,7 +18,7 @@
 #include <cstring>
 #include <ranges>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 constexpr std::int64_t kTurn = kUDegFullCircle;
@@ -752,7 +752,7 @@ std::vector<LineMeet> line_meets(Point2 a, Point2 b, const PathPiece& piece)
         // infinite line by where it falls along it.
         Box2 box = curve::bounds(piece);
         box      = Box2{box.min_x - kMmPerMetre, box.min_y - kMmPerMetre, box.max_x + kMmPerMetre,
-                   box.max_y + kMmPerMetre};
+                        box.max_y + kMmPerMetre};
         const auto dx   = static_cast<double>(b.x - a.x);
         const auto dy   = static_cast<double>(b.y - a.y);
         double lo       = -1e300;
@@ -1116,8 +1116,8 @@ PathJoin join_paths(std::span<const CurvePath> paths, Mm tolerance)
     }
     merge_pieces(chain);
     out.chain.pieces = std::move(chain);
-    out.ends_meet    = out.joined.size() >= 2 && distance_squared(out.chain.pieces.front().from,
-                                                                  out.chain.pieces.back().to) <= reach;
+    out.ends_meet = out.joined.size() >= 2 && distance_squared(out.chain.pieces.front().from,
+                                                               out.chain.pieces.back().to) <= reach;
     return out;
 }
 
@@ -1324,8 +1324,8 @@ Result<CurvePath> path_with_arc_edge(const CurvePath& path, std::size_t edge, Po
     // the three turn left.
     const double turn = static_cast<double>(through.x - a.x) * static_cast<double>(b.y - a.y) -
                         static_cast<double>(through.y - a.y) * static_cast<double>(b.x - a.x);
-    CurvePath out    = path;
-    out.pieces[edge] = arc_piece(centre, radius, a, b, turn > 0.0);
+    CurvePath out     = path;
+    out.pieces[edge]  = arc_piece(centre, radius, a, b, turn > 0.0);
     return out;
 }
 
@@ -1459,4 +1459,4 @@ void path_outline(const CurvePath& path, std::vector<Mm>& xs, std::vector<Mm>& y
     }
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

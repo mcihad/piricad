@@ -17,7 +17,7 @@
 //
 // IT LIVES IN `/src/command`, NOT `/src/domain`, and that is the dependency
 // direction of Article 3.2 doing its job: the union is `core::polygon_boolean`,
-// which is Clipper2 under `kentos_core`, so nothing here needs the cadastre
+// which is Clipper2 under `piricad_core`, so nothing here needs the cadastre
 // target. A generic tool that had to reach into a domain library to work would be
 // a sign the split above was drawn in the wrong place.
 //
@@ -26,17 +26,17 @@
 // comes back with its arcs; a line that bends is chained as a path, its arcs
 // arcs (`core::join_paths`, UÇUCA's walk). Straight inputs keep the roads they
 // always had.
-#include "kentos_cad/command/area_face.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/path_edit.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/area_face.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/path_edit.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/offset.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/offset.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -44,7 +44,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// One input, read once: either a face (closed rings) or a run (one open ring).
@@ -570,7 +570,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(combine)
+PIRICAD_COMMAND(combine)
 {
     return CommandSpec{
         .id       = "core.combine",
@@ -578,7 +578,7 @@ KENTOS_COMMAND(combine)
         .title    = "Birleştir",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim"}
+                           "Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim"}
                          .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -589,4 +589,4 @@ KENTOS_COMMAND(combine)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

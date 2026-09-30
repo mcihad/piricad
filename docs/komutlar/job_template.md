@@ -151,7 +151,7 @@ başlatmadan etkisini gösterir — şablonların veri olmasının sebebi zaten 
 | `'core.job_template': 'islem' için tanınmayan değer 'ac'. Kabul edilenler: listele / goster` | Aynı hata betikten geldiğinde: veri yolu gövde çalışmadan önce yakalar | İki sözcükten birini yazın |
 | `Hangi şablon: sablon=<kimlik>. Kimlikleri İŞŞABLONU islem=listele ile görün.` | `islem=goster` verildi, `sablon` yazılmadı | Kimliği yazın |
 | `Böyle bir iş şablonu yok: 'x'. Olanlar: atlas-pafta, kadastro-kontrol, parsel-raporu` | Kimlik yanlış | Listedeki kimliklerden birini yazın |
-| `Veri paketi bulunamadı: 'data/catalogs/ai/is-sablonlari.json'. Kurulumda eksikse KENTOS_DATA ile dizini gösterin.` | Şablon paketi kurulumda yok | `KENTOS_DATA` ile veri dizinini gösterin |
+| `Veri paketi bulunamadı: 'data/catalogs/ai/is-sablonlari.json'. Kurulumda eksikse PIRICAD_DATA ile dizini gösterin.` | Şablon paketi kurulumda yok | `PIRICAD_DATA` ile veri dizinini gösterin |
 | `İş şablonu paketi okunamadı: …` | Paket bozuk JSON | Paketi kurulumdan yeniden alın |
 
 ## İlgili

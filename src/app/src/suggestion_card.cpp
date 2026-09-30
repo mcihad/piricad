@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/suggestion_card.hpp"
+#include "piricad/app/suggestion_card.hpp"
 
-#include "kentos_cad/app/ai_service.hpp"
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/ai_service.hpp"
+#include "piricad/app/tokens.hpp"
 
-#include "kentos_cad/command/session.hpp"
+#include "piricad/command/session.hpp"
 
 #include <QDateTime>
 #include <QHBoxLayout>
@@ -13,7 +13,7 @@
 #include <QStyle>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The Turkish word for a settled state, for the card's own outcome line.
@@ -368,4 +368,4 @@ void SuggestionCard::paintEvent(QPaintEvent*)
     p.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 4.0, 4.0);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

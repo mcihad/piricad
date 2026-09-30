@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: surveyed point lists.
+// PiriCAD — io: surveyed point lists.
 //
 // THE FIRST FILE A TURKISH SURVEYOR OPENS. A crew comes back from the field with
 // a list of numbered points — from a total station, a GNSS receiver, or a
@@ -19,13 +19,13 @@
 // short is a boundary quietly missing a corner.
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// One surveyed point, as the file names it.
 struct SurveyPoint
@@ -65,4 +65,4 @@ core::Result<std::vector<SurveyPoint>> read_point_list(const std::string& path, 
 core::Status write_point_list(const std::string& path, const std::vector<SurveyPoint>& points,
                               PointOrder order, int decimals = 3);
 
-} // namespace kentos::io
+} // namespace piricad::io

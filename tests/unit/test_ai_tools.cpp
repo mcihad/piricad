@@ -10,24 +10,24 @@
 // machine nothing; a handle that still resolves after the drawing moved under it;
 // a plan that applies without anybody deciding; an audit log with a hole in it
 // exactly where the refusals go.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/ai/audit.hpp"
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/ai/gate.hpp"
-#include "kentos_cad/ai/handles.hpp"
-#include "kentos_cad/ai/job_templates.hpp"
+#include "piricad/ai/audit.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/ai/gate.hpp"
+#include "piricad/ai/handles.hpp"
+#include "piricad/ai/job_templates.hpp"
 
-#include "kentos_cad/ai/plan.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/ai/plan.hpp"
+#include "piricad/core/text.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/command/parser.hpp"
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/parser.hpp"
+#include "piricad/command/registry.hpp"
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 

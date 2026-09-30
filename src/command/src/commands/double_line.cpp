@@ -27,16 +27,16 @@
 // (`uclar=kapali`). Each parallel is its own object on its own layer
 // (`katman_sol`, `katman_sag`, created if absent) and, when the axis is drawn,
 // records that it was made from it (core/lineage.hpp).
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/path_edit.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/path_edit.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/parallel.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/parallel.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -45,7 +45,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The corner a word names; anything but the two named is the sharp one, which
@@ -265,7 +265,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(double_line)
+PIRICAD_COMMAND(double_line)
 {
     return CommandSpec{
         .id       = "core.double_line",
@@ -320,4 +320,4 @@ KENTOS_COMMAND(double_line)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

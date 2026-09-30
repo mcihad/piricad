@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — script: the sandbox level, shared by every script host.
+// PiriCAD — script: the sandbox level, shared by every script host.
 //
-// kentoscad.md §4.3 gives a script exactly three levels and no fourth:
+// piricad.md §4.3 gives a script exactly three levels and no fourth:
 //
 //   güvenli  no filesystem, no network. THE DEFAULT, and the level a script from
 //            an unknown source runs at.
@@ -15,19 +15,19 @@
 // is the same objection).
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <string>
 #include <string_view>
 
-namespace kentos::command {
+namespace piricad::command {
 /// The command bus; declared rather than included, because this header is about
 /// the sandbox and only `journal_run` below needs the type.
 class Bus;
-} // namespace kentos::command
+} // namespace piricad::command
 
-namespace kentos::script {
+namespace piricad::script {
 
 /// What a script is permitted to touch (`.claude/script.md` R11).
 enum class Sandbox : std::uint8_t {
@@ -73,4 +73,4 @@ std::uint64_t script_identity(std::string_view text) noexcept;
 void journal_run(command::Bus& bus, std::string_view host, std::string_view label, Sandbox level,
                  std::uint64_t identity, bool consented);
 
-} // namespace kentos::script
+} // namespace piricad::script

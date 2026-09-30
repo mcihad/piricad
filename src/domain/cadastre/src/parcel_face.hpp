@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — cadastre: a parcel as İFRAZ, ALANİFRAZ and TEVHİT cut and join it.
+// PiriCAD — cadastre: a parcel as İFRAZ, ALANİFRAZ and TEVHİT cut and join it.
 //
 // A PARCEL WITH AN ARC EDGE KEEPS ITS ARC (TODOS O-3), by the one answer every
 // command that cuts or joins areas shares: `command/area_face.hpp`, where
@@ -11,13 +11,13 @@
 // reads it.
 #pragma once
 
-#include "kentos_cad/command/area_face.hpp"
+#include "piricad/command/area_face.hpp"
 
 #include <optional>
 #include <span>
 #include <vector>
 
-namespace kentos::command::cadastre {
+namespace piricad::command::cadastre {
 
 /// A parcel read for cutting: its boundary and holes, arcs as arcs, and whether
 /// any edge bends — `command::AreaFace`.
@@ -55,4 +55,4 @@ parcel_boolean(std::span<const core::KernelFace> a, std::span<const core::Kernel
     return command::area_boolean(a, b, op, curved);
 }
 
-} // namespace kentos::command::cadastre
+} // namespace piricad::command::cadastre

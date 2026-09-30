@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/style.hpp"
+#include "piricad/core/style.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// A per-record-type seed, so that folding a style into a document hash cannot
@@ -25,7 +25,7 @@ std::uint64_t fold_appearance(const Appearance& a, std::uint64_t seed)
     // indeterminate and the byte order of a multi-byte member is not, so hashing
     // the raw object would give one answer on x86 and another somewhere else —
     // and a golden fixture that disagrees across platforms is a legal defect
-    // (.claude/core.md R9, kentoscad.md §7.3).
+    // (.claude/core.md R9, piricad.md §7.3).
     std::uint64_t h = seed;
     h               = fnv1a_int(static_cast<std::int64_t>(a.rgba), h);
     h               = fnv1a_int(static_cast<std::int64_t>(a.width_um), h);
@@ -449,4 +449,4 @@ Appearance resolve_appearance(const Appearance& own, const Appearance& layer_def
     return out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

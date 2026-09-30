@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/ribbon.hpp"
+#include "piricad/app/ribbon.hpp"
 
-#include "kentos_cad/render/snap_marker.hpp"
+#include "piricad/render/snap_marker.hpp"
 
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
 
 #include <QAccessible>
 #include <QAccessibleWidget>
@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 // The chips keep the numbers the title bar gave them (`design.md` §7): the
@@ -828,4 +828,4 @@ void ShellCorner::applyTheme(ThemeMode mode)
     user_->setTokens(t);
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

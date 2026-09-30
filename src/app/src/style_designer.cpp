@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/style_designer.hpp"
+#include "piricad/app/style_designer.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
+#include "piricad/core/attribute.hpp"
 
-#include "kentos_cad/render/symbology.hpp"
+#include "piricad/render/symbology.hpp"
 
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/tokens.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/datagrid.hpp"
-#include "kentos_cad/app/export_dialog.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/schema_page.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/datagrid.hpp"
+#include "piricad/app/export_dialog.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/schema_page.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/style_library.hpp"
-#include "kentos_cad/core/style_rule.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/style_library.hpp"
+#include "piricad/core/style_rule.hpp"
 
 #include <QAbstractTableModel>
 #include <QColorDialog>
@@ -67,7 +67,7 @@
 #include <cstddef>
 #include <string_view>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The three units a symbol's measures can be in, in the order the renderer
@@ -768,8 +768,8 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     resize(1280, 880);
 
     const core::LayerId layer = controller_.document().find_layer(layerName_.toStdString());
-    symbol_                   = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
-                                                        : symbol_of_layer(controller_.document(), layer);
+    symbol_ = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
+                                      : symbol_of_layer(controller_.document(), layer);
     if (symbol_.layers.empty()) symbol_ = core::Symbol::of(core::Appearance{});
     original_ = symbol_;
 
@@ -3974,7 +3974,7 @@ void StyleDesigner::saveToLibrary()
     if (!ok || name.trimmed().isEmpty()) return;
 
     // THE APPLICATION'S OWN SETTINGS DIRECTORY, resolved by Qt per platform:
-    // ~/.config/KentOSCad on Linux, Application Support on macOS, AppData on
+    // ~/.config/PiriCAD on Linux, Application Support on macOS, AppData on
     // Windows. Not the project directory: a symbol a user designs belongs to the
     // user, travels with them between drawings, and must not turn up as an
     // untracked file next to somebody's pafta.
@@ -4029,4 +4029,4 @@ void StyleDesigner::saveToLibrary()
                              done.arg(path) + QStringLiteral("\nSEMBOL paket=\"%1\"").arg(path));
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

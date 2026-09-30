@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/find_replace_dialog.hpp"
+#include "piricad/app/find_replace_dialog.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/widgets.hpp"
 
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -13,7 +13,7 @@
 
 #include <cstdint>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 enum Column : std::uint8_t { Key = 0, Before, After, ColumnCount };
@@ -274,4 +274,4 @@ bool FindReplaceDialog::applyEnabled() const
     return apply_->isEnabled();
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

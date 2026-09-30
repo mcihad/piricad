@@ -15,20 +15,20 @@
 // the trust mode P1 forbids. So the two verbs exist in order to give a client
 // asking for them a clear refusal rather than a `Bilinmeyen komut`, and
 // `docs/komutlar/suggestion.md` documents that behaviour as the behaviour.
-#include "kentos_cad/ai/commands.hpp"
+#include "piricad/ai/commands.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/log.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/log.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using command::Arity;
@@ -298,4 +298,4 @@ void register_ai_commands(command::Registry& registry)
         if (auto st = registry.add(std::move(spec)); !st) command::log_error(st.error().message);
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

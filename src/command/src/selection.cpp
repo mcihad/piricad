@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/selection.hpp"
+#include "piricad/command/selection.hpp"
 
 #include <algorithm>
 
-namespace kentos::command {
+namespace piricad::command {
 
 bool Selection::add(core::EntityKey key)
 {
@@ -45,4 +45,4 @@ bool Selection::contains(core::EntityKey key) const
     return std::binary_search(keys_.begin(), keys_.end(), key);
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

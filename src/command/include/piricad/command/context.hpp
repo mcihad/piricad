@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the execution context handed to a command body.
+// PiriCAD — command: the execution context handed to a command body.
 //
-// kentoscad.md §2.4 — ctx.point() does not know where the input comes from: a mouse
+// piricad.md §2.4 — ctx.point() does not know where the input comes from: a mouse
 // click, a typed coordinate, the script's next argument, or an AI-produced value.
 // The same command code runs in all four contexts. This is the most critical
 // detail of the architecture, so nothing in this header may ever expose Origin to
 // the command body.
 #pragma once
 
-#include "kentos_cad/command/input.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/command/value.hpp"
-#include "kentos_cad/core/json.hpp"
+#include "piricad/command/input.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/command/value.hpp"
+#include "piricad/core/json.hpp"
 
 #include <coroutine>
 #include <cstdint>
@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// One running command; see session.hpp. Declared rather than included so this
 /// header stays cheap for every command body that includes it.
@@ -35,13 +35,13 @@ struct Offer;
 ///
 /// THIS IS THE ONE PLACE IT HAPPENS, and it sits on the path every `co_await
 /// ctx.point(...)` takes, so a mouse click, a typed coordinate, a script argument
-/// and an AI-produced point are aided identically (kentoscad.md §2.4, Article 1.2).
+/// and an AI-produced point are aided identically (piricad.md §2.4, Article 1.2).
 /// It does not ask, and cannot ask, which client supplied the value
 /// (`.claude/command.md` P10) — it is handed a `Value` and a `Prompt`, and the
 /// prompt's rubber-band origin is the previous point every direction constraint
 /// measures from.
 ///
-/// A non-point value is returned untouched. See `kentos_cad/command/aids.hpp` for
+/// A non-point value is returned untouched. See `piricad/command/aids.hpp` for
 /// why a client with no view gets no object snap.
 ///
 /// `up_front` says the value came WITH the invocation — typed after the command's
@@ -81,7 +81,7 @@ public:
 
     /// The converted value, or `nullopt` when the user cancelled. A command reads
     /// this as "stop" and returns; it never asks WHY, because ESC from a mouse and
-    /// an exhausted argument list are the same fact to the body (kentoscad.md §2.4).
+    /// an exhausted argument list are the same fact to the body (piricad.md §2.4).
     std::optional<T> await_resume();
 
 private:
@@ -266,7 +266,7 @@ public:
     core::LayerId active_layer() const;
 
     /// Writes a line to the transcript. Never a dialog: a command body must be
-    /// runnable headless (kentoscad.md §14 journal replay).
+    /// runnable headless (piricad.md §14 journal replay).
     ///
     /// NOT FOR A REFUSAL. A line on the transcript reaches a person at the command
     /// line and nobody else: the bus still reports the dispatch as a success, so a
@@ -346,4 +346,4 @@ private:
     const core::Document& doc_;
 };
 
-} // namespace kentos::command
+} // namespace piricad::command

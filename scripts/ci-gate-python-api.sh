@@ -5,7 +5,7 @@
 #
 # WHY THIS GATE EXISTS.
 #
-# `kentos.cad` is PROJECTED from `Registry` (CLAUDE.md 5.10, 5.20): a command
+# `piricad.cad` is PROJECTED from `Registry` (CLAUDE.md 5.10, 5.20): a command
 # registered today is a Python callable today, with no second list to update. The
 # one thing the projection cannot work out for itself is what to call a parameter
 # in English — `noktalar` is `points`, and no rule of grammar gets you there.
@@ -63,7 +63,7 @@ while IFS= read -r hit; do
 
     if [[ -z "$english" ]]; then
         echo "python-api: '${name}' parametresinin İngilizce adı yok -> ${file}" >&2
-        echo "python-api:   .en(\"...\") ile bildirin; kentos.cad anahtar kelimesi odur." >&2
+        echo "python-api:   .en(\"...\") ile bildirin; piricad.cad anahtar kelimesi odur." >&2
         fail=1
         continue
     fi

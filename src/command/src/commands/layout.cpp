@@ -28,15 +28,15 @@
 // needs its own answer to which of the two a handle may fill. Until that is
 // designed these two are typed by a person or a script, and a model composes a
 // sheet by asking the person to run them.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/colour.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/colour.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/layout.hpp"
-#include "kentos_cad/core/layout_table.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/layout.hpp"
+#include "piricad/core/layout_table.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -46,7 +46,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 using core::Layout;
@@ -1269,7 +1269,7 @@ bool column_verb(Context& ctx, Bus& bus, LayoutItem& item, const std::string& op
         item.columns.clear();
     }
     std::vector<core::LayoutColumn>& columns = item.table_columns;
-    const auto position                      = [&](const char* name, std::size_t last,
+    const auto position = [&](const char* name, std::size_t last,
                               std::size_t fallback) -> std::optional<std::size_t> {
         const Value v = ctx.argument(name);
         if (v.empty()) return fallback;
@@ -1679,7 +1679,7 @@ Task<void> run_template(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(layout)
+PIRICAD_COMMAND(layout)
 {
     return CommandSpec{
         .id       = "core.layout",
@@ -1746,11 +1746,11 @@ KENTOS_COMMAND(layout)
                                "(varsayılan evet)")
                     .en("single_file"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve "
                    "kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir.",
-        .run = &run_layout,
+        .run     = &run_layout,
         // LISTING IS A READ. Collapsing the five words into the command's worst
         // case would make `islem=listele` ask a person for approval, which a read
         // must never do (.claude/ai.md R3).
@@ -1775,7 +1775,7 @@ KENTOS_COMMAND(layout)
     };
 }
 
-KENTOS_COMMAND(layout_item)
+PIRICAD_COMMAND(layout_item)
 {
     return CommandSpec{
         .id       = "core.layout_item",
@@ -2010,7 +2010,7 @@ KENTOS_COMMAND(layout_item)
     };
 }
 
-KENTOS_COMMAND(layout_template)
+PIRICAD_COMMAND(layout_template)
 {
     return CommandSpec{
         .id       = "core.layout_template",
@@ -2056,4 +2056,4 @@ KENTOS_COMMAND(layout_template)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: what a symbol looks like, drawn small.
+// PiriCAD — app: what a symbol looks like, drawn small.
 //
 // The picture that appears beside a layer in the tree, beside a row on the symbol
 // shelf, and above the editor in the style designer.
@@ -15,10 +15,10 @@
 // parcel happens to look like.
 #pragma once
 
-#include "kentos_cad/core/dash_store.hpp"
-#include "kentos_cad/core/image_store.hpp"
-#include "kentos_cad/core/style.hpp"
-#include "kentos_cad/render/backend.hpp"
+#include "piricad/core/dash_store.hpp"
+#include "piricad/core/image_store.hpp"
+#include "piricad/core/style.hpp"
+#include "piricad/render/backend.hpp"
 
 #include <QIcon>
 #include <QImage>
@@ -29,7 +29,7 @@ class QPainter;
 
 #include <cstdint>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// What shape the preview draws the symbol on.
 enum class PreviewShape {
@@ -100,4 +100,4 @@ QIcon symbol_icon(const core::Symbol& symbol, const core::ImageStore& images,
                   const core::DashStore& dashes, QSize size, std::uint32_t background,
                   PreviewShape shape);
 
-} // namespace kentos::app
+} // namespace piricad::app

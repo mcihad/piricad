@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — processing: the tool list, and the one command body every tool runs through.
+// PiriCAD — processing: the tool list, and the one command body every tool runs through.
 //
 // THE RUNNER IS THE WHOLE CONTRACT. A tool declares what it takes and computes
 // from a snapshot; everything that touches the bus — reading the scope, asking
@@ -16,19 +16,19 @@
 //      so a replay acts on the same objects with the same parameters.
 // Durdur requests the job's stop; the tool returns `Cancelled`; phase 3 never
 // runs, and the transaction commits nothing.
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/processing/registry.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/text_fields.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/text_fields.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <array>
@@ -38,15 +38,15 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::processing {
+namespace piricad::processing {
 
-KENTOS_PROCESSING_TOOL(label_length);
-KENTOS_PROCESSING_TOOL(number_vertices);
-KENTOS_PROCESSING_TOOL(area_edit);
-KENTOS_PROCESSING_TOOL(attach);
-KENTOS_PROCESSING_TOOL(detach);
-KENTOS_PROCESSING_TOOL(buffer);
-KENTOS_PROCESSING_TOOL(polygonize);
+PIRICAD_PROCESSING_TOOL(label_length);
+PIRICAD_PROCESSING_TOOL(number_vertices);
+PIRICAD_PROCESSING_TOOL(area_edit);
+PIRICAD_PROCESSING_TOOL(attach);
+PIRICAD_PROCESSING_TOOL(detach);
+PIRICAD_PROCESSING_TOOL(buffer);
+PIRICAD_PROCESSING_TOOL(polygonize);
 
 namespace {
 
@@ -59,9 +59,10 @@ const std::vector<const ProcessingTool*>& all_tools()
 {
     static const std::vector<const ProcessingTool*> tools = [] {
         const std::vector<const ProcessingTool*> declared{
-            &kentos_tool_label_length(), &kentos_tool_number_vertices(), &kentos_tool_area_edit(),
-            &kentos_tool_attach(),       &kentos_tool_detach(),          &kentos_tool_buffer(),
-            &kentos_tool_polygonize(),
+            &piricad_tool_label_length(), &piricad_tool_number_vertices(),
+            &piricad_tool_area_edit(),    &piricad_tool_attach(),
+            &piricad_tool_detach(),       &piricad_tool_buffer(),
+            &piricad_tool_polygonize(),
         };
         // The ORDER is sorted, never the addresses: a run that put two tools in
         // a different place would move a row in the Araçlar tree and a line in
@@ -652,4 +653,4 @@ void register_processing_commands(command::Registry& registry)
     }
 }
 
-} // namespace kentos::processing
+} // namespace piricad::processing

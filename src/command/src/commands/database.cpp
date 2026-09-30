@@ -6,7 +6,7 @@
 // their corporate data. A program that can only read a dump cannot sit inside
 // that workflow.
 //
-// TWO THINGS GO IN AND THEY ARE NOT THE SAME THING; `kentos_cad/io/postgis.hpp`
+// TWO THINGS GO IN AND THEY ARE NOT THE SAME THING; `piricad/io/postgis.hpp`
 // states the reasoning in full and it is worth repeating here, because this is the
 // surface a user and the AI both see:
 //
@@ -34,17 +34,17 @@
 // The work itself lives in /src/io behind `Bus::on_database_request`, for the same
 // reason `AÇ` does: Article 3.2 forbids /src/command from including /src/io, while
 // the registry that generates the CLI help, the AI schema and the docs lives here.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <array>
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// One place where "no database engine" is reported, so a headless test and a
@@ -87,7 +87,7 @@ struct Operation
 
 constexpr std::array<Operation, 8> kOperations{{
     {"baglan", DatabaseRequest::Verb::Connect, true,
-     "Bağlantı dizesi, örnek: host=localhost dbname=kentoscad user=kentoscad"}, // ui-label
+     "Bağlantı dizesi, örnek: host=localhost dbname=piricad user=piricad"}, // ui-label
     {"kes", DatabaseRequest::Verb::Disconnect, false, nullptr},
     {"tablolar", DatabaseRequest::Verb::Tables, false, nullptr},
     {"katmanyaz", DatabaseRequest::Verb::WriteLayer, false, "Yazılacak tablonun adı"},
@@ -185,7 +185,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(database)
+PIRICAD_COMMAND(database)
 {
     return CommandSpec{
         .id       = "core.database",
@@ -225,9 +225,9 @@ KENTOS_COMMAND(database)
         // be able to cost a user work they cannot get back. The AI reaches a
         // PostGIS layer the same way it reaches everything else: by drawing and
         // measuring on a document somebody else opened for it.
-        .flags = Flags::Interactive | Flags::Scriptable,
+        .flags   = Flags::Interactive | Flags::Scriptable,
         .summary = "PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar.",
-        .run = &run,
+        .run     = &run,
         // THE ONE COMMAND THAT REACHES OFF THIS MACHINE. Reading a table edits
         // the drawing; writing one changes somebody else's database, and that is
         // not something an undo stack can take back (C-05).
@@ -235,4 +235,4 @@ KENTOS_COMMAND(database)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

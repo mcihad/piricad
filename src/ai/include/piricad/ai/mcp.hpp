@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// KentOSCad — ai: the MCP protocol engine, revision 2026-07-28 and nothing else.
+// PiriCAD — ai: the MCP protocol engine, revision 2026-07-28 and nothing else.
 //
 // WHY THIS FILE IS AGPL WHEN THE REST OF THE TREE IS GPL-3.0-or-later: see
 // `jsonrpc.hpp`. CLAUDE.md Article 2.1 puts a server component under AGPLv3 and
@@ -35,30 +35,30 @@
 // first gets `-Wmismatched-tags` on the definition that follows, and a warning
 // is a defect here (CLAUDE.md 6.3). Defining it first makes the later spelling a
 // mere reference to a known type. The real fix belongs in `dispatcher.hpp`.
-#include "kentos_cad/ai/arguments.hpp"
-#include "kentos_cad/ai/catalog.hpp"
+#include "piricad/ai/arguments.hpp"
+#include "piricad/ai/catalog.hpp"
 
-#include "kentos_cad/ai/clients.hpp"
-#include "kentos_cad/ai/dispatcher.hpp"
-#include "kentos_cad/ai/endpoint.hpp"
-#include "kentos_cad/ai/jsonrpc.hpp"
+#include "piricad/ai/clients.hpp"
+#include "piricad/ai/dispatcher.hpp"
+#include "piricad/ai/endpoint.hpp"
+#include "piricad/ai/jsonrpc.hpp"
 
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/spec.hpp"
 
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// What this server says it is.
 struct ServerInfo
 {
-    std::string name{"KentOSCad"}; ///< the program's name, as a client displays it
+    std::string name{"PiriCAD"}; ///< the program's name, as a client displays it
 
     /// The build's version. EMPTY BY DEFAULT and filled by the application,
-    /// which is the only target `KENTOS_VERSION` is defined for
+    /// which is the only target `PIRICAD_VERSION` is defined for
     /// (`src/app/CMakeLists.txt`). A copy of the number here would be a second
     /// place the version lives, and those two places disagree eventually.
     std::string version;
@@ -87,10 +87,10 @@ std::string default_instructions();
 inline constexpr const char* kLlmsToolName = "llms_txt";
 
 /// The index resource: `ai::llms_txt`, generated on every read.
-inline constexpr const char* kLlmsUri = "kentoscad://llms.txt";
+inline constexpr const char* kLlmsUri = "piricad://llms.txt";
 
 /// The long form: `ai::llms_full_txt`, also generated on every read.
-inline constexpr const char* kLlmsFullUri = "kentoscad://llms-full.txt";
+inline constexpr const char* kLlmsFullUri = "piricad://llms-full.txt";
 
 /// WHAT THE CLIENT IS WORKING ON, as a resource rather than a call.
 ///
@@ -98,13 +98,13 @@ inline constexpr const char* kLlmsFullUri = "kentoscad://llms-full.txt";
 /// through a second path that could come to disagree with it (CLAUDE.md 5.10).
 /// A resource because a client attaches it once and re-reads it; a tool because
 /// an agent asks it mid-turn. The two are different gestures over one answer.
-inline constexpr const char* kContextUri = "kentoscad://belge/ozet";
+inline constexpr const char* kContextUri = "piricad://belge/ozet";
 
 /// What the drawing's sheets cannot honour, from `ÇIKTIYERLEŞİMİ islem=denetle`.
 ///
 /// Read before an export rather than after it: none of what it reports fails, so
 /// the file appears and looks finished (TODOS L-15, M-05).
-inline constexpr const char* kPreflightUri = "kentoscad://yerlesim/denetim";
+inline constexpr const char* kPreflightUri = "piricad://yerlesim/denetim";
 
 /// The `_meta` key a client appends to an existing pending suggestion with.
 ///
@@ -112,10 +112,10 @@ inline constexpr const char* kPreflightUri = "kentoscad://yerlesim/denetim";
 /// for a reverse-DNS prefix on any `_meta` key it did not define, while the
 /// shorter name is what the brief and the manual print. Reading both costs one
 /// line and spares a client a guess.
-inline constexpr const char* kPlanMetaKey = "cad.kentos/plan";
+inline constexpr const char* kPlanMetaKey = "cad.piricad/plan";
 
 /// The `_meta` key a client may name itself in, for the audit record.
-inline constexpr const char* kClientMetaKey = "cad.kentos/client";
+inline constexpr const char* kClientMetaKey = "cad.piricad/client";
 
 /// The `_meta` key a client names ITS OWN REQUEST in, so a retry is not a second
 /// suggestion.
@@ -129,7 +129,7 @@ inline constexpr const char* kClientMetaKey = "cad.kentos/client";
 /// TWO SPELLINGS, like the plan key: the prefixed form the specification asks
 /// for on any `_meta` key it did not define, and the short `idempotency` the
 /// manual prints.
-inline constexpr const char* kIdempotencyMetaKey = "cad.kentos/idempotency";
+inline constexpr const char* kIdempotencyMetaKey = "cad.piricad/idempotency";
 
 /// The protocol engine: one function from an HTTP request to an HTTP answer.
 class McpServer
@@ -224,4 +224,4 @@ private:
     ClientLedger* ledger_{nullptr};
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

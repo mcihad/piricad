@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// KentOSCad — ai: who has talked to this server, and who may not any more.
+// PiriCAD — ai: who has talked to this server, and who may not any more.
 //
 // WHY THIS FILE IS AGPL WHEN THE REST OF THE TREE IS GPL-3.0-or-later: see
 // `jsonrpc.hpp`. This is the server's own bookkeeping about the clients it
@@ -24,9 +24,9 @@
 // record — never the token, never a header value that could hold one.
 #pragma once
 
-#include "kentos_cad/ai/endpoint.hpp"
+#include "piricad/ai/endpoint.hpp"
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -34,7 +34,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// One client, as the settings page shows it.
 struct ClientRecord
@@ -120,4 +120,4 @@ private:
     std::vector<ClientRecord> records_;
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

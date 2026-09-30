@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the dash patterns one document carries.
+// PiriCAD — core: the dash patterns one document carries.
 //
 // A LINE TYPE IS A PATTERN, NOT A PICTURE. MPYY prints `İL SINIRI` as a dash, a
 // gap, a dot and a gap, repeated; that is four numbers. Carrying it as a picture
@@ -25,7 +25,7 @@
 // boundary is drawn at some thickness and the dash is so many times that.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <span>
@@ -33,7 +33,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Index into a Document's DashStore. Slot 0 always means "solid".
 using DashId = std::uint16_t;
@@ -116,4 +116,4 @@ private:
     std::vector<Entry> patterns_;
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

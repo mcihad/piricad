@@ -14,14 +14,14 @@
 // The tree comes from the package. MPYY EK-1 files its rows by annex and then by
 // a section path such as SINIRLAR > İDARİ SINIRLAR, and that is exactly the tree
 // a planner already navigates on paper. Nothing here invents a taxonomy (5.13).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/style_library.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/style_library.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// Reads one catalogue package from disk.
@@ -219,7 +219,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(symbol)
+PIRICAD_COMMAND(symbol)
 {
     return CommandSpec{
         .id       = "core.symbol",
@@ -247,4 +247,4 @@ KENTOS_COMMAND(symbol)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: minimal deterministic JSON.
+// PiriCAD — core: minimal deterministic JSON.
 //
 // Phase 0 has no external dependency beyond Qt (canon). glaze / simdjson replace
-// this behind KENTOS_WITH_JSON when the dependency set lands (kentoscad.md §9.1).
+// this behind PIRICAD_WITH_JSON when the dependency set lands (piricad.md §9.1).
 // Requirements it must keep: object key order is preserved (journal diffs must be
 // stable) and number formatting is locale-independent.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <map>
@@ -16,7 +16,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Declared before the aliases below, which are written in terms of it.
 class Json;
@@ -128,4 +128,4 @@ private:
     void dump_to(std::string& out, int indent, int depth) const;
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

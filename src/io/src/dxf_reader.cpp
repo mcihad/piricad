@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: reading a DXF through libdxfrw.
+// PiriCAD — io: reading a DXF through libdxfrw.
 //
 // The library parses the file and calls one method here per table entry, block
 // and entity; this file turns each call into a document entity through the
 // transaction, with every loss said (io.md P11/P13). Nothing here reads the file
 // itself, nothing here writes the document outside the transaction (Article 5.9),
 // and the DRW_* types stay inside this .cpp (io.md R2).
-#include "kentos_cad/io/dxf.hpp"
+#include "piricad/io/dxf.hpp"
 
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/spline.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/io/vector.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/spline.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/io/vector.hpp"
 
 #include "dxf_common.hpp"
 #include "dxf_multileader.hpp"
@@ -45,7 +45,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef KENTOS_HAVE_DXFRW
+#ifdef PIRICAD_HAVE_DXFRW
 #include <drw_entities.h>
 #include <drw_header.h>
 #include <drw_interface.h>
@@ -53,12 +53,12 @@
 #include <libdxfrw.h>
 #endif
 
-namespace kentos::io {
+namespace piricad::io {
 
 using core::err;
 using core::ErrorCode;
 
-#ifndef KENTOS_HAVE_DXFRW
+#ifndef PIRICAD_HAVE_DXFRW
 
 command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std::string path,
                                                   ImportOptions options, std::stop_token stop)
@@ -68,7 +68,7 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
     (void)stop;
     co_return err(ErrorCode::Unsupported,
                   "'" + path +
-                      "' libdxfrw ile okunamaz: bu yapı KENTOS_WITH_DXFRW=OFF ile "
+                      "' libdxfrw ile okunamaz: bu yapı PIRICAD_WITH_DXFRW=OFF ile "
                       "derlendi. " +
                       dxf_backend_status());
 }
@@ -590,7 +590,7 @@ public:
             const dxf::Pt ma = x.apply(cx + mx, cy + my);
             const dxf::Pt mi = x.apply(cx + nx, cy + ny);
             const bool full  = std::abs(e.endparam - e.staparam) >= 2.0 * core::kPi - 1e-9 ||
-                              (e.staparam == 0.0 && e.endparam == 0.0);
+                               (e.staparam == 0.0 && e.endparam == 0.0);
             if (full) {
                 auto made = place_ellipse(layer_for(e, in), to_mm(c), to_mm(ma), to_mm(mi), {});
                 finish(e, "ELLIPSE", made, {cz});
@@ -1147,7 +1147,7 @@ private:
         height_of(zs, id);
         if (!e.extData.empty()) {
             // FOREIGN means another program's. This program's own application
-            // group (KENTOSCAD) is decoded into columns and regenerated on every
+            // group (PIRICAD) is decoded into columns and regenerated on every
             // write, so it is left out of the kept bytes — otherwise a drawing
             // that went out and came back would carry itself twice.
             std::vector<std::shared_ptr<DRW_Variant>> foreign;
@@ -1156,7 +1156,7 @@ private:
                 if (!v) continue;
                 if (v->code() == 1001)
                     ours = v->type() == DRW_Variant::STRING && v->content.s != nullptr &&
-                           *v->content.s == "KENTOSCAD";
+                           *v->content.s == "PIRICAD";
                 if (!ours) foreign.push_back(v);
             }
             const auto bytes = dxf::encode_xdata(foreign);
@@ -1316,7 +1316,7 @@ private:
     }
 
     /// The value of this program's own note `key` on `e` — a `key=value` string
-    /// in its KENTOSCAD XDATA group, which the writer keeps for what a DXF record
+    /// in its PIRICAD XDATA group, which the writer keeps for what a DXF record
     /// cannot say. Empty when the file does not carry it.
     static std::optional<std::string> own_note(const DRW_Entity& e, std::string_view key)
     {
@@ -1325,7 +1325,7 @@ private:
             if (!v) continue;
             if (v->code() == 1001) {
                 ours = v->type() == DRW_Variant::STRING && v->content.s != nullptr &&
-                       *v->content.s == "KENTOSCAD";
+                       *v->content.s == "PIRICAD";
                 continue;
             }
             if (!ours || v->code() != 1000 || v->type() != DRW_Variant::STRING ||
@@ -1338,7 +1338,7 @@ private:
         return std::nullopt;
     }
 
-    /// This program's own attributes, written by its exporter under the KENTOSCAD
+    /// This program's own attributes, written by its exporter under the PIRICAD
     /// application name as `id=value` strings, come back into the columns the
     /// drawing already declares — the same type, parsed the way the column's type
     /// says. A column the drawing does not have stays in the foreign bytes.
@@ -1350,7 +1350,7 @@ private:
             if (!v) continue;
             if (v->code() == 1001) {
                 ours = v->type() == DRW_Variant::STRING && v->content.s != nullptr &&
-                       *v->content.s == "KENTOSCAD";
+                       *v->content.s == "PIRICAD";
                 continue;
             }
             if (!ours || v->code() != 1000 || v->type() != DRW_Variant::STRING ||
@@ -1865,9 +1865,9 @@ private:
                                                  core::RingRole::Open, 0};
         const core::BlockId saved = in_block_;
         in_block_                 = in_block;
-        auto made                 = tx_.add_kind(layer_slot(e.layer), core::kBlockReferenceKind,
-                                                 std::span<const core::RingGeometry::RingInput>(&ring, 1),
-                                                 core::encode_block_reference(ref), in_block);
+        auto made = tx_.add_kind(layer_slot(e.layer), core::kBlockReferenceKind,
+                                 std::span<const core::RingGeometry::RingInput>(&ring, 1),
+                                 core::encode_block_reference(ref), in_block);
         if (made && in_block == core::kNoBlock) ++refs_read_;
         finish(e, "INSERT", made, {iz});
         in_block_ = saved;
@@ -2200,7 +2200,7 @@ public:
                     const Point2 base = pts.front();
                     const auto far    = std::ranges::max_element(corners, {}, [base](Point2 c) {
                         return std::hypot(static_cast<double>(c.x - base.x),
-                                             static_cast<double>(c.y - base.y));
+                                          static_cast<double>(c.y - base.y));
                     });
                     const double size = std::hypot(static_cast<double>(far->x - base.x),
                                                    static_cast<double>(far->y - base.y));
@@ -2441,7 +2441,7 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
     if (path.rfind("/vsi", 0) == 0)
         co_return err(ErrorCode::InvalidArgument,
                       "'" + path +
-                          "' sanal dosya sistemi yolu. KentOSCad bir veri dosyasının ağdan ya da "
+                          "' sanal dosya sistemi yolu. PiriCAD bir veri dosyasının ağdan ya da "
                           "arşivin içinden okunmasına izin vermez; dosyayı diske alıp yeniden "
                           "deneyin.");
     if (stop.stop_requested())
@@ -2512,6 +2512,6 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
     co_return std::move(sink.report());
 }
 
-#endif // KENTOS_HAVE_DXFRW
+#endif // PIRICAD_HAVE_DXFRW
 
-} // namespace kentos::io
+} // namespace piricad::io

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — the support matrix, MEASURED (TODOS F-01).
+// PiriCAD — the support matrix, MEASURED (TODOS F-01).
 //
 // WHY A PROGRAM AND NOT A TABLE. "Does TRIM work on an arc" has two answers in
 // any codebase: the one a person believes and the one the code gives. A
@@ -34,18 +34,18 @@
 // It is an executable at the top of the dependency graph (Article 3.2a): it links
 // io, processing, the domains and ai so its registry is the application's, and it
 // contains no Qt.
-#include "kentos_cad/ai/commands.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/grips.hpp"
-#include "kentos_cad/core/snap.hpp"
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/processing/registry.hpp"
+#include "piricad/ai/commands.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/grips.hpp"
+#include "piricad/core/snap.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/surface/commands.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/processing/registry.hpp"
 
 #include <algorithm>
 #include <array>
@@ -64,7 +64,7 @@
 
 namespace {
 
-using namespace kentos;
+using namespace piricad;
 using command::Args;
 using command::Value;
 using core::EntityKey;
@@ -1271,7 +1271,7 @@ int run(int argc, char** argv)
 {
     if (argc < 4) {
         (void)std::fprintf(stderr,
-                           "kullanım: kentos_kapsam <çıktı.md> <depo kökü> <geçici dizin>\n");
+                           "kullanım: piricad_kapsam <çıktı.md> <depo kökü> <geçici dizin>\n");
         return 2;
     }
     const std::string out_path = argv[1];
@@ -1302,7 +1302,7 @@ int run(int argc, char** argv)
     std::string doc;
     doc += "<!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->\n";
     doc +=
-        "<!-- Kaynak: kentos_kapsam. Her hücre bir komut GERÇEKTEN çalıştırılarak ölçülür. -->\n";
+        "<!-- Kaynak: piricad_kapsam. Her hücre bir komut GERÇEKTEN çalıştırılarak ölçülür. -->\n";
     doc += "<!-- Yeniden üret: make kapsam -->\n\n";
     doc += "# Destek Matrisi\n\n";
     doc += "Hangi düzenleme işleminin hangi nesne türünde ne yaptığını gösterir. Tablo elle\n";
@@ -1407,7 +1407,7 @@ int run(int argc, char** argv)
 
     std::ofstream out(out_path, std::ios::out | std::ios::binary);
     if (!out) {
-        (void)std::fprintf(stderr, "kentos_kapsam: '%s' yazılamadı\n", out_path.c_str());
+        (void)std::fprintf(stderr, "piricad_kapsam: '%s' yazılamadı\n", out_path.c_str());
         return 1;
     }
     out << doc;
@@ -1427,10 +1427,10 @@ int main(int argc, char** argv)
     try {
         return run(argc, argv);
     } catch (const std::exception& e) {
-        (void)std::fprintf(stderr, "kentos_kapsam: %s\n", e.what());
+        (void)std::fprintf(stderr, "piricad_kapsam: %s\n", e.what());
         return 1;
     } catch (...) {
-        (void)std::fprintf(stderr, "kentos_kapsam: bilinmeyen hata\n");
+        (void)std::fprintf(stderr, "piricad_kapsam: bilinmeyen hata\n");
         return 1;
     }
 }

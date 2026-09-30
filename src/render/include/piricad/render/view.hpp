@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — render: the world/screen transform, and the jitter defence.
+// PiriCAD — render: the world/screen transform, and the jitter defence.
 //
-// kentoscad.md §10.3, the single most important rendering rule:
+// piricad.md §10.3, the single most important rendering rule:
 //
 //   TUREF/TM3 coordinates are seven digits. Writing a double world coordinate
 //   straight into a float vertex attribute produces metre-scale shimmer on
@@ -11,9 +11,9 @@
 // The only float-producing call takes the origin offset into account by design.
 #pragma once
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
-namespace kentos::render {
+namespace piricad::render {
 
 using core::Box2;
 using core::Mm;
@@ -101,4 +101,4 @@ private:
     int height_{1};
 };
 
-} // namespace kentos::render
+} // namespace piricad::render

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: internal units and primitive geometry types.
+// PiriCAD — core: internal units and primitive geometry types.
 //
 // Constitution: coordinates are stored as int64 fixed-point millimetres.
-// Never double, never float. See kentoscad.md §10.2 and .claude/core.md.
+// Never double, never float. See piricad.md §10.2 and .claude/core.md.
 #pragma once
 
 #include <cmath>
@@ -12,7 +12,7 @@
 #include <limits>
 #include <string>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Internal storage unit: signed 64-bit fixed-point millimetres.
 /// Range at 1 mm resolution is ±9.2e15 mm ≈ ±9.2e12 m — nine orders of
@@ -446,4 +446,4 @@ constexpr std::int64_t mul_div_round(std::int64_t v, std::int64_t num, std::int6
     return saturate_int64(two * (-r) >= d ? q - 1 : q);
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

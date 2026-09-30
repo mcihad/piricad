@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the byte order of a kind payload.
+// PiriCAD — core: the byte order of a kind payload.
 //
 // model.md R9a. A kind stores what its rings cannot say — an arc-polyline's
 // bulges, a spline's knots, a block reference's transform — as fixed-width
@@ -14,7 +14,7 @@
 // a payload comes off disk, and disk is untrusted input (io.md).
 #pragma once
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -22,7 +22,7 @@
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Appends one byte.
 inline void put_u8(std::vector<std::uint8_t>& out, std::uint8_t v)
@@ -154,4 +154,4 @@ private:
     std::size_t at_{0};
 };
 
-} // namespace kentos::core
+} // namespace piricad::core

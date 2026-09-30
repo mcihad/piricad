@@ -186,7 +186,7 @@ aynı komut aynı yolu izler. Sonuç **Transkript** panelinde görünür.
 Koordinat sistemi durum çubuğunun sağ ucunda yazar; `AYAR koordinat_sistemi` ile
 değiştirdiğinizde oradan doğrular.
 
-**Seçenekler** penceresi (**KentOS CAD ▸ Seçenekler…**, kısayolu **Ctrl+,**) bildirilen her
+**Seçenekler** penceresi (**PiriCAD CAD ▸ Seçenekler…**, kısayolu **Ctrl+,**) bildirilen her
 ayarı gösterir. Pencerenin tamamı ayar kataloğundan **üretilir**: satırın adı ayarın
 kendi birincil adı, alanı bildirilen tipinden, sınırları bildirilen aralığından,
 üzerine gelince çıkan açıklaması bildirilen özetinden gelir. Kataloğa eklenen bir ayar
@@ -199,7 +199,7 @@ hangi kapsamda olduğunu söyler; karışıksa onu da söyler.
 
 ## Proje Ayarları penceresi
 
-`Seçenekler` "bu program nasıl davransın" sorusunu cevaplar. **KentOS CAD ▸ Proje
+`Seçenekler` "bu program nasıl davransın" sorusunu cevaplar. **PiriCAD CAD ▸ Proje
 Ayarları…** ise başka bir soruyu: **"bu dosyanın içinde ne var"**. Ayrı bir
 penceredir, çünkü ikinci soruyu soran biri genellikle dosyayı birine vermek
 üzeredir — ve ikisi çoğu zaman aynı anda açık durur.
@@ -274,7 +274,7 @@ hassasiyetini ve birimini kurmak, sonra çizime geçmektir:
 
 `AYAR` **AI erişimine kapalıdır.** Koordinat sistemini değiştirmek çizimdeki bütün
 koordinatları yeniden yorumlamak demektir; bunu yalnızca yetkili bir mühendis yapar
-(`kentoscad.md` §5.1).
+(`piricad.md` §5.1).
 
 Ayrıntı: [Betik yazma](../betik/README.md).
 

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — render: builds a DrawList from a Document.
+// PiriCAD — render: builds a DrawList from a Document.
 #pragma once
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/render/drawlist.hpp"
-#include "kentos_cad/render/view.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/render/drawlist.hpp"
+#include "piricad/render/view.hpp"
 
 #include <cstdint>
 #include <span>
 
-namespace kentos::render {
+namespace piricad::render {
 
 /// Turns one symbol layer into a pass, converting every measure to pixels.
 ///
@@ -74,4 +74,4 @@ struct SceneOptions
 void build_scene(const core::Document& doc, const ViewTransform& view, const SceneOptions& options,
                  DrawList& out);
 
-} // namespace kentos::render
+} // namespace piricad::render

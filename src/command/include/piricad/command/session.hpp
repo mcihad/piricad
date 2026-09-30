@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: one running command instance.
+// PiriCAD — command: one running command instance.
 //
 // A Session owns the coroutine, its transaction and its input source. The bus
 // drives it; the GUI feeds it. Non-interactive clients run it to completion in a
@@ -7,12 +7,12 @@
 // same path — no client has a private route (Constitution Article 1).
 #pragma once
 
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/input.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/json.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/input.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/json.hpp"
 
 #include <coroutine>
 #include <cstdint>
@@ -22,7 +22,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// Where one running command is in its life.
 ///
@@ -109,7 +109,7 @@ class Session
 public:
     /// Exactly one of `owned_tx` / `borrowed_tx` must be supplied. A batch run
     /// borrows the bus's batch transaction so N commands collapse into one undo
-    /// step (kentoscad.md §10.4); every other run owns its own.
+    /// step (piricad.md §10.4); every other run owns its own.
     Session(Bus& bus, const CommandSpec& spec, std::unique_ptr<InputSource> input,
             std::unique_ptr<Transaction> owned_tx, Transaction* borrowed_tx = nullptr);
     ~Session();
@@ -408,4 +408,4 @@ template<class T> std::optional<T> InputAwaiter<T>::await_resume()
     return conv_(v);
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

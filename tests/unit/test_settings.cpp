@@ -7,20 +7,20 @@
 // legal export that changes because someone switched to the dark theme. So every
 // case here asks one of three questions: does the boundary hold, is an out-of-range
 // value clamped and reported, and can a user find out why a value is what it is.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/settings.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/settings.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/script/json_runner.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <string>
 
-using namespace kentos;
-using namespace kentos::core;
+using namespace piricad;
+using namespace piricad::core;
 
 namespace {
 
@@ -524,16 +524,16 @@ TEST_CASE("Aynı ad iki ayara verilemez")
 {
     SettingCatalog c = test_catalogue();
     auto clash       = c.add(SettingSpec{
-              .id       = "test.baska.sayi",
-              .names    = {"sayi"}, // already taken by test.proje.sayi
-              .type     = SettingType::Int,
-              .scope    = SettingScope::Project,
-              .fallback = SettingValue::integer(0),
-              .range    = SettingRange::unbounded(),
-              .values   = {},
-              .unit     = "",
-              .summary  = "Çakışan ad.",
-              .section  = "Sınama",
+        .id       = "test.baska.sayi",
+        .names    = {"sayi"}, // already taken by test.proje.sayi
+        .type     = SettingType::Int,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::integer(0),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Çakışan ad.",
+        .section  = "Sınama",
     });
     CHECK(!clash.ok());
     CHECK(mentions(clash.error().message, "test.proje.sayi"));
@@ -628,7 +628,7 @@ TEST_CASE("Her tür metne çevrilip geri okunur")
     // the case worth naming: it must not be read as a number.
     round_trip("core.veritabani.sunucu", "sunucu.belediye.gov.tr", "sunucu.belediye.gov.tr");
     round_trip("core.veritabani.port", "5433", "5433");
-    round_trip("core.veritabani.ad", "kentoscad", "kentoscad");
+    round_trip("core.veritabani.ad", "piricad", "piricad");
     round_trip("core.veritabani.kullanici", "harita", "harita");
 
     // A mask is readable in hexadecimal, which is how a user thinks about it.
@@ -794,7 +794,7 @@ TEST_CASE("R41: her Rig kendi ayar kutusunu taşır — komşu case bulaşmaz")
 
 TEST_CASE("AYAR komut satırından, betikten ve arayüzden aynı sonucu verir")
 {
-    // test.md R3 / kentoscad.md §16.5: the three clients are equal. A dialog, a typed
+    // test.md R3 / piricad.md §16.5: the three clients are equal. A dialog, a typed
     // line and a JSON script must leave the same state behind and the same journal.
     // `origin` is the only field allowed to differ, and it is not compared.
     const auto what_happened = [](const command::Journal& j) {
@@ -817,7 +817,7 @@ TEST_CASE("AYAR komut satırından, betikten ve arayüzden aynı sonucu verir")
 
     // 3. a JSON script through the same bus
     Rig script;
-    kentos::script::JsonRunner runner(script.bus, kentos::script::Sandbox::Project);
+    piricad::script::JsonRunner runner(script.bus, piricad::script::Sandbox::Project);
     auto ran = runner.run_text(R"({"ad":"ayar","komutlar":[)"
                                R"({"cmd":"core.setting","args":{"ad":"core.crs.hassasiyet",)"
                                R"("deger":"6"}}]})");
@@ -1122,10 +1122,10 @@ TEST_CASE("Okunur seçenek adları değerlerle aynı sayıda; yetki ayarlarında
     // THE SETTINGS WINDOW SHOWS `labels` and writes `values` by index, so a list
     // one short would write the wrong word for the last choice. The settings
     // that decide who may do what carry readable names (TODOS A-03).
-    for (const kentos::core::SettingSpec& spec : kentos::core::builtin_settings().all()) {
+    for (const piricad::core::SettingSpec& spec : piricad::core::builtin_settings().all()) {
         INFO(spec.id);
         if (!spec.labels.empty()) CHECK_EQ(spec.labels.size(), spec.values.size());
-        if (spec.authority && spec.type == kentos::core::SettingType::Enum)
+        if (spec.authority && spec.type == piricad::core::SettingType::Enum)
             CHECK_FALSE(spec.labels.empty());
     }
 }

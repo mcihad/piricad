@@ -1,6 +1,6 @@
 # Fuzzing
 
-File reading is the largest attack surface in this product (kentoscad.md §13), so
+File reading is the largest attack surface in this product (piricad.md §13), so
 every parser is fuzzed continuously: DXF, DWG, GML/PlanGML, LAS/LAZ, GeoJSON, the
 native project format, the command-line grammar and the journal reader.
 
@@ -11,11 +11,11 @@ PR (CLAUDE.md 6.7).
 
 | Hedef | Ayrıştırıcı | Tohum korpusu |
 |---|---|---|
-| `kentos_fuzz_proje` | native project format (`.pcad`) | `tohum/proje/` |
-| `kentos_fuzz_dxf` | DXF import seam (GDAL/OGR + the KentOSCad conversion) | `tohum/dxf/` |
-| `kentos_fuzz_shp` | Shapefile import seam | `tohum/shp/` |
-| `kentos_fuzz_ncz` | the Netcad NCZ reader (`io/ncz.hpp`): the block walk, every geometry record, smart objects, attribute tables and the mapping into the document — hand-written, needs no library | `tohum/ncz/` |
-| `kentos_fuzz_komut` | the command-line grammar (`command/parser.hpp`): line, expression, predicate and single coordinate, every coordinate resolved under all six angle conventions, with and without a numbered-point lookup behind `n()` | `tohum/komut/` |
+| `piricad_fuzz_proje` | native project format (`.pcad`) | `tohum/proje/` |
+| `piricad_fuzz_dxf` | DXF import seam (GDAL/OGR + the PiriCAD conversion) | `tohum/dxf/` |
+| `piricad_fuzz_shp` | Shapefile import seam | `tohum/shp/` |
+| `piricad_fuzz_ncz` | the Netcad NCZ reader (`io/ncz.hpp`): the block walk, every geometry record, smart objects, attribute tables and the mapping into the document — hand-written, needs no library | `tohum/ncz/` |
+| `piricad_fuzz_komut` | the command-line grammar (`command/parser.hpp`): line, expression, predicate and single coordinate, every coordinate resolved under all six angle conventions, with and without a numbered-point lookup behind `n()` | `tohum/komut/` |
 
 Still to land with their formats: DWG, GML/PlanGML, LAS/LAZ, GeoJSON and the
 journal reader.
@@ -26,15 +26,15 @@ The targets are Clang-only (`-fsanitize=fuzzer`) and off by default:
 
 ```bash
 cmake -S . -B build/fuzz -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_CXX_COMPILER=clang++ -DKENTOS_BUILD_FUZZ=ON -DKENTOS_BUILD_APP=OFF
-cmake --build build/fuzz --target kentos_fuzz_proje kentos_fuzz_dxf kentos_fuzz_komut kentos_fuzz_ncz
+      -DCMAKE_CXX_COMPILER=clang++ -DPIRICAD_BUILD_FUZZ=ON -DPIRICAD_BUILD_APP=OFF
+cmake --build build/fuzz --target piricad_fuzz_proje piricad_fuzz_dxf piricad_fuzz_komut piricad_fuzz_ncz
 
 mkdir -p build/fuzz/fuzz-corpus/proje build/fuzz/fuzz-corpus/dxf build/fuzz/fuzz-corpus/komut
-./build/fuzz/bin/kentos_fuzz_proje build/fuzz/fuzz-corpus/proje tests/fuzz/tohum/proje \
+./build/fuzz/bin/piricad_fuzz_proje build/fuzz/fuzz-corpus/proje tests/fuzz/tohum/proje \
     -max_total_time=300
-./build/fuzz/bin/kentos_fuzz_dxf   build/fuzz/fuzz-corpus/dxf   tests/fuzz/tohum/dxf \
+./build/fuzz/bin/piricad_fuzz_dxf   build/fuzz/fuzz-corpus/dxf   tests/fuzz/tohum/dxf \
     -max_total_time=300
-./build/fuzz/bin/kentos_fuzz_komut build/fuzz/fuzz-corpus/komut tests/fuzz/tohum/komut \
+./build/fuzz/bin/piricad_fuzz_komut build/fuzz/fuzz-corpus/komut tests/fuzz/tohum/komut \
     -max_total_time=300
 ```
 

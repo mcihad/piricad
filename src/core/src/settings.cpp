@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: settings.
-#include "kentos_cad/core/settings.hpp"
+// PiriCAD — core: settings.
+#include "piricad/core/settings.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <cstring>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 using std::int64_t;
@@ -326,7 +326,7 @@ constexpr std::int64_t kFullCircle = kUDegFullCircle;
 
 } // namespace
 
-KENTOS_SETTING(tarama_desen_katalogu)
+PIRICAD_SETTING(tarama_desen_katalogu)
 {
     return SettingSpec{
         .id    = "core.tarama.desen_katalogu",
@@ -348,7 +348,7 @@ KENTOS_SETTING(tarama_desen_katalogu)
     };
 }
 
-KENTOS_SETTING(olcu_stil_katalogu)
+PIRICAD_SETTING(olcu_stil_katalogu)
 {
     return SettingSpec{
         .id       = "core.olcu.stil_katalogu",
@@ -357,19 +357,19 @@ KENTOS_SETTING(olcu_stil_katalogu)
         .scope    = SettingScope::App,
         .fallback = text_value("data/catalogs/dxf/olcu-stili.json"), // catalog-key: a path into
                                                                      // /data/catalogs, not a value
-        .range  = SettingRange::unbounded(),
-        .values = {},
-        .unit   = "",
-        .summary = "ÖLÇÜ ve LİDER komutlarının ok boyunu, uzatma çizgilerini ve yazı " // ui-label
-                   "yüksekliğini aldığı ölçü stili kataloğu (ISO-25, STANDARD, MIMARI). "
-                   "Değerler kâğıt mikrometresidir ve plan ölçeğiyle zemine iner. Bu "
-                   "makinedeki bir dosya yolu olduğu için uygulama ayarıdır; ölçünün "
-                   "kendi sayıları çizimle birlikte nesnede saklanır.",
-        .section = "Veri Kaynakları", // ui-label
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "ÖLÇÜ ve LİDER komutlarının ok boyunu, uzatma çizgilerini ve yazı " // ui-label
+                    "yüksekliğini aldığı ölçü stili kataloğu (ISO-25, STANDARD, MIMARI). "
+                    "Değerler kâğıt mikrometresidir ve plan ölçeğiyle zemine iner. Bu "
+                    "makinedeki bir dosya yolu olduğu için uygulama ayarıdır; ölçünün "
+                    "kendi sayıları çizimle birlikte nesnede saklanır.",
+        .section  = "Veri Kaynakları", // ui-label
     };
 }
 
-KENTOS_SETTING(vektor_kutuphanesi)
+PIRICAD_SETTING(vektor_kutuphanesi)
 {
     return SettingSpec{
         .id       = "core.stil.vektor",
@@ -379,9 +379,9 @@ KENTOS_SETTING(vektor_kutuphanesi)
         .fallback = text_value(
             "data/catalogs/mpyy-vektor/plan-gosterim.json"), // catalog-key: a path into
                                                              // /data/catalogs, not a value
-        .range  = SettingRange::unbounded(),
-        .values = {},
-        .unit   = "",
+        .range   = SettingRange::unbounded(),
+        .values  = {},
+        .unit    = "",
         .summary = "Resimli paketin ÜSTÜNE yüklenecek vektör gösterim paketi. Raf her " // ui-label
                    "kimlikten bir satır tutar ve aynı kimliği yeniden bildiren paket "
                    "öncekinin yerine geçer: burada yeniden çizilmiş bir satır "
@@ -396,75 +396,75 @@ KENTOS_SETTING(vektor_kutuphanesi)
     };
 }
 
-KENTOS_SETTING(koordinat_sistemi);
-KENTOS_SETTING(koordinat_hassasiyeti);
-KENTOS_SETTING(cizim_birimi);
-KENTOS_SETTING(egri_sapmasi);
-KENTOS_SETTING(cizgi_tipi_olcegi);
-KENTOS_SETTING(metin_yuksekligi);
-KENTOS_SETTING(veri_paketi_surumu);
-KENTOS_SETTING(mcp_port);
-KENTOS_SETTING(mcp_belirtec_zorunlu);
-KENTOS_SETTING(mcp_otomatik);
-KENTOS_SETTING(ai_hassas);
-KENTOS_SETTING(ai_dusunme_goster);
-KENTOS_SETTING(ai_tur_siniri);
-KENTOS_SETTING(ai_onay_politikasi);
-KENTOS_SETTING(ai_soru_politikasi);
-KENTOS_SETTING(ai_uzerine_yazma);
-KENTOS_SETTING(tema);
-KENTOS_SETTING(dil);
-KENTOS_SETTING(otomatik_kayit);
-KENTOS_SETTING(son_dosya_sayisi);
-KENTOS_SETTING(tuval_arkaplani);
-KENTOS_SETTING(yakalama_modlari);
-KENTOS_SETTING(dik_mod);
-KENTOS_SETTING(yuzey_normali);
-KENTOS_SETTING(kosegen_kilidi);
-KENTOS_SETTING(kutupsal_aci);
-KENTOS_SETTING(sembol_kutuphanesi);
-KENTOS_SETTING(vektor_kutuphanesi);
-KENTOS_SETTING(tarama_desen_katalogu);
-KENTOS_SETTING(olcu_stil_katalogu);
-KENTOS_SETTING(veritabani_sunucu);
-KENTOS_SETTING(veritabani_port);
-KENTOS_SETTING(veritabani_ad);
-KENTOS_SETTING(veritabani_kullanici);
-KENTOS_SETTING(yakalama_uzanti);
-KENTOS_SETTING(yakalama_isaret_boyu);
-KENTOS_SETTING(yakalama_isaret_rengi);
-KENTOS_SETTING(yakalama_ipucu);
-KENTOS_SETTING(yakalama_adimi);
-KENTOS_SETTING(dinamik_girdi);
-KENTOS_SETTING(son_komut);
-KENTOS_SETTING(kopukluk_carpani);
-KENTOS_SETTING(islem_pencere);
-KENTOS_SETTING(islem_hatirla);
-KENTOS_SETTING(izgara_rengi);
-KENTOS_SETTING(izgara_ana_rengi);
-KENTOS_SETTING(izgara_adimi_y);
-KENTOS_SETTING(cetvel_gorunur);
-KENTOS_SETTING(cetvel_kalinligi);
-KENTOS_SETTING(cetvel_birimi);
-KENTOS_SETTING(harita_olcek_cubugu);
-KENTOS_SETTING(harita_kalinlik);
-KENTOS_SETTING(harita_kuzey_oku);
-KENTOS_SETTING(harita_koordinat);
-KENTOS_SETTING(harita_ipucu_boyu);
-KENTOS_SETTING(harita_imlec);
-KENTOS_SETTING(harita_imlec_boyu);
-KENTOS_SETTING(harita_yakinlastirma);
-KENTOS_SETTING(harita_tekerlek_ters);
-KENTOS_SETTING(secim_rengi);
-KENTOS_SETTING(silme_onayi);
-KENTOS_SETTING(secim_vurgu_rengi);
-KENTOS_SETTING(plan_olcegi);
-KENTOS_SETTING(olcu_stili);
-KENTOS_SETTING(aci_birimi);
-KENTOS_SETTING(aci_kurali);
-KENTOS_SETTING(alan_birimi);
+PIRICAD_SETTING(koordinat_sistemi);
+PIRICAD_SETTING(koordinat_hassasiyeti);
+PIRICAD_SETTING(cizim_birimi);
+PIRICAD_SETTING(egri_sapmasi);
+PIRICAD_SETTING(cizgi_tipi_olcegi);
+PIRICAD_SETTING(metin_yuksekligi);
+PIRICAD_SETTING(veri_paketi_surumu);
+PIRICAD_SETTING(mcp_port);
+PIRICAD_SETTING(mcp_belirtec_zorunlu);
+PIRICAD_SETTING(mcp_otomatik);
+PIRICAD_SETTING(ai_hassas);
+PIRICAD_SETTING(ai_dusunme_goster);
+PIRICAD_SETTING(ai_tur_siniri);
+PIRICAD_SETTING(ai_onay_politikasi);
+PIRICAD_SETTING(ai_soru_politikasi);
+PIRICAD_SETTING(ai_uzerine_yazma);
+PIRICAD_SETTING(tema);
+PIRICAD_SETTING(dil);
+PIRICAD_SETTING(otomatik_kayit);
+PIRICAD_SETTING(son_dosya_sayisi);
+PIRICAD_SETTING(tuval_arkaplani);
+PIRICAD_SETTING(yakalama_modlari);
+PIRICAD_SETTING(dik_mod);
+PIRICAD_SETTING(yuzey_normali);
+PIRICAD_SETTING(kosegen_kilidi);
+PIRICAD_SETTING(kutupsal_aci);
+PIRICAD_SETTING(sembol_kutuphanesi);
+PIRICAD_SETTING(vektor_kutuphanesi);
+PIRICAD_SETTING(tarama_desen_katalogu);
+PIRICAD_SETTING(olcu_stil_katalogu);
+PIRICAD_SETTING(veritabani_sunucu);
+PIRICAD_SETTING(veritabani_port);
+PIRICAD_SETTING(veritabani_ad);
+PIRICAD_SETTING(veritabani_kullanici);
+PIRICAD_SETTING(yakalama_uzanti);
+PIRICAD_SETTING(yakalama_isaret_boyu);
+PIRICAD_SETTING(yakalama_isaret_rengi);
+PIRICAD_SETTING(yakalama_ipucu);
+PIRICAD_SETTING(yakalama_adimi);
+PIRICAD_SETTING(dinamik_girdi);
+PIRICAD_SETTING(son_komut);
+PIRICAD_SETTING(kopukluk_carpani);
+PIRICAD_SETTING(islem_pencere);
+PIRICAD_SETTING(islem_hatirla);
+PIRICAD_SETTING(izgara_rengi);
+PIRICAD_SETTING(izgara_ana_rengi);
+PIRICAD_SETTING(izgara_adimi_y);
+PIRICAD_SETTING(cetvel_gorunur);
+PIRICAD_SETTING(cetvel_kalinligi);
+PIRICAD_SETTING(cetvel_birimi);
+PIRICAD_SETTING(harita_olcek_cubugu);
+PIRICAD_SETTING(harita_kalinlik);
+PIRICAD_SETTING(harita_kuzey_oku);
+PIRICAD_SETTING(harita_koordinat);
+PIRICAD_SETTING(harita_ipucu_boyu);
+PIRICAD_SETTING(harita_imlec);
+PIRICAD_SETTING(harita_imlec_boyu);
+PIRICAD_SETTING(harita_yakinlastirma);
+PIRICAD_SETTING(harita_tekerlek_ters);
+PIRICAD_SETTING(secim_rengi);
+PIRICAD_SETTING(silme_onayi);
+PIRICAD_SETTING(secim_vurgu_rengi);
+PIRICAD_SETTING(plan_olcegi);
+PIRICAD_SETTING(olcu_stili);
+PIRICAD_SETTING(aci_birimi);
+PIRICAD_SETTING(aci_kurali);
+PIRICAD_SETTING(alan_birimi);
 
-#define KENTOS_BUILTIN_SETTINGS(X)                                                                 \
+#define PIRICAD_BUILTIN_SETTINGS(X)                                                                \
     X(koordinat_sistemi)                                                                           \
     X(koordinat_hassasiyeti)                                                                       \
     X(cizim_birimi)                                                                                \
@@ -544,7 +544,7 @@ KENTOS_SETTING(alan_birimi);
 
 // ---- SNAP: what the aid layer looks for, and what the canvas draws when it ----
 
-KENTOS_SETTING(yakalama_adimi)
+PIRICAD_SETTING(yakalama_adimi)
 {
     return SettingSpec{
         .id       = "core.yakalama.adim",
@@ -563,7 +563,7 @@ KENTOS_SETTING(yakalama_adimi)
     };
 }
 
-KENTOS_SETTING(dinamik_girdi)
+PIRICAD_SETTING(dinamik_girdi)
 {
     return SettingSpec{
         .id       = "core.arayuz.dinamik_girdi",
@@ -580,7 +580,7 @@ KENTOS_SETTING(dinamik_girdi)
     };
 }
 
-KENTOS_SETTING(son_komut)
+PIRICAD_SETTING(son_komut)
 {
     // THE ORDER IS READ BY INDEX (`app::Controller::repeats`): enter, tik,
     // kapali. A new word goes at the end, never between.
@@ -601,7 +601,7 @@ KENTOS_SETTING(son_komut)
     };
 }
 
-KENTOS_SETTING(islem_pencere)
+PIRICAD_SETTING(islem_pencere)
 {
     return SettingSpec{
         .id       = "core.islem.pencere",
@@ -619,7 +619,7 @@ KENTOS_SETTING(islem_pencere)
     };
 }
 
-KENTOS_SETTING(islem_hatirla)
+PIRICAD_SETTING(islem_hatirla)
 {
     return SettingSpec{
         .id       = "core.islem.hatirla",
@@ -637,7 +637,7 @@ KENTOS_SETTING(islem_hatirla)
     };
 }
 
-KENTOS_SETTING(yakalama_uzanti)
+PIRICAD_SETTING(yakalama_uzanti)
 {
     return SettingSpec{
         .id       = "core.yakalama.uzanti_carpani",
@@ -648,17 +648,17 @@ KENTOS_SETTING(yakalama_uzanti)
         .range    = SettingRange::between(0, 200),
         .values   = {},
         .unit     = "× açıklık",
-        .summary = "UZANTI, PARALEL ve UZATILMIŞ KESİŞİM modlarının, yakalama açıklığının "
-                   "kaç katı ötesindeki kenarlardan nokta kurabileceği. Bu üç mod "
-                   "imlecin altında olmayan bir kenardan nokta üretir, açıklık tek "
-                   "başına o kenarı hiç bulamaz. 0 yazılırsa üç mod da maskede açık "
-                   "olsa bile çalışmaz. Görüşe bağlı bir tercih olduğu için uygulama "
-                   "kapsamındadır.",
-        .section = "Çizim ve Yakalama", // ui-label
+        .summary  = "UZANTI, PARALEL ve UZATILMIŞ KESİŞİM modlarının, yakalama açıklığının "
+                    "kaç katı ötesindeki kenarlardan nokta kurabileceği. Bu üç mod "
+                    "imlecin altında olmayan bir kenardan nokta üretir, açıklık tek "
+                    "başına o kenarı hiç bulamaz. 0 yazılırsa üç mod da maskede açık "
+                    "olsa bile çalışmaz. Görüşe bağlı bir tercih olduğu için uygulama "
+                    "kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
-KENTOS_SETTING(yakalama_isaret_boyu)
+PIRICAD_SETTING(yakalama_isaret_boyu)
 {
     return SettingSpec{
         .id       = "core.yakalama.isaret_boyu",
@@ -675,7 +675,7 @@ KENTOS_SETTING(yakalama_isaret_boyu)
     };
 }
 
-KENTOS_SETTING(yakalama_isaret_rengi)
+PIRICAD_SETTING(yakalama_isaret_rengi)
 {
     return SettingSpec{
         .id       = "core.yakalama.isaret_rengi",
@@ -692,7 +692,7 @@ KENTOS_SETTING(yakalama_isaret_rengi)
     };
 }
 
-KENTOS_SETTING(yakalama_ipucu)
+PIRICAD_SETTING(yakalama_ipucu)
 {
     return SettingSpec{
         .id       = "core.yakalama.ipucu",
@@ -712,7 +712,7 @@ KENTOS_SETTING(yakalama_ipucu)
 
 // ---- GRID: the lattice's own appearance --------------------------------------
 
-KENTOS_SETTING(izgara_rengi)
+PIRICAD_SETTING(izgara_rengi)
 {
     return SettingSpec{
         .id       = "core.izgara.renk",
@@ -729,7 +729,7 @@ KENTOS_SETTING(izgara_rengi)
     };
 }
 
-KENTOS_SETTING(izgara_ana_rengi)
+PIRICAD_SETTING(izgara_ana_rengi)
 {
     return SettingSpec{
         .id       = "core.izgara.ana_renk",
@@ -746,12 +746,12 @@ KENTOS_SETTING(izgara_ana_rengi)
     };
 }
 
-KENTOS_SETTING(izgara_adimi_y)
+PIRICAD_SETTING(izgara_adimi_y)
 {
     return SettingSpec{
-        .id = "core.izgara.adim_y",
-        .names = {"ızgara_dikey_adımı", "izgara_dikey_adimi", "ızgara_adımı_y", "izgara_adimi_y",
-                  "gridunity"},
+        .id       = "core.izgara.adim_y",
+        .names    = {"ızgara_dikey_adımı", "izgara_dikey_adimi", "ızgara_adımı_y", "izgara_adimi_y",
+                     "gridunity"},
         .type     = SettingType::Length,
         .scope    = SettingScope::App,
         .fallback = SettingValue::length(0),
@@ -767,7 +767,7 @@ KENTOS_SETTING(izgara_adimi_y)
 
 // ---- RULER ------------------------------------------------------------------
 
-KENTOS_SETTING(cetvel_gorunur)
+PIRICAD_SETTING(cetvel_gorunur)
 {
     return SettingSpec{
         .id       = "core.cetvel.gorunur",
@@ -784,7 +784,7 @@ KENTOS_SETTING(cetvel_gorunur)
     };
 }
 
-KENTOS_SETTING(cetvel_kalinligi)
+PIRICAD_SETTING(cetvel_kalinligi)
 {
     return SettingSpec{
         .id    = "core.cetvel.kalinlik",
@@ -802,7 +802,7 @@ KENTOS_SETTING(cetvel_kalinligi)
     };
 }
 
-KENTOS_SETTING(cetvel_birimi)
+PIRICAD_SETTING(cetvel_birimi)
 {
     return SettingSpec{
         .id       = "core.cetvel.birim",
@@ -822,7 +822,7 @@ KENTOS_SETTING(cetvel_birimi)
 
 // ---- MAP: what sits on top of the drawing ------------------------------------
 
-KENTOS_SETTING(harita_olcek_cubugu)
+PIRICAD_SETTING(harita_olcek_cubugu)
 {
     return SettingSpec{
         .id       = "core.harita.olcek_cubugu",
@@ -839,7 +839,7 @@ KENTOS_SETTING(harita_olcek_cubugu)
     };
 }
 
-KENTOS_SETTING(harita_kalinlik)
+PIRICAD_SETTING(harita_kalinlik)
 {
     return SettingSpec{
         .id       = "core.harita.kalinlik",
@@ -850,15 +850,15 @@ KENTOS_SETTING(harita_kalinlik)
         .range    = SettingRange::unbounded(),
         .values   = {},
         .unit     = "",
-        .summary = "Çizgi kalınlıkları ekranda paftadaki ölçüsüyle çizilir; kapalıyken her "
-                   "çizgi tek piksel (kıl çizgi) olur, kalınlık nesnede ve çıktıda durur. "
-                   "Yalnız ekranı etkilediği için uygulama kapsamındadır (durum çubuğu "
-                   "KALINLIK).",
-        .section = "Görünüm ve Tema", // ui-label
+        .summary  = "Çizgi kalınlıkları ekranda paftadaki ölçüsüyle çizilir; kapalıyken her "
+                    "çizgi tek piksel (kıl çizgi) olur, kalınlık nesnede ve çıktıda durur. "
+                    "Yalnız ekranı etkilediği için uygulama kapsamındadır (durum çubuğu "
+                    "KALINLIK).",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
-KENTOS_SETTING(harita_kuzey_oku)
+PIRICAD_SETTING(harita_kuzey_oku)
 {
     return SettingSpec{
         .id       = "core.harita.kuzey_oku",
@@ -875,7 +875,7 @@ KENTOS_SETTING(harita_kuzey_oku)
     };
 }
 
-KENTOS_SETTING(harita_koordinat)
+PIRICAD_SETTING(harita_koordinat)
 {
     return SettingSpec{
         .id       = "core.harita.koordinat_gostergesi",
@@ -892,7 +892,7 @@ KENTOS_SETTING(harita_koordinat)
     };
 }
 
-KENTOS_SETTING(harita_ipucu_boyu)
+PIRICAD_SETTING(harita_ipucu_boyu)
 {
     return SettingSpec{
         .id       = "core.harita.ipucu_boyu",
@@ -916,7 +916,7 @@ KENTOS_SETTING(harita_ipucu_boyu)
     };
 }
 
-KENTOS_SETTING(harita_imlec)
+PIRICAD_SETTING(harita_imlec)
 {
     return SettingSpec{
         .id       = "core.harita.imlec",
@@ -933,7 +933,7 @@ KENTOS_SETTING(harita_imlec)
     };
 }
 
-KENTOS_SETTING(harita_imlec_boyu)
+PIRICAD_SETTING(harita_imlec_boyu)
 {
     return SettingSpec{
         .id       = "core.harita.imlec_boyu",
@@ -950,7 +950,7 @@ KENTOS_SETTING(harita_imlec_boyu)
     };
 }
 
-KENTOS_SETTING(harita_yakinlastirma)
+PIRICAD_SETTING(harita_yakinlastirma)
 {
     return SettingSpec{
         .id       = "core.harita.yakinlastirma_adimi",
@@ -967,7 +967,7 @@ KENTOS_SETTING(harita_yakinlastirma)
     };
 }
 
-KENTOS_SETTING(harita_tekerlek_ters)
+PIRICAD_SETTING(harita_tekerlek_ters)
 {
     return SettingSpec{
         .id       = "core.harita.tekerlek_ters",
@@ -984,7 +984,7 @@ KENTOS_SETTING(harita_tekerlek_ters)
     };
 }
 
-KENTOS_SETTING(silme_onayi)
+PIRICAD_SETTING(silme_onayi)
 {
     return SettingSpec{
         .id       = "core.duzenleme.silme_onayi",
@@ -1008,7 +1008,7 @@ KENTOS_SETTING(silme_onayi)
     };
 }
 
-KENTOS_SETTING(secim_rengi)
+PIRICAD_SETTING(secim_rengi)
 {
     return SettingSpec{
         .id       = "core.secim.renk",
@@ -1025,7 +1025,7 @@ KENTOS_SETTING(secim_rengi)
     };
 }
 
-KENTOS_SETTING(secim_vurgu_rengi)
+PIRICAD_SETTING(secim_vurgu_rengi)
 {
     return SettingSpec{
         .id       = "core.secim.vurgu_renk",
@@ -1045,7 +1045,7 @@ KENTOS_SETTING(secim_vurgu_rengi)
 
 // ---- PROJECT scope: anything that can change a byte of the exported document --
 
-KENTOS_SETTING(plan_olcegi)
+PIRICAD_SETTING(plan_olcegi)
 {
     return SettingSpec{
         .id       = "core.plan.olcek",
@@ -1065,7 +1065,7 @@ KENTOS_SETTING(plan_olcegi)
     };
 }
 
-KENTOS_SETTING(olcu_stili)
+PIRICAD_SETTING(olcu_stili)
 {
     return SettingSpec{
         .id       = "core.olcu.stil",
@@ -1085,7 +1085,7 @@ KENTOS_SETTING(olcu_stili)
     };
 }
 
-KENTOS_SETTING(aci_birimi)
+PIRICAD_SETTING(aci_birimi)
 {
     return SettingSpec{
         .id       = "core.aci.birim",
@@ -1096,11 +1096,11 @@ KENTOS_SETTING(aci_birimi)
         .range    = SettingRange::unbounded(),
         .values   = {"grad", "derece", "radyan"},
         .unit     = "",
-        .summary = "Açıların yazıldığı ve okunduğu birim. Varsayılan GRAD'dır: Türkiye'de "
-                   "nirengi, poligon ve aplikasyon hesapları grad ile yürür ve tam daire "
-                   "400'dür. Belgenin sayılarının nasıl okunacağını söylediği için proje "
-                   "kapsamındadır.",
-        .section = "Genel", // ui-label
+        .summary  = "Açıların yazıldığı ve okunduğu birim. Varsayılan GRAD'dır: Türkiye'de "
+                    "nirengi, poligon ve aplikasyon hesapları grad ile yürür ve tam daire "
+                    "400'dür. Belgenin sayılarının nasıl okunacağını söylediği için proje "
+                    "kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
@@ -1111,7 +1111,7 @@ KENTOS_SETTING(aci_birimi)
 // coordinate (journal.hpp), so a saved drawing and a recorded session replay
 // identically whatever the rule was. That makes it an input aid, like dik mod:
 // the ruler on the desk, not the drawing (TODOS-CAD P0-1).
-KENTOS_SETTING(aci_kurali)
+PIRICAD_SETTING(aci_kurali)
 {
     return SettingSpec{
         .id       = "core.aci.kural",
@@ -1122,18 +1122,18 @@ KENTOS_SETTING(aci_kurali)
         .range    = SettingRange::unbounded(),
         .values   = {"semt", "matematik"},
         .unit     = "",
-        .summary = "Bir açının nereden ve hangi yöne sayıldığı. SEMT (varsayılan): kuzeyden "
-                   "saat yönüne — aletin okuduğu semt açısıdır, `@100<0` kuzeye gider. "
-                   "MATEMATİK: doğudan saat yönünün tersine — `@100<0` doğuya gider. Komut "
-                   "satırına, betiğe ve öneriye yazılan her `@mesafe<açı` bu kuralla "
-                   "okunur; ÖLÇ, APLİKASYON ve sürüklerken okunan açı bu kuralla yazılır. "
-                   "Günlük çözülmüş koordinatı tuttuğu için bu bir girdi yardımıdır ve "
-                   "oturum kapsamındadır.",
-        .section = "Genel", // ui-label
+        .summary  = "Bir açının nereden ve hangi yöne sayıldığı. SEMT (varsayılan): kuzeyden "
+                    "saat yönüne — aletin okuduğu semt açısıdır, `@100<0` kuzeye gider. "
+                    "MATEMATİK: doğudan saat yönünün tersine — `@100<0` doğuya gider. Komut "
+                    "satırına, betiğe ve öneriye yazılan her `@mesafe<açı` bu kuralla "
+                    "okunur; ÖLÇ, APLİKASYON ve sürüklerken okunan açı bu kuralla yazılır. "
+                    "Günlük çözülmüş koordinatı tuttuğu için bu bir girdi yardımıdır ve "
+                    "oturum kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
-KENTOS_SETTING(alan_birimi)
+PIRICAD_SETTING(alan_birimi)
 {
     return SettingSpec{
         .id       = "core.alan.birim",
@@ -1151,7 +1151,7 @@ KENTOS_SETTING(alan_birimi)
     };
 }
 
-KENTOS_SETTING(sembol_kutuphanesi)
+PIRICAD_SETTING(sembol_kutuphanesi)
 {
     return SettingSpec{
         .id       = "core.stil.kutuphane",
@@ -1174,7 +1174,7 @@ KENTOS_SETTING(sembol_kutuphanesi)
     };
 }
 
-KENTOS_SETTING(koordinat_sistemi)
+PIRICAD_SETTING(koordinat_sistemi)
 {
     return SettingSpec{
         .id       = "core.crs.id",
@@ -1194,7 +1194,7 @@ KENTOS_SETTING(koordinat_sistemi)
     };
 }
 
-KENTOS_SETTING(koordinat_hassasiyeti)
+PIRICAD_SETTING(koordinat_hassasiyeti)
 {
     return SettingSpec{
         .id       = "core.crs.hassasiyet",
@@ -1214,7 +1214,7 @@ KENTOS_SETTING(koordinat_hassasiyeti)
     };
 }
 
-KENTOS_SETTING(cizim_birimi)
+PIRICAD_SETTING(cizim_birimi)
 {
     return SettingSpec{
         .id       = "core.cizim.birim",
@@ -1225,16 +1225,16 @@ KENTOS_SETTING(cizim_birimi)
         .range    = SettingRange::between(0, 2),
         .values   = {"milimetre", "santimetre", "metre"},
         .unit     = "",
-        .summary = "CAD dosyalarının (DXF, DWG) sayılarının ve ölçü yazılarının birimi: bir "
-                   "DXF bu birimle okunur ve yazılır. Koordinat sisteminin birimi değildir — "
-                   "çizim metre sayan bir sistemde, milimetre çözünürlükte saklanır; "
-                   "GeoPackage ve Shapefile sistemlerinin metresiyle okunur ve yazılır. "
-                   "Dışa aktarılan bir DXF'in sayılarını değiştirdiği için proje kapsamındadır.",
-        .section = "Genel", // ui-label
+        .summary  = "CAD dosyalarının (DXF, DWG) sayılarının ve ölçü yazılarının birimi: bir "
+                    "DXF bu birimle okunur ve yazılır. Koordinat sisteminin birimi değildir — "
+                    "çizim metre sayan bir sistemde, milimetre çözünürlükte saklanır; "
+                    "GeoPackage ve Shapefile sistemlerinin metresiyle okunur ve yazılır. "
+                    "Dışa aktarılan bir DXF'in sayılarını değiştirdiği için proje kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
-KENTOS_SETTING(egri_sapmasi)
+PIRICAD_SETTING(egri_sapmasi)
 {
     return SettingSpec{
         .id       = "core.aktarim.egri_sapmasi",
@@ -1245,17 +1245,17 @@ KENTOS_SETTING(egri_sapmasi)
         .range    = SettingRange::between(1, 1000),
         .values   = {},
         .unit     = "mm",
-        .summary = "Eğri taşımayan bir dosyaya (GeoPackage, PostGIS) yazılan daire, yay, elips, "
-                   "yaylı çizgi ve spline kirişlerinin eğriden en çok ne kadar uzak "
-                   "durabileceği, zeminde milimetre. Varsayılan 1 mm, saklama çözünürlüğüdür. "
-                   "Ekrandaki çizim sabit sıklıktadır ve bundan etkilenmez; DXF eğriyi eğri "
-                   "olarak yazar. Dışa aktarılan dosyanın koordinatlarını değiştirdiği için "
-                   "proje kapsamındadır.",
-        .section = "Plot ve Çıktı", // ui-label
+        .summary  = "Eğri taşımayan bir dosyaya (GeoPackage, PostGIS) yazılan daire, yay, elips, "
+                    "yaylı çizgi ve spline kirişlerinin eğriden en çok ne kadar uzak "
+                    "durabileceği, zeminde milimetre. Varsayılan 1 mm, saklama çözünürlüğüdür. "
+                    "Ekrandaki çizim sabit sıklıktadır ve bundan etkilenmez; DXF eğriyi eğri "
+                    "olarak yazar. Dışa aktarılan dosyanın koordinatlarını değiştirdiği için "
+                    "proje kapsamındadır.",
+        .section  = "Plot ve Çıktı", // ui-label
     };
 }
 
-KENTOS_SETTING(cizgi_tipi_olcegi)
+PIRICAD_SETTING(cizgi_tipi_olcegi)
 {
     return SettingSpec{
         .id       = "core.cizim.cizgi_tipi_olcegi",
@@ -1272,7 +1272,7 @@ KENTOS_SETTING(cizgi_tipi_olcegi)
     };
 }
 
-KENTOS_SETTING(metin_yuksekligi)
+PIRICAD_SETTING(metin_yuksekligi)
 {
     return SettingSpec{
         .id       = "core.cizim.metin_yuksekligi",
@@ -1289,7 +1289,7 @@ KENTOS_SETTING(metin_yuksekligi)
     };
 }
 
-KENTOS_SETTING(veri_paketi_surumu)
+PIRICAD_SETTING(veri_paketi_surumu)
 {
     return SettingSpec{
         .id    = "core.katalog.paket_surumu",
@@ -1323,7 +1323,7 @@ KENTOS_SETTING(veri_paketi_surumu)
 // tapu document that gets exported. Were it a per-machine preference, the same
 // drawing would report two different parcel areas on two computers.
 
-KENTOS_SETTING(dugum_toleransi)
+PIRICAD_SETTING(dugum_toleransi)
 {
     return SettingSpec{
         .id       = "core.topoloji.dugum_toleransi",
@@ -1342,7 +1342,7 @@ KENTOS_SETTING(dugum_toleransi)
     };
 }
 
-KENTOS_SETTING(en_kucuk_alan)
+PIRICAD_SETTING(en_kucuk_alan)
 {
     return SettingSpec{
         .id       = "core.topoloji.en_kucuk_alan",
@@ -1361,7 +1361,7 @@ KENTOS_SETTING(en_kucuk_alan)
     };
 }
 
-KENTOS_SETTING(kopukluk_carpani)
+PIRICAD_SETTING(kopukluk_carpani)
 {
     return SettingSpec{
         .id       = "core.denetim.kopukluk_carpani",
@@ -1372,17 +1372,17 @@ KENTOS_SETTING(kopukluk_carpani)
         .range    = SettingRange::between(2, 1000),
         .values   = {},
         .unit     = "",
-        .summary = "KAPSAMDENETİM'in eşiği: bir nesne, onu çizimin çoğunluğundan ayıran boş "
-                   "bant çoğunluğun yarıçapının bu kadar katı genişse kopuk sayılır. Büyüdükçe "
-                   "denetim yalnız çok uzaktakileri bildirir. Denetim çıktısını değiştirdiği "
-                   "için proje kapsamındadır.",
-        .section = "Çizim ve Yakalama", // ui-label
+        .summary  = "KAPSAMDENETİM'in eşiği: bir nesne, onu çizimin çoğunluğundan ayıran boş "
+                    "bant çoğunluğun yarıçapının bu kadar katı genişse kopuk sayılır. Büyüdükçe "
+                    "denetim yalnız çok uzaktakileri bildirir. Denetim çıktısını değiştirdiği "
+                    "için proje kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
 // ---- APP scope: per user and machine, and never written into the document ----
 
-KENTOS_SETTING(tema)
+PIRICAD_SETTING(tema)
 {
     return SettingSpec{
         .id       = "core.arayuz.tema",
@@ -1399,7 +1399,7 @@ KENTOS_SETTING(tema)
     };
 }
 
-KENTOS_SETTING(dil)
+PIRICAD_SETTING(dil)
 {
     return SettingSpec{
         .id       = "core.arayuz.dil",
@@ -1416,7 +1416,7 @@ KENTOS_SETTING(dil)
     };
 }
 
-KENTOS_SETTING(otomatik_kayit)
+PIRICAD_SETTING(otomatik_kayit)
 {
     return SettingSpec{
         .id       = "core.dosya.otomatik_kayit",
@@ -1433,7 +1433,7 @@ KENTOS_SETTING(otomatik_kayit)
     };
 }
 
-KENTOS_SETTING(son_dosya_sayisi)
+PIRICAD_SETTING(son_dosya_sayisi)
 {
     return SettingSpec{
         .id       = "core.dosya.son_dosya_sayisi",
@@ -1450,7 +1450,7 @@ KENTOS_SETTING(son_dosya_sayisi)
     };
 }
 
-KENTOS_SETTING(tuval_arkaplani)
+PIRICAD_SETTING(tuval_arkaplani)
 {
     return SettingSpec{
         .id       = "core.tuval.arkaplan",
@@ -1472,7 +1472,7 @@ KENTOS_SETTING(tuval_arkaplani)
 // persistent and App scope, like the theme and the canvas colour; something that
 // MOVES the cursor is transient and Session scope.
 
-KENTOS_SETTING(izgara_gorunur)
+PIRICAD_SETTING(izgara_gorunur)
 {
     return SettingSpec{
         .id       = "core.izgara.gorunur",
@@ -1490,7 +1490,7 @@ KENTOS_SETTING(izgara_gorunur)
     };
 }
 
-KENTOS_SETTING(izgara_modu)
+PIRICAD_SETTING(izgara_modu)
 {
     return SettingSpec{
         .id       = "core.izgara.mod",
@@ -1501,15 +1501,15 @@ KENTOS_SETTING(izgara_modu)
         .range    = SettingRange::between(0, 1),
         .values   = {"uyarlanır", "sabit"},
         .unit     = "",
-        .summary = "Izgara adımının seçilme biçimi. 'uyarlanır' ölçeğe göre 1/2/5×10ⁿ "
-                   "adımlarından okunabilir olanı seçer; 'sabit' her ölçekte "
-                   "ızgara_adımı değerini kullanır. Paftaya basılmayan bir görünüm "
-                   "tercihi olduğu için uygulama kapsamındadır.",
-        .section = "Çizim ve Yakalama", // ui-label
+        .summary  = "Izgara adımının seçilme biçimi. 'uyarlanır' ölçeğe göre 1/2/5×10ⁿ "
+                    "adımlarından okunabilir olanı seçer; 'sabit' her ölçekte "
+                    "ızgara_adımı değerini kullanır. Paftaya basılmayan bir görünüm "
+                    "tercihi olduğu için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
-KENTOS_SETTING(izgara_adimi)
+PIRICAD_SETTING(izgara_adimi)
 {
     return SettingSpec{
         .id       = "core.izgara.adim",
@@ -1528,7 +1528,7 @@ KENTOS_SETTING(izgara_adimi)
     };
 }
 
-KENTOS_SETTING(izgara_ana_cizgi)
+PIRICAD_SETTING(izgara_ana_cizgi)
 {
     return SettingSpec{
         .id       = "core.izgara.ana_cizgi",
@@ -1546,7 +1546,7 @@ KENTOS_SETTING(izgara_ana_cizgi)
     };
 }
 
-KENTOS_SETTING(yakalama_toleransi)
+PIRICAD_SETTING(yakalama_toleransi)
 {
     return SettingSpec{
         .id    = "core.yakalama.tolerans",
@@ -1572,7 +1572,7 @@ KENTOS_SETTING(yakalama_toleransi)
     };
 }
 
-KENTOS_SETTING(secim_toleransi)
+PIRICAD_SETTING(secim_toleransi)
 {
     return SettingSpec{
         .id       = "core.secim.tolerans",
@@ -1593,7 +1593,7 @@ KENTOS_SETTING(secim_toleransi)
 
 // ---- SESSION scope: transient, never persisted, never hashed ----------------
 
-KENTOS_SETTING(yakalama_modlari)
+PIRICAD_SETTING(yakalama_modlari)
 {
     return SettingSpec{
         .id    = "core.yakalama.modlar",
@@ -1655,7 +1655,7 @@ KENTOS_SETTING(yakalama_modlari)
     };
 }
 
-KENTOS_SETTING(dik_mod)
+PIRICAD_SETTING(dik_mod)
 {
     return SettingSpec{
         .id       = "core.yakalama.dik_mod",
@@ -1672,7 +1672,7 @@ KENTOS_SETTING(dik_mod)
     };
 }
 
-KENTOS_SETTING(yuzey_normali)
+PIRICAD_SETTING(yuzey_normali)
 {
     return SettingSpec{
         .id       = "core.yakalama.yuzey_normali",
@@ -1691,7 +1691,7 @@ KENTOS_SETTING(yuzey_normali)
     };
 }
 
-KENTOS_SETTING(kosegen_kilidi)
+PIRICAD_SETTING(kosegen_kilidi)
 {
     return SettingSpec{
         .id       = "core.yakalama.kosegen",
@@ -1720,7 +1720,7 @@ KENTOS_SETTING(kosegen_kilidi)
     };
 }
 
-KENTOS_SETTING(kutupsal_aci)
+PIRICAD_SETTING(kutupsal_aci)
 {
     return SettingSpec{
         .id       = "core.yakalama.kutupsal_aci",
@@ -1737,7 +1737,7 @@ KENTOS_SETTING(kutupsal_aci)
     };
 }
 
-KENTOS_SETTING(izgaraya_yakala)
+PIRICAD_SETTING(izgaraya_yakala)
 {
     return SettingSpec{
         .id       = "core.yakalama.izgara",
@@ -1781,7 +1781,7 @@ void SettingCatalog::record_failure(std::string message)
 // pointer at a database they cannot reach — and must not carry a pointer at one
 // they CAN.
 
-KENTOS_SETTING(veritabani_sunucu)
+PIRICAD_SETTING(veritabani_sunucu)
 {
     return SettingSpec{
         .id       = "core.veritabani.sunucu",
@@ -1798,7 +1798,7 @@ KENTOS_SETTING(veritabani_sunucu)
     };
 }
 
-KENTOS_SETTING(veritabani_port)
+PIRICAD_SETTING(veritabani_port)
 {
     return SettingSpec{
         .id       = "core.veritabani.port",
@@ -1816,7 +1816,7 @@ KENTOS_SETTING(veritabani_port)
     };
 }
 
-KENTOS_SETTING(veritabani_ad)
+PIRICAD_SETTING(veritabani_ad)
 {
     return SettingSpec{
         .id       = "core.veritabani.ad",
@@ -1827,15 +1827,15 @@ KENTOS_SETTING(veritabani_ad)
         .range    = SettingRange::unbounded(),
         .values   = {},
         .unit     = "",
-        .summary = "Bağlanılacak veritabanının adı. Boş bırakılırsa kullanıcı adıyla aynı "
-                   "kabul edilir; libpq'nun kendi kuralıdır. Hangi veritabanına "
-                   "bağlanıldığı çizimin verisi değil kurulumun bilgisidir, bu yüzden "
-                   "uygulama kapsamındadır.",
-        .section = "Veri Kaynakları", // ui-label
+        .summary  = "Bağlanılacak veritabanının adı. Boş bırakılırsa kullanıcı adıyla aynı "
+                    "kabul edilir; libpq'nun kendi kuralıdır. Hangi veritabanına "
+                    "bağlanıldığı çizimin verisi değil kurulumun bilgisidir, bu yüzden "
+                    "uygulama kapsamındadır.",
+        .section  = "Veri Kaynakları", // ui-label
     };
 }
 
-KENTOS_SETTING(veritabani_kullanici)
+PIRICAD_SETTING(veritabani_kullanici)
 {
     return SettingSpec{
         .id       = "core.veritabani.kullanici",
@@ -1854,7 +1854,7 @@ KENTOS_SETTING(veritabani_kullanici)
     };
 }
 
-KENTOS_SETTING(mcp_port)
+PIRICAD_SETTING(mcp_port)
 {
     return SettingSpec{
         .id       = "core.mcp.port",
@@ -1877,7 +1877,7 @@ KENTOS_SETTING(mcp_port)
     };
 }
 
-KENTOS_SETTING(mcp_belirtec_zorunlu)
+PIRICAD_SETTING(mcp_belirtec_zorunlu)
 {
     return SettingSpec{
         .id    = "core.mcp.belirtec_zorunlu",
@@ -1905,10 +1905,10 @@ KENTOS_SETTING(mcp_belirtec_zorunlu)
     };
 }
 
-KENTOS_SETTING(mcp_otomatik)
+PIRICAD_SETTING(mcp_otomatik)
 {
     return SettingSpec{
-        .id = "core.mcp.otomatik",
+        .id    = "core.mcp.otomatik",
         .names = {"kendiliğinden_başlat", "kendiliginden_baslat", "mcp_otomatik", "araci_otomatik",
                   "mcp_autostart"},
         .type  = SettingType::Bool,
@@ -1931,7 +1931,7 @@ KENTOS_SETTING(mcp_otomatik)
     };
 }
 
-KENTOS_SETTING(ai_hassas)
+PIRICAD_SETTING(ai_hassas)
 {
     return SettingSpec{
         .id    = "core.ai.hassas",
@@ -1945,11 +1945,11 @@ KENTOS_SETTING(ai_hassas)
         .range    = {},
         .values   = {},
         .unit     = "",
-        .summary = "Bu çizimin verisi kurum dışına çıkamaz. Açıkken yalnız yerel ya da kurum "
-                   "içi model sağlayıcıları kullanılabilir ve MCP sunucusu başlatılmaz. "
-                   "Verinin kendisine ait bir nitelik olduğu için proje kapsamındadır ve "
-                   "dosyayla birlikte taşınır.",
-        .section = "Yapay Zeka Modelleri", // ui-label
+        .summary  = "Bu çizimin verisi kurum dışına çıkamaz. Açıkken yalnız yerel ya da kurum "
+                    "içi model sağlayıcıları kullanılabilir ve MCP sunucusu başlatılmaz. "
+                    "Verinin kendisine ait bir nitelik olduğu için proje kapsamındadır ve "
+                    "dosyayla birlikte taşınır.",
+        .section  = "Yapay Zeka Modelleri", // ui-label
         // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
         // could change this would be widening its own permissions, so
         // `ai::escalates` refuses the call whatever flags the command carries.
@@ -1958,7 +1958,7 @@ KENTOS_SETTING(ai_hassas)
     };
 }
 
-KENTOS_SETTING(ai_tur_siniri)
+PIRICAD_SETTING(ai_tur_siniri)
 {
     return SettingSpec{
         .id    = "core.ai.tur_siniri",
@@ -1987,7 +1987,7 @@ KENTOS_SETTING(ai_tur_siniri)
     };
 }
 
-KENTOS_SETTING(ai_dusunme_goster)
+PIRICAD_SETTING(ai_dusunme_goster)
 {
     return SettingSpec{
         .id       = "core.ai.dusunme_goster",
@@ -2005,7 +2005,7 @@ KENTOS_SETTING(ai_dusunme_goster)
     };
 }
 
-KENTOS_SETTING(ai_onay_politikasi)
+PIRICAD_SETTING(ai_onay_politikasi)
 {
     return SettingSpec{
         .id    = "core.ai.onay_politikasi",
@@ -2059,7 +2059,7 @@ KENTOS_SETTING(ai_onay_politikasi)
     };
 }
 
-KENTOS_SETTING(ai_soru_politikasi)
+PIRICAD_SETTING(ai_soru_politikasi)
 {
     return SettingSpec{
         .id    = "core.ai.soru_politikasi",
@@ -2096,7 +2096,7 @@ KENTOS_SETTING(ai_soru_politikasi)
     };
 }
 
-KENTOS_SETTING(ai_uzerine_yazma)
+PIRICAD_SETTING(ai_uzerine_yazma)
 {
     return SettingSpec{
         .id       = "core.ai.uzerine_yazma",
@@ -2125,7 +2125,7 @@ KENTOS_SETTING(ai_uzerine_yazma)
     };
 }
 
-KENTOS_SETTING(ai_sorumlu)
+PIRICAD_SETTING(ai_sorumlu)
 {
     return SettingSpec{
         .id    = "core.ai.sorumlu",
@@ -2199,10 +2199,10 @@ const SettingCatalog& builtin_settings()
     // document, so it is not the mutable registry core.md P8 bans.
     static const SettingCatalog catalogue = [] {
         SettingCatalog c;
-#define KENTOS_REGISTER(sym)                                                                       \
-    if (auto st = c.add(kentos_setting_##sym()); !st) c.record_failure(st.error().message);
-        KENTOS_BUILTIN_SETTINGS(KENTOS_REGISTER)
-#undef KENTOS_REGISTER
+#define PIRICAD_REGISTER(sym)                                                                      \
+    if (auto st = c.add(piricad_setting_##sym()); !st) c.record_failure(st.error().message);
+        PIRICAD_BUILTIN_SETTINGS(PIRICAD_REGISTER)
+#undef PIRICAD_REGISTER
         register_sections(c);
         return c;
     }();
@@ -2214,7 +2214,7 @@ std::span<const std::string> builtin_setting_failures()
     return builtin_settings().failures();
 }
 
-#undef KENTOS_BUILTIN_SETTINGS
+#undef PIRICAD_BUILTIN_SETTINGS
 
 // ---------------------------------------------------------- conversion ------
 
@@ -2408,8 +2408,8 @@ Status Settings::revert(const SettingChange& change)
     if (index == kNoSetting)
         return err(ErrorCode::NotFound, "Bilinmeyen ayar: " + quote(change.id));
 
-    const auto it      = std::lower_bound(values_.begin(), values_.end(), index,
-                                          [](const auto& e, std::uint32_t k) { return e.first < k; });
+    const auto it = std::lower_bound(values_.begin(), values_.end(), index,
+                                     [](const auto& e, std::uint32_t k) { return e.first < k; });
     const bool present = it != values_.end() && it->first == index;
 
     // The value came from this store, so it is not re-validated: undo restores what
@@ -2474,4 +2474,4 @@ std::uint64_t Settings::fold(std::uint64_t seed) const
     return h;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

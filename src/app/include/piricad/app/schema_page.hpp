@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the attribute schema, as a page of Katman Özellikleri.
+// PiriCAD — app: the attribute schema, as a page of Katman Özellikleri.
 //
 // WHAT THIS IS. The columns a drawing's objects can carry — `ada`, `parsel`,
 // `taks`, `onay_tarihi` — listed, added, edited and deleted. It is the schema
@@ -24,8 +24,8 @@
 // script can do everything this page can.
 #pragma once
 
-#include "kentos_cad/app/dialog_chrome.hpp"
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/dialog_chrome.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QString>
 #include <QWidget>
@@ -33,7 +33,7 @@
 class QLabel;
 class QTableWidget;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -93,7 +93,7 @@ private:
 class SchemaPage : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the page over a controller, which outlives it.
@@ -111,7 +111,7 @@ public:
 
     void applyTheme(ThemeMode mode) override;
 
-    /// Runs one of the three actions by name, for `KENTOS_SCHEMA_PROBE`.
+    /// Runs one of the three actions by name, for `PIRICAD_SCHEMA_PROBE`.
     /// `row` picks the column the action applies to. Returns false when the
     /// action or the row is not there.
     bool probeAction(const QString& action, int row, const QString& line);
@@ -142,4 +142,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

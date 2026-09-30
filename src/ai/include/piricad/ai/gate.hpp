@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: the one place a suggestion becomes an edit, and the permission
+// PiriCAD — ai: the one place a suggestion becomes an edit, and the permission
 // that has to exist for it.
 //
-// THE RULE. CLAUDE.md 5.7 (amended 20 September 2026 with `kentoscad.md` §5.2.1):
+// THE RULE. CLAUDE.md 5.7 (amended 20 September 2026 with `piricad.md` §5.2.1):
 // AI output reaches the document through exactly two roads — a preview a person
 // approves, or an approval policy that person set BEFOREHAND, deliberately and
 // for themselves. Never through a claim made by a client, a header, a prompt or
@@ -31,15 +31,15 @@
 // bit-identical (Article 1.6, ai.md R20).
 #pragma once
 
-#include "kentos_cad/ai/audit.hpp"
-#include "kentos_cad/ai/plan.hpp"
+#include "piricad/ai/audit.hpp"
+#include "piricad/ai/plan.hpp"
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <functional>
 #include <string>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// What the person decided.
 enum class Decision : std::uint8_t {
@@ -156,4 +156,4 @@ private:
     Runner runner_;
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

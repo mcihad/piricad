@@ -1,15 +1,15 @@
 # Script Engine — Rules
 
-> Scope: `/src/script` (target `kentos_script`) + the optional Python module package  |  Depends on: `kentos_command` only (→ `kentos_core`)  |  Source: kentoscad.md §3, §4.1–§4.3, §2.5, §2.6, §10.1, §10.4
+> Scope: `/src/script` (target `piricad_script`) + the optional Python module package  |  Depends on: `piricad_command` only (→ `piricad_core`)  |  Source: piricad.md §3, §4.1–§4.3, §2.5, §2.6, §10.1, §10.4
 
 ## Hard Rules
 
-R1. Every state mutation from a script MUST go through the host's one write call — `cad.run(...)` in Python, the `cmd` entry of a JSON step — reaching `Bus::dispatch` in `kentos_cad/command/bus.hpp`, so undo, validation and journalling run automatically (§4.3). (This supersedes the former wording, which named the removed Lua host's `h.komut(...)`.)
-R2. `/src/script` MUST link only `kentos_command`. No `/src/app`, `/src/io`, `/src/domain`, `/src/render`, no Qt (canon dependency graph).
-R3. Two hosts ship and they are ONE architecture: `kentos_cad/script/json_runner.hpp` replays a JSON command array, and `kentos_cad/script/python_runner.hpp` runs CPython behind `KENTOS_WITH_PYTHON`. Both dispatch through the same `Bus`, parse command text with the same `Parser`, run inside one batch and return the same `RunReport`; `BETİK` chooses between them by file extension. A further host MUST add a language and nothing else — what is common to all of them lives in `kentos_cad/script/host.hpp` and `kentos_cad/script/sandbox.hpp`, never copied. (This supersedes the former wording, which named the removed Lua host and put Python in Phase 2.)
-R4. Script text MUST be parsed by the `Parser` object in `kentos_cad/command/parser.hpp` — the same grammar instance the command line uses (§3, implementation note).
-R5. Layer roles are fixed (§4.1, as amended): every expression evaluator, style rule, label expression and area calculator MUST be the COMPILED expression engine in `kentos_cad/command/parser.hpp`; plugins, batch processing, data pipelines and macros MUST be Python (pybind11). A per-feature evaluator written in Python is a defect, and now with no faster script language behind it to fall back on. (This supersedes the former wording, which gave the hot path to Lua.)
-R6. Python MUST sit behind `KENTOS_WITH_PYTHON`, defaulting to `OFF`; `kentos_cad` MUST build, start and pass all tests with it OFF (§4.2, "optional module"). Build-option mechanics: see `.claude/build.md`.
+R1. Every state mutation from a script MUST go through the host's one write call — `cad.run(...)` in Python, the `cmd` entry of a JSON step — reaching `Bus::dispatch` in `piricad/command/bus.hpp`, so undo, validation and journalling run automatically (§4.3). (This supersedes the former wording, which named the removed Lua host's `h.komut(...)`.)
+R2. `/src/script` MUST link only `piricad_command`. No `/src/app`, `/src/io`, `/src/domain`, `/src/render`, no Qt (canon dependency graph).
+R3. Two hosts ship and they are ONE architecture: `piricad/script/json_runner.hpp` replays a JSON command array, and `piricad/script/python_runner.hpp` runs CPython behind `PIRICAD_WITH_PYTHON`. Both dispatch through the same `Bus`, parse command text with the same `Parser`, run inside one batch and return the same `RunReport`; `BETİK` chooses between them by file extension. A further host MUST add a language and nothing else — what is common to all of them lives in `piricad/script/host.hpp` and `piricad/script/sandbox.hpp`, never copied. (This supersedes the former wording, which named the removed Lua host and put Python in Phase 2.)
+R4. Script text MUST be parsed by the `Parser` object in `piricad/command/parser.hpp` — the same grammar instance the command line uses (§3, implementation note).
+R5. Layer roles are fixed (§4.1, as amended): every expression evaluator, style rule, label expression and area calculator MUST be the COMPILED expression engine in `piricad/command/parser.hpp`; plugins, batch processing, data pipelines and macros MUST be Python (pybind11). A per-feature evaluator written in Python is a defect, and now with no faster script language behind it to fall back on. (This supersedes the former wording, which gave the hot path to Lua.)
+R6. Python MUST sit behind `PIRICAD_WITH_PYTHON`, defaulting to `OFF`; `piricad` MUST build, start and pass all tests with it OFF (§4.2, "optional module"). Build-option mechanics: see `.claude/build.md`.
 R7. CPython MUST be pinned to 3.14 and shipped embedded inside the optional Python module package — never in the base installer — resolved relative to the install root (§4.2, as amended; `.claude/build.md` R23). (3.14 supersedes the 3.12 this rule pinned: it is the version pybind11 3.0+ supports and the one §4.2 now names.)
 R8. `pip` packages MUST install into an isolated venv under the project data directory, never into the embedded interpreter's own `site-packages` (§4.2).
 R9. Read APIs MAY be rich and direct, but MUST return values or const views only — `Mm`, `Point2`, `Box2`, `EntityId`, `Value`, const spans. The write API is the host's one dispatch call and the callables PROJECTED from `Registry` beside it (`cad.run`, `cad.<command>`), and nothing else (§4.3). (This supersedes the former wording, which named the removed Lua host's `h.komut()`.)
@@ -24,17 +24,17 @@ R15. Bulk work MUST use `TOPLU_BASLA` / `TOPLU_BITIR`: a script creating 100 000
 R16. Command dispatch cost from a script MUST stay ≤ 10 µs, measured by a `/tests/bench` gate; >10 % regression breaks the build (§10.1).
 R17. The script dispatch hot path MUST be allocation-free — arguments packed into the POD `Value` union or an arena; no `std::function`, no `shared_ptr` (§10.4).
 R18. Command names and aliases MUST be resolved through `Registry` (`core.line`, `ÇİZGİ`/`LINE`, …); `/src/script` MUST NOT hold its own name table (§2.3).
-R19. Turkish identifiers and command names MUST be case-folded with the shared Turkish folding table exposed by `kentos_command` (`.claude/command.md` R7), never `std::toupper`/`std::tolower` (CLAUDE.md 5.6, i/I).
+R19. Turkish identifiers and command names MUST be case-folded with the shared Turkish folding table exposed by `piricad_command` (`.claude/command.md` R7), never `std::toupper`/`std::tolower` (CLAUDE.md 5.6, i/I).
 R20. Plugins MUST come from the signed plugin repository; an unsigned plugin loads only after an explicit warning the user must accept, and the acceptance MUST be written as a `{kind:"meta"}` `Journal` line (`.claude/command.md` R20, `.claude/plugin-api.md` R10) (§4.3).
 R21. Script errors MUST propagate as `Result<T>` / `Error{code,message}` with actionable text (expected vs. received), matching the command-line error contract (§3).
 
 ## Absolute Prohibitions
 
-P1. NEVER call Python on a per-feature hot path — label expression, style rule, or per-object evaluation callback. Use the compiled expression engine of `kentos_cad/command/parser.hpp` (§4.1 as amended, §10.4). (This supersedes "Use Lua": there is no second script language to escape to, which makes the prohibition sharper rather than softer.)
+P1. NEVER call Python on a per-feature hot path — label expression, style rule, or per-object evaluation callback. Use the compiled expression engine of `piricad/command/parser.hpp` (§4.1 as amended, §10.4). (This supersedes "Use Lua": there is no second script language to escape to, which makes the prohibition sharper rather than softer.)
 P2. NEVER use, probe, or fall back to the system Python interpreter or system `site-packages` (§4.2).
 P3. NEVER give a script a path that bypasses validation, the transaction boundary, or the journal — including "fast" internal helpers (§2.6).
 P4. NEVER hand a script a raw pointer, mutable reference, iterator, or non-const span into `Document`, `Layer`, or the SoA polyline store (§4.3).
-P5. NEVER write a second parser, tokenizer, or expression grammar inside `/src/script`; extend `kentos_cad/command/parser.hpp` instead — see `.claude/command.md` (§3).
+P5. NEVER write a second parser, tokenizer, or expression grammar inside `/src/script`; extend `piricad/command/parser.hpp` instead — see `.claude/command.md` (§3).
 P6. NEVER execute a script body, plugin `import`, or interpreter startup on the UI thread (§4.2).
 P7. NEVER auto-grant or auto-escalate the `tam` sandbox level. No config key, environment variable, CLI flag, script header, or plugin manifest may raise the level without interactive consent (§4.3).
 P8. NEVER touch the filesystem or network at `güvenli`; NEVER touch anything outside the project directory at `proje` (§4.3).
@@ -48,13 +48,13 @@ P15. NEVER give `core.script`, or any future command that runs a script, the `Ai
 
 ## Definitions of Done
 
-- [ ] Builds and tests green with `KENTOS_WITH_PYTHON=OFF`, and green again with it ON.
+- [ ] Builds and tests green with `PIRICAD_WITH_PYTHON=OFF`, and green again with it ON.
 - [ ] New binding has zero non-const core types in its signature (grep-checkable).
 - [ ] New script entry point takes a sandbox level parameter and a `std::stop_token`.
 - [ ] Journal shows exactly one undo step per script block; bulk case shows one validation pass.
 - [ ] `/tests/bench` dispatch benchmark still ≤ 10 µs, no >10 % regression.
 - [ ] Sandbox test added for the new surface at `güvenli`, `proje`, and `tam`.
-- [ ] No new grammar/keyword handling outside `kentos_cad/command/parser.hpp`.
+- [ ] No new grammar/keyword handling outside `piricad/command/parser.hpp`.
 
 ## Enforcement
 

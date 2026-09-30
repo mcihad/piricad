@@ -10,26 +10,26 @@
 // two ends given the other way round are the other arc of the same circle. That
 // is the whole direction control: no flag, no "major arc" option, and no two
 // records that could mean one picture.
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -399,7 +399,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(arc_draw)
+PIRICAD_COMMAND(arc_draw)
 {
     return CommandSpec{
         .id       = "core.arc_draw",
@@ -446,4 +446,4 @@ KENTOS_COMMAND(arc_draw)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

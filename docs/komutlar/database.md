@@ -27,7 +27,7 @@ parselden iki tane oluşturmamalıdır; satırları ikilenmiş bir kadastro tabl
 hiç tablo olmamasından kötüdür.
 
 Bütün yazma işi **tek bir işlemdedir**. Yarıda kalan bir yazma, belediyenin canlı
-tablosunda çizimin bir parçasını bırakırdı; KentOSCad bunu reddeder — ya hepsi
+tablosunda çizimin bir parçasını bırakırdı; PiriCAD bunu reddeder — ya hepsi
 yazılır ya hiçbiri.
 
 ## Adlar
@@ -73,7 +73,7 @@ Tipi ve adedi için üretilmiş [komut referansına](referans.md) bakın.
 
 ## Parola nereye yazılır
 
-**Hiçbir yere.** KentOSCad parolayı ne ayar dosyasına, ne projeye, ne de günlüğe
+**Hiçbir yere.** PiriCAD parolayı ne ayar dosyasına, ne projeye, ne de günlüğe
 yazar. Ayar dosyası düz metindir, yedeklere kopyalanır ve hata bildirimlerine
 yapıştırılır; oraya konan bir veritabanı parolası, yanında bir kolaylık hikâyesi
 olan bir kimlik sızıntısıdır.
@@ -82,7 +82,7 @@ Bunun zaten çözülmüş yolu libpq'nun kendi mekanizmalarıdır:
 
 ```bash
 # Kalıcı çözüm: satır biçimi sunucu:port:veritabanı:kullanıcı:parola
-echo "localhost:5432:kentoscad:kentoscad:GİZLİ" >> ~/.pgpass
+echo "localhost:5432:piricad:piricad:GİZLİ" >> ~/.pgpass
 chmod 600 ~/.pgpass
 ```
 
@@ -91,7 +91,7 @@ Windows'ta aynı dosya `%APPDATA%\postgresql\pgpass.conf` adındadır.
 Tek seferlik bir oturum için ortam değişkeni yeter:
 
 ```bash
-PGPASSWORD=GİZLİ kentos_cad
+PGPASSWORD=GİZLİ piricad
 ```
 
 Komut satırına parola yazarsanız çalışır, ama günlüğe `password=***` olarak
@@ -105,7 +105,7 @@ kasıtlıdır.
 Bağlanın. Parola `~/.pgpass` dosyasından gelir:
 
 ```
-VERİTABANI baglan hedef="host=localhost dbname=kentoscad user=kentoscad"
+VERİTABANI baglan hedef="host=localhost dbname=piricad user=piricad"
 ```
 
 Transkript şunu yazar:
@@ -142,7 +142,7 @@ VERİTABANI katmanyaz katman=PARSEL hedef=ada142_parsel
 Artık QGIS'ten ya da düz SQL'den okunabilir:
 
 ```bash
-psql -d kentoscad -c "select kimlik, ada_no, ST_Area(geom) from ada142_parsel limit 3"
+psql -d piricad -c "select kimlik, ada_no, ST_Area(geom) from ada142_parsel limit 3"
 ```
 
 Bütün projeyi kaydedin:
@@ -158,7 +158,7 @@ Proje veritabanına kaydedildi: 'Ada 142 imar'  (37 nesne, 412 KB).
 Başka bir makinede geri açın:
 
 ```
-VERİTABANI baglan hedef="host=sunucu.belediye.gov.tr dbname=kentoscad user=harita"
+VERİTABANI baglan hedef="host=sunucu.belediye.gov.tr dbname=piricad user=harita"
 VERİTABANI projeac hedef="Ada 142 imar"
 ```
 
@@ -171,10 +171,10 @@ tıpkı [AÇ](open.md) gibi. Kaydedilmemiş işiniz varsa önce kaydedin.
 
 ### Arayüz
 
-**KentOS CAD ▸ Veritabanı…** ya da şeritteki **Harita ▸ Veri ▸ Veritabanı…**
+**PiriCAD CAD ▸ Veritabanı…** ya da şeritteki **Harita ▸ Veri ▸ Veritabanı…**
 (`Ctrl+Shift+D`) modsuz bir pencere açar: üstte bağlantı
 alanları ve bağlantı durumu, altta solda sunucudaki mekansal tablolar, sağda
-kayıtlı KentOSCad projeleri bulunur. Bağlantı kurulduktan sonra **Yenile** düğmesi
+kayıtlı PiriCAD projeleri bulunur. Bağlantı kurulduktan sonra **Yenile** düğmesi
 iki listeyi sunucudan yeniden okur.
 
 Pencere yalnızca argümanı toplar. Her düğme bir `VERİTABANI …` satırı kurar ve
@@ -209,7 +209,7 @@ Betikte, her işlem bir satırdır:
 ```json
 [
   { "cmd": "core.database", "args": { "islem": "baglan",
-      "hedef": "host=localhost dbname=kentoscad user=kentoscad" } },
+      "hedef": "host=localhost dbname=piricad user=piricad" } },
   { "cmd": "core.setting",  "args": { "ad": "koordinat_sistemi", "deger": "TUREF/TM30" } },
   { "cmd": "core.database", "args": { "islem": "katmanyaz",
       "katman": "PARSEL", "hedef": "ada142_parsel" } },
@@ -225,7 +225,7 @@ Gece çalışan bir toplu iş için tipik kalıp budur: aç, yaz, kes.
 `VERİTABANI` geri alınamaz ve geri alma yığınına girmez.
 
 `katmanyaz`, `projekaydet` ve `projesil` çizimi değil **sunucuyu** değiştirir;
-KentOSCad'in geri alması sizin çiziminizi geri alır, başkasının veritabanını değil.
+PiriCAD'in geri alması sizin çiziminizi geri alır, başkasının veritabanını değil.
 Yanlış tabloya yazdıysanız doğrusuna yeniden yazın; yanlış projeyi sildiyseniz
 veritabanının kendi yedeğinden dönmeniz gerekir.
 
@@ -261,7 +261,7 @@ bir katmanda aradaki fark saniyelerle kahve molası arasındaki farktır.
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `Veritabanı motoru bağlı değil. Bu yapı PostgreSQL desteği olmadan derlenmiş olabilir.` | Veritabanı motoru olmayan bir ortam | Uygulama içinden çalıştırın |
-| `Bu KentOSCad yapısı PostgreSQL desteği olmadan derlenmiş.` | `KENTOS_WITH_POSTGIS=OFF` ile derlenmiş | Kaynaktan `KENTOS_WITH_POSTGIS=ON` ile yapılandırın |
+| `Bu PiriCAD yapısı PostgreSQL desteği olmadan derlenmiş.` | `PIRICAD_WITH_POSTGIS=OFF` ile derlenmiş | Kaynaktan `PIRICAD_WITH_POSTGIS=ON` ile yapılandırın |
 | `Bilinmeyen işlem: '...'. Geçerli işlemler: ...` | İşlem adı yanlış yazılmış | Listedeki adlardan birini yazın |
 | `Veritabanı bağlantı dizesi boş. Örnek: host=localhost dbname=postgres user=postgres password=...` | `hedef` boş verilmiş | Bağlantı dizesini yazın |
 | `Veritabanına bağlanılamadı: ...` | Sunucu kapalı, adres yanlış ya da parola geçersiz | Mesajdaki sunucu yanıtını okuyun; `~/.pgpass` dosyasını denetleyin |
@@ -318,7 +318,7 @@ Geometri, nesnenin halkalarının rollerine göre yazılır:
 Son satır önemlidir: **yolla ikiye bölünmüş bir parsel iki yüzlü tek parseldir**,
 delikli bir parsel değil. İkinci yüzü delik olarak yazmak, belediyeye alanları
 yanlış olan ve buna rağmen hiçbir denetimin şikâyet etmeyeceği bir tablo verirdi.
-Böyle bir parsel KentOSCad'e çoğunlukla [İÇEAKTAR](import.md) ile, TKGM'den gelen
+Böyle bir parsel PiriCAD'e çoğunlukla [İÇEAKTAR](import.md) ile, TKGM'den gelen
 bir GeoPackage'ın `MULTIPOLYGON` kaydı olarak girer.
 
 Boş bir hücre SQL `null`'dur, sıfır değil: ölçülmemiş bir cephe ile sıfır cephe,
@@ -330,20 +330,20 @@ Bir PostGIS sunucusu yoksa Docker ile bir tane açabilirsiniz:
 
 ```bash
 docker run -d --name postgis -p 5432:5432 \
-  -e POSTGRES_PASSWORD=GİZLİ -e POSTGRES_DB=kentoscad \
+  -e POSTGRES_PASSWORD=GİZLİ -e POSTGRES_DB=piricad \
   postgis/postgis:18-3.6
 ```
 
 Sonra eklentiyi bir kez etkinleştirin:
 
 ```bash
-psql -h localhost -U postgres -d kentoscad -c "CREATE EXTENSION IF NOT EXISTS postgis"
+psql -h localhost -U postgres -d piricad -c "CREATE EXTENSION IF NOT EXISTS postgis"
 ```
 
-KentOSCad'i kaynaktan derliyorsanız PostgreSQL desteği bir seçenektir:
+PiriCAD'i kaynaktan derliyorsanız PostgreSQL desteği bir seçenektir:
 
 ```bash
-cmake --preset dev -DKENTOS_WITH_POSTGIS=ON
+cmake --preset dev -DPIRICAD_WITH_POSTGIS=ON
 ```
 
 Bağımlılık `libpqxx`'tir ve `libpq` geliştirme paketini ister
@@ -352,7 +352,7 @@ Bağımlılık `libpqxx`'tir ve `libpq` geliştirme paketini ister
 ## Henüz olmayan: tabloyu çizime okumak
 
 **Bu sürümde katman veritabanına yazılır, veritabanından okunmaz.** Yazdığınız
-tabloyu QGIS'te, `ogr2ogr` ile ve düz SQL ile görebilirsiniz; KentOSCad'e katman
+tabloyu QGIS'te, `ogr2ogr` ile ve düz SQL ile görebilirsiniz; PiriCAD'e katman
 olarak geri getiren bir işlem henüz yok.
 
 Bir projenin tamamı için böyle bir asimetri yoktur: `projekaydet` ile yazılan
@@ -364,7 +364,7 @@ connection" cümlesidir. O zamana kadar yol, tabloyu QGIS'ten ya da `ogr2ogr` il
 bir GeoPackage'a yazıp [İÇEAKTAR](import.md) ile almaktır:
 
 ```bash
-ogr2ogr -f GPKG ada142.gpkg PG:"host=localhost dbname=kentoscad" ada142_parsel
+ogr2ogr -f GPKG ada142.gpkg PG:"host=localhost dbname=piricad" ada142_parsel
 ```
 
 ## İlgili sayfalar

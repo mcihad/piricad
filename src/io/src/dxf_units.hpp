@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — io: the DXF `$INSUNITS` code table.
+// PiriCAD — io: the DXF `$INSUNITS` code table.
 //
 // A DXF says what its numbers mean in one header variable, and a file that
 // leaves it at 0 says nothing. Both readers of the format — GDAL's driver today,
@@ -11,11 +11,11 @@
 // `core::DrawingUnit`, never for a group-code value.
 #pragma once
 
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/units.hpp"
 
 #include <optional>
 
-namespace kentos::io {
+namespace piricad::io {
 
 /// The unit a `$INSUNITS` value names, or nothing for 0 (unitless) and for the
 /// codes this program does not scale by — miles, mils, yards, ångström,
@@ -83,4 +83,4 @@ constexpr const char* gdal_insunits_name(core::DrawingUnit unit) noexcept
     return "UNITLESS";
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

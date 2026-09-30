@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kentoscad.org/data/catalogs/schema/is-sablonlari.schema.json",
-  "title": "KentOSCad iş şablonları",
+  "$id": "https://piricad.org/data/catalogs/schema/is-sablonlari.schema.json",
+  "title": "PiriCAD iş şablonları",
   "description": "Sık yapılan işlerin komut satırları, sırasıyla. Bir şablon hiçbir şey ÇALIŞTIRMAZ: adımlar sıradan komut satırlarıdır ve yazan her adım yine önizlemeli bir öneriye dönüşür. Önerilen sıra değiştiğinde bu dosya güncellenir; yeniden derleme gerekmez.",
   "type": "object",
   "required": ["schema_version", "package_version", "id", "source", "published", "licence", "sablonlar"],

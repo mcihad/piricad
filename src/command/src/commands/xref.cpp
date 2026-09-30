@@ -12,17 +12,17 @@
 // Reading the file is /src/io's, through the file seam (`FileRequest`'s
 // `XrefAttach`, `XrefLoad`, `XrefRepath`); what needs no file — unloading,
 // binding, taking a reference off, listing — is done here, in the document.
-#include "kentos_cad/command/block_edit.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/construct.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/external_ref.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/block_edit.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/construct.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/external_ref.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/block.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/document.hpp"
+#include "piricad/core/block.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/document.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -32,7 +32,7 @@
 #include <system_error>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 core::Ratio ratio_of(double v)
@@ -432,7 +432,7 @@ Task<void> run_xref(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(xref)
+PIRICAD_COMMAND(xref)
 {
     return CommandSpec{
         .id       = "core.xref",
@@ -477,4 +477,4 @@ KENTOS_COMMAND(xref)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

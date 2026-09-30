@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the model profiles, on disk and answerable.
+// PiriCAD — app: the model profiles, on disk and answerable.
 //
 // `/src/ai` owns the RECORD — a named endpoint, its dialect, its context window
 // and the NAME of its key-store entry (`ai/provider.hpp`) — and deliberately owns
@@ -27,12 +27,12 @@
 // that reported success before the reply arrived would be a probe that lies.
 #pragma once
 
-#include "kentos_cad/app/secret_resolver.hpp"
+#include "piricad/app/secret_resolver.hpp"
 
-#include "kentos_cad/ai/provider.hpp"
-#include "kentos_cad/ai/provider_catalog.hpp"
-#include "kentos_cad/ai/transport.hpp"
-#include "kentos_cad/command/bus.hpp"
+#include "piricad/ai/provider.hpp"
+#include "piricad/ai/provider_catalog.hpp"
+#include "piricad/ai/transport.hpp"
+#include "piricad/command/bus.hpp"
 
 #include <QObject>
 #include <QString>
@@ -42,7 +42,7 @@
 #include <memory>
 #include <string>
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// Owns the provider profiles, their file, the key store and the probe.
 class ProviderService : public QObject
@@ -157,4 +157,4 @@ private:
     QTimer probe_timeout_; ///< an endpoint that never answers still has to be given up on
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

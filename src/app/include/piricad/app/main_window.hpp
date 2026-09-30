@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the main window.
+// PiriCAD — app: the main window.
 //
-// Layout (Qt Widgets shell, kentoscad.md §6.3):
+// Layout (Qt Widgets shell, piricad.md §6.3):
 //
 //   ┌ menu ─────────────────────────────────────────────────────────────┐
 //   │ ┌──────┐ ┌──────────────────────────────┐ ┌────────────────────┐ │
@@ -16,16 +16,16 @@
 //
 // Every dock is movable between the left and right edges and can be floated.
 // Qt Advanced Docking System replaces QDockWidget in Phase 1 for saved
-// perspectives (kentoscad.md §6.3, .claude/ui.md).
+// perspectives (piricad.md §6.3, .claude/ui.md).
 #pragma once
 
-#include "kentos_cad/app/app_menu.hpp"
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/ribbon.hpp"
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/app/app_menu.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/ribbon.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -40,13 +40,13 @@
 // SYSTEM include of the `saribbon` target.
 #include "SARibbon.h"
 
-namespace kentos::command {
+namespace piricad::command {
 /// The registry's categories (`spec.hpp`), declared here so the ribbon's
 /// leftovers can be asked for by category without pulling the spec in.
 enum class Category : std::uint8_t;
 /// One of SEÇ's modes as the Seçim prompt tab offers it (`select_modes.hpp`).
 struct SelectModeInfo;
-} // namespace kentos::command
+} // namespace piricad::command
 
 /// Qt widgets this header only holds pointers to. Forward-declared rather than
 /// included so that touching a widget's header does not rebuild everything that
@@ -62,7 +62,7 @@ class QPlainTextEdit;
 class QToolBar;
 class QToolButton;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The two-page import window this shell opens; see `import_wizard.hpp`.
 class ImportWizard;
@@ -71,7 +71,7 @@ class ImportWizard;
 class DatabaseDialog;
 class SettingsDialog;
 
-/// KentOSCad's own widgets and the controller, forward-declared for the same reason.
+/// PiriCAD's own widgets and the controller, forward-declared for the same reason.
 class CommandLine;
 class Controller;
 class LayerPanel;
@@ -112,7 +112,7 @@ public:
     void openStyleDesigner(const QString& layerName);
 
     /// Sends one line to the bus, exactly as the command line would. Public for
-    /// `KENTOS_SHOT_DIR`, which has to re-fit the drawing after it resizes the
+    /// `PIRICAD_SHOT_DIR`, which has to re-fit the drawing after it resizes the
     /// window; it buys no privilege — this IS the command line's own road.
     void runScriptLine(const QString& line);
 
@@ -137,7 +137,7 @@ public:
     /// `transcriptDock_` member sat null for its whole life and two theme loops
     /// quietly skipped it. A query command answers here and changes nothing on
     /// the canvas, so a menu row that runs one has to put its answer where
-    /// somebody is looking. Public so `KENTOS_SHOT_DIR` can photograph an answer
+    /// somebody is looking. Public so `PIRICAD_SHOT_DIR` can photograph an answer
     /// where a user would read it; it is the same call the menu makes.
     /// Brings the attribute panel forward — the tab and the page together, as
     /// `showTranscript` does for the transcript.
@@ -180,7 +180,7 @@ public:
     int probePython();
 
     /// The other three windows, public for the same reason as the designer:
-    /// `KENTOS_SMOKE` opens every one of them in turn, so a dialog that crashes
+    /// `PIRICAD_SMOKE` opens every one of them in turn, so a dialog that crashes
     /// on construction fails a test rather than a user. A window nothing
     /// constructs is a window nothing is checking.
     void openSettings();
@@ -256,7 +256,7 @@ public:
     void openProjectSettings();
 
     /// Opens the attribute table on `layerName`, or on the ACTIVE layer when it is
-    /// empty — which is what the Katman menu and `KENTOS_SMOKE` ask for.
+    /// empty — which is what the Katman menu and `PIRICAD_SMOKE` ask for.
     void openAttributeTable(const QString& layerName = QString());
 
     /// Opens the command list page, `YARDIM`'s answer and `Ctrl+K`'s.
@@ -268,7 +268,7 @@ public:
     /// Asks which of `candidates` the click meant, and sends the answer to the
     /// bus with `modifiers` applied.
     ///
-    /// Public for the same reason the three windows above are: `KENTOS_PICK_PROBE`
+    /// Public for the same reason the three windows above are: `PIRICAD_PICK_PROBE`
     /// drives it, and a chooser nothing constructs is a chooser nothing checks.
     void choosePick(const std::vector<core::EntityId>& candidates, Qt::KeyboardModifiers modifiers);
     /// What a double click on object `key` opens (TODOS C-17): the object
@@ -327,7 +327,7 @@ public:
 
     /// Opens the living component standard — every component in every state,
     /// laid out as `bileşen_standardı.png` is — prints its inventory, and
-    /// photographs it when `KENTOS_WIDGETS_PROBE` carries a directory.
+    /// photographs it when `PIRICAD_WIDGETS_PROBE` carries a directory.
     ///
     /// It is how a change to a component is SEEN before it ships, and how the
     /// picture in `docs/baslangic/bilesenler.md` is regenerated (docs.md R15).
@@ -337,12 +337,12 @@ public:
     /// Photographs every window of the program — the main window with an object
     /// selected, both settings windows, the layer properties, the attribute
     /// table, the PostGIS window, the import wizard, the column dialog — into
-    /// the directory `KENTOS_DIALOG_PROBE` names, in the theme the mockups are
-    /// drawn in unless `KENTOS_PROBE_THEME=acik`.
+    /// the directory `PIRICAD_DIALOG_PROBE` names, in the theme the mockups are
+    /// drawn in unless `PIRICAD_PROBE_THEME=acik`.
     ///
     /// It exists because a window is judged by looking at it, and a reviewer who
     /// has to build a drawing by hand before every look does not look.
-    /// `KENTOS_HELP_PROBE`: runs the help command the way its menu entry does
+    /// `PIRICAD_HELP_PROBE`: runs the help command the way its menu entry does
     /// and checks what the user gets. Returns the number of failures.
     ///
     /// The help menu used to pour the generated reference into a `QMessageBox`,
@@ -379,7 +379,7 @@ public:
     /// leaving the journal line typing it leaves. Returns the failures.
     int probePromptTabs();
 
-    /// `KENTOS_MENU_PROBE`: opens every menu in turn, photographs it and prints
+    /// `PIRICAD_MENU_PROBE`: opens every menu in turn, photographs it and prints
     /// what it holds. Returns the failure count.
     ///
     /// A menu is the one part of a shell nothing else can show you: it is not in
@@ -388,7 +388,7 @@ public:
     /// than reasoned about.
     int probeMenus();
 
-    /// `KENTOS_REACH_PROBE`: how much of the program a hand can reach. Returns
+    /// `PIRICAD_REACH_PROBE`: how much of the program a hand can reach. Returns
     /// the number of commands with no button and no menu entry.
     ///
     /// CLAUDE.md 5.15 forbids a feature reachable only by mouse. Its mirror is
@@ -398,7 +398,7 @@ public:
     /// commands are added.
     int probeReach();
 
-    /// `KENTOS_ANSWER_PROBE`: presses the tools that ask for a NAME or a NUMBER
+    /// `PIRICAD_ANSWER_PROBE`: presses the tools that ask for a NAME or a NUMBER
     /// and checks a hand could answer. Returns the failure count.
     ///
     /// Reachability (`probeReach`) says a button exists. This says pressing it
@@ -408,7 +408,7 @@ public:
     /// and measuring tools looked dead when pressed.
     int probeAnswerable();
 
-    /// `KENTOS_FLYOUT_PROBE`: opens every tool family with a real mouse and runs
+    /// `PIRICAD_FLYOUT_PROBE`: opens every tool family with a real mouse and runs
     /// every member. Returns the failure count.
     ///
     /// Eleven tools live behind a family button — ÇOKLUÇİZGİ, SPLINE, ÇOKGEN,
@@ -419,7 +419,7 @@ public:
     /// and each member is then chosen from it.
     int probeFlyouts();
 
-    /// `KENTOS_REALMOUSE_PROBE`: drawing driven the way a REAL mouse arrives.
+    /// `PIRICAD_REALMOUSE_PROBE`: drawing driven the way a REAL mouse arrives.
     /// Returns the failure count.
     ///
     /// Every other probe sends its events straight to the widget it means, which
@@ -430,7 +430,7 @@ public:
     /// do not cover is exactly where the defect has to be.
     int probeRealMouse();
 
-    /// `KENTOS_OSCLICK_PROBE=<dir>`: the window held open for REAL window-system
+    /// `PIRICAD_OSCLICK_PROBE=<dir>`: the window held open for REAL window-system
     /// events. Returns 0 — nothing is asserted here.
     ///
     /// Every probe above synthesises its events inside the process. What none
@@ -438,14 +438,14 @@ public:
     /// through Cocoa, the platform plugin and Qt's own hit test — which is the
     /// only kind a user ever makes. This one prints where its buttons and its
     /// canvas are in GLOBAL coordinates, then pumps events until `<dir>/dur`
-    /// appears or `KENTOS_OSCLICK_SECONDS` pass, reporting every change it sees:
+    /// appears or `PIRICAD_OSCLICK_SECONDS` pass, reporting every change it sees:
     /// the lit tool, the prompt, the object count, new transcript lines, and an
     /// open family card with its rows. A driver outside the process — `osascript`
     /// System Events — does the clicking, and its log against this one is the
     /// evidence. A picture is left at the end.
     int probeOsClicks();
 
-    /// `KENTOS_ACCESS_PROBE`: the ribbon's tools reached the way a SCREEN READER
+    /// `PIRICAD_ACCESS_PROBE`: the ribbon's tools reached the way a SCREEN READER
     /// reaches it. Returns the failure count.
     ///
     /// This is the probe the accessibility hole got past, and it got past
@@ -466,7 +466,7 @@ public:
     /// over the canvas widget, which `grab()` alone leaves blank under QRhi.
     QImage probePicture();
 
-    /// `KENTOS_STRIP_PROBE`: the status strip under a long message. Returns the
+    /// `PIRICAD_STRIP_PROBE`: the status strip under a long message. Returns the
     /// failure count.
     ///
     /// The strip's right end holds three cells — the render backend, the
@@ -488,7 +488,7 @@ public:
     /// screen.
     int probeFit();
 
-    /// THE WHOLE RIBBON, PHOTOGRAPHED (`KENTOS_RIBBON_SHEET=<dir>`): every tab,
+    /// THE WHOLE RIBBON, PHOTOGRAPHED (`PIRICAD_RIBBON_SHEET=<dir>`): every tab,
     /// every editor tab with an object of its kind picked, and one sheet of
     /// every button's picture with its name and command — and a list of what a
     /// reviewer should look at: a button with no picture, one wearing the
@@ -496,7 +496,7 @@ public:
     /// review of the ribbon's pictures reads this sheet, not a guess.
     int probeRibbonSheet();
 
-    /// EVERY RIBBON TOOL, USED (`KENTOS_TOOL_DRIVE=<dir>`, main_window_drive.cpp):
+    /// EVERY RIBBON TOOL, USED (`PIRICAD_TOOL_DRIVE=<dir>`, main_window_drive.cpp):
     /// pressed with nothing selected on a drawing with an object of every
     /// class, its questions answered the way a hand would, the outcome written
     /// down, and undone. A measurement for the review of what does not work.
@@ -517,14 +517,14 @@ public:
 
     /// Opens the layer properties window on the probe drawing, classifies its
     /// layer by a text column, applies, and prints what the document ended up
-    /// with — `KENTOS_DESIGNER_PROBE`, photographed when given a directory.
+    /// with — `PIRICAD_DESIGNER_PROBE`, photographed when given a directory.
     void probeDesigner();
 
     /// Opens the import wizard WITHOUT blocking, on `path` when one is given.
     ///
     /// `importData()` runs it modally and then runs the command line it built;
-    /// this one shows it and returns, which is what `KENTOS_SMOKE` and
-    /// `KENTOS_SHOT_DIR` need — a window that never returns cannot be
+    /// this one shows it and returns, which is what `PIRICAD_SMOKE` and
+    /// `PIRICAD_SHOT_DIR` need — a window that never returns cannot be
     /// photographed or closed by a timer.
     /// Returns the window it opened, so a probe can photograph the file page and
     /// only then start the read. A caller with no such need ignores it.
@@ -553,7 +553,7 @@ public:
     /// decided. The line is where the two meet, so the line is what has to be
     /// read.
     ///
-    /// Developer tooling behind `KENTOS_PRINT_PROBE`.
+    /// Developer tooling behind `PIRICAD_PRINT_PROBE`.
     QString probePrintLine(core::Box2 box, const QString& profile, const QString& pdf, bool round);
 
     /// What a second press on a print control would open, for the print probe.
@@ -585,8 +585,8 @@ public:
     /// "Alan Seç" shipped sending `SEÇ mod=KUTU` to a lookup that can only resolve
     /// a bare name: dead on every click, in every session, with a green suite.
     ///
-    /// Developer tooling behind `KENTOS_TOOL_PROBE`, the same category as
-    /// `KENTOS_EDIT_PROBE`; nothing user-facing calls it.
+    /// Developer tooling behind `PIRICAD_TOOL_PROBE`, the same category as
+    /// `PIRICAD_EDIT_PROBE`; nothing user-facing calls it.
     void probeTools();
 
     /// Drives a RECORDED provider stream into the chat dock and reports what the
@@ -599,7 +599,7 @@ public:
     /// running shell, and that a write call leaves the drawing untouched until
     /// the card is pressed. Returns 0 when everything held.
     ///
-    /// Developer tooling behind `KENTOS_CHAT_PROBE`.
+    /// Developer tooling behind `PIRICAD_CHAT_PROBE`.
     int probeChat();
 
     /// Every entry of `Çıktı ▸ Yazdır ▸ Çıktı Yerleşimleri`, as a menu walk would find it, one
@@ -624,7 +624,7 @@ public:
     /// user can give it one. That gap is exactly where "Alan Seç" hid, and it is
     /// where the next one will hide too.
     ///
-    /// Developer tooling behind `KENTOS_HAND_PROBE`.
+    /// Developer tooling behind `PIRICAD_HAND_PROBE`.
     void probeToolsByHand();
 
 private slots:
@@ -956,7 +956,7 @@ private:
     /// what it does, how it is typed, and a family's other members.
     QString ribbonTip(const QAction* action) const;
 
-    /// Opens the application menu under the `KentOS CAD` button, with the
+    /// Opens the application menu under the `PiriCAD CAD` button, with the
     /// documents opened last in its pane.
     void openApplicationMenu();
 
@@ -1015,7 +1015,7 @@ private:
 
     /// The right end of the tab row: the command search and the user chip.
     ShellCorner* corner_{nullptr};
-    /// `KentOS CAD`, the application button; its floor is set after every sheet.
+    /// `PiriCAD CAD`, the application button; its floor is set after every sheet.
     QToolButton* appButton_{nullptr};
     /// Everything on the ribbon that reads the document (`ribbon.hpp`).
     std::unique_ptr<RibbonLive> ribbonLive_ = std::make_unique<RibbonLive>();
@@ -1023,7 +1023,7 @@ private:
     QList<QAction*> layerActions_;
     /// Puts the select tool's panel first on a tab (`buildRibbon`).
     std::function<void(SARibbonCategory*)> selectFirst_;
-    /// What the `KentOS CAD` button opens.
+    /// What the `PiriCAD CAD` button opens.
     ApplicationMenu* appMenu_{nullptr};
     /// The document last put on the recent list, so a refresh does not write
     /// the list again for the same file.
@@ -1112,7 +1112,7 @@ private:
     QAction* actStyleCopy_{nullptr};
     QAction* actColour_{nullptr}; ///< RENK — the colour chips' command, on a menu row too
     QAction* actTopology_{nullptr};
-    QAction* actDependency_{nullptr}; ///< BAĞIMLILIK — which results still hold (TODOS F-04)
+    QAction* actDependency_{nullptr};        ///< BAĞIMLILIK — which results still hold (TODOS F-04)
     QAction* actDependencyRefresh_{nullptr}; ///< BAĞIMLILIK islem=yenile — bring them up to date
     QAction* actLine_{nullptr};
     QAction* actErase_{nullptr};
@@ -1226,7 +1226,7 @@ private:
     QAction* actBlockBase_{nullptr};    ///< BLOKDÜZENLE islem=taban — moves its base point
     QAction* actBlockLibrary_{nullptr}; ///< BLOKEKLE dosya= — a block from a library file
     QAction* actXref_{nullptr};         ///< DIŞREFERANS — a drawing kept in its own file
-    QAction* actXrefReload_{nullptr}; ///< DIŞREFERANS islem=yenile — every reference, read again
+    QAction* actXrefReload_{nullptr};   ///< DIŞREFERANS islem=yenile — every reference, read again
     QAction* actLocalCopy_{
         nullptr}; ///< YERELKOPYA — a linked file's objects, copied as this drawing's
     QAction* actBlockClip_{nullptr};         ///< BLOKKIRP — a reference clipped by a rectangle
@@ -1414,4 +1414,4 @@ private:
     int snapMaskMemory_{0x7};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

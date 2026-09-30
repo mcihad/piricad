@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/attribute_panel.hpp"
-#include "kentos_cad/app/widgets.hpp"
+#include "piricad/app/attribute_panel.hpp"
+#include "piricad/app/widgets.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/measure_text.hpp"
-#include "kentos_cad/app/tokens.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/dimension_link.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/hatch_link.hpp"
-#include "kentos_cad/core/lineage.hpp"
-#include "kentos_cad/core/ties.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/measure_text.hpp"
+#include "piricad/app/tokens.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/dimension_link.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/hatch_link.hpp"
+#include "piricad/core/lineage.hpp"
+#include "piricad/core/ties.hpp"
 
 #include <QClipboard>
 #include <QColorDialog>
@@ -33,7 +33,7 @@
 
 #include <algorithm>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 // `design.md` §7, in the mockup's own numbers.
@@ -549,9 +549,9 @@ void AttributePanel::rebuild()
                 // written and changed at the prompt.
                 const bool symmetric = def.tolerance == core::DimTolerance::None ||
                                        def.tolerance == core::DimTolerance::Symmetric;
-                const bool angle = def.type == core::DimensionType::Angular ||
-                                   def.type == core::DimensionType::Angular3P;
-                QString tolerance = QStringLiteral("—");
+                const bool angle     = def.type == core::DimensionType::Angular ||
+                                       def.type == core::DimensionType::Angular3P;
+                QString tolerance    = QStringLiteral("—");
                 if (def.tolerance == core::DimTolerance::Symmetric)
                     tolerance =
                         angle ? QString::number(
@@ -1413,4 +1413,4 @@ void AttributePanel::paintEvent(QPaintEvent*)
     }
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/chat_panel.hpp"
+#include "piricad/app/chat_panel.hpp"
 
-#include "kentos_cad/app/ai_service.hpp"
-#include "kentos_cad/app/ai_transport.hpp"
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/flow_layout.hpp"
-#include "kentos_cad/app/provider_service.hpp"
-#include "kentos_cad/app/suggestion_card.hpp"
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/ai_service.hpp"
+#include "piricad/app/ai_transport.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/flow_layout.hpp"
+#include "piricad/app/provider_service.hpp"
+#include "piricad/app/suggestion_card.hpp"
+#include "piricad/app/tokens.hpp"
 
-#include "kentos_cad/ai/llmstxt.hpp"
-#include "kentos_cad/ai/policy.hpp"
-#include "kentos_cad/ai/redact.hpp"
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/ai/llmstxt.hpp"
+#include "piricad/ai/policy.hpp"
+#include "piricad/ai/redact.hpp"
+#include "piricad/command/registry.hpp"
 
 #include <QDateTime>
 #include <QFile>
@@ -25,7 +25,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// How many read-tool rounds one question may take before the panel stops, when
@@ -593,8 +593,8 @@ QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
     } else if (state == ai::PlanState::Failed || state == ai::PlanState::Rejected) {
         failed = true;
         told   = "Öneri " + filed.value() + " uygulanamadı: " +
-               (result ? result.value().refusal : std::string("sebep bildirilmedi.")) +
-               " Çizim değişmedi.";
+                 (result ? result.value().refusal : std::string("sebep bildirilmedi.")) +
+                 " Çizim değişmedi.";
     } else {
         told = "Öneri " + filed.value() +
                " olarak kaydedildi. Uygulanmadı: bilgisayar başındaki mühendis onaylayana kadar "
@@ -1038,4 +1038,4 @@ void ChatPanel::applyTheme(ThemeMode mode)
     update();
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

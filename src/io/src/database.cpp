@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/io/database.hpp"
+#include "piricad/io/database.hpp"
 
 #include "adopt.hpp"
 
-#include "kentos_cad/io/project.hpp"
+#include "piricad/io/project.hpp"
 
-#if KENTOS_HAVE_POSTGIS
-#include "kentos_cad/io/postgis.hpp"
+#if PIRICAD_HAVE_POSTGIS
+#include "piricad/io/postgis.hpp"
 #endif
 
 #include <filesystem>
@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 using core::err;
@@ -23,7 +23,7 @@ using core::ErrorCode;
 
 namespace fs = std::filesystem;
 
-#if KENTOS_HAVE_POSTGIS
+#if PIRICAD_HAVE_POSTGIS
 
 /// A private directory under the system temp path, removed when it goes away.
 ///
@@ -61,7 +61,7 @@ public:
         // somebody else's directory.
         for (int attempt = 0; attempt < 64; ++attempt) {
             const fs::path candidate =
-                base / ("kentoscad-" + std::string(tag) + "-" + std::to_string(counter_++));
+                base / ("piricad-" + std::string(tag) + "-" + std::to_string(counter_++));
             if (fs::create_directory(candidate, ec) && !ec) {
                 path_ = candidate;
                 return;
@@ -133,7 +133,7 @@ std::string human_bytes(std::int64_t bytes)
     return std::to_string(bytes / kMegabyte) + " MB";
 }
 
-#endif // KENTOS_HAVE_POSTGIS
+#endif // PIRICAD_HAVE_POSTGIS
 
 } // namespace
 
@@ -141,7 +141,7 @@ std::string human_bytes(std::int64_t bytes)
 
 struct DatabaseService::Impl
 {
-#if KENTOS_HAVE_POSTGIS
+#if PIRICAD_HAVE_POSTGIS
     std::unique_ptr<PostgisStore> store;
 #endif
 };
@@ -159,7 +159,7 @@ DatabaseService::~DatabaseService()
 
 bool DatabaseService::available() noexcept
 {
-#if KENTOS_HAVE_POSTGIS
+#if PIRICAD_HAVE_POSTGIS
     return true;
 #else
     return false;
@@ -168,14 +168,14 @@ bool DatabaseService::available() noexcept
 
 bool DatabaseService::connected() const noexcept
 {
-#if KENTOS_HAVE_POSTGIS
+#if PIRICAD_HAVE_POSTGIS
     return impl_->store != nullptr;
 #else
     return false;
 #endif
 }
 
-#if !KENTOS_HAVE_POSTGIS
+#if !PIRICAD_HAVE_POSTGIS
 
 command::Task<core::Result<std::string>> DatabaseService::handle(command::DatabaseRequest)
 {
@@ -184,8 +184,8 @@ command::Task<core::Result<std::string>> DatabaseService::handle(command::Databa
     // not crash (build.md: an optional dependency is invisible to its callers
     // except in the message it gives when asked to work).
     co_return err(ErrorCode::Unsupported,
-                  "Bu KentOSCad yapısı PostgreSQL desteği olmadan derlenmiş. "
-                  "Kaynaktan derliyorsanız KENTOS_WITH_POSTGIS=ON ile yapılandırın.");
+                  "Bu PiriCAD yapısı PostgreSQL desteği olmadan derlenmiş. "
+                  "Kaynaktan derliyorsanız PIRICAD_WITH_POSTGIS=ON ile yapılandırın.");
 }
 
 #else
@@ -352,6 +352,6 @@ command::Task<core::Result<std::string>> DatabaseService::handle(command::Databa
     co_return err(ErrorCode::Internal, "Bilinmeyen veritabanı işlemi.");
 }
 
-#endif // KENTOS_HAVE_POSTGIS
+#endif // PIRICAD_HAVE_POSTGIS
 
-} // namespace kentos::io
+} // namespace piricad::io

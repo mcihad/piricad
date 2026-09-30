@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/secret_resolver.hpp"
+#include "piricad/app/secret_resolver.hpp"
 
 #include <QThread>
 
@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// How long the destructor gives a lookup to come back before it stops waiting.
@@ -37,7 +37,7 @@ SecretResolver::SecretResolver(QObject* parent) : QObject(parent), box_(std::mak
     // process that exits before that happens leaks two objects, which is the
     // right way round for the trade.
     thread_ = new QThread;
-    thread_->setObjectName(QStringLiteral("kentos-keystore"));
+    thread_->setObjectName(QStringLiteral("piricad-keystore"));
     worker_ = new QObject;
     worker_->moveToThread(thread_);
     connect(thread_, &QThread::finished, worker_, &QObject::deleteLater);
@@ -154,4 +154,4 @@ core::Status SecretResolver::erase(const QString& key_ref)
     return gone;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

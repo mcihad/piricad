@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // AGPL rather than GPL for the reason `jsonrpc.hpp` states: CLAUDE.md Article 2.1
 // puts a server component under AGPLv3, and this is part of one.
-#include "kentos_cad/ai/endpoint.hpp"
+#include "piricad/ai/endpoint.hpp"
 
 #include <optional>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -277,4 +277,4 @@ HttpOutcome http_stream(StreamPlan plan)
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

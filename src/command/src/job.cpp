@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/job.hpp"
+#include "piricad/command/job.hpp"
 
-#include "kentos_cad/command/session.hpp"
+#include "piricad/command/session.hpp"
 
 #include <algorithm>
 
-namespace kentos::command {
+namespace piricad::command {
 
 bool JobAwaiter::await_suspend(std::coroutine_handle<> h)
 {
@@ -36,4 +36,4 @@ void JobControl::at(std::size_t done, std::size_t total, std::uint32_t from,
     permille->store(from + static_cast<std::uint32_t>((done * span) / total));
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

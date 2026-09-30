@@ -4,18 +4,18 @@
 // real bus inside one batch and are taken back whole, so what they WOULD do is
 // counted and outlined while the drawing — its content, revision, keys, undo
 // and redo stacks, journal and selection — comes out exactly as it went in.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/preview.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/processing/registry.hpp"
-#include "kentos_cad/script/json_runner.hpp"
-#if KENTOS_HAVE_PYTHON
-#include "kentos_cad/script/python_runner.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/preview.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/processing/registry.hpp"
+#include "piricad/script/json_runner.hpp"
+#if PIRICAD_HAVE_PYTHON
+#include "piricad/script/python_runner.hpp"
 #endif
 
 #include <cstdint>
@@ -24,8 +24,8 @@
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 
 namespace {
 
@@ -246,7 +246,7 @@ TEST_CASE("BETİK onizle=evet: JSON betiğinin ne yapacağını söyler, çalı�
     script::JsonRunner runner(r.bus, script::Sandbox::Project);
     script::install(r.bus, runner);
     r.run("ÇİZGİ 0,0 10,0");
-    const auto dir = std::filesystem::temp_directory_path() / "kentoscad-betik-onizleme";
+    const auto dir = std::filesystem::temp_directory_path() / "piricad-betik-onizleme";
     std::filesystem::create_directories(dir);
     const auto path = (dir / "iki.json").string();
     std::ofstream(path) << R"({"ad": "İki", "komutlar": [
@@ -266,7 +266,7 @@ TEST_CASE("BETİK onizle=evet: JSON betiğinin ne yapacağını söyler, çalı�
     std::filesystem::remove_all(dir, ignored);
 }
 
-#if KENTOS_HAVE_PYTHON
+#if PIRICAD_HAVE_PYTHON
 TEST_CASE("BETİK onizle=evet: Python betiği önizlenmez ve sebebini söyler (F-05)")
 {
     Rig r;
@@ -311,7 +311,7 @@ TEST_CASE("BETİK onizle=evet: kılavuzun örnek betiği kılavuzdaki cümleyi y
     // docs/komutlar/script.md prints this preview of the manual's sample script.
     Rig r;
     script::JsonRunner runner(r.bus, script::Sandbox::Project);
-    auto seen = runner.preview_file(std::string(KENTOS_JOURNAL_DIR) + "/ornek-parsel.json");
+    auto seen = runner.preview_file(std::string(PIRICAD_JOURNAL_DIR) + "/ornek-parsel.json");
     if (!seen) FAIL_WITH("önizleme", seen.error().message);
     CHECK_EQ(describe_preview(seen.value()),
              "Önizleme: 9 adım — uygulanırsa 14 nesne eklenecek; 4 katmanın ayarları değişecek. "

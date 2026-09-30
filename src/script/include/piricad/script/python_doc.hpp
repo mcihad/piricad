@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — script: the Python surface, written out as documents.
+// PiriCAD — script: the Python surface, written out as documents.
 //
 // TWO PROJECTIONS OF ONE REGISTRY, and the thing to notice is that the RUN-TIME
 // surface (`python_api.cpp`) and these documents are built from the same source
@@ -17,19 +17,19 @@
 
 #include <string>
 
-namespace kentos::command {
+namespace piricad::command {
 /// The command registry; declared rather than included, because this header is
 /// about two documents and only their signatures need the type.
 class Registry;
-} // namespace kentos::command
+} // namespace piricad::command
 
-namespace kentos::command {
+namespace piricad::command {
 /// One declared parameter; declared rather than included for the same reason
 /// `Registry` is.
 struct Param;
-} // namespace kentos::command
+} // namespace piricad::command
 
-namespace kentos::script {
+namespace piricad::script {
 
 /// What a parameter looks like from Python: `list[int]`, `float`, `str`.
 ///
@@ -43,9 +43,9 @@ std::string python_type_name(const command::Param& p);
 /// keywords and the Turkish help each one carries.
 std::string python_reference(const command::Registry& reg);
 
-/// `docs/python/kentos_cad.pyi` — the same surface as a PEP 484 stub, so an
+/// `docs/python/piricad_cad.pyi` — the same surface as a PEP 484 stub, so an
 /// editor outside this program can complete a script and a type checker can read
 /// it. It declares; it never runs.
 std::string python_stub(const command::Registry& reg);
 
-} // namespace kentos::script
+} // namespace piricad::script

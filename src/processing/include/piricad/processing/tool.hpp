@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — processing: what an ANALYSIS TOOL is.
+// PiriCAD — processing: what an ANALYSIS TOOL is.
 //
 // A processing tool is a piece of work applied to many objects at once — label
 // every line with its length, number every corner of a parcel, buffer, simplify,
@@ -20,18 +20,18 @@
 // makes a tool testable without a bus at all.
 #pragma once
 
-#include "kentos_cad/command/job.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/command/task.hpp"
-#include "kentos_cad/command/value.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/attach.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/command/job.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/command/task.hpp"
+#include "piricad/command/value.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/attach.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -40,15 +40,15 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 class Document; ///< read by `classify` and the runner, never by a tool
-} // namespace kentos::core
+} // namespace piricad::core
 
-namespace kentos::command {
+namespace piricad::command {
 class Context; ///< the interactive phase's way to ask for points
-} // namespace kentos::command
+} // namespace piricad::command
 
-namespace kentos::processing {
+namespace piricad::processing {
 
 /// The geometry classes a tool can be applied to, as a bit set. A class is
 /// what the user SEES — a line, a face, a point — not a kind id: an open
@@ -85,7 +85,7 @@ struct ToolParam
 {
     std::string name; ///< ASCII, the CLI keyword
 
-    /// The same parameter in English, for the `kentos.cad` Python keyword.
+    /// The same parameter in English, for the `piricad.cad` Python keyword.
     ///
     /// It travels onto the generated `command::Param` with the word list and the
     /// range, for the reason those do: declared once here, projected everywhere
@@ -147,7 +147,7 @@ struct ToolSpec
     std::string id; ///< stable, namespaced: `islem.uzunluk_yaz`
 
     /// The name of this tool's Python callable. REQUIRED here, unlike on a
-    /// command, because every tool id is Turkish and the `kentos.cad` surface is
+    /// command, because every tool id is Turkish and the `piricad.cad` surface is
     /// English (`command::CommandSpec::python`).
     std::string python;
     std::vector<std::string>
@@ -367,4 +367,4 @@ std::vector<core::ArcPolyline::Arc> edge_arcs(const InputEntity& e);
 /// The error a tool returns when it was stopped.
 core::Error cancelled();
 
-} // namespace kentos::processing
+} // namespace piricad::processing

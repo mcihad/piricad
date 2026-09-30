@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — render: the SDF glyph atlas (`.claude/render.md` R8, kentoscad.md §9.4).
+// PiriCAD — render: the SDF glyph atlas (`.claude/render.md` R8, piricad.md §9.4).
 //
 // ONE TEXTURE, SCALE INDEPENDENT. A cadastral sheet's captions are drawn at every
 // zoom between 1:200 and 1:25 000, and a bitmap atlas is right at exactly one of
@@ -21,10 +21,10 @@
 // produces PIXELS and NUMBERS; uploading them to a texture is the backend's job,
 // which is what keeps the atlas testable in a suite that links no Qt.
 //
-// Compiled only when `KENTOS_WITH_TEXT=ON`.
+// Compiled only when `PIRICAD_WITH_TEXT=ON`.
 #pragma once
 
-#include "kentos_cad/core/result.hpp"
+#include "piricad/core/result.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -32,7 +32,7 @@
 #include <string_view>
 #include <vector>
 
-namespace kentos::render {
+namespace piricad::render {
 
 /// The faces the shell draws with, from `data/fonts`.
 ///
@@ -155,7 +155,7 @@ public:
     /// How far the SHAPER's pen moves over `utf8`, in the face's own units,
     /// exactly — an integer sum of its advances, never anchored to the core's
     /// measure the way `shape` anchors a drawing's text. What
-    /// `kentos_yazi_olcusu` writes into the core's table, character by
+    /// `piricad_yazi_olcusu` writes into the core's table, character by
     /// character, and what the suite holds the table to.
     std::int64_t advance_units(Face face, std::string_view utf8, Spacing spacing);
 
@@ -223,4 +223,4 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-} // namespace kentos::render
+} // namespace piricad::render

@@ -20,10 +20,10 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 
 # Offline builds and packagers must not be forced onto the network.
-option(KENTOS_FETCH_DEPENDENCIES
+option(PIRICAD_FETCH_DEPENDENCIES
        "Download pinned third-party sources when they are not found locally" ON)
 
-if(NOT KENTOS_FETCH_DEPENDENCIES)
+if(NOT PIRICAD_FETCH_DEPENDENCIES)
     set(FETCHCONTENT_FULLY_DISCONNECTED ON)
 endif()
 
@@ -32,43 +32,43 @@ endif()
 # /NOTICE, regenerate the SBOM, and re-record the benchmark baseline if it is on a
 # hot path.
 
-set(KENTOS_DEP_JSON_REPO      https://github.com/nlohmann/json.git)
-set(KENTOS_DEP_JSON_SHA       9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03)  # v3.11.3
+set(PIRICAD_DEP_JSON_REPO      https://github.com/nlohmann/json.git)
+set(PIRICAD_DEP_JSON_SHA       9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03)  # v3.11.3
 
-set(KENTOS_DEP_DOCTEST_REPO   https://github.com/doctest/doctest.git)
+set(PIRICAD_DEP_DOCTEST_REPO   https://github.com/doctest/doctest.git)
 # v2.4.12, not the v2.4.11 that sat here unused: 2.4.11 declares
 # `cmake_minimum_required(VERSION 3.0)`, and CMake 4 removed compatibility with
 # anything below 3.5. The pin was never exercised, so the breakage was invisible.
-set(KENTOS_DEP_DOCTEST_SHA    1da23a3e8119ec5cce4f9388e91b065e20bf06f5)  # v2.4.12
+set(PIRICAD_DEP_DOCTEST_SHA    1da23a3e8119ec5cce4f9388e91b065e20bf06f5)  # v2.4.12
 
-set(KENTOS_DEP_BENCHMARK_REPO https://github.com/google/benchmark.git)
-set(KENTOS_DEP_BENCHMARK_SHA  c58e6d0710581e3a08d65c349664128a8d9a2461)  # v1.9.1
+set(PIRICAD_DEP_BENCHMARK_REPO https://github.com/google/benchmark.git)
+set(PIRICAD_DEP_BENCHMARK_SHA  c58e6d0710581e3a08d65c349664128a8d9a2461)  # v1.9.1
 
-set(KENTOS_DEP_XXHASH_REPO    https://github.com/Cyan4973/xxHash.git)
-set(KENTOS_DEP_XXHASH_SHA     e626a72bc2321cd320e953a0ccf1584cad60f363)  # v0.8.3
+set(PIRICAD_DEP_XXHASH_REPO    https://github.com/Cyan4973/xxHash.git)
+set(PIRICAD_DEP_XXHASH_SHA     e626a72bc2321cd320e953a0ccf1584cad60f363)  # v0.8.3
 
-set(KENTOS_DEP_LIBREDWG_REPO  https://github.com/LibreDWG/libredwg.git)
-set(KENTOS_DEP_LIBREDWG_SHA   7eb90a9f933623729f82781cb1d68de2e50593f3)  # 0.14.8594
+set(PIRICAD_DEP_LIBREDWG_REPO  https://github.com/LibreDWG/libredwg.git)
+set(PIRICAD_DEP_LIBREDWG_SHA   7eb90a9f933623729f82781cb1d68de2e50593f3)  # 0.14.8594
 
 # libdxfrw: LibreCAD's DXF reader/writer, GPL-2.0-or-later (compatible with this
 # project's GPLv3 — the "or later" is the whole of the finding, and it is in every
 # source header). master of 2025-09-25; there is no tagged release after 1.0.1.
-set(KENTOS_DEP_LIBDXFRW_REPO  https://github.com/LibreCAD/libdxfrw.git)
-set(KENTOS_DEP_LIBDXFRW_SHA   92d7466ed9146badcd4fb44c82d1dd8302b3c7db)  # 1.0.1+ (2025-09-25)
+set(PIRICAD_DEP_LIBDXFRW_REPO  https://github.com/LibreCAD/libdxfrw.git)
+set(PIRICAD_DEP_LIBDXFRW_SHA   92d7466ed9146badcd4fb44c82d1dd8302b3c7db)  # 1.0.1+ (2025-09-25)
 
-set(KENTOS_DEP_CLIPPER2_REPO  https://github.com/AngusJohnson/Clipper2.git)
-set(KENTOS_DEP_CLIPPER2_SHA   736ddb0b53d97fd5f65dd3d9bbf8a0993eaf387c)  # Clipper2_1.4.0
+set(PIRICAD_DEP_CLIPPER2_REPO  https://github.com/AngusJohnson/Clipper2.git)
+set(PIRICAD_DEP_CLIPPER2_SHA   736ddb0b53d97fd5f65dd3d9bbf8a0993eaf387c)  # Clipper2_1.4.0
 
-set(KENTOS_DEP_CDT_REPO       https://github.com/artem-ogre/CDT.git)
-set(KENTOS_DEP_CDT_SHA        21fae3ba957551b46130349c318b030f85451be4)  # 1.4.1
+set(PIRICAD_DEP_CDT_REPO       https://github.com/artem-ogre/CDT.git)
+set(PIRICAD_DEP_CDT_SHA        21fae3ba957551b46130349c318b030f85451be4)  # 1.4.1
 
-set(KENTOS_DEP_FMT_REPO       https://github.com/fmtlib/fmt.git)
-set(KENTOS_DEP_FMT_SHA        0c9fce2ffefecfdce794e1859584e25877b7b592)  # 11.0.2
+set(PIRICAD_DEP_FMT_REPO       https://github.com/fmtlib/fmt.git)
+set(PIRICAD_DEP_FMT_SHA        0c9fce2ffefecfdce794e1859584e25877b7b592)  # 11.0.2
 
-set(KENTOS_DEP_LIBPQXX_REPO   https://github.com/jtv/libpqxx.git)
-set(KENTOS_DEP_LIBPQXX_SHA    1ca80b0e638f6182426c5b11255069cae4fbd542)  # 7.9.2
+set(PIRICAD_DEP_LIBPQXX_REPO   https://github.com/jtv/libpqxx.git)
+set(PIRICAD_DEP_LIBPQXX_SHA    1ca80b0e638f6182426c5b11255069cae4fbd542)  # 7.9.2
 
-# pybind11, the binding layer of the Python module (kentoscad.md §4.2,
+# pybind11, the binding layer of the Python module (piricad.md §4.2,
 # `.claude/script.md` R5). BSD-3, which is GPLv3-compatible; recorded in /NOTICE.
 #
 # v3.1.0 AND NOT 2.x, because the version is what makes CPython 3.14 reachable:
@@ -76,44 +76,44 @@ set(KENTOS_DEP_LIBPQXX_SHA    1ca80b0e638f6182426c5b11255069cae4fbd542)  # 7.9.2
 # and PyPy 3.11", and 3.0 is also where multi-phase init and sub-interpreter
 # support landed. Embedding (`pybind11/embed.h`) carries no documented limitation
 # on 3.14.
-set(KENTOS_DEP_PYBIND11_REPO  https://github.com/pybind/pybind11.git)
-set(KENTOS_DEP_PYBIND11_SHA   97bf890db679505a14dfe547a5e77bb2bd05dc90)  # v3.1.0
+set(PIRICAD_DEP_PYBIND11_REPO  https://github.com/pybind/pybind11.git)
+set(PIRICAD_DEP_PYBIND11_SHA   97bf890db679505a14dfe547a5e77bb2bd05dc90)  # v3.1.0
 
-# The text stack of kentoscad.md §9.4 and `.claude/render.md` R8. FreeType and
+# The text stack of piricad.md §9.4 and `.claude/render.md` R8. FreeType and
 # HarfBuzz come from the system: both are already on every machine that has Qt,
 # and vendoring a font rasteriser means vendoring its own dependency tree.
 # msdfgen and stb_rect_pack are small and pure, so they are pinned by SHA.
-set(KENTOS_DEP_MSDFGEN_REPO   https://github.com/Chlumsky/msdfgen.git)
-set(KENTOS_DEP_MSDFGEN_SHA    1874bcf7d9624ccc85b4bc9a85d78116f690f35b)  # v1.13
+set(PIRICAD_DEP_MSDFGEN_REPO   https://github.com/Chlumsky/msdfgen.git)
+set(PIRICAD_DEP_MSDFGEN_SHA    1874bcf7d9624ccc85b4bc9a85d78116f690f35b)  # v1.13
 
 # stb has no releases and never has had; upstream's own instruction is to pin a
 # commit, which is what CLAUDE.md 5.12 asks for anyway.
-set(KENTOS_DEP_STB_REPO       https://github.com/nothings/stb.git)
-set(KENTOS_DEP_STB_SHA        2c980bb59875b0d32144a71867fbdebb2f77cd20)
+set(PIRICAD_DEP_STB_REPO       https://github.com/nothings/stb.git)
+set(PIRICAD_DEP_STB_SHA        2c980bb59875b0d32144a71867fbdebb2f77cd20)
 
 # SARibbon: the shell's ribbon (`.claude/ui.md` R46). MIT, which is GPLv3-compatible;
 # recorded in /NOTICE. v2.9.5 of 2026-09-18, tested upstream on Qt 5.15 and 6.8 LTS
 # on Windows, Linux and macOS. The single-file amalgamation (`src/SARibbon.h`,
 # `src/SARibbon.cpp`, resources inlined) is what is compiled — see the block in
 # `src/app/CMakeLists.txt` for why not its own build.
-set(KENTOS_DEP_SARIBBON_REPO  https://github.com/czyt1988/SARibbon.git)
-set(KENTOS_DEP_SARIBBON_SHA   a21d30c2a8495da92c7db3adcdc124699b0f2a60)  # v2.9.5
+set(PIRICAD_DEP_SARIBBON_REPO  https://github.com/czyt1988/SARibbon.git)
+set(PIRICAD_DEP_SARIBBON_SHA   a21d30c2a8495da92c7db3adcdc124699b0f2a60)  # v2.9.5
 
-set(KENTOS_DEP_SPDLOG_REPO    https://github.com/gabime/spdlog.git)
+set(PIRICAD_DEP_SPDLOG_REPO    https://github.com/gabime/spdlog.git)
 # v1.15.3, not the v1.14.1 that was pinned first: 1.14.1 predates fmt 11 and its
 # SPDLOG_LOGGER_CATCH macro calls FMT_STRING, whose lambda trips fmt 11's consteval
 # format-string constructor. GCC accepts it; clang REJECTS it, so the pairing built
 # here and would have broken the macOS and clang CI jobs Article 6.1 requires.
 # Found by clang-tidy, which parses with clang on a GCC build — the one tool in the
 # pipeline that sees the other compiler's opinion.
-set(KENTOS_DEP_SPDLOG_SHA     6fa36017cfd5731d617e1a934f0e5ea9c4445b13)  # v1.15.3
+set(PIRICAD_DEP_SPDLOG_SHA     6fa36017cfd5731d617e1a934f0e5ea9c4445b13)  # v1.15.3
 
 # ------------------------------------------------------------------ helpers --
 
 # Prefers an installed copy, falls back to the pinned source. A distribution
-# packaging KentOSCad gets its own build of the library; a developer on a fresh
+# packaging PiriCAD gets its own build of the library; a developer on a fresh
 # machine gets a working build with nothing installed.
-function(kentos_dependency name)
+function(piricad_dependency name)
     cmake_parse_arguments(ARG "" "REPO;SHA;PACKAGE;VERSION;SUBDIR" "" ${ARGN})
 
     if(ARG_PACKAGE)
@@ -124,9 +124,9 @@ function(kentos_dependency name)
         endif()
     endif()
 
-    if(NOT KENTOS_FETCH_DEPENDENCIES)
+    if(NOT PIRICAD_FETCH_DEPENDENCIES)
         message(FATAL_ERROR
-            "${name} bulunamadı ve KENTOS_FETCH_DEPENDENCIES=OFF.\n"
+            "${name} bulunamadı ve PIRICAD_FETCH_DEPENDENCIES=OFF.\n"
             "  Ya paketi kurun, ya vcpkg kullanın, ya da indirmeye izin verin.")
     endif()
 
@@ -156,7 +156,7 @@ function(kentos_dependency name)
     FetchContent_MakeAvailable(${name})
 endfunction()
 
-message(STATUS "KentOSCad bağımlılıkları:")
+message(STATUS "PiriCAD bağımlılıkları:")
 
 # ------------------------------------------------------------- acquisition --
 #
@@ -165,9 +165,9 @@ message(STATUS "KentOSCad bağımlılıkları:")
 # in /NOTICE as though they shipped, and compiled into nothing. Each library moves
 # down here in the change that starts using it, and /NOTICE moves with it.
 
-option(KENTOS_WITH_JSON "Use nlohmann/json for the JSON facade" ON)
+option(PIRICAD_WITH_JSON "Use nlohmann/json for the JSON facade" ON)
 
-if(KENTOS_WITH_JSON)
+if(PIRICAD_WITH_JSON)
     # ordered_json, NOT json. The default container sorts object keys, and the
     # journal is compared byte for byte across three clients (CLAUDE.md 6.4) with
     # golden fixtures recording the exact bytes. Sorted keys would rewrite every
@@ -175,16 +175,16 @@ if(KENTOS_WITH_JSON)
     # the alphabet rather than a decision.
     set(JSON_BuildTests OFF CACHE INTERNAL "")
     set(JSON_Install OFF CACHE INTERNAL "")
-    kentos_dependency(nlohmann_json
-        REPO ${KENTOS_DEP_JSON_REPO}
-        SHA  ${KENTOS_DEP_JSON_SHA}
+    piricad_dependency(nlohmann_json
+        REPO ${PIRICAD_DEP_JSON_REPO}
+        SHA  ${PIRICAD_DEP_JSON_SHA}
         PACKAGE nlohmann_json
         VERSION 3.11.0)
 endif()
 
-option(KENTOS_WITH_SPDLOG "Use spdlog for logging" ON)
+option(PIRICAD_WITH_SPDLOG "Use spdlog for logging" ON)
 
-if(KENTOS_WITH_SPDLOG)
+if(PIRICAD_WITH_SPDLOG)
     # fmt as an external dependency of spdlog rather than its bundled copy: two
     # copies of fmt in one binary is the ODR violation that shows up as a crash in
     # a formatting call nobody changed.
@@ -193,37 +193,37 @@ if(KENTOS_WITH_SPDLOG)
     set(SPDLOG_INSTALL OFF CACHE INTERNAL "")
     set(FMT_INSTALL OFF CACHE INTERNAL "")
     set(FMT_TEST OFF CACHE INTERNAL "")
-    kentos_dependency(fmt
-        REPO ${KENTOS_DEP_FMT_REPO}
-        SHA  ${KENTOS_DEP_FMT_SHA}
+    piricad_dependency(fmt
+        REPO ${PIRICAD_DEP_FMT_REPO}
+        SHA  ${PIRICAD_DEP_FMT_SHA}
         PACKAGE fmt
         VERSION 10.0)
-    kentos_dependency(spdlog
-        REPO ${KENTOS_DEP_SPDLOG_REPO}
-        SHA  ${KENTOS_DEP_SPDLOG_SHA}
+    piricad_dependency(spdlog
+        REPO ${PIRICAD_DEP_SPDLOG_REPO}
+        SHA  ${PIRICAD_DEP_SPDLOG_SHA}
         PACKAGE spdlog
         VERSION 1.12)
 endif()
 
-option(KENTOS_WITH_DOCTEST "Use doctest as the unit-test framework" ON)
+option(PIRICAD_WITH_DOCTEST "Use doctest as the unit-test framework" ON)
 
-if(KENTOS_WITH_DOCTEST)
+if(PIRICAD_WITH_DOCTEST)
     # Header-only and self-registering, so a test file needs no CMake entry beyond
     # its source line. The reason it is doctest rather than Catch2 or GoogleTest is
     # compile time: this suite is one binary of ~280 cases that every `make check`
     # rebuilds, and doctest's headers cost a fraction of the alternatives'.
     set(DOCTEST_WITH_TESTS OFF CACHE INTERNAL "")
     set(DOCTEST_NO_INSTALL ON CACHE INTERNAL "")
-    kentos_dependency(doctest
-        REPO ${KENTOS_DEP_DOCTEST_REPO}
-        SHA  ${KENTOS_DEP_DOCTEST_SHA}
+    piricad_dependency(doctest
+        REPO ${PIRICAD_DEP_DOCTEST_REPO}
+        SHA  ${PIRICAD_DEP_DOCTEST_SHA}
         PACKAGE doctest
         VERSION 2.4)
 endif()
 
-option(KENTOS_WITH_BENCHMARK "Use Google Benchmark to time the Article 7 budgets" ON)
+option(PIRICAD_WITH_BENCHMARK "Use Google Benchmark to time the Article 7 budgets" ON)
 
-if(KENTOS_WITH_BENCHMARK)
+if(PIRICAD_WITH_BENCHMARK)
     # Google Benchmark MEASURES; it does not gate. The Article 7 budgets and the
     # per-machine baseline stay ours (tests/support/benchmark.hpp), because no
     # library knows that 16 ms is a product requirement. What it replaces is the
@@ -239,16 +239,16 @@ if(KENTOS_WITH_BENCHMARK)
     # compiler upgrade into a broken build of code we do not own (CLAUDE.md 5.14
     # is about OUR warnings, which stay fatal).
     set(BENCHMARK_ENABLE_WERROR OFF CACHE INTERNAL "")
-    kentos_dependency(benchmark
-        REPO ${KENTOS_DEP_BENCHMARK_REPO}
-        SHA  ${KENTOS_DEP_BENCHMARK_SHA}
+    piricad_dependency(benchmark
+        REPO ${PIRICAD_DEP_BENCHMARK_REPO}
+        SHA  ${PIRICAD_DEP_BENCHMARK_SHA}
         PACKAGE benchmark
         VERSION 1.8)
 endif()
 
-option(KENTOS_WITH_CDT "Delaunay triangulation for the terrain model" ON)
+option(PIRICAD_WITH_CDT "Delaunay triangulation for the terrain model" ON)
 
-if(KENTOS_WITH_CDT)
+if(PIRICAD_WITH_CDT)
     # CLAUDE.md 2.7 and 5.16 again: a Delaunay triangulation is a solved problem
     # with well-known degeneracies — cocircular points, collinear runs, duplicate
     # coordinates — and the naive implementations get every one of them wrong on
@@ -267,17 +267,17 @@ if(KENTOS_WITH_CDT)
     # library is fine; its build file is from before that change. So the source is
     # fetched and the include directory is used directly, which is the same shape
     # this file already uses for the stb header drop.
-    if(NOT KENTOS_FETCH_DEPENDENCIES)
+    if(NOT PIRICAD_FETCH_DEPENDENCIES)
         message(FATAL_ERROR
-            "KENTOS_WITH_CDT=ON but KENTOS_FETCH_DEPENDENCIES=OFF.\n"
+            "PIRICAD_WITH_CDT=ON but PIRICAD_FETCH_DEPENDENCIES=OFF.\n"
             "  CDT is fetched from a pinned commit; allow the download,\n"
-            "  or configure with -DKENTOS_WITH_CDT=OFF.")
+            "  or configure with -DPIRICAD_WITH_CDT=OFF.")
     endif()
 
-    message(STATUS "  cdt: sabitlenmiş kaynaktan (${KENTOS_DEP_CDT_SHA})")
+    message(STATUS "  cdt: sabitlenmiş kaynaktan (${PIRICAD_DEP_CDT_SHA})")
     FetchContent_Declare(cdt
-        GIT_REPOSITORY ${KENTOS_DEP_CDT_REPO}
-        GIT_TAG        ${KENTOS_DEP_CDT_SHA}
+        GIT_REPOSITORY ${PIRICAD_DEP_CDT_REPO}
+        GIT_TAG        ${PIRICAD_DEP_CDT_SHA}
         GIT_SHALLOW    FALSE
         SOURCE_SUBDIR  cmake-yok        # deliberately absent: populate, do not add
         SYSTEM
@@ -287,13 +287,13 @@ if(KENTOS_WITH_CDT)
     # The one target the rest of the build sees. INTERFACE, because there is
     # nothing to compile: `CDT_USE_AS_COMPILED_LIBRARY` is off and every entry
     # point is a template in a header.
-    add_library(kentos_cdt INTERFACE)
-    target_include_directories(kentos_cdt SYSTEM INTERFACE "${cdt_SOURCE_DIR}/CDT/include")
+    add_library(piricad_cdt INTERFACE)
+    target_include_directories(piricad_cdt SYSTEM INTERFACE "${cdt_SOURCE_DIR}/CDT/include")
 endif()
 
-option(KENTOS_WITH_CLIPPER2 "Polygon offset and boolean through Clipper2" ON)
+option(PIRICAD_WITH_CLIPPER2 "Polygon offset and boolean through Clipper2" ON)
 
-if(KENTOS_WITH_CLIPPER2)
+if(PIRICAD_WITH_CLIPPER2)
     # CLAUDE.md 2.7 and 5.16: polygon offsetting is a solved problem with a mature,
     # excellent, cross-platform answer, and reimplementing it is how a program ends
     # up with self-intersecting parallels and mitre spikes on reflex corners.
@@ -314,16 +314,16 @@ if(KENTOS_WITH_CLIPPER2)
     set(CLIPPER2_TESTS OFF CACHE INTERNAL "")
     set(CLIPPER2_EXAMPLES OFF CACHE INTERNAL "")
     set(CLIPPER2_UTILS OFF CACHE INTERNAL "")
-    kentos_dependency(clipper2
-        REPO   ${KENTOS_DEP_CLIPPER2_REPO}
-        SHA    ${KENTOS_DEP_CLIPPER2_SHA}
+    piricad_dependency(clipper2
+        REPO   ${PIRICAD_DEP_CLIPPER2_REPO}
+        SHA    ${PIRICAD_DEP_CLIPPER2_SHA}
         SUBDIR CPP
         PACKAGE Clipper2
         VERSION 1.3)
 endif()
 
-if(KENTOS_WITH_CGAL)
-    # CLAUDE.md 2.7 and 5.16, and kentoscad.md §9.2, which names CGAL for
+if(PIRICAD_WITH_CGAL)
+    # CLAUDE.md 2.7 and 5.16, and piricad.md §9.2, which names CGAL for
     # "arrangement": noding a drawing's segments and arcs into a planar network
     # and walking its faces — islands as holes, dangling ends as dangling ends —
     # is a solved problem with every degeneracy a survey produces (collinear
@@ -344,17 +344,17 @@ if(KENTOS_WITH_CGAL)
     find_package(CGAL 5.6 CONFIG QUIET)
     if(NOT CGAL_FOUND)
         message(FATAL_ERROR
-            "KENTOS_WITH_CGAL=ON but CGAL 5.6 or newer was not found.\n"
+            "PIRICAD_WITH_CGAL=ON but CGAL 5.6 or newer was not found.\n"
             "  macOS:          brew install cgal\n"
             "  Debian/Ubuntu:  sudo apt install libcgal-dev\n"
             "  Fedora:         sudo dnf install CGAL-devel\n"
             "  Windows/vcpkg:  vcpkg install cgal  (feature \"cgal\" of /vcpkg.json)\n"
-            "  or configure with -DKENTOS_WITH_CGAL=OFF (SINIR then refuses and says why).")
+            "  or configure with -DPIRICAD_WITH_CGAL=OFF (SINIR then refuses and says why).")
     endif()
     message(STATUS "  cgal: ${CGAL_VERSION} (düzlemsel ağ, core/planar.cpp)")
 endif()
 
-if(KENTOS_WITH_OCCT)
+if(PIRICAD_WITH_OCCT)
     # THE GEOMETRY KERNEL (CLAUDE.md 2.11): OpenCASCADE Technology, the mature,
     # cross-platform B-rep kernel Article 2.7 asks for wherever geometry is
     # harder than straight edges — a boolean that keeps a parcel's arc, an
@@ -376,24 +376,24 @@ if(KENTOS_WITH_OCCT)
     # which is GPL-3.0-or-later here (Article 2.1); the exception asks for a
     # prominent notice that the program uses OCCT, which /NOTICE and
     # docs/veri/geometri-cekirdegi.md give. Not GPLv2-only (5.5).
-    # The floor by hand: OCCT's config takes no minimum (`KentOSCadOptions.cmake`).
+    # The floor by hand: OCCT's config takes no minimum (`PiriCADOptions.cmake`).
     find_package(OpenCASCADE CONFIG QUIET
                  COMPONENTS FoundationClasses ModelingData ModelingAlgorithms)
     if(NOT OpenCASCADE_FOUND OR OpenCASCADE_VERSION VERSION_LESS 7.6)
         message(FATAL_ERROR
-            "KENTOS_WITH_OCCT=ON but OpenCASCADE 7.6 or newer was not found.\n"
+            "PIRICAD_WITH_OCCT=ON but OpenCASCADE 7.6 or newer was not found.\n"
             "  macOS:          brew install opencascade\n"
             "  Debian/Ubuntu:  sudo apt install libocct-foundation-dev "
             "libocct-modeling-data-dev libocct-modeling-algorithms-dev\n"
             "  Fedora:         sudo dnf install opencascade-devel\n"
             "  Windows/vcpkg:  vcpkg install opencascade  (feature \"occt\" of /vcpkg.json)\n"
-            "  The geometry kernel is required (CLAUDE.md 2.11); -DKENTOS_WITH_OCCT=OFF "
+            "  The geometry kernel is required (CLAUDE.md 2.11); -DPIRICAD_WITH_OCCT=OFF "
             "builds a program whose kernel-backed operations refuse and say why.")
     endif()
     message(STATUS "  opencascade: ${OpenCASCADE_VERSION} (geometri çekirdeği, core/kernel.cpp)")
 endif()
 
-if(KENTOS_WITH_DWG)
+if(PIRICAD_WITH_DWG)
     # DWG, READ ONLY, and the read-only part is enforced by the build rather than
     # by discipline: `LIBREDWG_DISABLE_WRITE=ON` leaves the encoder out of the
     # library entirely, so io.md P8 — no native DWG writer while the R14 coverage
@@ -417,23 +417,23 @@ if(KENTOS_WITH_DWG)
     set(DISABLE_WERROR ON CACHE INTERNAL "")
     set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
 
-    kentos_dependency(libredwg
-        REPO ${KENTOS_DEP_LIBREDWG_REPO}
-        SHA  ${KENTOS_DEP_LIBREDWG_SHA})
+    piricad_dependency(libredwg
+        REPO ${PIRICAD_DEP_LIBREDWG_REPO}
+        SHA  ${PIRICAD_DEP_LIBREDWG_SHA})
 endif()
 
-if(KENTOS_BUILD_APP)
+if(PIRICAD_BUILD_APP)
     # THE RIBBON, fetched here with every other pinned source and built beside Qt
     # in `src/app/CMakeLists.txt`, which is the only place Qt is found. Populated,
     # not added: its own CMakeLists installs into the source tree, builds the
     # examples by default and raises nothing we need.
-    kentos_dependency(saribbon
-        REPO   ${KENTOS_DEP_SARIBBON_REPO}
-        SHA    ${KENTOS_DEP_SARIBBON_SHA}
-        SUBDIR kentos-no-cmake)   # a subdir with no CMakeLists: populate, do not add
+    piricad_dependency(saribbon
+        REPO   ${PIRICAD_DEP_SARIBBON_REPO}
+        SHA    ${PIRICAD_DEP_SARIBBON_SHA}
+        SUBDIR piricad-no-cmake)   # a subdir with no CMakeLists: populate, do not add
 endif()
 
-if(KENTOS_WITH_DXFRW)
+if(PIRICAD_WITH_DXFRW)
     # DXF, READ AND WRITE, through the library io.md R13 names. Pure C++11, no
     # dependency of its own, one static library.
     #
@@ -446,18 +446,18 @@ if(KENTOS_WITH_DXFRW)
     # is neither our warning nor our file). Listing the twenty-one sources here
     # costs a line per file and buys the Article 2.5 floating-point flags on
     # every one of them, the dwg2dxf tool and the doxygen run left out, and a
-    # target that is exactly what kentos_io links. The list is upstream's own
+    # target that is exactly what piricad_io links. The list is upstream's own
     # `libdxfrw_srcs`; a bump of the SHA re-reads it.
     set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
-    kentos_dependency(libdxfrw
-        REPO   ${KENTOS_DEP_LIBDXFRW_REPO}
-        SHA    ${KENTOS_DEP_LIBDXFRW_SHA}
-        SUBDIR kentos-no-cmake)   # a subdir with no CMakeLists: populate, do not add
-    # `kentos_dependency` is a function, so the populated source directory has to
+    piricad_dependency(libdxfrw
+        REPO   ${PIRICAD_DEP_LIBDXFRW_REPO}
+        SHA    ${PIRICAD_DEP_LIBDXFRW_SHA}
+        SUBDIR piricad-no-cmake)   # a subdir with no CMakeLists: populate, do not add
+    # `piricad_dependency` is a function, so the populated source directory has to
     # be asked for again in this scope.
     FetchContent_GetProperties(libdxfrw)
 
-    set(KENTOS_DXFRW_SOURCES
+    set(PIRICAD_DXFRW_SOURCES
         src/intern/drw_dbg.cpp
         src/intern/drw_textcodec.cpp
         src/intern/dwgbuffer.cpp
@@ -478,9 +478,9 @@ if(KENTOS_WITH_DXFRW)
         src/drw_objects.cpp
         src/libdwgr.cpp
         src/libdxfrw.cpp)
-    list(TRANSFORM KENTOS_DXFRW_SOURCES PREPEND "${libdxfrw_SOURCE_DIR}/")
+    list(TRANSFORM PIRICAD_DXFRW_SOURCES PREPEND "${libdxfrw_SOURCE_DIR}/")
 
-    add_library(dxfrw STATIC ${KENTOS_DXFRW_SOURCES})
+    add_library(dxfrw STATIC ${PIRICAD_DXFRW_SOURCES})
     target_include_directories(dxfrw SYSTEM PUBLIC "${libdxfrw_SOURCE_DIR}/src")
     target_compile_features(dxfrw PUBLIC cxx_std_14)
     set_target_properties(dxfrw PROPERTIES CXX_CLANG_TIDY "" EXPORT_NAME libdxfrw)
@@ -494,9 +494,9 @@ if(KENTOS_WITH_DXFRW)
     endif()
 endif()
 
-option(KENTOS_WITH_POSTGIS "Read and write layers against a live PostGIS database" ON)
+option(PIRICAD_WITH_POSTGIS "Read and write layers against a live PostGIS database" ON)
 
-if(KENTOS_WITH_POSTGIS)
+if(PIRICAD_WITH_POSTGIS)
     # CLAUDE.md Article 2.9: PostGIS is a first-class store, not an export target,
     # because Turkish municipalities and TKGM run their corporate data on it.
     #
@@ -516,15 +516,15 @@ if(KENTOS_WITH_POSTGIS)
     # search path. Without this, find_package fails on a machine that did exactly
     # what it was told. PostgreSQL.app lands outside the prefix entirely.
     if(APPLE AND NOT PostgreSQL_ROOT)
-        find_program(KENTOS_BREW_EXECUTABLE brew)
-        if(KENTOS_BREW_EXECUTABLE)
+        find_program(PIRICAD_BREW_EXECUTABLE brew)
+        if(PIRICAD_BREW_EXECUTABLE)
             execute_process(
-                COMMAND ${KENTOS_BREW_EXECUTABLE} --prefix libpq
-                OUTPUT_VARIABLE KENTOS_LIBPQ_PREFIX
+                COMMAND ${PIRICAD_BREW_EXECUTABLE} --prefix libpq
+                OUTPUT_VARIABLE PIRICAD_LIBPQ_PREFIX
                 OUTPUT_STRIP_TRAILING_WHITESPACE
                 ERROR_QUIET)
-            if(KENTOS_LIBPQ_PREFIX AND EXISTS "${KENTOS_LIBPQ_PREFIX}")
-                set(PostgreSQL_ROOT "${KENTOS_LIBPQ_PREFIX}")
+            if(PIRICAD_LIBPQ_PREFIX AND EXISTS "${PIRICAD_LIBPQ_PREFIX}")
+                set(PostgreSQL_ROOT "${PIRICAD_LIBPQ_PREFIX}")
             endif()
         endif()
     endif()
@@ -533,18 +533,18 @@ if(KENTOS_WITH_POSTGIS)
 
     if(NOT PostgreSQL_FOUND)
         message(WARNING
-            "KENTOS_WITH_POSTGIS=ON but libpq was not found; PostGIS support is off.\n"
+            "PIRICAD_WITH_POSTGIS=ON but libpq was not found; PostGIS support is off.\n"
             "  Debian/Ubuntu: sudo apt install libpq-dev\n"
             "  macOS:         brew install libpq   (keg-only; found automatically)\n"
             "  vcpkg:         vcpkg install libpq\n"
             "  elsewhere:     configure with -D PostgreSQL_ROOT=<prefix>")
-        set(KENTOS_WITH_POSTGIS OFF CACHE BOOL "" FORCE)
+        set(PIRICAD_WITH_POSTGIS OFF CACHE BOOL "" FORCE)
     else()
         set(SKIP_BUILD_TEST ON CACHE INTERNAL "")
         set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
-        kentos_dependency(libpqxx
-            REPO ${KENTOS_DEP_LIBPQXX_REPO}
-            SHA  ${KENTOS_DEP_LIBPQXX_SHA}
+        piricad_dependency(libpqxx
+            REPO ${PIRICAD_DEP_LIBPQXX_REPO}
+            SHA  ${PIRICAD_DEP_LIBPQXX_SHA}
             PACKAGE libpqxx
             VERSION 7.7)
     endif()
@@ -559,15 +559,15 @@ endif()
 # finished PDF and writes it back with AES-256 and the permission flags the user
 # asked for. Apache-2.0, GPLv3-compatible, recorded in /NOTICE. Behind an option
 # and defaulting ON where found, like every optional library (Article 8.2).
-option(KENTOS_WITH_QPDF "Encrypt exported PDFs with a password (qpdf)" ON)
+option(PIRICAD_WITH_QPDF "Encrypt exported PDFs with a password (qpdf)" ON)
 
 # The minimum this code needs: `setR6EncryptionParameters` (AES-256) and the
 # CMake package, both of which qpdf has had since 11.x. Recorded here as a
 # variable rather than as a `find_package` version argument, for the reason
 # below (CLAUDE.md 5.12 wants the minimum written down, not the mechanism).
-set(KENTOS_QPDF_MIN_VERSION 11.9.1)
+set(PIRICAD_QPDF_MIN_VERSION 11.9.1)
 
-if(KENTOS_WITH_QPDF)
+if(PIRICAD_WITH_QPDF)
     # NO VERSION ARGUMENT TO find_package, AND THE CHECK RIGHT AFTER IT.
     # qpdf ships a SameMajorVersion package version file, so
     # `find_package(qpdf 11)` REFUSES qpdf 12 — "not compatible" — on a machine
@@ -575,21 +575,21 @@ if(KENTOS_WITH_QPDF)
     # same way. Asking for no version and comparing ourselves is the only form
     # that both accepts 12 and still enforces a floor.
     find_package(qpdf CONFIG QUIET)
-    if(qpdf_FOUND AND qpdf_VERSION VERSION_LESS KENTOS_QPDF_MIN_VERSION)
+    if(qpdf_FOUND AND qpdf_VERSION VERSION_LESS PIRICAD_QPDF_MIN_VERSION)
         message(WARNING
-            "KENTOS_WITH_QPDF=ON but qpdf ${qpdf_VERSION} is older than "
-            "${KENTOS_QPDF_MIN_VERSION}; PDF encryption is off.")
+            "PIRICAD_WITH_QPDF=ON but qpdf ${qpdf_VERSION} is older than "
+            "${PIRICAD_QPDF_MIN_VERSION}; PDF encryption is off.")
         set(qpdf_FOUND FALSE)
     endif()
     if(NOT qpdf_FOUND)
         message(WARNING
-            "KENTOS_WITH_QPDF=ON but qpdf ${KENTOS_QPDF_MIN_VERSION}+ was not found; "
+            "PIRICAD_WITH_QPDF=ON but qpdf ${PIRICAD_QPDF_MIN_VERSION}+ was not found; "
             "PDF encryption is off.\n"
             "  Debian/Ubuntu: sudo apt install libqpdf-dev\n"
             "  macOS:         brew install qpdf\n"
             "  vcpkg:         vcpkg install qpdf\n"
             "  elsewhere:     configure with -D qpdf_DIR=<prefix>/lib/cmake/qpdf")
-        set(KENTOS_WITH_QPDF OFF CACHE BOOL "" FORCE)
+        set(PIRICAD_WITH_QPDF OFF CACHE BOOL "" FORCE)
     else()
         message(STATUS "  PDF şifreleme ... etkin (qpdf ${qpdf_VERSION})")
     endif()
@@ -598,11 +598,11 @@ endif()
 
 # ----------------------------------------------------------------- python ----
 #
-# The ecosystem layer of kentoscad.md §4.2: plugins, batch jobs and data
-# pipelines (`.claude/script.md` R5). Behind `KENTOS_WITH_PYTHON`, defaulting
+# The ecosystem layer of piricad.md §4.2: plugins, batch jobs and data
+# pipelines (`.claude/script.md` R5). Behind `PIRICAD_WITH_PYTHON`, defaulting
 # OFF, and R6 requires the application to build, start and pass its tests with
 # the option off.
-if(KENTOS_WITH_PYTHON)
+if(PIRICAD_WITH_PYTHON)
     # CPYTHON IS FOUND, NOT FETCHED, and that is the one place this block departs
     # from every other entry in this file. A pinned SHA works for a library we
     # compile; CPython is an interpreter with a standard library, a configure
@@ -625,20 +625,20 @@ if(KENTOS_WITH_PYTHON)
     find_package(Python3 3.14 COMPONENTS Interpreter Development.Embed QUIET)
     if(NOT Python3_FOUND)
         message(FATAL_ERROR
-            "KENTOS_WITH_PYTHON=ON but CPython 3.14 with its development headers "
+            "PIRICAD_WITH_PYTHON=ON but CPython 3.14 with its development headers "
             "was not found.\n"
             "  macOS:   brew install python@3.14\n"
             "  Debian:  apt install python3.14-dev\n"
             "  Windows: winget install Python.Python.3.14\n"
-            "  Or configure with -DKENTOS_WITH_PYTHON=OFF.")
+            "  Or configure with -DPIRICAD_WITH_PYTHON=OFF.")
     endif()
     message(STATUS "  python: sistemden (CPython ${Python3_VERSION})")
 
     # pybind11 the ordinary way: the system package when it is there, the pinned
     # commit when it is not.
-    kentos_dependency(pybind11
-        REPO ${KENTOS_DEP_PYBIND11_REPO}
-        SHA  ${KENTOS_DEP_PYBIND11_SHA}
+    piricad_dependency(pybind11
+        REPO ${PIRICAD_DEP_PYBIND11_REPO}
+        SHA  ${PIRICAD_DEP_PYBIND11_SHA}
         PACKAGE pybind11
         VERSION 3.0)
 endif()
@@ -656,23 +656,23 @@ endif()
 # from I, and the fonts carry the kerning pairs that make `AV` in `TAKS/KAKS`
 # readable. A renderer that mapped bytes to glyphs would be wrong on the first
 # cadastral sheet.
-if(KENTOS_WITH_TEXT)
+if(PIRICAD_WITH_TEXT)
     find_package(Freetype 2.10)
 
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)
-        pkg_check_modules(KENTOS_HARFBUZZ QUIET IMPORTED_TARGET harfbuzz)
+        pkg_check_modules(PIRICAD_HARFBUZZ QUIET IMPORTED_TARGET harfbuzz)
     endif()
 
-    if(NOT FREETYPE_FOUND OR NOT KENTOS_HARFBUZZ_FOUND)
+    if(NOT FREETYPE_FOUND OR NOT PIRICAD_HARFBUZZ_FOUND)
         message(FATAL_ERROR
-            "KENTOS_WITH_TEXT=ON but the text stack is incomplete "
-            "(FreeType: ${FREETYPE_FOUND}, HarfBuzz: ${KENTOS_HARFBUZZ_FOUND}).\n"
+            "PIRICAD_WITH_TEXT=ON but the text stack is incomplete "
+            "(FreeType: ${FREETYPE_FOUND}, HarfBuzz: ${PIRICAD_HARFBUZZ_FOUND}).\n"
             "  Debian/Ubuntu: sudo apt install libfreetype-dev libharfbuzz-dev\n"
             "  Fedora:        sudo dnf install freetype-devel harfbuzz-devel\n"
             "  macOS:         brew install freetype harfbuzz\n"
             "  vcpkg:         freetype harfbuzz\n"
-            "  Or configure with -DKENTOS_WITH_TEXT=OFF.")
+            "  Or configure with -DPIRICAD_WITH_TEXT=OFF.")
     endif()
 
     # CORE ONLY. msdfgen's extension half exists to LOAD fonts and SVGs, and
@@ -686,37 +686,37 @@ if(KENTOS_WITH_TEXT)
     set(MSDFGEN_INSTALL OFF CACHE BOOL "" FORCE)
     set(MSDFGEN_DYNAMIC_RUNTIME OFF CACHE BOOL "" FORCE)
 
-    kentos_dependency(msdfgen
-        REPO ${KENTOS_DEP_MSDFGEN_REPO}
-        SHA  ${KENTOS_DEP_MSDFGEN_SHA})
+    piricad_dependency(msdfgen
+        REPO ${PIRICAD_DEP_MSDFGEN_REPO}
+        SHA  ${PIRICAD_DEP_MSDFGEN_SHA})
 
     # stb_rect_pack, for laying the glyphs out in the one texture R8 asks for.
     # A shelf packer is twenty lines and everyone who writes one gets the same
     # wasted third of the atlas; CLAUDE.md 5.16 is about exactly this.
-    if(NOT KENTOS_FETCH_DEPENDENCIES)
+    if(NOT PIRICAD_FETCH_DEPENDENCIES)
         message(FATAL_ERROR
-            "KENTOS_WITH_TEXT=ON but KENTOS_FETCH_DEPENDENCIES=OFF; "
+            "PIRICAD_WITH_TEXT=ON but PIRICAD_FETCH_DEPENDENCIES=OFF; "
             "msdfgen and stb are fetched from pinned commits.")
     endif()
 
-    message(STATUS "  stb:  sabitlenmiş kaynaktan (${KENTOS_DEP_STB_SHA})")
+    message(STATUS "  stb:  sabitlenmiş kaynaktan (${PIRICAD_DEP_STB_SHA})")
     FetchContent_Declare(stb
-        GIT_REPOSITORY ${KENTOS_DEP_STB_REPO}
-        GIT_TAG        ${KENTOS_DEP_STB_SHA}
+        GIT_REPOSITORY ${PIRICAD_DEP_STB_REPO}
+        GIT_TAG        ${PIRICAD_DEP_STB_SHA}
         GIT_SHALLOW    FALSE
         SOURCE_SUBDIR  cmake-yok        # header drop: populate, do not add
         SYSTEM
         EXCLUDE_FROM_ALL)
     FetchContent_MakeAvailable(stb)
 
-    add_library(kentos_stb INTERFACE)
-    target_include_directories(kentos_stb SYSTEM INTERFACE "${stb_SOURCE_DIR}")
+    add_library(piricad_stb INTERFACE)
+    target_include_directories(piricad_stb SYSTEM INTERFACE "${stb_SOURCE_DIR}")
 endif()
 
 
-option(KENTOS_WITH_QGIS "Draw symbols through the QGIS symbology engine" ON)
+option(PIRICAD_WITH_QGIS "Draw symbols through the QGIS symbology engine" ON)
 
-if(KENTOS_WITH_QGIS)
+if(PIRICAD_WITH_QGIS)
     # CLAUDE.md Article 2.7 and 5.16: a mature, excellent, cross-platform library
     # is used and never reimplemented. A symbology engine is exactly such a thing,
     # and QGIS has the best free one there is — marker lines with real placement
@@ -737,7 +737,7 @@ if(KENTOS_WITH_QGIS)
     # LICENCE: QGIS is GPL-2.0-or-later, which is GPLv3-compatible, so it may be
     # linked into a GPL-3.0-or-later program (CLAUDE.md 2.1, 9).
     #
-    # WHERE IT MAY BE USED: `/src/app` only. Article 3.4 keeps `kentos_render`
+    # WHERE IT MAY BE USED: `/src/app` only. Article 3.4 keeps `piricad_render`
     # Qt-free, and QGIS is Qt; the QGIS backend therefore sits beside the QPainter
     # one, behind the same `render::Backend` interface, exactly as Article 8.5
     # describes. Nothing below `/src/app` learns that QGIS exists.
@@ -750,12 +750,12 @@ if(KENTOS_WITH_QGIS)
 
     if(NOT QGIS_INCLUDE_DIR OR NOT QGIS_CORE_LIBRARY)
         message(WARNING
-            "KENTOS_WITH_QGIS=ON but the QGIS development files were not found; "
+            "PIRICAD_WITH_QGIS=ON but the QGIS development files were not found; "
             "the QGIS symbology backend is off and the built-in one is used.\n"
             "  Debian/Ubuntu: sudo apt install libqgis-dev\n"
             "  Fedora:        sudo dnf install qgis-devel\n"
             "  macOS:         brew install qgis")
-        set(KENTOS_WITH_QGIS OFF CACHE BOOL "" FORCE)
+        set(PIRICAD_WITH_QGIS OFF CACHE BOOL "" FORCE)
     else()
         message(STATUS "QGIS symbology: ${QGIS_CORE_LIBRARY}")
     endif()

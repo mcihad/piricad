@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// KentOSCad — ai: the HTTP exchange as VALUES, so the engine never names a socket.
+// PiriCAD — ai: the HTTP exchange as VALUES, so the engine never names a socket.
 //
 // WHY THIS FILE IS AGPL WHEN THE REST OF THE TREE IS GPL-3.0-or-later: see
 // `jsonrpc.hpp`. CLAUDE.md Article 2.1 puts a server component under AGPLv3 and
@@ -17,7 +17,7 @@
 // reachable from a Qt-free, network-free doctest case.
 #pragma once
 
-#include "kentos_cad/core/json.hpp"
+#include "piricad/core/json.hpp"
 
 #include <cstdint>
 #include <string>
@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// One inbound HTTP request, exactly as the transport read it.
 ///
@@ -270,7 +270,7 @@ std::string sse_event(std::string_view event, std::string_view data);
 /// One SSE comment line — the keep-alive. It carries no event and no data, so a
 /// conforming client ignores it entirely while every proxy between here and there
 /// sees traffic.
-std::string sse_comment(std::string_view text = "kentos");
+std::string sse_comment(std::string_view text = "piricad");
 
 /// A JSON response.
 HttpOutcome http_json(int status, const core::Json& payload);
@@ -287,4 +287,4 @@ HttpOutcome http_empty(int status);
 /// progress notification into nothing at all.
 HttpOutcome http_stream(StreamPlan plan);
 
-} // namespace kentos::ai
+} // namespace piricad::ai

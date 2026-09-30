@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/ai/chat.hpp"
+#include "piricad/ai/chat.hpp"
 
-#include "kentos_cad/ai/arguments.hpp"
-#include "kentos_cad/command/registry.hpp"
+#include "piricad/ai/arguments.hpp"
+#include "piricad/command/registry.hpp"
 
-#include "kentos_cad/ai/redact.hpp"
+#include "piricad/ai/redact.hpp"
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -426,4 +426,4 @@ Message tool_result_message(const Block& call, std::string_view output, bool fai
     return message;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

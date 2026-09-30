@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/io/postgis.hpp"
+#include "piricad/io/postgis.hpp"
 
-#include "kentos_cad/core/stroke.hpp"
+#include "piricad/core/stroke.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/text.hpp"
 
 // The connection half of this file needs libpqxx; the ENCODING half does not.
 // `entity_ewkb` is pure arithmetic over the document's rings, so it is built and
 // tested in every configuration — including one where PostGIS is off and the
 // store below reports that plainly instead of failing to compile. This is the
-// same shape `vector.cpp` uses for KENTOS_HAVE_GDAL.
-#if KENTOS_HAVE_POSTGIS
+// same shape `vector.cpp` uses for PIRICAD_HAVE_GDAL.
+#if PIRICAD_HAVE_POSTGIS
 #include <pqxx/pqxx>
 #endif
 
@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::io {
+namespace piricad::io {
 namespace {
 
 using core::ErrorCode;
@@ -33,7 +33,7 @@ using core::ErrorCode;
 /// prefixed because this table sits in somebody else's schema beside their own
 /// cadastral tables, and a bare `projeler` would be a name collision waiting for
 /// the first municipality that already has one.
-constexpr const char* kProjectTable = "kentos_projeler";
+constexpr const char* kProjectTable = "piricad_projeler";
 
 /// Millimetres to the CRS's own unit.
 ///
@@ -58,7 +58,7 @@ template<class T> void put(std::string& wkb, T value)
     wkb.append(bytes, sizeof(T));
 }
 
-#if KENTOS_HAVE_POSTGIS
+#if PIRICAD_HAVE_POSTGIS
 
 /// The hex form of a WKB buffer, which is what a COPY into a geometry column
 /// takes: PostGIS's own text input for `geometry` is hex EWKB.
@@ -76,7 +76,7 @@ std::string to_hex(const std::string& wkb)
     return out;
 }
 
-#endif // KENTOS_HAVE_POSTGIS
+#endif // PIRICAD_HAVE_POSTGIS
 
 /// One entity's geometry as EWKB, or empty when it has none worth writing.
 ///
@@ -254,7 +254,7 @@ std::string encode_ewkb(const core::Document& doc, core::EntityId e, std::int64_
     return wkb;
 }
 
-#if KENTOS_HAVE_POSTGIS
+#if PIRICAD_HAVE_POSTGIS
 
 /// A safe SQL identifier built from a layer or column name.
 ///
@@ -341,7 +341,7 @@ std::int64_t srid_of(const core::Document& doc)
     return doc.crs().epsg();
 }
 
-#endif // KENTOS_HAVE_POSTGIS
+#endif // PIRICAD_HAVE_POSTGIS
 
 } // namespace
 
@@ -351,7 +351,7 @@ std::string entity_ewkb(const core::Document& doc, core::EntityId entity, std::i
     return encode_ewkb(doc, entity, srid, curve_tolerance);
 }
 
-#if !KENTOS_HAVE_POSTGIS
+#if !PIRICAD_HAVE_POSTGIS
 
 // ---------------------------------------------------------------------------
 // Built WITHOUT libpqxx. The type still exists, so nothing downstream needs an
@@ -372,8 +372,8 @@ namespace {
 core::Error postgis_off()
 {
     return core::Error{ErrorCode::Unsupported,
-                       "Bu KentOSCad yapısı PostgreSQL desteği olmadan derlenmiş. "
-                       "Kaynaktan derliyorsanız KENTOS_WITH_POSTGIS=ON ile yapılandırın."};
+                       "Bu PiriCAD yapısı PostgreSQL desteği olmadan derlenmiş. "
+                       "Kaynaktan derliyorsanız PIRICAD_WITH_POSTGIS=ON ile yapılandırın."};
 }
 
 } // namespace
@@ -742,6 +742,6 @@ core::Result<std::vector<PostgisProject>> PostgisStore::projects()
     }
 }
 
-#endif // KENTOS_HAVE_POSTGIS
+#endif // PIRICAD_HAVE_POSTGIS
 
-} // namespace kentos::io
+} // namespace piricad::io

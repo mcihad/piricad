@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/app/layout_designer.hpp"
+#include "piricad/app/layout_designer.hpp"
 
-#include "kentos_cad/app/controller.hpp"
-#include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/layout_render.hpp"
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/app/tokens.hpp"
+#include "piricad/app/controller.hpp"
+#include "piricad/app/fields.hpp"
+#include "piricad/app/layout_render.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/app/tokens.hpp"
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/layout_table.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/layout_table.hpp"
 
 #include <QApplication>
 #include <QButtonGroup>
@@ -39,7 +39,7 @@
 #include <cmath>
 #include <numeric>
 
-namespace kentos::app {
+namespace piricad::app {
 namespace {
 
 /// The handle's side, in device pixels. Big enough to hit with a mouse, small
@@ -777,7 +777,7 @@ void LayoutCanvas::mousePressEvent(QMouseEvent* event)
     if (!drawKind_.isEmpty()) {
         const QPointF paper = paperAt(at);
         drawn_              = core::PaperRect{whole(static_cast<core::Um>(paper.x())),
-                                 whole(static_cast<core::Um>(paper.y())), 0, 0};
+                                              whole(static_cast<core::Um>(paper.y())), 0, 0};
         live_               = {ItemFrame{drawKind_, drawn_}};
         gesture_            = Gesture::Draw;
         return;
@@ -2012,7 +2012,7 @@ void LayoutDesigner::placeItem(const QString& kind, core::PaperRect frame)
         const auto w = core::um_from_mm(static_cast<std::int64_t>(one->w_mm));
         const auto h = core::um_from_mm(static_cast<std::int64_t>(one->h_mm));
         frame        = core::PaperRect{std::clamp<core::Um>(frame.x - w / 2, 0, page->w - w),
-                                std::clamp<core::Um>(frame.y - h / 2, 0, page->h - h), w, h};
+                                       std::clamp<core::Um>(frame.y - h / 2, 0, page->h - h), w, h};
     }
     QString line = QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=%1 tur=%2 x=%3 y=%4 genislik=%5 "
                                   "yukseklik=%6")
@@ -3456,7 +3456,7 @@ void LayoutDesigner::buildTableProperties(const core::Layout& /*l*/, const core:
         const core::LayoutColumn& column = columns[static_cast<std::size_t>(at)];
         const Writer write               = [this, at](const QString& change) {
             edit(QStringLiteral("sutun=%1 %2").arg(at + 1).arg(change),
-                               QStringLiteral("sutunayarla"));
+                 QStringLiteral("sutunayarla"));
         };
         group(tr("%1. SÜTUN").arg(at + 1));
         row(tr("Başlık"),
@@ -3739,4 +3739,4 @@ QStringList LayoutDesigner::probeDrive()
     return said;
 }
 
-} // namespace kentos::app
+} // namespace piricad::app

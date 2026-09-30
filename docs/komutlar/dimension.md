@@ -164,7 +164,7 @@ tam yazılır.
 
 DXF'te R2007 öncesi bir yay uzunluğu ölçüsü yoktur; dışa aktarımda **açısal**
 ölçü olarak yazılır (aynı üç nokta: yay, iki yarıçapı ve bir yazı) ve bunun bir yay
-uzunluğu olduğunu bu programın kendi notu (`KENTOSCAD` xdata grubunda `olcu.tur=yay`)
+uzunluğu olduğunu bu programın kendi notu (`PIRICAD` xdata grubunda `olcu.tur=yay`)
 söyler — yani bu programdan çıkıp geri girince yay uzunluğu olarak döner, başka bir
 program ise bir açı görüp onu söyler, bir kiriş görüp ona inanmaz.
 

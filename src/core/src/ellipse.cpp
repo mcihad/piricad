@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/wire.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/wire.hpp"
 #include <algorithm>
 #include "kind_common.hpp"
 
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/units.hpp"
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 Point2 vertex_at(const RingGeometry& geom, std::uint32_t slot, std::size_t i)
@@ -148,4 +148,4 @@ void ellipse_arc_outline(Point2 centre, Point2 major, Point2 minor, std::int64_t
     }
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

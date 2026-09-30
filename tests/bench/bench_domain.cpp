@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Domain budgets from kentoscad.md §10.1.
+// Domain budgets from piricad.md §10.1.
 #include "benchmark.hpp"
 
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/domain/cadastre/topology.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/domain/cadastre/topology.hpp"
 
 #include <array>
 #include <cstddef>
@@ -12,14 +12,14 @@
 
 namespace {
 
-using namespace kentos;
+using namespace piricad;
 
 /// A hundred thousand parcels at TUREF/TM30 magnitudes, 316 to a row, each a
 /// quadrilateral on a 20 m grid — and each with two corners pulled up to 1,2 m
 /// off the grid, so a parcel's box overlaps its neighbours' and the pairwise
 /// pass has real work to do on every one of them. Axis-aligned squares only
 /// touch along a side, which would measure the check on its easiest case.
-/// Deterministic, like every fixture here (kentoscad.md §7.3).
+/// Deterministic, like every fixture here (piricad.md §7.3).
 core::Document& parcels_100k()
 {
     static core::Document document = [] {
@@ -48,7 +48,7 @@ core::Document& parcels_100k()
     return document;
 }
 
-/// kentoscad.md §10.1: topological validation of 100 000 parcels in 2 s. The
+/// piricad.md §10.1: topological validation of 100 000 parcels in 2 s. The
 /// whole check TOPOLOJİ runs — both passes over the parcels, the redundancy
 /// finder and the line network — over the whole drawing.
 void topology_100k(benchmark::State& state)
@@ -62,7 +62,7 @@ void topology_100k(benchmark::State& state)
 
 } // namespace
 
-KENTOS_BENCH(topology_validation){bench::Case{
+PIRICAD_BENCH(topology_validation){bench::Case{
     .id          = "domain.topoloji_100k_parsel",
     .title       = "100k parselde topolojik doğrulama",
     .budget      = 2000.0,

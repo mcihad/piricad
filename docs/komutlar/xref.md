@@ -34,7 +34,7 @@ bir sonraki kayıtta yeni yeri yazar.
 Kaynak hiç bulunamazsa çizim **yine açılır**: referans yerinde, boş çizilir ve açılışta bir
 uyarı hangi dosyanın eksik olduğunu söyler. `islem=yol` ile yeni yerini gösterirsiniz.
 
-Dış referans taşıyan bir proje dosyası, bu sürümden eski KentOSCad'lerde açılmaz; eski
+Dış referans taşıyan bir proje dosyası, bu sürümden eski PiriCAD'lerde açılmaz; eski
 sürüm bunu "daha yeni bir okuyucu istiyor" diye söyler ([Proje dosyası](../veri/proje-dosyasi.md)).
 
 ### İçe almak ile bağlamak

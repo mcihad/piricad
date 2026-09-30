@@ -23,21 +23,21 @@
 //            CHOICE rather than a computation.
 // The construction for `3n` is `core::circumcircle`, shared with YAY's own three
 // point method so a circle and the arc cut from it agree (CLAUDE.md 5.10).
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cmath>
 #include <initializer_list>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The circle a construction makes, asked of `core` rather than worked out here.
@@ -250,7 +250,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(circle_draw)
+PIRICAD_COMMAND(circle_draw)
 {
     return CommandSpec{
         .id       = "core.circle_draw",
@@ -292,12 +292,12 @@ KENTOS_COMMAND(circle_draw)
                     .en("side"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya "
                    "teğet yarıçapla daire çizer.",
-        .run = &run,
+        .run     = &run,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

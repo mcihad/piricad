@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the inline editors, and the only ones.
+// PiriCAD — app: the inline editors, and the only ones.
 //
 // WHY THIS FILE EXISTS. The object inspector opened a bare `QLineEdit` over the
 // cell being edited. Two things were wrong with that and both were visible:
@@ -30,9 +30,9 @@
 // the panel that owns it turns that into a command (CLAUDE.md 1.1, 5.9).
 #pragma once
 
-#include "kentos_cad/app/icons.hpp"
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/core/attribute.hpp"
+#include "piricad/app/icons.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/core/attribute.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -52,7 +52,7 @@ class QLineEdit;
 class QSlider;
 class QToolButton;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The component set; see widgets.hpp.
 class ComboBox;
@@ -218,7 +218,7 @@ inline FieldSpec decimal_of(int decimals)
 class DatePopup : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the card. Sized once, from the metrics in `fields.cpp`: six week
@@ -345,7 +345,7 @@ private:
 class Field : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the editor `spec` describes. The widget is frameless and expects to
@@ -441,4 +441,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

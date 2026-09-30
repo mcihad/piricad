@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/targets.hpp"
+#include "piricad/command/targets.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
 
 #include <cstdint>
 
-namespace kentos::command {
+namespace piricad::command {
 
 Targets target_of(const core::Document& doc, core::EntityId e)
 {
@@ -67,4 +67,4 @@ bool acts_on_all(Targets targets, const Held& held)
     return (held_bits & ~taken_bits) == 0U;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

@@ -18,18 +18,18 @@
 // changes the coordinates an ifraz produces — which is why `core.topoloji.
 // dugum_toleransi` is project-scoped and why this reads it rather than inventing
 // one (settings R40).
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/geometry.hpp"
+#include "piricad/core/geometry.hpp"
 
 #include <cstdlib>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// One source line, as a run of vertices that may be walked either way round.
@@ -241,7 +241,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(to_area)
+PIRICAD_COMMAND(to_area)
 {
     return CommandSpec{
         .id       = "core.to_area",
@@ -249,7 +249,7 @@ KENTOS_COMMAND(to_area)
         .title    = "Alana Çevir",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"}
+                           "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"}
                          .en("objects")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -259,4 +259,4 @@ KENTOS_COMMAND(to_area)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

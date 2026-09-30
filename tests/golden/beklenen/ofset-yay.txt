@@ -105,7 +105,7 @@ nesne 11 katman=PARSEL stil=0 halka=1 tur=6 yuk=01000000000000000000000000000000
   alan_mm2 260568583  cevre_mm 64955
   koken core.offset 1
 kapsam -1000 -1000 61000 40000
-icerik-ozeti f76a80d594dc926f
+icerik-ozeti 4ef16c18e7b6168f
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"PARSEL"},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
   {"seq":2,"cmd":"core.area","args":{"noktalar":[[0,0],[20000,0],[20000,10000],[0,10000]]},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}

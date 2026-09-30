@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/kernel.hpp"
+#include "piricad/core/kernel.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/pick.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/pick.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-#if KENTOS_HAVE_OCCT
+#if PIRICAD_HAVE_OCCT
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepAlgoAPI_BooleanOperation.hxx>
 #include <BRepAlgoAPI_Common.hxx>
@@ -51,7 +51,7 @@
 #include <gp_Pnt.hxx>
 #endif
 
-namespace kentos::core {
+namespace piricad::core {
 
 std::vector<KernelFace> kernel_faces_of(std::vector<CurvePath> rings)
 {
@@ -105,7 +105,7 @@ std::vector<KernelFace> kernel_faces_of(std::vector<CurvePath> rings)
     return out;
 }
 
-#if !KENTOS_HAVE_OCCT
+#if !PIRICAD_HAVE_OCCT
 
 bool kernel_available() noexcept
 {
@@ -114,7 +114,7 @@ bool kernel_available() noexcept
 
 std::string kernel_version()
 {
-    return "Bu yapıda geometri çekirdeği (OpenCASCADE) yok; KENTOS_WITH_OCCT=ON ile derleyin.";
+    return "Bu yapıda geometri çekirdeği (OpenCASCADE) yok; PIRICAD_WITH_OCCT=ON ile derleyin.";
 }
 
 Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace>,
@@ -550,4 +550,4 @@ Result<std::vector<CurvePath>> kernel_offset(const CurvePath& path, Mm distance,
 
 #endif
 
-} // namespace kentos::core
+} // namespace piricad::core

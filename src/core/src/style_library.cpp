@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/style_library.hpp"
+#include "piricad/core/style_library.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <algorithm>
 #include <utility>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 // THE SEED DOES NOT FOLLOW THE PRODUCT'S NAME, and must not. It is folded into
 // every content hash this program has ever computed — golden fixtures, journal
@@ -324,4 +324,4 @@ std::uint64_t StyleLibrary::content_hash() const
     return h;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

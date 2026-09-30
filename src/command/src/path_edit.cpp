@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/command/path_edit.hpp"
+#include "piricad/command/path_edit.hpp"
 
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/identity.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/identity.hpp"
 
 #include <cstddef>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 std::int64_t key_of(const core::Document& doc, core::EntityId slot)
@@ -186,4 +186,4 @@ core::Json edits_json(const std::vector<PathEdit>& edits)
     return out;
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

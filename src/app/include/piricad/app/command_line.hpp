@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the command line widget.
+// PiriCAD — app: the command line widget.
 //
-// kentoscad.md §3: AutoCAD's command line is forty years of refinement and the users
+// piricad.md §3: AutoCAD's command line is forty years of refinement and the users
 // are coming from it. It is a separate engineering job, not a text box. What is
 // implemented here, and what is still owed, is listed in .claude/ui.md.
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
+#include "piricad/app/theme.hpp"
 
 #include <QLineEdit>
 #include <QStringList>
@@ -15,7 +15,7 @@
 class QCompleter;
 class QStringListModel;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
@@ -23,7 +23,7 @@ class Controller;
 class CommandLine : public QLineEdit, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the line over a controller, which outlives it. Completion comes
@@ -142,4 +142,4 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

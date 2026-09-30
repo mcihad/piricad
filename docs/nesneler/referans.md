@@ -1,5 +1,5 @@
 <!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->
-<!-- Kaynak: kentos::core::builtin_kinds().  Yeniden üret: make reference -->
+<!-- Kaynak: piricad::core::builtin_kinds().  Yeniden üret: make reference -->
 <!-- Bir nesne türünün burada görünmesi için tek yapılması gereken onu kaydetmektir; -->
 <!-- projede elle tutulan ikinci bir tür listesi yoktur (model.md R25). -->
 

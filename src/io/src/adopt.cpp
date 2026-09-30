@@ -5,7 +5,7 @@
 
 #include <utility>
 
-namespace kentos::io {
+namespace piricad::io {
 
 command::Task<core::Result<ProjectReport>> adopt_project(command::Bus& bus, std::string path,
                                                          std::stop_token stop)
@@ -79,4 +79,4 @@ command::Task<core::Result<ProjectReport>> adopt_project(command::Bus& bus, std:
     co_return std::move(report.value());
 }
 
-} // namespace kentos::io
+} // namespace piricad::io

@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // AGPL rather than GPL for the reason `jsonrpc.hpp` states: CLAUDE.md Article 2.1
 // puts a server component under AGPLv3, and this file is the heart of one.
-#include "kentos_cad/ai/mcp.hpp"
+#include "piricad/ai/mcp.hpp"
 
-#include "kentos_cad/ai/catalog.hpp"
-#include "kentos_cad/ai/llmstxt.hpp"
-#include "kentos_cad/ai/policy.hpp"
+#include "piricad/ai/catalog.hpp"
+#include "piricad/ai/llmstxt.hpp"
+#include "piricad/ai/policy.hpp"
 
-#include "kentos_cad/core/text.hpp"
+#include "piricad/core/text.hpp"
 
 #include <cstdio>
 #include <locale>
 #include <sstream>
 
-namespace kentos::ai {
+namespace piricad::ai {
 namespace {
 
 using core::Json;
@@ -75,7 +75,7 @@ SseFrame message_frame(const char* level, std::string text)
 {
     Json params;
     params.set("level", Json::string(level));
-    params.set("logger", Json::string("kentoscad"));
+    params.set("logger", Json::string("piricad"));
     params.set("data", Json::string(std::move(text)));
 
     SseFrame frame;
@@ -118,19 +118,19 @@ Json llms_tool_entry()
     schema.set("additionalProperties", Json::boolean(false));
 
     Json meta;
-    meta.set("cad.kentos/approval", Json::string("none"));
+    meta.set("cad.piricad/approval", Json::string("none"));
     // Says out loud that this one is not projected from the registry, so a client
     // comparing the list against the fingerprint is not surprised by it.
-    meta.set("cad.kentos/builtin", Json::boolean(true));
+    meta.set("cad.piricad/builtin", Json::boolean(true));
 
     Json entry;
     entry.set("name", Json::string(kLlmsToolName));
     entry.set("title", Json::string("llms.txt"));
     entry.set("description",
-              Json::string("KentOSCad'in kullanim kilavuzunu dondurur: birimler, eksen adlari, "
+              Json::string("PiriCAD'in kullanim kilavuzunu dondurur: birimler, eksen adlari, "
                            "tutamak kurali, uygulama kurali ve araclarin kullanim sirasi. "
                            "Bu arac hicbir seyi degistirmez; dogrudan calisir. "
-                           "Ayni metin `kentoscad://llms.txt` kaynagi olarak da okunabilir."));
+                           "Ayni metin `piricad://llms.txt` kaynagi olarak da okunabilir."));
     entry.set("inputSchema", std::move(schema));
     entry.set("annotations", std::move(annotations));
     entry.set("_meta", std::move(meta));
@@ -167,7 +167,7 @@ std::string default_instructions()
     // TURKISH, because the audience is a machine but the vocabulary is the
     // product's: a model that read these rules in English still has to write
     // `KATMANGÖRÜNÜM islem=gizle` (CLAUDE.md 2.6).
-    return R"(KentOSCad: Türkiye odaklı CBS + CAD masaüstü programı. Bu sunucu programın komut
+    return R"(PiriCAD: Türkiye odaklı CBS + CAD masaüstü programı. Bu sunucu programın komut
 yüzeyini sunar. Üç şeyi bilmeden çağrı yapmayın.
 
 1. KONUM UYDURULAMAZ. Nokta, nokta listesi ya da nesne seçimi isteyen her parametre
@@ -181,7 +181,7 @@ yüzeyini sunar. Üç şeyi bilmeden çağrı yapmayın.
    ÖNERİ kaydı açar ve uygulanacak komut satırlarını döndürür. Öneri, kullanıcının
    önceden seçtiği onay politikasına göre ya bilgisayar başındaki harita mühendisinin
    onayını bekler ya da hemen uygulanır; yanıtın `durum` alanı ve `_meta` içindeki
-   `cad.kentos/approval` (`user-required` / `policy-applied`) hangisinin olduğunu
+   `cad.piricad/approval` (`user-required` / `policy-applied`) hangisinin olduğunu
    söyler. Uygulanan öneri tek bir işlemdir ve tek `Ctrl+Z` ile geri alınır. Kadastro
    ve imar çıktısı hukuki belgedir; imzayı yapay zeka atamaz. Politikayı istemci
    değiştiremez. Bir diziyi tek uygulamada toplamak için `_meta` içinde `plan` alanına
@@ -194,7 +194,7 @@ yüzeyini sunar. Üç şeyi bilmeden çağrı yapmayın.
    yazılır.
 
 Hiçbir şeyi değiştirmeyen araçlar doğrudan çalışır ve sonucunu döndürür. Tam şema:
-`tools/list`. Kılavuz: `kentoscad://llms.txt` kaynağı ya da `llms_txt` aracı.)";
+`tools/list`. Kılavuz: `piricad://llms.txt` kaynağı ya da `llms_txt` aracı.)";
 }
 
 McpServer::McpServer(Dispatcher& dispatcher, const command::Registry& registry, ServerInfo info,
@@ -380,7 +380,7 @@ McpServer::Answer McpServer::discover(const JsonRpcRequest& rpc) const
 
     // AND NO `prompts`, which is the capability a job template LOOKS like it
     // should be declared under and must not be. `prompts/get` returns messages
-    // for a model to be run with; a KentOSCad job template is a list of command
+    // for a model to be run with; a PiriCAD job template is a list of command
     // lines a client composes into a suggestion a PERSON applies, and nothing
     // here runs a model on a client's behalf. A server that advertised `prompts`
     // would be promising a method it answers with 404, which is worse than not
@@ -395,7 +395,7 @@ McpServer::Answer McpServer::discover(const JsonRpcRequest& rpc) const
     meta.set(kServerInfoMetaKey, std::move(server_info));
     // A DECIMAL STRING, not an integer: the fingerprint is a uint64 and JSON's
     // integer is signed, so half the range would arrive negative or rounded.
-    meta.set("cad.kentos/fingerprint",
+    meta.set("cad.piricad/fingerprint",
              Json::string(std::to_string(dispatcher_.catalog().fingerprint)));
     meta.set(kProtocolVersionMetaKey, Json::string(Catalog::kProtocolVersion));
 
@@ -413,7 +413,7 @@ McpServer::Answer McpServer::discover(const JsonRpcRequest& rpc) const
     policy.set("onay", Json::string(approval_policy_name(prefs.approval)));
     policy.set("soru", Json::string(question_policy_name(prefs.questions)));
     policy.set("uzerine_yazma", Json::string(overwrite_policy_name(prefs.overwrite)));
-    meta.set("cad.kentos/policy", std::move(policy));
+    meta.set("cad.piricad/policy", std::move(policy));
     // Five minutes. The discovery answer changes only when the build or the
     // command catalogue does, and the fingerprint travels with it so a client
     // that cached it longer can still tell.
@@ -452,7 +452,7 @@ McpServer::Answer McpServer::tools_list(const JsonRpcRequest& rpc) const
     if (!placed) merged.push(llms_tool_entry());
 
     Json meta;
-    meta.set("cad.kentos/fingerprint", Json::string(std::to_string(catalog.fingerprint)));
+    meta.set("cad.piricad/fingerprint", Json::string(std::to_string(catalog.fingerprint)));
     meta.set(kProtocolVersionMetaKey, Json::string(Catalog::kProtocolVersion));
 
     Json result;
@@ -514,8 +514,8 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     // surface is generated from (see `kLlmsToolName` in the header).
     if (tool_name == kLlmsToolName) {
         Json meta;
-        meta.set("cad.kentos/builtin", Json::boolean(true));
-        meta.set("cad.kentos/fingerprint",
+        meta.set("cad.piricad/builtin", Json::boolean(true));
+        meta.set("cad.piricad/fingerprint",
                  Json::string(std::to_string(dispatcher_.catalog().fingerprint)));
         out.payload = rpc_result(
             rpc.id, call_result(llms_txt(registry_), Json::null(), false, std::move(meta)));
@@ -633,7 +633,7 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
         }
 
         Json meta;
-        meta.set("cad.kentos/commandId",
+        meta.set("cad.piricad/commandId",
                  Json::string(outcome.command_id.empty() ? command_id : outcome.command_id));
         out.payload = rpc_result(rpc.id, call_result(std::move(text),
                                                      have_structured ? structured : Json::null(),
@@ -815,14 +815,14 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     // WHAT DECIDED THIS CALL, said per call: `policy-applied` when the user's
     // standing policy applied it, `user-required` while it waits for a person.
     Json meta;
-    meta.set("cad.kentos/commandId", Json::string(command_id));
+    meta.set("cad.piricad/commandId", Json::string(command_id));
     meta.set(kPlanMetaKey, Json::string(plan_id));
     const char* decided = "user-required";
     if (said_state == PlanState::Applied)
         decided = "policy-applied";
     else if (failed)
         decided = "failed";
-    meta.set("cad.kentos/approval", Json::string(decided));
+    meta.set("cad.piricad/approval", Json::string(decided));
 
     std::string frame = "Öneri " + plan_id +
                         " açıldı ve uygulanmadı; karar bilgisayar başındaki "
@@ -1033,7 +1033,7 @@ HttpOutcome McpServer::handle(const HttpRequestView& request)
 
     const auto unauthorised = []() {
         HttpOutcome out = http_empty(401);
-        out.headers.emplace_back("WWW-Authenticate", "Bearer realm=\"KentOSCad\"");
+        out.headers.emplace_back("WWW-Authenticate", "Bearer realm=\"PiriCAD\"");
         return out;
     };
 
@@ -1045,7 +1045,7 @@ HttpOutcome McpServer::handle(const HttpRequestView& request)
 
     if (policy_.require_token) {
         const std::string_view bearer = bearer_token(request.authorization);
-        const bool authorised         = !policy_.token.empty() &&
+        const bool authorised = !policy_.token.empty() &&
                                 (matched == PathMatch::Token ||
                                  (!bearer.empty() && constant_time_equals(bearer, policy_.token)));
         if (!authorised) return unauthorised();
@@ -1195,4 +1195,4 @@ HttpOutcome McpServer::handle(const HttpRequestView& request)
     return out;
 }
 
-} // namespace kentos::ai
+} // namespace piricad::ai

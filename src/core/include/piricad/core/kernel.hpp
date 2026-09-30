@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the geometry kernel, OpenCASCADE (CLAUDE.md 2.11).
+// PiriCAD — core: the geometry kernel, OpenCASCADE (CLAUDE.md 2.11).
 //
 // WHERE OPENCASCADE DOES A THING BETTER THAN THIS PROGRAM DID, IT DOES IT HERE:
 // a boolean that keeps an arc an arc, an offset whose corners are true arcs, and
@@ -27,19 +27,19 @@
 // module's .cpp files").
 #pragma once
 
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
 #include <string>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
-/// Whether this build carries the kernel (`KENTOS_WITH_OCCT`).
+/// Whether this build carries the kernel (`PIRICAD_WITH_OCCT`).
 bool kernel_available() noexcept;
 
 /// `OpenCASCADE 7.9.3`, or the sentence that says the build has none.
@@ -92,4 +92,4 @@ enum class OffsetCorner : std::uint8_t {
 Result<std::vector<CurvePath>> kernel_offset(const CurvePath& path, Mm distance,
                                              OffsetCorner corner, bool both_sides);
 
-} // namespace kentos::core
+} // namespace piricad::core

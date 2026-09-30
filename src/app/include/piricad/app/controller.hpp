@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the bridge between Qt and the command bus.
+// PiriCAD — app: the bridge between Qt and the command bus.
 //
 // Constitution Article 1: the user interface is a CLIENT of the command bus and
 // has no privileges. Every widget in this application reaches the document
@@ -7,27 +7,27 @@
 // There is no other path.
 #pragma once
 
-#include "kentos_cad/app/ai_service.hpp"
-#if KENTOS_HAVE_MCP
-#include "kentos_cad/app/mcp_service.hpp"
+#include "piricad/app/ai_service.hpp"
+#if PIRICAD_HAVE_MCP
+#include "piricad/app/mcp_service.hpp"
 #endif
-#include "kentos_cad/app/layout_templates.hpp"
-#include "kentos_cad/app/print_service.hpp"
-#include "kentos_cad/app/provider_service.hpp"
-#include "kentos_cad/app/python_api_info.hpp"
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/journal.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/transaction.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/domain/geodesy/crs_service.hpp"
-#include "kentos_cad/io/database.hpp"
-#include "kentos_cad/io/service.hpp"
-#include "kentos_cad/script/json_runner.hpp"
+#include "piricad/app/layout_templates.hpp"
+#include "piricad/app/print_service.hpp"
+#include "piricad/app/provider_service.hpp"
+#include "piricad/app/python_api_info.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/journal.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/transaction.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/domain/geodesy/crs_service.hpp"
+#include "piricad/io/database.hpp"
+#include "piricad/io/service.hpp"
+#include "piricad/script/json_runner.hpp"
 
-#if KENTOS_HAVE_PYTHON
-#include "kentos_cad/script/python_runner.hpp"
+#if PIRICAD_HAVE_PYTHON
+#include "piricad/script/python_runner.hpp"
 #endif
 
 #include <QObject>
@@ -41,7 +41,7 @@
 
 class QThread;
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The outbound wire, held by pointer so the socket does not reach every
 /// translation unit that includes this header; see ai_transport.hpp.
@@ -61,7 +61,7 @@ public:
     void runLine(const QString& line, command::Origin origin = command::Origin::CommandLine);
 
     /// Runs several lines as ONE gesture: one validation pass, one undo step,
-    /// one line in the echo (`Bus::begin_batch`, kentoscad.md §10.4).
+    /// one line in the echo (`Bus::begin_batch`, piricad.md §10.4).
     ///
     /// WHAT IT IS FOR. Some things a user does in one click are several commands
     /// — hiding eleven picked layers is eleven `KATMANGÖRÜNÜM` calls — and eleven
@@ -94,7 +94,7 @@ public:
     /// made lossless.
     void runPython(const QString& source);
 
-    /// The `kentos.cad` callable names this build exposes, for completion and
+    /// The `piricad.cad` callable names this build exposes, for completion and
     /// for the editor's highlighting.
     ///
     /// From the REGISTRY, so a command added today is completable today and there
@@ -313,7 +313,7 @@ public:
     /// MCP listener; written only through the bus and through `decide`.
     AiService& aiService() noexcept { return ai_; }
 
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
     /// The agent listener, or null in a build without Qt HttpServer. The status
     /// strip and the settings page both ask it for its state.
     McpService* mcpService() noexcept { return mcp_.get(); }
@@ -370,7 +370,7 @@ public:
     bool isDirty() const;
 
     /// Where a clipboard payload lives when nobody named a file — the io
-    /// service's own scratch path, exposed so `KENTOS_CLIP_PROBE` can delete it
+    /// service's own scratch path, exposed so `PIRICAD_CLIP_PROBE` can delete it
     /// and prove the paste came out of the system clipboard.
     std::string clipboardPath() const;
 
@@ -495,17 +495,17 @@ private:
     // Installs Bus::on_layout_template_request, in the same shape and with the
     // same lifetime rule as the services above.
     LayoutTemplates templates_;
-#if KENTOS_HAVE_MCP
+#if PIRICAD_HAVE_MCP
     std::unique_ptr<McpService> mcp_;
 #endif
 
     /// Resolves a CRS id into its EPSG code and zone. Held as an optional because
     /// a build whose /data/crs package is missing has no catalogue to answer from,
     /// and answering wrong is worse than not answering (see crs_service.hpp).
-    std::optional<kentos::domain::geodesy::CrsService> crs_;
+    std::optional<piricad::domain::geodesy::CrsService> crs_;
     script::JsonRunner runner_;
 
-#if KENTOS_HAVE_PYTHON
+#if PIRICAD_HAVE_PYTHON
     // The second host. Both are installed behind one BETİK and chosen by the
     // file's extension, so a user with a `.py` and a `.json` beside each other
     // does not have to tell the program which is which (script/python_runner.hpp).
@@ -533,4 +533,4 @@ private:
     std::uint64_t selection_revision_{0};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

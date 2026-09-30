@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/cleanup.hpp"
+#include "piricad/core/cleanup.hpp"
 
-#include "kentos_cad/core/attribute.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/text_store.hpp"
+#include "piricad/core/attribute.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/text_store.hpp"
 
 #include <algorithm>
 #include <map>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 Mm chebyshev(Point2 a, Point2 b) noexcept
@@ -243,4 +243,4 @@ std::vector<Redundancy> find_redundant(const Document& doc, std::span<const Enti
     return out;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

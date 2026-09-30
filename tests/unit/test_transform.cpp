@@ -6,25 +6,25 @@
 // drawing has letters of the new size; a caption or a dimension mirrored still
 // reads; HİZALA carries every kind the other verbs carry. Each case below is a
 // defect this program had, held down by its closed-form numbers.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/registry.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/identity.hpp"
-#include "kentos_cad/core/spline.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/circle.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/spline.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
-using namespace kentos;
-using namespace kentos::command;
+using namespace piricad;
+using namespace piricad::command;
 using core::Point2;
 
 namespace {

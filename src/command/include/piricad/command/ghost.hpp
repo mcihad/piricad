@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — command: the ghost a drawing prompt shows (TODOS C-02).
+// PiriCAD — command: the ghost a drawing prompt shows (TODOS C-02).
 //
 // THE GHOST IS THE OBJECT. While a drawing command waits for its next point the
 // canvas draws what that point would make — the segment, the face, the circle,
@@ -21,12 +21,12 @@
 // the reference a guide hangs from — is decoration, and stays the canvas's.
 #pragma once
 
-#include "kentos_cad/command/input.hpp"
-#include "kentos_cad/core/angle.hpp"
+#include "piricad/command/input.hpp"
+#include "piricad/core/angle.hpp"
 
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 
 /// One drawn run of a ghost, in world millimetres.
 struct GhostRun
@@ -48,4 +48,4 @@ struct GhostRun
 std::vector<GhostRun> ghost_outline(const Prompt& prompt, core::Point2 at,
                                     core::AngleConvention convention);
 
-} // namespace kentos::command
+} // namespace piricad::command

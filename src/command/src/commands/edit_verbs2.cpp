@@ -30,29 +30,29 @@
 //
 // ÇİZGİDÜZENLE is the small edits a run needs and nothing else does: close it,
 // open it, reverse it, thin it out.
-#include "kentos_cad/command/block_edit.hpp"
-#include "kentos_cad/command/construct.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/external_ref.hpp"
-#include "kentos_cad/command/path_edit.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
-#include "kentos_cad/command/transform_edit.hpp"
+#include "piricad/command/block_edit.hpp"
+#include "piricad/command/construct.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/external_ref.hpp"
+#include "piricad/command/path_edit.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
+#include "piricad/command/transform_edit.hpp"
 
-#include "kentos_cad/core/angle.hpp"
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/block.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/offset.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/transform.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/angle.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/block.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/offset.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/transform.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -60,7 +60,7 @@
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// One ring of an entity, as points.
@@ -924,7 +924,7 @@ Task<void> run_pedit(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(explode)
+PIRICAD_COMMAND(explode)
 {
     return CommandSpec{
         .id       = "core.explode",
@@ -932,21 +932,21 @@ KENTOS_COMMAND(explode)
         .title    = "Patlat",
         .category = Category::Modify,
         .params   = {Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Patlatılacak nesneler"}
+                           "Patlatılacak nesneler"}
                          .en("object")},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve "
-                   "yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.",
-        .run    = &run_explode,
-        .effect = Effect::DocumentEdit,
+        .summary  = "Çizgiyi tek tek kenarlara, alanı sınırına, yaylı çoklu çizgiyi çizgi ve "
+                    "yaylarına, blok referansını kendi türündeki bileşenlerine ayırır.",
+        .run      = &run_explode,
+        .effect   = Effect::DocumentEdit,
         // What the body takes apart; a hatch, a dimension and a leader it
         // refuses, a circle and a caption are one piece already.
         .targets = Targets::Lines | Targets::Faces | Targets::Blocks,
     };
 }
 
-KENTOS_COMMAND(align)
+PIRICAD_COMMAND(align)
 {
     return CommandSpec{
         .id       = "core.align",
@@ -983,7 +983,7 @@ KENTOS_COMMAND(align)
     };
 }
 
-KENTOS_COMMAND(divide)
+PIRICAD_COMMAND(divide)
 {
     return CommandSpec{
         .id       = "core.divide",
@@ -1019,7 +1019,7 @@ KENTOS_COMMAND(divide)
     };
 }
 
-KENTOS_COMMAND(pedit)
+PIRICAD_COMMAND(pedit)
 {
     return CommandSpec{
         .id       = "core.pedit",
@@ -1049,4 +1049,4 @@ KENTOS_COMMAND(pedit)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

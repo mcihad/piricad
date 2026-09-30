@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — tests: the kind registry's general mutators (model.md R9a, R22, R26).
+// PiriCAD — tests: the kind registry's general mutators (model.md R9a, R22, R26).
 //
 // `Document::add_kind` is what every `add_*` spells for one kind, and what a file
 // reader hands an entity of ANY kind to — the ones this build knows, validated by
 // their own `KindSpec`, and the ones it does not, preserved as given. These cases
 // lock that contract: the floor a kind declares is enforced, an unknown kind is
 // kept and refused by every edit, and a curve's measures come from the kind.
-#include "kentos_test.hpp"
+#include "piricad_test.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/trig.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -20,7 +20,7 @@
 #include <span>
 #include <vector>
 
-using namespace kentos::core;
+using namespace piricad::core;
 
 namespace {
 
@@ -313,8 +313,8 @@ TEST_CASE("BELİRLENİMCİLİK: atan2 eksen ve köşegenlerde tam, arada libm'in
 
 // ---------------------------------------------------------------- grips ----
 
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/grips.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/grips.hpp"
 
 TEST_CASE("TUTAMAK: yaylı çizginin köşesi yayın şişkinliğini korur, yay ortası yayı üç noktadan "
           "kurar, önizleme türün çizimidir")
@@ -396,13 +396,13 @@ TEST_CASE("TUTAMAK: yaylı çizginin köşesi yayın şişkinliğini korur, yay 
 
 // ------------------------------------------------------ Phase 2 kinds (C1–C5) --
 
-#include "kentos_cad/core/arc_polyline.hpp"
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/dimension.hpp"
-#include "kentos_cad/core/ellipse.hpp"
-#include "kentos_cad/core/hatch.hpp"
-#include "kentos_cad/core/outline.hpp"
-#include "kentos_cad/core/spline.hpp"
+#include "piricad/core/arc_polyline.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/dimension.hpp"
+#include "piricad/core/ellipse.hpp"
+#include "piricad/core/hatch.hpp"
+#include "piricad/core/outline.hpp"
+#include "piricad/core/spline.hpp"
 
 namespace {
 

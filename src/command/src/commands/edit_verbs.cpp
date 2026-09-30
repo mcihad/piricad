@@ -17,26 +17,26 @@
 // UZUNLUK MOVES AN END ALONG ITS OWN DIRECTION. `UZAT` extends to a boundary,
 // which needs something to extend TO; this is the form a plan gives — "make the
 // kerb 2 m longer", "bring it to 48 m" — and it needs nothing but the line.
-#include "kentos_cad/command/construct.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/path_edit.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/construct.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/path_edit.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/break_run.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/pick.hpp"
-#include "kentos_cad/core/text.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/break_run.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/entity_kind.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/pick.hpp"
+#include "piricad/core/text.hpp"
+#include "piricad/core/units.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// The vertices of an OPEN run, or false with the reason echoed.
@@ -446,7 +446,7 @@ Task<void> run_lengthen(Context& ctx)
     }
     const double want_mm = segment_wanted * static_cast<double>(core::kMmPerMetre);
     pts[moving]          = core::Point2{pts[anchor].x + core::mm_round(want_mm * dx / len),
-                               pts[anchor].y + core::mm_round(want_mm * dy / len)};
+                                        pts[anchor].y + core::mm_round(want_mm * dy / len)};
 
     if (!write_run(ctx, slot, pts)) co_return;
 
@@ -458,7 +458,7 @@ Task<void> run_lengthen(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(break_line)
+PIRICAD_COMMAND(break_line)
 {
     return CommandSpec{
         .id       = "core.break",
@@ -476,8 +476,8 @@ KENTOS_COMMAND(break_line)
                               "böler")
                     .en("second"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizgiden, yaydan, daireden ya da yaylı çoklu çizgiden iki nokta arasındaki "
                    "parçayı çıkarır; tek nokta açık bir nesneyi boşluk bırakmadan böler.",
         .run     = &run_break,
@@ -486,7 +486,7 @@ KENTOS_COMMAND(break_line)
     };
 }
 
-KENTOS_COMMAND(join_lines)
+PIRICAD_COMMAND(join_lines)
 {
     return CommandSpec{
         .id       = "core.join",
@@ -508,8 +508,8 @@ KENTOS_COMMAND(join_lines)
                               "· reddet: katman ya da öznitelik farklıysa birleştirmez")
                     .en("on_conflict"),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Uçları birbirine değen çizgileri, yayları ve yaylı çoklu çizgileri tek bir "
                    "nesneye ekler; yaylar yay kalır, boşluklar söylenir.",
         .run     = &run_join,
@@ -518,7 +518,7 @@ KENTOS_COMMAND(join_lines)
     };
 }
 
-KENTOS_COMMAND(lengthen)
+PIRICAD_COMMAND(lengthen)
 {
     return CommandSpec{
         .id       = "core.lengthen",
@@ -552,4 +552,4 @@ KENTOS_COMMAND(lengthen)
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

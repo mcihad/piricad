@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the pieces of the ribbon that are this program's own.
+// PiriCAD — app: the pieces of the ribbon that are this program's own.
 //
 // THE RIBBON IS SARIBBON'S (`.claude/ui.md` R46): its tab bar, its panels, its
 // buttons, its galleries and its contextual tabs. What lives here is what the
@@ -19,10 +19,10 @@
 // over any other client.
 #pragma once
 
-#include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/app/widgets.hpp"
-#include "kentos_cad/command/drawing_catalogs.hpp"
-#include "kentos_cad/core/identity.hpp"
+#include "piricad/app/theme.hpp"
+#include "piricad/app/widgets.hpp"
+#include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/core/identity.hpp"
 
 #include <array>
 #include <functional>
@@ -46,12 +46,12 @@ class SARibbonToolButton;
 // SARibbon's element factory, which this program subclasses below.
 #include "SARibbon.h"
 
-namespace kentos::core {
+namespace piricad::core {
 /// The drawing `ribbon_context_of` reads an object's kind and caption from.
 class Document;
-} // namespace kentos::core
+} // namespace piricad::core
 
-namespace kentos::app {
+namespace piricad::app {
 
 /// The dynamic property every tool action carries: the command word it
 /// dispatches (or the whole line, for a method). Declared once, because the
@@ -64,7 +64,7 @@ inline constexpr const char* kToolCommandProperty = "piricad.command";
 /// command acts on some objects only: a method that asks for corners (`ALANÖLÇ
 /// yontem=nokta`), the save of an open block edit, which names its own objects.
 /// The selection never greys such an action (`MainWindow::refreshToolAvailability`).
-inline constexpr const char* kIgnoresSelectionProperty = "kentos.ignoresSelection";
+inline constexpr const char* kIgnoresSelectionProperty = "piricad.ignoresSelection";
 
 /// THE RIBBON'S BUTTONS ARE MADE HERE, so each one knows the keyboard — Down or
 /// F4 on a button with a list opens it (`.claude/ui.md` R21) — and shows the
@@ -108,7 +108,7 @@ protected:
                                  const QColor& color) override;
 };
 
-/// `KENTOS CAD`, the application button, AS WIDE AS ITS NAME. SARibbon's compact
+/// `PIRICAD CAD`, the application button, AS WIDE AS ITS NAME. SARibbon's compact
 /// layout scales a button's hint to the title row's height at a 1 : 1,5 aspect
 /// (`scaleSizeByHeight`), so a taller row made a wider button; the hint this
 /// returns is the one that scaling maps back onto the label's own width.
@@ -130,7 +130,7 @@ class UserChip;
 /// wear a SHORT word of its own while that member is on its face: `Uzat` on the
 /// Buda button, `Pah` on the Yuvarla button — a menu row may say "Uzat — çit
 /// ile", a 26 px ribbon row may not.
-inline constexpr const char* kRibbonShortLabel = "kentos.ribbon.short";
+inline constexpr const char* kRibbonShortLabel = "piricad.ribbon.short";
 
 /// ONE SPLIT BUTTON FOR A FAMILY OF TOOLS — the Daire with its three other ways
 /// of drawing a circle, the Buda with its fence and its carried edges.
@@ -302,7 +302,7 @@ inline constexpr int kPromptSelectContextId = 102;
 
 /// Property under which a `Nokta Girişi` snap switch carries its engine bit —
 /// not `QAction::data()`, which is the glyph.
-inline constexpr const char* kSnapBitProperty = "kentos.snap.bit";
+inline constexpr const char* kSnapBitProperty = "piricad.snap.bit";
 
 /// The editor tab object `e` of `doc` belongs to, if any: what brings a tab
 /// up for a selection and what a double click on the object opens.
@@ -362,7 +362,7 @@ struct RibbonLive
 class ShellCorner : public QWidget, public Themed
 {
     Q_OBJECT
-    Q_INTERFACES(kentos::app::Themed)
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the corner.
@@ -382,4 +382,4 @@ private:
     UserChip* user_{nullptr};
 };
 
-} // namespace kentos::app
+} // namespace piricad::app

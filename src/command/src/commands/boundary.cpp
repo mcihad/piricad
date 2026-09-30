@@ -20,17 +20,17 @@
 // circle is a circle. Only a face with arcs AND holes — which no single kind in
 // the model holds — is written with its arcs as chords, and the sentence says
 // how far those chords are from the arcs.
-#include "kentos_cad/command/bus.hpp"
-#include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/measure_mark.hpp"
-#include "kentos_cad/command/region_input.hpp"
-#include "kentos_cad/command/session.hpp"
-#include "kentos_cad/command/spec.hpp"
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/measure_mark.hpp"
+#include "piricad/command/region_input.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
 
-#include "kentos_cad/core/arc.hpp"
-#include "kentos_cad/core/curve_path.hpp"
-#include "kentos_cad/core/json.hpp"
-#include "kentos_cad/core/planar.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/curve_path.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/planar.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -39,7 +39,7 @@
 #include <utility>
 #include <vector>
 
-namespace kentos::command {
+namespace piricad::command {
 namespace {
 
 /// An area in square metres to two decimals, divided in integers (Article 2.4).
@@ -155,7 +155,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-KENTOS_COMMAND(boundary)
+PIRICAD_COMMAND(boundary)
 {
     return CommandSpec{
         .id       = "core.boundary",
@@ -180,12 +180,12 @@ KENTOS_COMMAND(boundary)
                     .en("objects"),
                 Param::draw_layer(),
             },
-        .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; "
                    "içerideki adalar delik olur, açık uçlar gösterilir.",
-        .run = &run,
+        .run     = &run,
     };
 }
 
-} // namespace kentos::command
+} // namespace piricad::command

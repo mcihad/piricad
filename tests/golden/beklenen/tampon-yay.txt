@@ -199,7 +199,7 @@ nesne 10 katman=HALKA stil=0 halka=2
   alan_mm2 711209027  cevre_mm 235404
   koken islem.tampon 10
 kapsam -3000 -5000 77000 73000
-icerik-ozeti 9302ea3f418ee069
+icerik-ozeti 6653cb8700a4b04d
 gunluk
   {"seq":1,"cmd":"core.point_draw","args":{"noktalar":[[0,0]]},"origin":"test","crs":"TUREF/TM36","katman":"0"}
   {"seq":2,"cmd":"islem.tampon","args":{"nesneler":[1],"katman":"KUYU","mesafe":3.0,"birlestir":true,"kose":"yuvarlak","uc":"yuvarlak"},"origin":"test","crs":"TUREF/TM36","katman":"0"}

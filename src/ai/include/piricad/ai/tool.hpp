@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — ai: what one tool IS, as data.
+// PiriCAD — ai: what one tool IS, as data.
 //
 // ONE FORM, THREE READERS. The MCP server serves it, `llms.txt` is written from
 // it, and the in-app chat projects it into whichever dialect its provider
@@ -12,13 +12,13 @@
 // only action needed to put it in front of a model (ai.md R12).
 #pragma once
 
-#include "kentos_cad/core/json.hpp"
+#include "piricad/core/json.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace kentos::ai {
+namespace piricad::ai {
 
 /// What a client may assume about calling a tool.
 ///
@@ -71,4 +71,4 @@ struct Catalog
     std::size_t mutating_count() const;
 };
 
-} // namespace kentos::ai
+} // namespace piricad::ai

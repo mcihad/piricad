@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/core/text_metrics.hpp"
+#include "piricad/core/text_metrics.hpp"
 
 #include "text_metrics_table.hpp"
 
 #include <algorithm>
 #include <iterator>
 
-namespace kentos::core {
+namespace piricad::core {
 namespace {
 
 /// What the shaper reads for a byte that does not begin a well-formed UTF-8
@@ -80,4 +80,4 @@ std::int64_t text_run_advance(std::string_view utf8) noexcept
     return pen;
 }
 
-} // namespace kentos::core
+} // namespace piricad::core

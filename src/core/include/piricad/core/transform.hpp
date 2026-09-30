@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: moving, turning, mirroring and scaling coordinates.
+// PiriCAD — core: moving, turning, mirroring and scaling coordinates.
 //
 // Every function here is DETERMINISTIC ACROSS PLATFORMS, and that is a
 // requirement rather than a nicety: a rotated parcel's corners are stored
@@ -15,17 +15,17 @@
 // of which IEEE-754 pins exactly.
 #pragma once
 
-#include "kentos_cad/core/block_reference.hpp"
-#include "kentos_cad/core/document.hpp"
-#include "kentos_cad/core/trig.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/block_reference.hpp"
+#include "piricad/core/document.hpp"
+#include "piricad/core/trig.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// Angles are whole MICRO-DEGREES — `kUDegPerDegree` in units.hpp, the unit the
 /// polar snap already uses. An integer angle keeps a right angle exactly a right
@@ -102,12 +102,12 @@ struct Xform
     Kind kind{Kind::Translate}; ///< which transform
     Mm dx{0};                   ///< Translate: east component · Place: the grid step across
     Mm dy{0};                   ///< Translate: north component · Place: the grid step up
-    Point2 base{};   ///< Rotate/Scale: the centre · Mirror: the axis's first point · Align: the
-                     ///< source · Place: the definition's base point
-    Point2 axis_b{}; ///< Mirror: the axis's second point · Align: where the source goes · Place:
-                     ///< the insertion point
-    SinCos turn{};   ///< Rotate, Align: the turn
-    double factor{1.0};         ///< Scale, Align: the multiplier · Stretch: the one across (east)
+    Point2 base{};      ///< Rotate/Scale: the centre · Mirror: the axis's first point · Align: the
+                        ///< source · Place: the definition's base point
+    Point2 axis_b{};    ///< Mirror: the axis's second point · Align: where the source goes · Place:
+                        ///< the insertion point
+    SinCos turn{};      ///< Rotate, Align: the turn
+    double factor{1.0}; ///< Scale, Align: the multiplier · Stretch: the one across (east)
     double factor_y{1.0};       ///< Stretch: the multiplier up (north)
     bool flip{false};           ///< Align: reflected in the line through `base` along east, first
     Ratio place_sx{1, 1};       ///< Place: the scale along the definition's x; negative mirrors
@@ -276,4 +276,4 @@ UDeg ghost_turn_udeg(Point2 base, Point2 cursor) noexcept;
 /// cursor is on the base point, which the verb refuses.
 double ghost_factor(Point2 base, Point2 cursor) noexcept;
 
-} // namespace kentos::core
+} // namespace piricad::core

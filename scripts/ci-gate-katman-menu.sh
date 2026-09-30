@@ -10,7 +10,7 @@
 # announced a layer and listed the whole drawing.
 #
 # WHY IT IS A SHELL GATE. /tests links no Qt (Article 3.4), so a menu, a signal
-# and a dialog cannot be constructed there. `KENTOS_LAYER_PROBE` opens the real
+# and a dialog cannot be constructed there. `PIRICAD_LAYER_PROBE` opens the real
 # menu — built by the same function a right-click builds it with — finds the
 # entry by the text on it and fires it, then prints what the document and the
 # table did. A test that called the handler would prove the handler works and say
@@ -21,12 +21,12 @@ set -euo pipefail
 kok="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 exe=""
-for aday in build/dev/bin/kentos_cad build/release/bin/kentos_cad build/debug/bin/kentos_cad; do
+for aday in build/dev/bin/piricad build/release/bin/piricad build/debug/bin/piricad; do
     if [[ -x "$kok/$aday" ]]; then exe="$kok/$aday"; break; fi
 done
 
 if [[ -z "$exe" ]]; then
-    echo "katman-menu: kentos_cad bulunamadı — ATLANDI (uygulama derlenmemiş)"
+    echo "katman-menu: piricad bulunamadı — ATLANDI (uygulama derlenmemiş)"
     exit 0
 fi
 
@@ -63,7 +63,7 @@ JSON
 cd "$kok"
 
 set +e
-cikti="$(KENTOS_DATA="$kok/data" KENTOS_LAYER_PROBE=1 \
+cikti="$(PIRICAD_DATA="$kok/data" PIRICAD_LAYER_PROBE=1 \
          "$exe" --betik "$gecici/sahne.json" 2>/dev/null)"
 rc=$?
 set -e

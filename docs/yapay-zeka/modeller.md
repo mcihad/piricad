@@ -154,7 +154,7 @@ PostGIS yolu `~/.pgpass` ile zaten kullanır. Böyle bir yapıda anahtar **kayde
 ve program bunu söyler:
 
 ```text
-Bu yapıda sistem anahtar deposu yok (KENTOS_WITH_KEYCHAIN kapalı), bu yüzden anahtar
+Bu yapıda sistem anahtar deposu yok (PIRICAD_WITH_KEYCHAIN kapalı), bu yüzden anahtar
 kaydedilemez. Anahtarı bir ortam değişkeninde tutun: deepseek ya da DEEPSEEK_API_KEY
 değişkenini ayarlayıp programı yeniden başlatın.
 ```

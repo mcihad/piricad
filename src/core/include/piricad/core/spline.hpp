@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: a NURBS curve.
+// PiriCAD — core: a NURBS curve.
 //
 // A spline is its CONTROL POINTS, its degree and its knots; what is drawn is a
 // picture of them. Ring 0 holds the control points, ring 1 (when the source had
@@ -15,15 +15,15 @@
 // determinism (CLAUDE.md Article 9, the hand-rolled exception, stated here).
 #pragma once
 
-#include "kentos_cad/core/geometry.hpp"
-#include "kentos_cad/core/result.hpp"
-#include "kentos_cad/core/units.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/result.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <span>
 #include <vector>
 
-namespace kentos::core {
+namespace piricad::core {
 
 /// One nano-unit: knots and weights are stored as value × 10⁹.
 inline constexpr std::int64_t kNano = 1'000'000'000;
@@ -82,4 +82,4 @@ void spline_points(std::span<const Point2> controls, const SplineDef& def, int s
 bool spline_outline(const RingGeometry& geom, std::uint32_t slot, std::vector<Mm>& xs,
                     std::vector<Mm>& ys);
 
-} // namespace kentos::core
+} // namespace piricad::core

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "kentos_cad/io/pdf_encrypt.hpp"
+#include "piricad/io/pdf_encrypt.hpp"
 
-#if KENTOS_HAVE_QPDF
+#if PIRICAD_HAVE_QPDF
 #include <qpdf/QPDF.hh>
 #include <qpdf/QPDFExc.hh>
 #include <qpdf/QPDFObjectHandle.hh>
@@ -10,18 +10,18 @@
 #include <exception>
 #endif
 
-namespace kentos::io {
+namespace piricad::io {
 
 bool pdf_encryption_available() noexcept
 {
-#if KENTOS_HAVE_QPDF
+#if PIRICAD_HAVE_QPDF
     return true;
 #else
     return false;
 #endif
 }
 
-#if KENTOS_HAVE_QPDF
+#if PIRICAD_HAVE_QPDF
 
 core::Status pdf_encrypt(const std::string& in, const std::string& out,
                          const PdfEncryption& options)
@@ -88,16 +88,16 @@ core::Result<bool> pdf_is_encrypted(const std::string& path)
 core::Status pdf_encrypt(const std::string&, const std::string&, const PdfEncryption&)
 {
     return core::err(core::ErrorCode::Unsupported,
-                     "Bu yapı PDF şifrelemeyi içermiyor (KENTOS_WITH_QPDF kapalı ya da qpdf "
+                     "Bu yapı PDF şifrelemeyi içermiyor (PIRICAD_WITH_QPDF kapalı ya da qpdf "
                      "bulunamadı). PDF şifresiz yazılabilir.");
 }
 
 core::Result<bool> pdf_is_encrypted(const std::string&)
 {
     return core::err(core::ErrorCode::Unsupported,
-                     "Bu yapı PDF şifrelemeyi içermiyor (KENTOS_WITH_QPDF).");
+                     "Bu yapı PDF şifrelemeyi içermiyor (PIRICAD_WITH_QPDF).");
 }
 
 #endif
 
-} // namespace kentos::io
+} // namespace piricad::io
