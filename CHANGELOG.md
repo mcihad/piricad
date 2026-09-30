@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — DWG'de çok yüzlü ağ yarısı kayıp, yarısı okunmuş sayılıyordu
+
+- **`POLYLINE_PFACE` okunmuyordu.** Çok yüzlü ağ "desteklenmeyen tür" olarak
+  bildirilirken `VERTEX_PFACE` köşeleri ve `VERTEX_PFACE_FACE` yüz kayıtları
+  sessizce yutuluyordu — "poliçizgisinin parçası olarak zaten okundu" denilen
+  zincirin sahibi hiç okunmuyordu. Artık her yüzü, 3DFACE'in çevrildiği kapalı
+  bir **alan** olarak gelir; köşeler ve yüzler sahibin tanıtıcı zincirinden
+  (2004 öncesinde nesne akışından) okunur. Kırık yüz kaydı — listesinin dışını
+  işaret eden — adıyla bildirilir, yarım okunmaz.
+- **`POLYLINE_MESH` artık dürüstçe kayıp sayılıyor.** Tel kafes yüzeyine bu
+  programın bir türü yoktur; DXF okuyucu da aynı gerekçeyle reddediyor. Önceden
+  sahibi "desteklenmeyen tür" diye sayılırken köşeleri kayıp bile sayılmıyordu;
+  şimdi `VERTEX_MESH` köşeleriyle birlikte adıyla bildirilir.
+
 ### Değişti — programın adı yeniden PiriCAD
 
 Program bir süre `KentOSCad` adıyla anıldı; görünen ad, bütün tanımlayıcılar,

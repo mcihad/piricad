@@ -56,7 +56,8 @@ ve projenin GPLv3 lisansıyla bağdaşmaz.
 |---|---|
 | `LINE`, `LWPOLYLINE` (kapalıysa **alan**) | Bloklar (`INSERT`) — parçalanmadan atlanır |
 | `POLYLINE` — eski usul çoklu çizgi, kapalıysa **alan** | Ölçülendirme (`DIMENSION`) |
-| `POINT` — nirengi, poligon noktası, röper | Tarama (`HATCH`) |
+| `POLYLINE_PFACE` — çok yüzlü ağ; her yüzü ayrı bir **alan** olarak | Tarama (`HATCH`) |
+| `POINT` — nirengi, poligon noktası, röper | Ağ (`POLYLINE_MESH`) — tel kafese türümüz yok; köşeleriyle birlikte adıyla bildirilir |
 | `TEXT` — ada ve parsel numaraları, yüksekliğiyle | Kâğıt alanı (layout) — çizim değildir, alınmaz |
 | `CIRCLE` ve `ARC` — **gerçek daire ve yay olarak**, çizgiye bölünmeden | Katman rengi ve çizgi tipi |
 | Katman adları ve her katmandaki nesne sayısı | |
@@ -75,6 +76,10 @@ Daire ve yay her iki yolda da **gerçek daire ve yay** olarak gelir. DWG yolunda
 LibreDWG onları öyle verir; DXF yolunda libdxfrw da öyle verir. Yalnız libdxfrw
 kapalı derlenmiş bir yapıda GDAL çizgi parçalarına böler ve PiriCAD merkezle
 yarıçapı geri kurar — nasıl olduğu aşağıda.
+
+Çok yüzlü ağ (`POLYLINE_PFACE`) da aynı sahip-li zincirden okunur: köşeler ve
+yüz kayıtları sahibinin ardında ayrı nesneler olarak durur ve her yüz, 3DFACE'in
+çevrildiği şey olan kapalı bir **alan** olarak gelir.
 
 ### Netcad NCZ okunur, yazılmaz
 

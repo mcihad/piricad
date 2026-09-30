@@ -316,16 +316,107 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             break;
         }
 
+        // A POLYLINE_PFACE is a polyface mesh: a bag of faces over one shared
+        // vertex list, and in plan view it is a bag of 3DFACEs — every face a
+        // closed run, an AREA when three or more corners are distinct, which is
+        // exactly the translation the DXF path gives 3DFACE, SOLID and TRACE.
+        // Unhandled, the mesh fell through to `default:` below and was named a
+        // loss while its vertices were swallowed by the "NOT LOSSES" cases
+        // claiming their polyline had already read them — one half miscounted,
+        // the other half untrue.
+        case DWG_TYPE_POLYLINE_PFACE: {
+            const Dwg_Entity_POLYLINE_PFACE* e = obj->tio.entity->tio.POLYLINE_PFACE;
+            if (e == nullptr) break;
+
+            // THE OWNED CHAIN, which for a pface has no flat getter. The points
+            // are VERTEX_PFACE objects and the faces VERTEX_PFACE_FACE index
+            // records, the run closed by a SEQEND. The handle array is taken
+            // when the version resolved one; the walk forward through the object
+            // stream — owner, its vertices, its faces, SEQEND — is what every
+            // version writes and is the fallback, the split LibreDWG's own
+            // polyline getters make. R18/P6: the header's numverts/numfaces are
+            // hints and are not read at all, and num_owned is believed only
+            // while it can name a real object.
+            std::vector<core::Point2> verts;
+            std::vector<std::array<BITCODE_BSd, 4>> faces;
+
+            const auto take = [&](const Dwg_Object* v) {
+                if (v == nullptr || v->supertype != DWG_SUPERTYPE_ENTITY || v->tio.entity == nullptr)
+                    return false;
+
+                if (v->fixedtype == DWG_TYPE_VERTEX_PFACE) {
+                    if (const Dwg_Entity_VERTEX_PFACE* p = v->tio.entity->tio.VERTEX_PFACE)
+                        verts.push_back(mm(p->point.x, p->point.y));
+                    return true; // a vertex that did not parse still keeps the chain alive
+                }
+                if (v->fixedtype == DWG_TYPE_VERTEX_PFACE_FACE) {
+                    if (const Dwg_Entity_VERTEX_PFACE_FACE* f =
+                            v->tio.entity->tio.VERTEX_PFACE_FACE)
+                        faces.push_back(
+                            {f->vertind[0], f->vertind[1], f->vertind[2], f->vertind[3]});
+                    return true;
+                }
+                return false; // a SEQEND, or another object's: the chain is over
+            };
+
+            const BITCODE_BL owned =
+                (e->vertex != nullptr && e->num_owned > 0 && e->num_owned <= dwg.num_objects)
+                    ? e->num_owned
+                    : 0;
+            if (owned > 0)
+                for (BITCODE_BL v = 0; v < owned; ++v)
+                    take(::dwg_ref_object_silent(&dwg, e->vertex[v]));
+            else
+                for (const Dwg_Object* v = ::dwg_next_object(obj); v != nullptr;
+                     v                = ::dwg_next_object(v))
+                    if (!take(v)) break;
+
+            bool any = false;
+            for (const std::array<BITCODE_BSd, 4>& f : faces) {
+                // THE INDICES ARE 1-BASED positions in the vertex list, 0
+                // marking an unused corner. One that points outside the list is
+                // a broken record, and the face is a named loss rather than a
+                // partly-read shape (P13).
+                bool broken = false;
+                points.clear();
+                for (const BITCODE_BSd index : f) {
+                    if (index == 0) continue;
+                    if (index < 0 || static_cast<std::size_t>(index) > verts.size()) {
+                        broken = true;
+                        break;
+                    }
+                    const core::Point2& p = verts[static_cast<std::size_t>(index - 1)];
+                    if (points.empty() || points.back() != p) points.push_back(p);
+                }
+                if (broken) {
+                    ++skipped["VERTEX_PFACE_FACE"];
+                    continue;
+                }
+                any = add_run(true) || any;
+            }
+            if (!any) ++skipped[obj->name != nullptr ? obj->name : "?"];
+            break;
+        }
+
         // NOT LOSSES. A `VERTEX` belongs to the `POLYLINE` that owns it and a
-        // `SEQEND` only marks where the run stops; both were already read, above,
-        // as part of their polyline. Counting them as unsupported would have the
-        // report announce 162 067 dropped objects for a file that dropped none.
+        // `SEQEND` only marks where the run stops; all of them were already
+        // read, above, as part of their polyline — the 2D/3D pair through
+        // LibreDWG's getters and the pface pair through the handle chain.
+        // Counting them as unsupported would have the report announce 162 067
+        // dropped objects for a file that dropped none.
         case DWG_TYPE_VERTEX_2D:
         case DWG_TYPE_VERTEX_3D:
-        case DWG_TYPE_VERTEX_MESH:
         case DWG_TYPE_VERTEX_PFACE:
         case DWG_TYPE_VERTEX_PFACE_FACE:
         case DWG_TYPE_SEQEND: break;
+
+        // A MESH VERTEX, BY CONTRAST, IS A LOSS: its owner, POLYLINE_MESH, is
+        // below in `default:` — a surface wireframe this program has no kind
+        // for, the same decline the DXF reader gives one — and swallowing the
+        // vertices here would let a mesh look read while nothing of it was.
+        case DWG_TYPE_VERTEX_MESH:
+            ++skipped[obj->name != nullptr ? obj->name : "?"];
+            break;
 
         case DWG_TYPE_POINT: {
             const Dwg_Entity_POINT* e = obj->tio.entity->tio.POINT;
