@@ -47,6 +47,7 @@
 #include <QString>
 
 class QLabel;
+class QScrollArea;
 
 namespace kentos::app {
 
@@ -60,6 +61,9 @@ class CheckBox;
 class ComboBox;
 class Field;
 class Segment;
+
+/// The sheet, drawn on a pasteboard; see print_dialog.cpp.
+class PrintSheet;
 
 /// Collects the arguments of a plot, shows the sheet, and runs `YAZDIR`.
 class PrintDialog : public DialogFrame
@@ -94,8 +98,17 @@ signals:
     void reaimRequested();
 
 private:
-    /// Builds the sheet on the left and the compact form on the right.
+    /// Builds the sheet on the left, the settings column on the right and the
+    /// command strip under both.
     void build();
+
+    /// Draws the sheet again at the size the preview now has.
+    void renderSheet();
+
+    /// Shows or hides one of the column's folded groups by its state, turns
+    /// its chevron to say which, and shows the note that stands for its rows
+    /// only while they are shut.
+    void fold(QWidget* rows, Button* toggle, QLabel* note, bool open);
 
     /// The profile the chooser names, or the default one.
     io::PrintProfile chosen() const;
@@ -138,8 +151,12 @@ private:
     Controller& controller_;
     core::Box2 window_{};
 
-    QLabel* sheet_{nullptr}; ///< the preview image
-    QLabel* paper_{nullptr}; ///< `A3 420×297 mm yatay · 150 dpi · kenar 5 mm`
+    PrintSheet* sheet_{nullptr};   ///< the preview, on its pasteboard
+    QString drawnFor_;             ///< what the preview's picture was drawn for
+    QScrollArea* column_{nullptr}; ///< the settings column, which scrolls
+    QLabel* paper_{nullptr};       ///< `A3 yatay, 420 × 297 mm` over `150 dpi, kenar payı 5 mm`
+    QLabel* ground_{nullptr};      ///< `250.0 × 364.5 m`: what the sheet covers
+    QLabel* summary_{nullptr};     ///< under the sheet: paper, scale and ground in one line
     ComboBox* profile_{nullptr};
 
     /// THE SHEET'S PLACE. Both open on what the frame captured — its centre and
@@ -153,6 +170,12 @@ private:
     /// 1:200 — and is hidden when the scale is already one. Pressing it types
     /// the round figure, so the area grows where the user can see it grow.
     Button* round_{nullptr};
+
+    /// Which of the two ways of saying the area is in force, in words — the
+    /// command line says it too, as `pencere=` or `merkez= olcek=` — and the
+    /// way back to the frame's own box once a scale or a centre was typed.
+    QLabel* aimNote_{nullptr};
+    Button* backToFrame_{nullptr};
 
     /// The last values this window itself put in the two fields, so an edit can
     /// be told from a field that was only passed through. See `fromFrame`.
@@ -170,6 +193,19 @@ private:
     Field* password_{nullptr};
     Field* ownerPassword_{nullptr};
     QWidget* permissions_{nullptr};
+
+    /// The two groups a plot rarely needs, folded until opened: the PDF's
+    /// title and author, and its password.
+    QWidget* documentRows_{nullptr};
+    QWidget* protectRows_{nullptr};
+    Button* documentToggle_{nullptr};
+    Button* protectToggle_{nullptr};
+    QLabel* documentNote_{nullptr};
+    QLabel* protectNote_{nullptr};
+    QWidget* documentGroup_{nullptr};
+    QWidget* protectGroup_{nullptr};
+    bool documentOpen_{false};
+    bool protectOpen_{false};
     CheckBox* allowPrint_{nullptr};
     CheckBox* allowCopy_{nullptr};
     CheckBox* allowModify_{nullptr};

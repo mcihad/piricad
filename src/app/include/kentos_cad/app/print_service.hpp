@@ -77,8 +77,10 @@ public:
                                 std::int64_t scale);
 
     /// The sheet as an image no wider or taller than `max_px`, for the preview.
-    /// White paper, the printable area drawn through the render pipeline, a
-    /// hairline where the margin is.
+    /// White paper and the printable area drawn through the render pipeline —
+    /// the ink the plot puts down and nothing else. The margin is the preview
+    /// window's to mark, as a guide: drawn into the picture it read as a frame
+    /// the plot would print.
     static QImage renderPreview(const core::Document& document, const io::PrintProfile& profile,
                                 core::Box2 window, int max_px);
 

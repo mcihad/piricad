@@ -449,6 +449,22 @@ QString themeStyleSheet(ThemeMode mode)
         QLabel#layoutCursor              { background: transparent; color: %(readout)s;
                                            font-family: "IBM Plex Mono"; font-size: 11px; }
 
+        /* ---- print window ------------------------------------------------- */
+        /* The layout designer's manners, so the two windows that put a sheet
+         * on paper read as one program: the pasteboard, the settings column
+         * with a hard edge against it, the line under the sheet in the
+         * darkest strip, and the command in a band of its own over the
+         * footer. */
+        QWidget#printColumn              { background: %(window)s;
+                                           border-left: 1px solid %(lineHard)s; }
+        QLabel#printSummary              { background: %(strip)s; color: %(textDim)s;
+                                           border-top: 1px solid %(lineHard)s;
+                                           padding: 0px 16px; font-size: 11px; }
+        QLabel#printReading              { background: transparent; color: %(readout)s;
+                                           font-family: "IBM Plex Mono"; font-size: 12px; }
+        QWidget#printCommandStrip        { background: %(window)s;
+                                           border-top: 1px solid %(lineHard)s; }
+
         /* ---- style designer, §8 -------------------------------------------- */
         /*
          * THE SAME LANGUAGE THE TABLES SPEAK. The lists in this window were

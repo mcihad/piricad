@@ -34,50 +34,67 @@ istiyorsanız bu sayıları önizleme penceresinde elle de yazabilirsiniz.
 
 ## Önizleme penceresi
 
-Solda **kâğıdın kendisi** durur: aynı semboloji, aynı çizgi kalınlıkları, profilin
-çözünürlüğünde. Ekranda gördüğünüz çıkan kâğıttır. Altında kâğıdın ölçüleri ve o
-kâğıdın zeminde kapladığı yer yazılıdır.
+Pencerenin büyük bölümünü **kâğıdın kendisi** kaplar: aynı semboloji, aynı çizgi
+kalınlıkları, profilin çözünürlüğünde. Ekranda gördüğünüz çıkan kâğıttır. Kesik çizgi
+profilin **kenar payını**, mavi **+** işareti kâğıdın **merkezini** gösterir; ikisi de
+yalnız ekrandadır, kâğıda basılmaz. Kâğıdın altındaki satır ölçeği, kâğıdı ve kâğıdın
+zeminde kapladığı yeri tek cümlede söyler: `1:1316 ölçekte A4 dikey kâğıt, zeminde
+250.0 × 364.5 m`.
 
-Sağda dört şey vardır:
+Sağdaki sütun seçimleri yapılış sırasıyla gruplar:
 
-- **Profil** — hangi kâğıt, hangi yön, hangi çözünürlük, hangi kenar boşluğu.
-  Kâğıdın bütün ölçüleri **yalnız burada** durur; altındaki **Profilleri yönet…**
-  bağlantısı `Seçenekler ▸ Plot ve Çıktı`'yı açar.
-- **Ölçek** — `1 : N`. **Çerçevenin kendi ölçeğiyle gelir**, yuvarlanmadan: kâğıda
-  giren alan, çerçevede gördüğünüz alanın tam olarak kendisidir. Yanındaki
-  **Yuvarla** düğmesi ölçeği bir pafta ölçeğine çıkarır (1/184 → 1/200) — bunu
-  siz istersiniz, pencere kendi başına yapmaz, çünkü ölçeği büyütmek kâğıda
-  çerçevenin dışını da sokar. Düğme, ölçek zaten yuvarlaksa görünmez. İstediğiniz
-  değeri elle de yazabilirsiniz: 1/1000 bir karardır, çerçevenin rastgele düştüğü
-  yer değil.
-- **Merkez** — kâğıdın ortalandığı nokta, `Y,X` metre olarak. Yanındaki nişan
-  düğmesi önizlemeyi kapatıp çerçeveyi yeniden açar, yani "yeniden nişan alayım"
-  demektir.
-- **Çıktı** — **PDF** ya da **Yazıcı**.
+- **Kâğıt** — **Profil** listesi kâğıdı seçer: hangi boy, hangi yön, hangi
+  çözünürlük, hangi kenar payı. Altında seçilen profilin ne dediği yazılıdır.
+  Kâğıdın bütün ölçüleri **yalnız profilde** durur; **Profilleri düzenle…**
+  `Seçenekler ▸ Plot ve Çıktı`'yı açar.
+- **Ölçek ve konum**
+  - **Ölçek 1 :** — **Çerçevenin kendi ölçeğiyle gelir**, yuvarlanmadan: kâğıda
+    giren alan, çerçevede gördüğünüz alanın tam olarak kendisidir. Ölçek bir pafta
+    ölçeği değilse altında **1:2000 ölçeğine yuvarla** gibi bir düğme çıkar; basınca
+    ölçek bir üstteki pafta ölçeğine çıkar (1, 2, 2,5 ya da 5 çarpı 10'un bir kuvveti:
+    1/200, 1/500, 1/1000, 1/2500…). Bunu siz istersiniz, pencere kendi başına yapmaz,
+    çünkü ölçeği büyütmek kâğıda çerçevenin dışını da sokar. İstediğiniz değeri elle
+    de yazabilirsiniz: 1/1000 bir karardır, çerçevenin rastgele düştüğü yer değil.
+  - **Merkez (Y, X)** — kâğıdın ortalandığı nokta, `Y,X` metre olarak. Yanındaki nişan
+    düğmesi önizlemeyi kapatıp çerçeveyi yeniden açar, yani "yeniden nişan alayım"
+    demektir.
+  - **Zeminde** — kâğıdın zeminde kapladığı alan, metre olarak.
 
-Altta pencerenin göndereceği **komut satırı** yazılıdır. Kartta ne görüyorsanız
-komut satırına yazılacak olan odur; kopyalayıp bir betiğe koyabilirsiniz
-([`YAZDIR`](../komutlar/print.md)).
+  Altındaki satır alanı hangisinin belirlediğini söyler: **Çerçevenin tuttuğu alan
+  basılır.** ya da **Alanı merkez ve ölçek belirliyor.** İkinci durumda
+  **Çerçeveye dön** düğmesi yazdığınız ölçeği ve merkezi bırakır; kâğıda yeniden
+  çerçevenin alanı gider.
+- **Hedef** — **PDF** ya da **Yazıcı**. PDF'te **Dosya**, yazıcıda **Yazıcı** satırı
+  görünür.
+- **Belge bilgileri** ve **Koruma** — yalnız PDF'te görünür ve kapalı gelir, çünkü çoğu
+  çıktı onlara ihtiyaç duymaz. Başlığın yanındaki not, grup kapalıyken içinde ne
+  olduğunu söyler (`boş`, başlığın kendisi, `şifresiz`, `şifreli`); sağdaki ok grubu
+  açar ve kapatır.
 
-Bu satır aynı zamanda **alanın hangi biçimde gittiğini** söyler. Ölçeğe ve merkeze
+Altta, pencerenin bütün genişliğinde **Komut** şeridi durur: pencerenin göndereceği
+satır. Pencerede ne görüyorsanız komut satırına yazılacak olan odur; kopyalayıp bir
+betiğe koyabilirsiniz ([`YAZDIR`](../komutlar/print.md)). **Yazdır** düğmesi bu satırı
+gönderir; PDF'e bir dosya adı verilene kadar satır boştur ve düğme kapalı durur.
+
+Bu satır da **alanın hangi biçimde gittiğini** söyler. Ölçeğe ve merkeze
 dokunmadıysanız satır çerçevenin iki köşesini taşır — `pencere=… pencere=…` — yani
-kâğıda giden alan çerçevenin alanıdır. Ölçek ya da merkez yazdığınız (veya
-**Yuvarla**'ya bastığınız) anda satır `merkez=… olcek=…` olur: artık alanı o ikisi
-belirler, çerçeve geride kalır. Sol taraftaki kâğıt her iki durumda da gerçekten
-gidecek olanı gösterir.
+kâğıda giden alan çerçevenin alanıdır. Ölçek ya da merkez yazdığınız (veya yuvarlama
+düğmesine bastığınız) anda satır `merkez=… olcek=…` olur: artık alanı o ikisi
+belirler, çerçeve geride kalır. Soldaki kâğıt her iki durumda da gerçekten gidecek
+olanı gösterir.
 
 ## PDF
 
-**Dosya** alanına yolu yazın ya da **Gözat…** ile seçin. **Başlık** ve **Yazar**
-PDF'in kendi alanlarına yazılır.
+**Dosya** alanına yolu yazın ya da yanındaki klasör düğmesiyle (**Gözat…**) seçin.
+**Belge bilgileri** grubundaki **Başlık** ve **Yazar** PDF'in kendi alanlarına yazılır.
 
-**Şifreleme** iki şifre ve üç izinden oluşur:
+**Koruma** grubu iki şifre ve üç izinden oluşur:
 
 | Alan | Ne yapar |
 |---|---|
-| **Şifre** | PDF'i açmak için istenir. Boşsa dosya şifresizdir |
+| **Açma şifresi** | PDF'i açmak için istenir. Boşsa dosya şifresizdir |
 | **Sahip şifresi** | İzinleri değiştirmek için istenir; boşsa açma şifresiyle aynıdır |
-| **Yazdır / Kopyala / Değiştir** | Sahip şifresini bilmeyen bir okuyucunun yapabilecekleri |
+| **Yazdırılabilir / Kopyalanabilir / Değiştirilebilir** | Sahip şifresini bilmeyen bir okuyucunun yapabilecekleri |
 
 Şifreleme **AES-256** ile yapılır. İzinler yalnız bir şifre verildiğinde anlam
 taşır, bu yüzden şifre kutuları boşken kapalı durur.
@@ -118,6 +135,7 @@ Dosyanın yolu ayarlar sayfasının altında yazılıdır.
 | **Enter** | Çerçeve açıkken görüntüyü yakalar |
 | **Esc** | Çerçeveyi kapatır; önizleme penceresini kapatır |
 | **Tab** | Önizlemede alanlar arasında gezer |
+| **Boşluk** | Odaktaki grup okunda grubu açar ya da kapatır |
 | **F4** / **Alt+↓** | Merkez alanında çerçeveyi yeniden açar |
 
 ## İlgili

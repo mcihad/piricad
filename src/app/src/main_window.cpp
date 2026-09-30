@@ -545,8 +545,14 @@ MainWindow::MainWindow(QWidget* parent)
     // changed the value for that run and lost it while the same line from the
     // menu survived. Now every client's write persists, because none of them
     // does it — this does (Article 1.2).
+    //
+    // EXCEPT IN A PROBE RUN, for the reason the destructor gives: on macOS
+    // `QSettings` writes through CFPreferences, which test mode does not
+    // redirect, so a probe that switched the theme to photograph it switched
+    // the person's own theme — and the next `render-desen` measured a dark
+    // shell around the pattern it was looking for.
     controller_->bus().on_settings_changed = [this](core::SettingScope scope) {
-        if (scope == core::SettingScope::App) savePreferences();
+        if (scope == core::SettingScope::App && !isProbeRun()) savePreferences();
     };
 
     loadSymbolLibrary();
@@ -12084,12 +12090,18 @@ QString MainWindow::probePrintLine(core::Box2 box, const QString& profile, const
     // AN OUTPUT, because a preview with nowhere to write says nothing: the line
     // is deliberately empty until the plot has a destination, and this probe is
     // reading the line.
-    if (auto* file = dialog.findChild<Field*>(QStringLiteral("printPdfPath"))) file->setValue(pdf);
+    //
+    // FOUND BY THE NAME A SCREEN READER SPEAKS, not by an object name: a
+    // component's object name is its role, the name the stylesheet draws it by,
+    // and the path field renamed for this probe lost its box on screen.
+    for (Field* file : dialog.findChildren<Field*>())
+        if (file->accessibleName() == PrintDialog::tr("PDF dosyası")) file->setValue(pdf);
     if (round) {
         // PRESSED, not called: the probe reaches the button the way a hand does,
         // so a button that is there but unreachable fails here.
-        if (auto* offer = dialog.findChild<Button*>(QStringLiteral("printRoundScale")))
-            offer->click();
+        for (Button* offer : dialog.findChildren<Button*>())
+            if (offer->accessibleName() == PrintDialog::tr("Ölçeği pafta ölçeğine yuvarla"))
+                offer->click();
     }
     return dialog.commandLine();
 }

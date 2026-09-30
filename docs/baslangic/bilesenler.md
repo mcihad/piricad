@@ -48,6 +48,11 @@ zemini yoktur; üzerine gelince zemini belirir, basılı bir araçsa (örneğin 
 Yerleşimi Tasarımcısı'nda seçili öğe aracı) mavi kenar ve dolgu taşır. Yan yana
 yirmi çerçeveli kare bir araç çubuğu değil, bir kutu ızgarasıdır.
 
+Aynı biçim **katlanan bir grubun** başlığında da durur. Oku grubun gideceği yeri
+gösterir: grup kapalıyken aşağı, açıkken yukarı bakar. Kapalı bir grubun başlığının
+yanındaki soluk not, içinde ne olduğunu söyler. Yazdır penceresindeki **Belge
+bilgileri** ve **Koruma** grupları böyledir.
+
 Menü açan bir düğmenin sağında küçük bir ok vardır; ok yazıya yazılmaz, düğme çizer.
 Katman Özellikleri penceresindeki `Stil` düğmesi böyledir.
 
@@ -240,6 +245,7 @@ bir not — `TAKBİS'ten çekildi · 14.03.2019` — vardır.
 | **Öznitelik Tablosu** | tablo, ifade çubuğu, `Tablo \| Form` segmenti, birincil `Filtrele`, hücre içi girdiler |
 | **Yeni Sütun** | üstte etiketli form satırları, zorunlu işaretleri, birincil `Tanımla` |
 | **İçe Aktar** | ikincil `Gözat…`, yükleme çizgisi, birincil `İleri` |
+| **Yazdır** | açılır liste (profil), sayı ve nokta girdileri, ikincil `… ölçeğine yuvarla`, hayalet `Çerçeveye dön`, `PDF \| Yazıcı` segmenti, katlanan gruplar, şifre kutuları, onay kutuları, ikincil `İptal`, birincil `Yazdır` |
 | **Veritabanı** | bölüm başlıkları, etiketi üstte alanlar, birincil `Bağlan`, hayalet `Yenile`, yıkıcı `Projeyi Sil` |
 | **Yapay Zeka** paneli | döküm, ileti balonu, düşünme göstergesi, ek pençesi, bağlam ölçeri, açılır liste (model seçimi), ikon düğmeler (`Dosya ekle`, `Yeni sohbet`), ikincil `Dur`, birincil `Gönder` |
 | **Öneri kartı** | kesikli çerçeve, `ÖNERİ` rozeti, tek aralıklı komut satırları, uyarı şeridi (çizim değiştiyse), ikincil `Reddet`, birincil `Uygula` |

@@ -1216,17 +1216,9 @@ void LayoutCanvas::paintEvent(QPaintEvent*)
     }
 
     // A SHADOW UNDER THE SHEET: the one piece of chrome that says "this is
-    // paper on a table" without a word. Three falling passes rather than one
-    // hard offset — a single 40% rectangle reads as a second sheet behind the
-    // first. SAVED AND RESTORED: `paint_layout_page` draws into the painter it
-    // is handed, and a brush left set here filled every parcel on the preview.
-    p.save();
-    p.setPen(Qt::NoPen);
-    for (const auto& [drop, alpha] : {std::pair{8.0, 14}, std::pair{5.0, 20}, std::pair{2.0, 30}}) {
-        p.setBrush(QColor(0, 0, 0, alpha));
-        p.drawRect(box.adjusted(-drop + 2, -drop + 5, drop + 2, drop + 5));
-    }
-    p.restore();
+    // paper on a table" without a word — the print window's sheet wears the
+    // same one (`paint_paper_shadow`).
+    paint_paper_shadow(p, box);
 
     paintSheet(p, box);
     p.setBrush(Qt::NoBrush);
@@ -2411,11 +2403,20 @@ QWidget* LayoutDesigner::row(const QString& caption, QWidget* editor)
 
 void LayoutDesigner::help(const QString& text)
 {
-    auto* said = new QLabel(text, properties_);
+    // UNDER THE VALUE IT EXPLAINS, BY A LAYOUT'S MARGIN and not the label's
+    // own. A `QLabel` is a `QFrame`, and a frame works its contents margins out
+    // again from its frame widths whenever the style reaches it while it is
+    // narrower than those margins — which every label is before its first
+    // layout pass. The indent was lost at the first polish, and every help
+    // line sat under the captions instead.
+    auto* holder = new QWidget(properties_);
+    auto* line   = new QHBoxLayout(holder);
+    line->setContentsMargins(kCaption + 6, 0, 0, 2);
+    auto* said = new QLabel(text, holder);
     said->setObjectName(QStringLiteral("formHelp"));
     said->setWordWrap(true);
-    said->setContentsMargins(kCaption + 6, 0, 0, 2);
-    propertyColumn_->addWidget(said);
+    line->addWidget(said);
+    propertyColumn_->addWidget(holder);
 }
 
 QWidget* LayoutDesigner::mmEditor(core::Um value, const char* name, const QString& spoken,

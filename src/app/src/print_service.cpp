@@ -281,10 +281,6 @@ QImage PrintService::renderPreview(const core::Document& document, const io::Pri
     sheet.fill(Qt::white);
     QPainter p(&sheet);
     p.drawImage(QPoint(margin_px, margin_px), paint);
-    // The margin as a hairline, so the printable area reads as such.
-    p.setPen(QPen(QColor(0, 0, 0, 40), 1.0));
-    p.setBrush(Qt::NoBrush);
-    p.drawRect(QRect(margin_px, margin_px, paint_w - 1, paint_h - 1));
     p.end();
     return sheet;
 }

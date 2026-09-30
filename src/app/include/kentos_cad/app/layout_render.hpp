@@ -79,6 +79,12 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
                        const core::Layout& layout, int page, double dpi, const LayoutFacts& facts,
                        bool margin_guide = false, std::vector<std::string>* trouble = nullptr);
 
+/// The shadow a sheet casts on the pasteboard under it, painted before the
+/// sheet: one look for every window that shows paper on a table — the layout
+/// designer's page and the print window's sheet — so the two read as the same
+/// paper. `paper` is in the painter's own coordinates.
+void paint_paper_shadow(QPainter& painter, const QRectF& paper);
+
 /// The text a label prints, with its placeholders resolved.
 QString resolve_placeholders(const QString& text, const core::Layout& layout,
                              const core::LayoutItem* map, const LayoutFacts& facts);

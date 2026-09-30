@@ -130,13 +130,16 @@ ve `Yukarı (X)` değerlerini gösterir. Çerçeve ekranda hep aynı boydadır: 
 içine daha az yer girer.
 
 **Yazdır**'a ikinci kez basmak (ya da **Enter**) o görüntüyü yakalar ve **önizleme
-penceresini** açar: solda kâğıdın kendisi, sağda profil, ölçek, merkez ve çıktı.
-**Kâğıda giden alan çerçevenin alanıdır** — pencere ölçeği kendi başına
-yuvarlamaz; satırı da çerçevenin iki köşesiyle gönderir
-(`pencere=… pencere=…`). Ölçeği ve merkezi elle yazabilirsiniz ya da ölçeğin
-yanındaki **Yuvarla** düğmesiyle bir pafta ölçeğine (1/184 → 1/200) çıkarabilirsiniz;
-o anda satır `merkez=… olcek=…` olur ve alanı artık bu ikisi belirler. Önizleme her
-iki durumda da gidecek olanı gösterir. **Esc** ya da **sağ tık** çerçeveyi kapatır.
+penceresini** açar: solda kâğıdın kendisi, sağda kâğıt, ölçek ve konum, hedef; altta
+gönderilecek komut satırı. **Kâğıda giden alan çerçevenin alanıdır** — pencere ölçeği
+kendi başına yuvarlamaz; satırı da çerçevenin iki köşesiyle gönderir
+(`pencere=… pencere=…`). Ölçeği ve merkezi elle yazabilirsiniz ya da ölçeğin altındaki
+**1:200 ölçeğine yuvarla** gibi düğmeyle bir pafta ölçeğine (1/184 → 1/200)
+çıkarabilirsiniz; o anda satır `merkez=… olcek=…` olur ve alanı artık bu ikisi
+belirler. **Çerçeveye dön** yazdığınız ölçeği ve merkezi bırakıp çerçevenin alanına
+döner. Önizleme her iki durumda da gidecek olanı gösterir; pencerenin bütün alanları
+[Yazdırma ve PDF](../baslangic/yazdirma.md#önizleme-penceresi) sayfasında anlatılır.
+**Esc** ya da **sağ tık** çerçeveyi kapatır.
 
 Simgenin yanındaki küçük ok profilleri listeler: birine basmak o profille çerçeve
 açar, **Profilleri Yönet…** `Seçenekler ▸ Plot ve Çıktı`'yı açar.

@@ -3,18 +3,21 @@
 #include "kentos_cad/app/attribute_panel.hpp"
 #include "kentos_cad/app/command_line.hpp"
 #include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/app/fields.hpp"
 #include "kentos_cad/app/import_wizard.hpp"
 #include "kentos_cad/app/layout_designer.hpp"
 #include "kentos_cad/app/layout_render.hpp"
 #include "kentos_cad/app/main_window.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/panels.hpp"
+#include "kentos_cad/app/print_dialog.hpp"
 #include "kentos_cad/app/provider_dialog.hpp"
 #include "kentos_cad/app/ribbon.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/suggestion_card.hpp"
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/app/tokens.hpp"
+#include "kentos_cad/app/widgets.hpp"
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/core/circle.hpp"
 
@@ -1138,6 +1141,9 @@ int main(int argc, char** argv)
     // The same drawing and the same sheet every time, the window opened in its
     // working state, grabbed and put away — seconds, where the whole sequence
     // below takes minutes. Developer tooling, like the rest of this block.
+    // `KENTOS_SHOT_THEME=koyu` photographs the dark theme; the light one is set
+    // otherwise, so the theme a previous run left behind — `hakkinda` ends on
+    // the dark one — does not decide this one.
     if (const QByteArray only = qgetenv("KENTOS_WINDOW_SHOT"), shots = qgetenv("KENTOS_SHOT_DIR");
         !only.isEmpty() && !shots.isEmpty()) {
         const QString into = QString::fromLocal8Bit(shots);
@@ -1162,7 +1168,10 @@ int main(int argc, char** argv)
         };
         const QString dxf = into + QStringLiteral("/ornek-cizim.dxf");
 
-        later([&window, dxf] {
+        const bool shootDark = qgetenv("KENTOS_SHOT_THEME") == QByteArrayLiteral("koyu");
+        later([&window, dxf, shootDark] {
+            QMetaObject::invokeMethod(&window, "toggleTheme", Qt::DirectConnection,
+                                      Q_ARG(bool, shootDark));
             window.resize(1880, 1058);
             window.seedProbeDrawing();
             for (const char* line :
@@ -1198,6 +1207,65 @@ int main(int argc, char** argv)
             later([&window] { window.openPrintDialog(window.controller()->document().extent()); });
             later([shot] {
                 shot(QStringLiteral("pencere-yazdir"), QApplication::activeModalWidget());
+            });
+            // FILLED IN AS A HAND WOULD: a file named, the two folded groups
+            // opened and given a title, so the command line has its full say.
+            // Typed into the box and confirmed with Enter, the road `Field`
+            // reports an edit by.
+            later([] {
+                QWidget* top = QApplication::activeModalWidget();
+                if (top == nullptr) return;
+                const auto type = [top](const QString& spoken, const QString& text) {
+                    for (auto* field : top->findChildren<kentos::app::Field*>())
+                        if (field->accessibleName() == spoken)
+                            if (auto* line = field->findChild<QLineEdit*>(); line != nullptr) {
+                                field->setValue(text);
+                                QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                                QApplication::sendEvent(line, &enter);
+                            }
+                };
+                using kentos::app::PrintDialog;
+                for (auto* fold : top->findChildren<kentos::app::Button*>())
+                    if (fold->accessibleName() == PrintDialog::tr("Aç")) fold->click();
+                type(PrintDialog::tr("PDF dosyası"),
+                     QStringLiteral("/Users/harita/pafta-1284.pdf"));
+                type(PrintDialog::tr("Belge başlığı"), QStringLiteral("Kadastro paftası 1284"));
+                type(PrintDialog::tr("Yazar"), QStringLiteral("Harita Müdürlüğü"));
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-yazdir-acik"), QApplication::activeModalWidget());
+            });
+            // AND SENT TO A PRINTER, where the two PDF groups have no business.
+            later([] {
+                if (QWidget* top = QApplication::activeModalWidget(); top != nullptr)
+                    if (auto* target = top->findChild<kentos::app::Segment*>(); target != nullptr)
+                        target->setCurrent(1);
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-yazdir-yazici"), QApplication::activeModalWidget());
+            });
+            // AND ROUNDED, so the area is the centre and the scale and the way
+            // back to the frame shows.
+            later([] {
+                QWidget* top = QApplication::activeModalWidget();
+                if (top == nullptr) return;
+                if (auto* target = top->findChild<kentos::app::Segment*>(); target != nullptr)
+                    target->setCurrent(0);
+                for (auto* offer : top->findChildren<kentos::app::Button*>())
+                    if (offer->accessibleName() ==
+                        kentos::app::PrintDialog::tr("Ölçeği pafta ölçeğine yuvarla"))
+                        offer->click();
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-yazdir-yuvarlak"), QApplication::activeModalWidget());
+            });
+            // THE LEAST THE WINDOW ALLOWS, where a column that is cut shows first.
+            later([] {
+                if (QWidget* top = QApplication::activeModalWidget(); top != nullptr)
+                    top->resize(top->minimumSize());
+            });
+            later([shot] {
+                shot(QStringLiteral("pencere-yazdir-en-kucuk"), QApplication::activeModalWidget());
             });
             later(closeModal);
         }

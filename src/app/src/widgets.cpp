@@ -236,6 +236,13 @@ void Button::setBare(bool bare)
     restyle(this, "bare", bare);
 }
 
+void Button::setGlyph(Glyph glyph)
+{
+    if (!glyph_) setIconSize(QSize(kIconPx, kIconPx));
+    glyph_ = glyph;
+    refreshIcon();
+}
+
 void Button::refreshIcon()
 {
     if (!glyph_) return;
@@ -1361,8 +1368,7 @@ void MessageBubble::setReasoningOpen(bool open)
 {
     if (fold_ == nullptr) return;
     fold_->setVisible(open);
-    foldButton_->setIcon(icon(open ? Glyph::ChevronDown : Glyph::ChevronRight,
-                              tokensOf(theme_).textDim, tokensOf(theme_).accent, kIconPx));
+    foldButton_->setGlyph(open ? Glyph::ChevronDown : Glyph::ChevronRight);
 }
 
 bool MessageBubble::hasReasoning() const noexcept

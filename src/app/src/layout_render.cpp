@@ -830,6 +830,28 @@ QString resolve_placeholders(const QString& text, const core::Layout& layout,
         core::resolve_fields(text.toStdString(), sheet_context(layout, map, facts)));
 }
 
+void paint_paper_shadow(QPainter& painter, const QRectF& paper)
+{
+    // A SOFT FALL, TWELVE FAINT PASSES a pixel apart and lit from above: the
+    // dark gathers where they overlap, at the paper's edge, and thins out to
+    // nothing. Three passes several pixels apart drew three hard bands, which
+    // at a hundred per cent read as a grey frame round the sheet rather than
+    // as its shadow. SAVED AND RESTORED: a brush left set here fills whatever
+    // the caller draws next.
+    painter.save();
+    painter.setPen(Qt::NoPen);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setBrush(QColor(0, 0, 0, 5));
+    constexpr int kPasses   = 12;
+    constexpr double kLight = 3.0; // how far below the sheet the light puts it
+    for (int pass = kPasses; pass >= 1; --pass) {
+        const double spread = pass;
+        painter.drawRoundedRect(paper.adjusted(-spread, -spread + kLight, spread, spread + kLight),
+                                spread, spread);
+    }
+    painter.restore();
+}
+
 void paint_layout_page(QPainter& painter, const QRectF& target, const core::Document& document,
                        const core::Layout& layout, int page, double dpi, const LayoutFacts& facts,
                        bool margin_guide, std::vector<std::string>* trouble)

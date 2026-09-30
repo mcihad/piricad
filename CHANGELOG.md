@@ -6,6 +6,35 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — Yazdır penceresi yeniden kuruldu
+
+- Pencerenin büyük bölümünü kâğıdın kendisi kaplar: kâğıt kendi oranında, tasarımcının
+  kâğıdıyla aynı gölgeyle çizilir; kenar payı kesik bir kılavuzla, merkez mavi bir **+**
+  ile gösterilir, ikisi de basılmaz. Önizleme ekrandaki kâğıdın piksel sayısında çizilir
+  ve yalnız alan ya da kâğıt değişince yeniden çizilir. Altındaki satır ölçeği, kâğıdı
+  ve zeminde kapladığı yeri söyler.
+- Sağda tasarımcının denetçisiyle aynı "solda ad, sağda değer" sütunu: **Kâğıt**
+  (profil ve profilin ne dediği), **Ölçek ve konum**, **Hedef**. **Belge bilgileri** ve
+  **Koruma** yalnız PDF'te görünür, kapalı gelir ve kapalıyken ne taşıdıklarını
+  söyler.
+- Hangi alanın basılacağı artık satırda yazılıdır ("Çerçevenin tuttuğu alan
+  basılır." ya da "Alanı merkez ve ölçek belirliyor."); **Çerçeveye dön**
+  yazılan ölçeği ve merkezi bırakır. Yuvarlama düğmesi hangi ölçeğe yuvarlayacağını
+  söyler: **1:2000 ölçeğine yuvarla**.
+- Gönderilecek komut satırı pencerenin bütün genişliğinde, ayrı bir şeritte durur.
+- Pencere 1180 × 760 açılır; 940 × 620'ye kadar küçülür, sütun gerektiğinde kayar.
+
+### Düzeltildi — Yazdır penceresinde dosya kutusu, denetçide yardım satırları
+
+- Yazdır penceresinin **Dosya** kutusu çerçevesiz çiziliyordu; kutu artık öteki alanlar
+  gibi görünür.
+- Çıktı yerleşimi tasarımcısının denetçisindeki yardım satırları değer sütununun altına
+  değil, ad sütununun altına düşüyordu.
+- Kâğıdın gölgesi üç sert gri bant gibi görünüyordu; artık yumuşak bir gölgedir.
+- Ekran görüntüsü alan geliştirici koşuları (`KENTOS_SHOT_DIR` ve öteki problar) temayı
+  ya da başka bir tercihi değiştirdiğinde, macOS'ta kullanıcının kendi tercih dosyasına
+  yazıyordu. Prob koşuları artık hiçbir tercihi kalıcı olarak yazmaz.
+
 ### Eklendi — tablo öğesinde sütun yönetimi ve koordinat listesi
 
 - Yeni bir tablo **koordinat listesi** olarak gelir — `No`, `Sağa (Y)`, `Yukarı (X)`

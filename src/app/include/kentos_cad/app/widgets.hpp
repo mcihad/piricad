@@ -151,6 +151,12 @@ public:
     /// mode switch's pressed look: `--accent-wash` and `--accent-edge`.
     void setBare(bool bare);
 
+    /// Changes the glyph, for a button whose picture says a state: the chevron
+    /// of a fold points where its group will go. Kept across a theme change,
+    /// which a `setIcon` from outside was not — the button repaints its own
+    /// glyph in the new tones and the outside one was lost.
+    void setGlyph(Glyph glyph);
+
     void applyTheme(ThemeMode mode) override;
 
 protected:
