@@ -296,6 +296,26 @@ void paint_map(QPainter& painter, const QRectF& box, const core::Document& docum
 
 // ---------------------------------------------------------- the scale bar ---
 
+/// The longest round ground length — one, two or five times a power of ten —
+/// that is no longer than `limit`, in ground millimetres; 0 when even a
+/// millimetre is too long.
+///
+/// ROUNDED DOWN, and that is the whole point of it: the scale bar asked
+/// `grid_step_for`, which rounds UP because a grid wants the lines to fit
+/// inside the frame at least N times — and a bar sized that way came out up to
+/// two and a half times the width of its own box. On the default sheet at
+/// 1:625 a 133 mm box drew a 320 mm bar across the bottom of the page.
+core::Mm round_length_at_most(double limit)
+{
+    if (limit < 1.0) return 0;
+    double power = 1.0;
+    while (power * 10.0 <= limit)
+        power *= 10.0;
+    for (const double times : {5.0, 2.0})
+        if (times * power <= limit) return static_cast<core::Mm>(times * power);
+    return static_cast<core::Mm>(power);
+}
+
 void paint_scale_bar(QPainter& painter, const QRectF& box, const core::LayoutItem& item,
                      std::int64_t denominator, double px_per_paper_mm)
 {
@@ -303,39 +323,50 @@ void paint_scale_bar(QPainter& painter, const QRectF& box, const core::LayoutIte
 
     const int segments = std::clamp(item.style > 0 ? item.style : 4, 1, 10);
 
+    const QFont labels = font_at(item.text_height, px_per_paper_mm);
+    const QFontMetricsF metrics(labels);
+    const QString unit = QStringLiteral(" m   1:%1").arg(denominator);
+
     // A ROUND GROUND LENGTH PER SEGMENT, not the box divided by four: a bar
     // whose segment is 137 m is a bar nobody can measure with. The box is the
-    // most it may take; a round bar is shorter, and shorter is correct.
-    const double paper_mm_available  = mm_of(item.frame.w);
-    const double ground_mm_available = paper_mm_available * static_cast<double>(denominator);
-    const core::Mm per_segment =
-        grid_step_for(static_cast<core::Mm>(ground_mm_available / segments * 8.0));
+    // most it may take — THE BAR, ITS NUMBERS AND ITS UNIT TOGETHER — and a
+    // round bar is shorter, and shorter is correct. The "0" hangs half its
+    // width before the bar's start and the last number half its width after
+    // its end, with the unit after that; all of it is inside the frame.
+    const double px_per_ground_mm = px_per_paper_mm / static_cast<double>(denominator);
+    const double lead             = metrics.horizontalAdvance(QStringLiteral("0")) / 2.0;
+    const auto needs              = [&](core::Mm per_segment) {
+        const QString last = metres_of(per_segment * segments);
+        return lead + static_cast<double>(per_segment * segments) * px_per_ground_mm +
+               metrics.horizontalAdvance(last) / 2.0 + metrics.horizontalAdvance(unit);
+    };
+    core::Mm per_segment = round_length_at_most((box.width() - lead) / px_per_ground_mm / segments);
+    while (per_segment > 1 && needs(per_segment) > box.width())
+        per_segment = round_length_at_most(static_cast<double>(per_segment - 1));
     if (per_segment <= 0) return;
 
-    const double px_per_ground_mm = box.width() / std::max(1.0, ground_mm_available);
-    const double segment_px       = static_cast<double>(per_segment) * px_per_ground_mm;
+    const double segment_px = static_cast<double>(per_segment) * px_per_ground_mm;
     if (segment_px < 1.0) return;
 
+    const double left  = box.left() + lead;
     const double bar_h = box.height() * 0.45;
     const double top   = box.top() + box.height() * 0.25;
 
     painter.save();
     painter.setPen(QPen(colour_of(item.text_colour), std::max(0.6, 0.15 * px_per_paper_mm)));
     for (int i = 0; i < segments; ++i) {
-        const QRectF cell(box.left() + i * segment_px, top, segment_px, bar_h);
+        const QRectF cell(left + i * segment_px, top, segment_px, bar_h);
         // ALTERNATING FILL, the convention every printed map uses: a plain
         // outlined bar is read as one length rather than as a ruler.
         painter.setBrush(i % 2 == 0 ? QBrush(colour_of(item.text_colour)) : QBrush(Qt::white));
         painter.drawRect(cell);
     }
 
-    const QFont labels = font_at(item.text_height, px_per_paper_mm);
-    const QFontMetricsF metrics(labels);
     painter.setFont(labels);
     painter.setBrush(Qt::NoBrush);
     for (int i = 0; i <= segments; ++i) {
         const QString text = metres_of(per_segment * i);
-        const double x     = box.left() + i * segment_px;
+        const double x     = left + i * segment_px;
         painter.drawText(QPointF(x - metrics.horizontalAdvance(text) / 2.0,
                                  top + bar_h + metrics.ascent() + 1.0),
                          text);
@@ -343,13 +374,9 @@ void paint_scale_bar(QPainter& painter, const QRectF& box, const core::LayoutIte
     // AFTER THE LAST TICK LABEL, not after the bar. The tick is drawn CENTRED on
     // the bar's end, so half of "80" hangs past it — and the unit started four
     // pixels past the bar, printing "80m 1:550" on top of itself.
-    const QString last = metres_of(per_segment * segments);
-    const double last_end =
-        box.left() + segments * segment_px + metrics.horizontalAdvance(last) / 2.0;
-    const QString unit = QStringLiteral(" m   1:%1").arg(denominator);
-    painter.drawText(QPointF(last_end + metrics.horizontalAdvance(QStringLiteral(" ")),
-                             top + bar_h + metrics.ascent() + 1.0),
-                     unit);
+    const QString last    = metres_of(per_segment * segments);
+    const double last_end = left + segments * segment_px + metrics.horizontalAdvance(last) / 2.0;
+    painter.drawText(QPointF(last_end, top + bar_h + metrics.ascent() + 1.0), unit);
     painter.restore();
 }
 

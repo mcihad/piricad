@@ -43,6 +43,7 @@ buluşur ve çevirme orada yapılır.
 ÇIKTIÖĞE islem=sil [yerlesim=<ad>] ad=<ad>
 ÇIKTIÖĞE islem=tasi [yerlesim=<ad>] ad=<ad> x=<mm> y=<mm> genislik=<mm> yukseklik=<mm>
 ÇIKTIÖĞE islem=ad [yerlesim=<ad>] ad=<ad> yeni_ad=<ad>
+ÇIKTIÖĞE islem=cogalt [yerlesim=<ad>] ad=<ad> [yeni_ad=<ad>] [x=<mm> y=<mm>] [ayarlar…]
 ÇIKTIÖĞE islem=ayarla [yerlesim=<ad>] ad=<ad> [metin=<yazı>] [olcek=<N>]
          [pencere=x1,y1 pencere=x2,y2] [izgara=<biçim>] [kilit=evet] …
 ```
@@ -67,7 +68,7 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 
 | Parametre | Anlamı |
 |---|---|
-| `islem` | `listele`, `ekle`, `sil`, `tasi`, `ayarla`, `ad` |
+| `islem` | `listele`, `ekle`, `sil`, `tasi`, `ayarla`, `ad`, `cogalt` |
 | `yerlesim` | Hangi yerleşim; tek yerleşim varsa gerekmez |
 | `ad` | Öğenin adı. `ekle`'de verilmezse türünden türetilir (`harita`, `harita2`…) |
 | `tur` | `islem=ekle` için: `harita`, `metin`, `olcek`, `kuzey`, `lejant`, `resim`, `sekil`, `tablo`, `grafik` |
@@ -85,7 +86,7 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `satir_siniri` | Tablo öğesinin yazacağı en çok satır; `0` = kutuya sığdığı kadar |
 | `sutunlar` | Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla (`hepsi` listeyi boşaltır); **grafik** öğesinde sayımın yapılacağı tek sütun |
 | `harita` | Bu öğenin bağlı olduğu harita çerçevesinin adı; `ilk` bağı kaldırır |
-| `yeni_ad` | `islem=ad` için öğenin yeni adı |
+| `yeni_ad` | `islem=ad` için öğenin yeni adı; `islem=cogalt` için kopyanın adı (verilmezse `olcek2` gibi türetilir) |
 | `katmanlar` | Harita çerçevesinin çizeceği katmanlar; **anahtar birden çok kez yazılır**. Verilmezse görünür bütün katmanlar, `hepsi` listeyi boşaltır |
 | `sayfa` | Öğenin duracağı sayfa (1'den başlar); `tasi` ile verilir |
 | `aci` | Öğenin dönüşü, derece; sayfada **saat yönünde**, öğenin ortası çevresinde (−360…360) |
@@ -206,6 +207,20 @@ ALAN 0,0 100,0 100,80 0,80
 Izgara, ölçek bölümü ve şekil biçimi yalnız kendi türlerine verilir; başka bir öğeye
 verildiğinde komut hangi türe ait olduğunu söyleyerek reddeder.
 
+### Çoğaltmak
+
+`islem=cogalt` öğenin bir kopyasını **5 mm sağına ve altına**, aynı sayfaya ve bütün
+öğelerin üstüne koyar. Bütün ayarları ve bağları gelir — çoğaltılan bir ölçek çubuğu
+aslının haritasının ölçeğini yazmaya devam eder — ama kilidi gelmez. Aynı satırda
+verilen ayarlar kopyaya uygulanır:
+
+<!-- örnek: yeni çizim -->
+```
+ALAN 0,0 100,0 100,80 0,80
+ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta
+ÇIKTIÖĞE islem=cogalt ad=olcek yeni_ad=olcek_alt x=20 y=250
+```
+
 ### Ölçek mi pencere mi
 
 İkisi birlikte çalışır ama **bildirilen ölçek kazanır**:
@@ -302,41 +317,89 @@ Başlığı yazmak:
 
 ### Arayüz
 
-**Çıktı yerleşimi tasarımcısında** (**Çıktı ▸ Yazdır ▸ Yerleşimler** ya da hızlı
-erişimdeki yazıcının oku ▸ bir yerleşim) sol
-sütun sayfayı ve üzerindeki öğeleri, orta sütun kâğıdı, sağ sütun seçili öğenin
-ayarlarını taşır.
+**Çıktı yerleşimi tasarımcısı** (**Çıktı ▸ Yazdır ▸ Yerleşimler** ya da hızlı erişimdeki
+yazıcının oku ▸ bir yerleşim) dört parçadan oluşur: üstte **araç satırı**, solda **araç
+sütunu**, ortada **kâğıt**, sağda **öğeler ve denetçi**. En altta durum satırı imlecin
+kâğıt üzerindeki yerini milimetre olarak yazar.
 
-- Bir öğeye tıklamak seçer; **sürüklemek taşır**, köşe tutamağından çekmek boyutlandırır.
-- **Ok tuşları** birer milimetre kaydırır, **Shift+ok** on milimetre.
-- Kilitli bir öğenin tutamağı yoktur ve sürüklenmez; kilidi sağdaki anahtardan açarsınız.
-- **Sol alttaki dokuz düğme** dokuz öğe türünü ekler: harita, metin, ölçek, kuzey,
-  lejant, resim, şekil, tablo ve grafik.
-- Kâğıdın üstünde ve solunda **milimetre cetveli** durur. Seçili öğenin kapladığı
-  açıklık iki cetvelde de vurgulanır ve sürükleme boyunca onunla birlikte hareket
-  eder; kutunun kâğıdın neresinde durduğunu alandaki sayıyı okumadan görürsünüz.
-- Öğe listesi kimliği değil **adı** yazar, yanında kutunun `genişlik×yükseklik`
-  ölçüsünü verir; komut satırının `ad=` ile andığı kimlik satırın ipucundadır ve
-  sağdaki **Ad** alanından değiştirilir.
+**Araç sütunu** — kâğıda ne eklendiği. En üstteki **Seç** aracı öğeleri seçer ve taşır;
+altındaki dokuz araç dokuz öğe türünü ekler: harita, metin, lejant, ölçek çubuğu ve kuzey
+oku; resim ve şekil; tablo ve grafik. Bir araca basıp **kâğıtta sürüklediğinizde** öğe
+çizdiğiniz kutuya yerleşir; sürüklemeden **tıklarsanız** türün öntanımlı boyunda,
+tıkladığınız yerin çevresine konur. Sürüklerken **Shift** kutuyu kare tutar, **Esc**
+vazgeçer. Öğe eklenince araç kendiliğinden **Seç**'e döner ve yeni öğe seçili gelir.
 
-Sağ sütun **hiçbir zaman boş kalmaz** ve en üstünde neye baktığınızın **adı**
-yazar, altında türü, kimliği ve ölçüsü. Bir öğe seçili değilken sayfanın kendi
-ayarlarını gösterir — kâğıt, yön, kenar boşluğu, çözünürlük ve yerleşimin adı —
-çünkü sayfa her zaman vardır.
+**Araç satırı** — seçili öğelere ne yapıldığı. Soldan sağa:
 
-Bir öğe seçiliyken `ayarla`nın kabul ettiği her ayar oradadır, iki bölüm hâlinde:
+| Grup | Düğmeler | Ne zaman açık |
+|---|---|---|
+| Geçmiş | Geri al (`Ctrl+Z`), Yinele (`Ctrl+Shift+Z`) | her zaman |
+| Hizala | Sol, yatay orta, sağ; üst, dikey orta, alt | en az bir öğe seçiliyken |
+| Dağıt | Yatayda, dikeyde — aradaki boşluklar eşitlenir | en az üç öğe seçiliyken |
+| Sıra | En öne getir, en arkaya gönder | en az bir öğe seçiliyken |
+| Öğe | Çoğalt (`Ctrl+D`), kilitle (`Ctrl+L`), sil (`Delete`) | en az bir öğe seçiliyken |
+| Sayfa | `‹`, **Sayfa 1 / 3 ▾**, `›` | çok sayfalı yerleşimde |
+| Görünüm | Yakala; uzaklaş, yakınlaştırma oranı ▾, yakınlaş, sayfayı sığdır, gerçek boy | her zaman |
 
-| Bölüm | Ne karara bağlar |
+Tek bir öğe hizalanırken **kenar payına** göre hizalanır: tek seçili başlığa **yatayda
+ortala** demek onu sayfanın ortasına alır. Birden çok öğe, birlikte kapladıkları kutuya
+göre hizalanır. Seçimdeki öğelerin hepsi kilitliyken kilit düğmesi basılı görünür ve
+basmak kilidi açar. Düğmelerin adı üzerlerine gelince görünen ipucundadır.
+
+**Kâğıt.** Tekerlek imlecin olduğu yere doğru yakınlaştırır; **Boşluk** tuşunu basılı
+tutup ya da orta düğmeyle sürüklemek kâğıdı kaydırır; `+`, `−` ve `0` (sığdır) tuşları da
+çalışır. **Gerçek boy** kâğıdı ekranda kendi ölçüsünde gösterir.
+
+- Bir öğeye tıklamak seçer; **sürüklemek taşır**, köşe ya da kenar tutamağından çekmek
+  boyutlandırır. Köşeden çekerken **Shift** oranı korur, taşırken **Shift** hareketi tek
+  eksende tutar.
+- **Shift ile tıklamak** seçime ekler ya da çıkarır; boş kâğıtta **çerçeve çekmek**
+  çerçevenin değdiği bütün öğeleri seçer; `Ctrl+A` sayfadaki her şeyi seçer.
+- **Yakala** açıkken sürüklenen kutu sayfanın kenarlarına, ortasına, kenar payına ve
+  öteki öğelerin kenar ve ortalarına tutunur; tutunduğu çizgi mavi bir kılavuz olarak
+  görünür. Yakalanmadığında kutu tam milimetreye oturur.
+- **Ok tuşları** seçimi birer milimetre kaydırır, **Shift+ok** on milimetre.
+- Sürükleme ya da boyutlandırma boyunca kutunun yeri ya da ölçüsü yanındaki etikette
+  milimetre olarak yazar.
+- Kilitli bir öğenin tutamağı yoktur ve sürüklenmez.
+- Sağ tık öne/arkaya, çoğalt, kilitle ve sil seçeneklerini açar; bir öğeye çift tıklamak
+  denetçide ilk alanına gider.
+- Kâğıdın üstünde ve solunda **milimetre cetveli** durur. Seçili öğelerin kapladığı
+  açıklık iki cetvelde de vurgulanır ve sürükleme boyunca onunla birlikte hareket eder.
+
+**Öğeler ve denetçi.** Sağ sütunun üstünde bu sayfadaki öğeler, **en üstte çizilen en
+başta** olmak üzere listelenir. Satır öğenin adını ve `genişlik×yükseklik` ölçüsünü
+yazar; satırın sağındaki **kilit** tıklanarak öğe kilitlenir ya da kilidi açılır. Listede
+de **Shift/Ctrl** ile birden çok öğe seçilir. Komut satırının `ad=` ile andığı kimlik
+satırın ipucundadır.
+
+Listenin altındaki **Öğe | Sayfa** seçimi denetçinin neyi gösterdiğini belirler ve
+denetçinin başında neye baktığınızın adı, türü, kimliği ve ölçüsü yazar. Her ayar bir
+satırdır: solda adı, sağda değeri; birimi alanın içinde yazar. Ayarlar kararın verildiği
+sırayla gruplanmıştır:
+
+| Grup | Ne karara bağlar |
 |---|---|
-| **Yerleştirme** | Konum ve boyut, öğenin durduğu sayfa, çizim sırası, adı |
-| **İçerik** | Kutunun ne gösterdiği: harita için ölçek, ızgara, ızgara aralığı ve katmanlar; tablo için sütunlar ve satır sınırı; ölçek çubuğu, kuzey oku, lejant ve grafik için hangi haritaya bağlı olduğu |
+| **Konum ve boyut** | X (soldan), Y (üstten), genişlik, yükseklik, döndürme; çok sayfalı yerleşimde öğenin sayfası |
+| **Türe özgü** | Harita: ölçek (yazılır ya da plan ölçeklerinden seçilir), kapsam (**Çizimin tamamı**, **Ana pencereden al**), katmanlar, koordinat ızgarası. Metin: yazı, **Alan ekle ▾** ile yer tutucu, yazı boyu, renk, yatay ve dikey hizalama. Ölçek çubuğu: bağlı harita, bölüm sayısı, yazı boyu, renk. Kuzey oku: bağlı harita, renk. Lejant: başlık, bağlı harita, yazı. Resim: dosya. Şekil: biçim, çizgi, dolgu. Tablo: katman, sütunlar, satır sınırı. Grafik: katman, sayılan sütun, bağlı harita |
+| **Çerçeve ve zemin** | Çerçeve, rengi ve kalınlığı; zemin ve rengi |
+| **Öğe** | Kilit ve öğenin adı |
 
-Kuzey okunun İçerik bölümü yoktur: kuzeyi gösterir, hepsi bu.
+Bir alanın değeri **Enter**'a bastığınızda ya da alandan çıktığınızda yazılır; değeri
+değiştirmeden çıkmak hiçbir şey yazmaz. Birden çok öğe seçiliyken denetçi seçilenleri
+sayar; hizalama, dağıtma, sıralama, çoğaltma ve kilit araç satırından hepsine birden
+uygulanır ve tek adımda geri alınır.
+
+**Sayfa** bölümü kâğıdın boyunu ve yönünü, kenar payını, çözünürlüğü, bu sayfayı
+**ekle**, **çoğalt** ve **sil** düğmelerini, yerleşimin adını ve **denetimin**
+bulduklarını gösterir. Denetim uyarıları durum satırında da sayılır; o sayıya tıklamak
+Sayfa bölümünü açar.
 
 Her jest **bırakıldığında tek bir komut** yazar — sürükleme boyunca değil. Bu yüzden
 sayfanın bir ucundan öbürüne taşıdığınız bir kutu tek `Ctrl+Z` ile eski yerine döner,
-dört yüz adımda değil. Yaptığınız her şey komut günlüğünde durur ve bir betiğin
-yazabileceği satırlardır.
+dört yüz adımda değil; birden çok öğeyi birlikte taşımak, hizalamak ya da silmek de tek
+adımdır. Yaptığınız her şey komut günlüğünde durur ve bir betiğin yazabileceği
+satırlardır.
 
 ### Betik
 

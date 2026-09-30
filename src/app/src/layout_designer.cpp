@@ -3,28 +3,36 @@
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/fields.hpp"
-#include "kentos_cad/app/flow_layout.hpp"
 #include "kentos_cad/app/layout_render.hpp"
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/app/tokens.hpp"
 
 #include "kentos_cad/core/document.hpp"
 
+#include <QApplication>
+#include <QButtonGroup>
+#include <QContextMenuEvent>
 #include <QDate>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFont>
 #include <QGridLayout>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QImage>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QScreen>
 #include <QScrollArea>
+#include <QScrollBar>
+#include <QShortcut>
 #include <QStyledItemDelegate>
 #include <QVBoxLayout>
+#include <QWheelEvent>
 
 #include <algorithm>
 #include <cmath>
@@ -44,71 +52,161 @@ constexpr int kGripPx = 7;
 /// 20 mm from the edge is a frame somebody can check against a regulation. A
 /// canvas with no scale beside it asks the user to read those millimetres out
 /// of a property field, one at a time, which is reading a drawing through a
-/// keyhole. The ruler is the cheapest way to make the unit visible at all
-/// times, and it is the one piece of chrome here that would be wrong on any
-/// other panel in this program.
+/// keyhole.
 constexpr int kRulerPx = 24;
 
-/// A drag snaps to whole paper millimetres. A title block at 20.0 mm is a title
-/// block somebody can describe; one at 19.83 mm is an accident.
-constexpr core::Um kSnap = 1000;
+/// How close, in device pixels, an edge has to come to a guide to snap to it:
+/// near enough to catch without aiming, far enough to let a box sit 2 mm off an
+/// edge on purpose at a normal zoom.
+constexpr double kSnapPx = 6.0;
 
-core::Um snapped(core::Um value)
+/// A drag that is not caught by a guide still lands on a whole millimetre. A
+/// title block at 20.0 mm is a title block somebody can describe; one at
+/// 19.83 mm is an accident.
+constexpr core::Um kWhole = 1000;
+
+const Tokens& tokensOf(ThemeMode mode)
 {
-    return static_cast<core::Um>(std::lround(static_cast<double>(value) / kSnap) * kSnap);
+    return mode == ThemeMode::Dark ? darkTokens() : lightTokens();
+}
+
+core::Um whole(core::Um value)
+{
+    return static_cast<core::Um>(std::lround(static_cast<double>(value) / kWhole) * kWhole);
 }
 
 /// Paper micrometres as the millimetres a command line and a field carry.
-QString mm_text(core::Um um)
+QString mm_text(core::Um um, int decimals = 1)
 {
-    return QString::number(static_cast<double>(um) / 1000.0, 'f', 1);
+    return QString::number(static_cast<double>(um) / 1000.0, 'f', decimals);
 }
 
-/// The nine item kinds, in the order the bar offers them.
+/// The same in the Turkish way a reader sees it, with the decimal comma.
+QString mm_shown(core::Um um)
+{
+    return mm_text(um).replace(QLatin1Char('.'), QLatin1Char(','));
+}
+
+/// The nine item kinds, in the order the strip offers them.
 ///
-/// ONE TABLE, TWO READERS: the add bar draws a button per row and the item list
-/// draws a row's glyph beside each placed item, so a kind cannot gain an icon in
-/// one place and keep the wrong one in the other. `grafik` used to be missing
-/// from the bar entirely — the command accepts `tur=grafik` and there was no way
-/// to ask for one with the mouse, which is a capability that existed for a
-/// script and not for a hand (CLAUDE.md 5.15).
+/// ONE TABLE, THREE READERS: the strip draws a tool per row, the item list
+/// draws a row's glyph beside each placed item, and a click with a tool uses the
+/// row's size — so a kind cannot gain an icon in one place and keep the wrong
+/// one in another.
 struct Kind
 {
     const char* word;           ///< what `tur=` takes
     core::LayoutItemKind which; ///< what the model calls it
-    const char* label;          ///< what the button says
-    Glyph glyph;                ///< what both the button and the list draw
+    const char* label;          ///< what the tool says
+    Glyph glyph;                ///< what both the tool and the list draw
+    double w_mm;                ///< how wide a click with the tool makes it
+    double h_mm;                ///< and how tall
 };
 
 constexpr Kind kKinds[] = {
-    {"harita", core::LayoutItemKind::Map, "Harita", Glyph::Rectangle},
-    {"metin", core::LayoutItemKind::Label, "Metin", Glyph::Text},
-    {"olcek", core::LayoutItemKind::ScaleBar, "Ölçek", Glyph::Measure},
-    {"kuzey", core::LayoutItemKind::NorthArrow, "Kuzey", Glyph::Locate},
-    {"lejant", core::LayoutItemKind::Legend, "Lejant", Glyph::Layer},
-    {"resim", core::LayoutItemKind::Picture, "Resim", Glyph::Palette},
-    {"sekil", core::LayoutItemKind::Shape, "Şekil", Glyph::Polygon},
-    {"tablo", core::LayoutItemKind::Table, "Tablo", Glyph::Grid},
-    {"grafik", core::LayoutItemKind::Chart, "Grafik", Glyph::Sigma},
+    {"harita", core::LayoutItemKind::Map, "Harita", Glyph::LayoutMap, 160.0, 110.0},
+    {"metin", core::LayoutItemKind::Label, "Metin", Glyph::LayoutLabel, 70.0, 12.0},
+    {"lejant", core::LayoutItemKind::Legend, "Lejant", Glyph::LayoutLegend, 55.0, 45.0},
+    {"olcek", core::LayoutItemKind::ScaleBar, "Ölçek", Glyph::LayoutScaleBar, 70.0, 10.0},
+    {"kuzey", core::LayoutItemKind::NorthArrow, "Kuzey", Glyph::LayoutNorth, 16.0, 20.0},
+    {"resim", core::LayoutItemKind::Picture, "Resim", Glyph::LayoutPicture, 30.0, 30.0},
+    {"sekil", core::LayoutItemKind::Shape, "Şekil", Glyph::LayoutShape, 40.0, 25.0},
+    {"tablo", core::LayoutItemKind::Table, "Tablo", Glyph::LayoutTable, 90.0, 40.0},
+    {"grafik", core::LayoutItemKind::Chart, "Grafik", Glyph::LayoutChart, 70.0, 45.0},
 };
+
+const Kind* kind_of(core::LayoutItemKind kind)
+{
+    for (const Kind& one : kKinds)
+        if (one.which == kind) return &one;
+    return nullptr;
+}
+
+const Kind* kind_named(const QString& word)
+{
+    for (const Kind& one : kKinds)
+        if (word == QString::fromUtf8(one.word)) return &one;
+    return nullptr;
+}
 
 Glyph glyph_of(core::LayoutItemKind kind)
 {
-    for (const Kind& one : kKinds)
-        if (one.which == kind) return one.glyph;
-    return Glyph::Rectangle;
+    const Kind* one = kind_of(kind);
+    return one != nullptr ? one->glyph : Glyph::LayoutShape;
+}
+
+/// The round plan scales a pafta is drawn at, for the scale menu.
+constexpr long long kScales[] = {500, 1000, 2000, 2500, 5000, 10000, 25000, 50000};
+
+/// What a placed item is called on screen.
+///
+/// A LABEL IS CALLED BY WHAT IT SAYS. `baslik` is a key; "Ada 1284 / Pafta 3" is
+/// the thing on the paper. Everything else has no text of its own and is called
+/// by its kind, which is what a user would point at it and say.
+QString item_name(const core::LayoutItem& item)
+{
+    if (item.kind == core::LayoutItemKind::Label) {
+        const QString written = QString::fromStdString(item.text).simplified();
+        if (!written.isEmpty() && written.size() <= 40) return written;
+    }
+    return QString::fromUtf8(core::layout_item_kind_label(item.kind));
+}
+
+QString quoted(const QString& raw)
+{
+    QString out = raw;
+    out.replace('\\', QStringLiteral("\\\\"));
+    out.replace('"', QStringLiteral("\\\""));
+    return QStringLiteral("\"%1\"").arg(out);
+}
+
+/// A colour as the command line takes it and the journal keeps it.
+QString colour_word(std::uint32_t argb)
+{
+    if ((argb >> 24) == 0xFFu)
+        return QStringLiteral("#%1").arg(argb & 0xFFFFFFu, 6, 16, QLatin1Char('0')).toUpper();
+    return QStringLiteral("#%1").arg(argb, 8, 16, QLatin1Char('0')).toUpper();
+}
+
+/// The coarsest whole step whose marks stay at least `apart` pixels from each
+/// other, at `per_mm` device pixels to the paper millimetre.
+///
+/// ONE LADDER FOR THE RULER'S TICKS AND ITS NUMBERS, so a tick is where a number
+/// would be. Two separate answers to "how far apart" would drift the moment one
+/// was tuned.
+core::Um ruler_step(double per_mm, double apart)
+{
+    static constexpr core::Um kLadder[] = {1000, 5000, 10000, 25000, 50000, 100000, 250000};
+    for (const core::Um candidate : kLadder)
+        if (per_mm * (static_cast<double>(candidate) / 1000.0) >= apart) return candidate;
+    return kLadder[std::size(kLadder) - 1];
+}
+
+/// The box around several.
+core::PaperRect union_of(const std::vector<ItemFrame>& frames)
+{
+    if (frames.empty()) return {};
+    core::Um left   = frames.front().second.x;
+    core::Um top    = frames.front().second.y;
+    core::Um right  = frames.front().second.right();
+    core::Um bottom = frames.front().second.bottom();
+    for (const auto& [id, f] : frames) {
+        left   = std::min(left, f.x);
+        top    = std::min(top, f.y);
+        right  = std::max(right, f.right());
+        bottom = std::max(bottom, f.bottom());
+    }
+    return core::PaperRect{left, top, right - left, bottom - top};
 }
 
 /// Draws one item row: the kind's glyph, the item's name, its size in
-/// millimetres at the far end, and a padlock when it is locked.
+/// millimetres, and a padlock at the far end that locks it with a click.
 ///
-/// WHY NOT A PLAIN STRING. The rows read `baslik · Metin` — the MACHINE id
-/// first and the kind second, which is a list of identifiers rather than a table
-/// of contents. What a user looks for is "the title" and "the map", and what
-/// they check next is how big it is; the id is a detail they need only when they
-/// write a command line, so it moves to the tooltip. The glyph is the same one
-/// the add bar used to place it, so the list and the bar name a kind the same
-/// way.
+/// WHY NOT A PLAIN STRING. What a user looks for is "the title" and "the map",
+/// and what they check next is how big it is and whether it will move; the id is
+/// a detail they need only when they write a command line, so it moves to the
+/// tooltip. The padlock is a CONTROL, not a mark: it is where QGIS puts it and
+/// it is where a hand goes to pin a title block.
 class ItemRow : public QStyledItemDelegate
 {
 public:
@@ -116,9 +214,30 @@ public:
 
     void setTheme(ThemeMode mode) { theme_ = mode; }
 
+    /// Called with the row's id when its padlock is clicked.
+    std::function<void(const QString&)> onLock;
+
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
-        return {QStyledItemDelegate::sizeHint(option, index).width(), 28};
+        return {QStyledItemDelegate::sizeHint(option, index).width(), 30};
+    }
+
+    static QRect lockRect(const QRect& row)
+    {
+        return QRect(row.right() - 26, row.top() + 7, 16, 16);
+    }
+
+    bool editorEvent(QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option,
+                     const QModelIndex& index) override
+    {
+        if (event->type() == QEvent::MouseButtonRelease && onLock) {
+            const auto* mouse = static_cast<QMouseEvent*>(event);
+            if (lockRect(option.rect).adjusted(-4, -4, 4, 4).contains(mouse->pos())) {
+                onLock(index.data(Qt::UserRole).toString());
+                return true;
+            }
+        }
+        return QStyledItemDelegate::editorEvent(event, model, option, index);
     }
 
     void paint(QPainter* p, const QStyleOptionViewItem& option,
@@ -126,39 +245,49 @@ public:
     {
         const Tokens& t = theme_ == ThemeMode::Dark ? darkTokens() : lightTokens();
         const bool on   = (option.state & QStyle::State_Selected) != 0;
+        const bool over = (option.state & QStyle::State_MouseOver) != 0;
         p->save();
         if (on) {
             p->fillRect(option.rect, t.accentWash);
             p->fillRect(QRect(option.rect.left(), option.rect.top(), 2, option.rect.height()),
                         t.accent);
-        } else if ((option.state & QStyle::State_MouseOver) != 0) {
+        } else if (over) {
             p->fillRect(option.rect, t.hoverRow);
         }
 
-        QRect box        = option.rect.adjusted(9, 0, -8, 0);
+        const qreal dpr  = p->device()->devicePixelRatioF();
+        QRect box        = option.rect.adjusted(10, 0, -8, 0);
         const auto glyph = static_cast<Glyph>(index.data(Qt::UserRole + 1).toInt());
-        p->drawPixmap(
-            QRect(box.left(), box.top() + 6, 16, 16),
-            glyph_pixmap(glyph, on ? t.accent : t.textDim, 16, p->device()->devicePixelRatioF()));
-        box.setLeft(box.left() + 24);
+        p->drawPixmap(QRect(box.left(), box.top() + 7, 16, 16),
+                      glyph_pixmap(glyph, on ? t.accent : t.textDim, 16, dpr));
+        box.setLeft(box.left() + 26);
+
+        // THE PADLOCK, SHUT OR OPEN. Shut is drawn at full ink so a locked item
+        // reads as one from across the panel; open is drawn only under the
+        // pointer, so the column is not a fence of padlocks.
+        const bool locked = index.data(Qt::UserRole + 3).toBool();
+        if (locked || over)
+            p->drawPixmap(lockRect(option.rect),
+                          glyph_pixmap(locked ? Glyph::Lock : Glyph::Unlock,
+                                       locked ? t.warn : t.textFaint, 16, dpr));
+        box.setRight(option.rect.right() - 34);
 
         // THE SIZE IS RESERVED FIRST, so a long name is elided rather than
         // pushing the measurement off the panel.
         const QString size = index.data(Qt::UserRole + 2).toString();
-        const int wide     = option.fontMetrics.horizontalAdvance(size) + 8;
+        QFont mono         = p->font();
+        mono.setFamily(QStringLiteral("IBM Plex Mono"));
+        mono.setPointSizeF(std::max(7.5, mono.pointSizeF() - 1.5));
+        const QFontMetrics mm(mono);
+        const int wide = mm.horizontalAdvance(size) + 8;
+        p->setFont(mono);
         p->setPen(t.textFaint);
         p->drawText(QRect(box.right() - wide, box.top(), wide, box.height()),
                     Qt::AlignRight | Qt::AlignVCenter, size);
         box.setRight(box.right() - wide);
 
-        if (index.data(Qt::UserRole + 3).toBool()) {
-            p->drawPixmap(
-                QRect(box.right() - 14, box.top() + 7, 14, 14),
-                glyph_pixmap(Glyph::Lock, t.textFaint, 14, p->device()->devicePixelRatioF()));
-            box.setRight(box.right() - 18);
-        }
-
-        p->setPen(on ? t.text : t.text);
+        p->setFont(option.font);
+        p->setPen(t.text);
         p->drawText(box, Qt::AlignLeft | Qt::AlignVCenter,
                     option.fontMetrics.elidedText(index.data(Qt::DisplayRole).toString(),
                                                   Qt::ElideRight, box.width()));
@@ -169,61 +298,38 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-/// What a placed item is called on screen.
-///
-/// A LABEL IS CALLED BY WHAT IT SAYS. `baslik` is a key; "Ada 1284 / Pafta 3" is
-/// the thing on the paper. Everything else has no text of its own and is called
-/// by its kind, which is what a user would point at it and say.
-/// Whether a kind has any settings of its own past the frame.
-///
-/// A north arrow has none: it points north and that is the whole of it, so a
-/// heading over an empty group would be a promise of rows that never come.
-bool has_content_rows(core::LayoutItemKind kind)
+/// The hairline between two groups of a strip — the ribbon's own separator:
+/// upright in the tool row, lying down in the rail.
+QWidget* strip_rule(QWidget* parent, bool upright)
 {
-    using core::LayoutItemKind;
-    return kind != LayoutItemKind::NorthArrow;
+    auto* rule = new QWidget(parent);
+    rule->setObjectName(QStringLiteral("layoutStripRule"));
+    rule->setAttribute(Qt::WA_StyledBackground, true);
+    if (upright)
+        rule->setFixedSize(1, 20);
+    else
+        rule->setFixedSize(20, 1);
+    return rule;
 }
 
-QString item_name(const core::LayoutItem& item)
+/// A bare 32 px icon button for the strips (`Button::setBare`), its name in
+/// the tooltip and in what a screen reader says.
+Button* strip_button(Glyph glyph, const QString& tip, QWidget* parent)
 {
-    const QString written = QString::fromStdString(item.text).simplified();
-    if (!written.isEmpty() && written.size() <= 40) return written;
-    return QString::fromUtf8(core::layout_item_kind_label(item.kind));
+    auto* b = new Button(glyph, tip, parent);
+    b->setBare(true);
+    return b;
 }
 
-/// A list-valued argument as the one line a user edits, and as the command line
-/// takes it back: `PARSEL, BINA`. Empty means "every visible one", which is the
-/// default the command itself applies.
-QString joined(const std::vector<std::string>& words)
-{
-    QStringList out;
-    out.reserve(static_cast<qsizetype>(words.size()));
-    for (const std::string& one : words)
-        out << QString::fromStdString(one);
-    return out.join(QStringLiteral(", "));
-}
+/// The caption column of the inspector's rows — design.md §8's `110px | 1fr`.
+constexpr int kCaption = 110;
 
-/// The coarsest whole step whose marks stay at least `apart` pixels from each
-/// other, at `per_mm` device pixels to the paper millimetre.
-///
-/// ONE LADDER FOR THE RULER'S TICKS, ITS NUMBERS AND THE MAT, so a square of
-/// the mat is exactly the distance between two numbers on the scale. Three
-/// separate answers to "how far apart" would drift the moment one was tuned.
-core::Um ruler_step(double per_mm, double apart)
-{
-    static constexpr core::Um kLadder[] = {1000, 5000, 10000, 25000, 50000, 100000, 250000};
-    for (const core::Um candidate : kLadder)
-        if (per_mm * (static_cast<double>(candidate) / 1000.0) >= apart) return candidate;
-    return kLadder[std::size(kLadder) - 1];
-}
+/// The inspector's width: §8's symbol-editor column, which this is a sibling
+/// of — a property list read down its values beside the thing being edited.
+constexpr int kInspector = 352;
 
-QString quoted(const QString& raw)
-{
-    QString out = raw;
-    out.replace('\\', QStringLiteral("\\\\"));
-    out.replace('"', QStringLiteral("\\\""));
-    return QStringLiteral("\"%1\"").arg(out);
-}
+/// How many item rows the list shows before it scrolls.
+constexpr int kListRows = 7;
 
 } // namespace
 
@@ -235,14 +341,22 @@ LayoutCanvas::LayoutCanvas(Controller& controller, QWidget* parent)
     setObjectName(QStringLiteral("layoutCanvas"));
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
-    setMinimumSize(320, 240);
+    setMinimumSize(420, 320);
+    setAccessibleName(tr("Çıktı yerleşiminin kâğıdı"));
+    setAccessibleDescription(
+        tr("Öğeleri seçin, sürükleyin, köşelerinden boyutlandırın; ok tuşları kaydırır, "
+           "tekerlek yakınlaştırır"));
 }
 
 void LayoutCanvas::setSheet(const QString& layout, int page)
 {
-    sheet_ = layout;
-    page_  = page;
-    selected_.clear();
+    if (sheet_ != layout || page_ != page) {
+        selection_.clear();
+        primary_.clear();
+    }
+    sheet_     = layout;
+    page_      = page;
+    cachePage_ = -1;
     update();
 }
 
@@ -253,53 +367,65 @@ const core::Layout* LayoutCanvas::layout() const
 
 void LayoutCanvas::select(const QString& id)
 {
-    if (selected_ == id) return;
-    selected_ = id;
+    setSelection(id.isEmpty() ? QStringList{} : QStringList{id});
+}
+
+void LayoutCanvas::setSelection(const QStringList& ids)
+{
+    const QString was = primary_;
+    selection_        = ids;
+    primary_          = ids.isEmpty() ? QString() : ids.back();
     update();
-    emit selectionChanged(selected_);
+    if (primary_ != was || ids.size() != 1) emit selectionChanged(primary_);
 }
 
 void LayoutCanvas::refresh()
 {
-    // THE SELECTION IS CHECKED AGAINST THE DOCUMENT, not kept on faith: the item
-    // may have been deleted by a command typed on the command line while this
-    // window was open, and a selection naming nothing would draw handles around
-    // an empty box.
-    if (const core::Layout* l = layout();
-        l == nullptr || l->find(selected_.toStdString()) == nullptr)
-        selected_.clear();
+    // THE PICK IS CHECKED AGAINST THE DOCUMENT, not kept on faith: an item may
+    // have been deleted by a command typed on the command line while this window
+    // was open, and a pick naming nothing would draw handles around empty paper.
+    const core::Layout* l = layout();
+    QStringList kept;
+    if (l != nullptr)
+        for (const QString& id : std::as_const(selection_))
+            if (l->find(id.toStdString()) != nullptr) kept << id;
+    selection_ = kept;
+    primary_   = kept.isEmpty() ? QString() : kept.back();
+    cachePage_ = -1; ///< the document moved: draw the sheet again
     update();
+}
+
+double LayoutCanvas::pixelsPerMm() const
+{
+    const QRectF box             = pageRect();
+    const core::LayoutPage* page = activePage();
+    if (page == nullptr || page->w <= 0) return 0.0;
+    return box.width() / (static_cast<double>(page->w) / 1000.0);
 }
 
 QRectF LayoutCanvas::pageRect() const
 {
-    const core::Layout* l = layout();
-    if (l == nullptr || l->pages.empty()) return {};
-    const core::LayoutPage& page = *activePage();
+    const core::LayoutPage* page = activePage();
+    if (page == nullptr) return {};
 
-    // FITTED AND CENTRED INSIDE THE RULERS, with air around it — which is what
-    // makes the sheet read as a sheet rather than as the window's background.
-    // The rulers take a gutter off the top and the left, so the paper is
-    // centred in what is LEFT, not in the widget: centring it in the widget
-    // would slide it half a gutter under the scale and the two would disagree.
-    const double air     = 10.0;
-    const double left    = kRulerPx;
-    const double top     = kRulerPx;
-    const double avail_w = std::max(1.0, width() - left - 2 * air);
-    const double avail_h = std::max(1.0, height() - top - 2 * air);
-    const double scale =
-        std::min(avail_w / static_cast<double>(page.w), avail_h / static_cast<double>(page.h));
-    const double w = static_cast<double>(page.w) * scale;
-    const double h = static_cast<double>(page.h) * scale;
-    return QRectF(left + (avail_w - w) / 2.0 + air, top + (avail_h - h) / 2.0 + air, w, h);
+    if (fit_) {
+        // FITTED AND CENTRED INSIDE THE RULERS, with air around it — which is
+        // what makes the sheet read as a sheet on a table rather than as the
+        // window's background.
+        const double air     = 24.0;
+        const double avail_w = std::max(1.0, width() - kRulerPx - 2 * air);
+        const double avail_h = std::max(1.0, height() - kRulerPx - 2 * air);
+        const double scale   = std::min(avail_w / static_cast<double>(page->w),
+                                        avail_h / static_cast<double>(page->h));
+        const double w       = static_cast<double>(page->w) * scale;
+        const double h       = static_cast<double>(page->h) * scale;
+        return QRectF(kRulerPx + air + (avail_w - w) / 2.0, kRulerPx + air + (avail_h - h) / 2.0, w,
+                      h);
+    }
+    return QRectF(corner_.x(), corner_.y(), static_cast<double>(page->w) * scale_,
+                  static_cast<double>(page->h) * scale_);
 }
 
-/// THE PAGE THE CANVAS IS SHOWING, clamped, never null when a layout is set.
-///
-/// `pageRect` sized the sheet from this while `deviceFrom`, `paperFrom` and
-/// `dragged` scaled with `pages.front()`. On a layout whose second page is a
-/// different size that meant every box was drawn — and dragged — somewhere other
-/// than where it is. One question, one answer.
 QRect LayoutCanvas::sheetRect() const
 {
     return pageRect().toAlignedRect().intersected(rect());
@@ -316,35 +442,109 @@ const core::LayoutPage* LayoutCanvas::activePage() const
 
 QRectF LayoutCanvas::deviceFrom(const core::PaperRect& paper) const
 {
-    const core::Layout* l = layout();
-    const QRectF box      = pageRect();
-    if (l == nullptr || l->pages.empty() || box.isEmpty()) return {};
-    const core::LayoutPage& page = *activePage();
-    const double sx              = box.width() / static_cast<double>(page.w);
-    const double sy              = box.height() / static_cast<double>(page.h);
+    const QRectF box             = pageRect();
+    const core::LayoutPage* page = activePage();
+    if (page == nullptr || box.isEmpty()) return {};
+    const double sx = box.width() / static_cast<double>(page->w);
+    const double sy = box.height() / static_cast<double>(page->h);
     return QRectF(box.left() + paper.x * sx, box.top() + paper.y * sy, paper.w * sx, paper.h * sy);
 }
 
-core::PaperRect LayoutCanvas::paperFrom(const QRectF& device) const
+QPointF LayoutCanvas::paperAt(QPointF widget) const
+{
+    const QRectF box             = pageRect();
+    const core::LayoutPage* page = activePage();
+    if (page == nullptr || box.isEmpty()) return {};
+    return QPointF((widget.x() - box.left()) * static_cast<double>(page->w) / box.width(),
+                   (widget.y() - box.top()) * static_cast<double>(page->h) / box.height());
+}
+
+void LayoutCanvas::zoomBy(double factor, QPointF about)
+{
+    const core::LayoutPage* page = activePage();
+    if (page == nullptr) return;
+    const QRectF box    = pageRect();
+    const double before = box.width() / static_cast<double>(page->w);
+    // A TENTH OF REAL SIZE TO FORTY TIMES IT: from an A0 sheet whole on a laptop
+    // to a hairline at the width of a finger.
+    const double real  = (logicalDpiX() > 0 ? logicalDpiX() : 96.0) / 25400.0;
+    const double after = std::clamp(before * factor, real * 0.05, real * 40.0);
+    const QPointF paper((about.x() - box.left()) / before, (about.y() - box.top()) / before);
+    scale_     = after;
+    corner_    = QPointF(about.x() - paper.x() * after, about.y() - paper.y() * after);
+    fit_       = false;
+    cachePage_ = -1;
+    update();
+    emit zoomChanged(zoomPercent());
+}
+
+void LayoutCanvas::zoomBy(double factor)
+{
+    zoomBy(factor, QPointF(width() / 2.0, height() / 2.0));
+}
+
+void LayoutCanvas::zoomToFit()
+{
+    fit_       = true;
+    cachePage_ = -1;
+    update();
+    emit zoomChanged(zoomPercent());
+}
+
+void LayoutCanvas::zoomToRealSize()
+{
+    const core::LayoutPage* page = activePage();
+    if (page == nullptr) return;
+    scale_         = (logicalDpiX() > 0 ? logicalDpiX() : 96.0) / 25400.0;
+    const double w = static_cast<double>(page->w) * scale_;
+    const double h = static_cast<double>(page->h) * scale_;
+    corner_        = QPointF(kRulerPx + std::max(24.0, (width() - kRulerPx - w) / 2.0),
+                             kRulerPx + std::max(24.0, (height() - kRulerPx - h) / 2.0));
+    fit_           = false;
+    cachePage_     = -1;
+    update();
+    emit zoomChanged(zoomPercent());
+}
+
+double LayoutCanvas::zoomPercent() const
+{
+    const double real = (logicalDpiX() > 0 ? logicalDpiX() : 96.0) / 25.4;
+    return real > 0.0 ? 100.0 * pixelsPerMm() / real : 100.0;
+}
+
+void LayoutCanvas::setDrawKind(const QString& kind)
+{
+    drawKind_ = kind;
+    setCursor(kind.isEmpty() ? Qt::ArrowCursor : Qt::CrossCursor);
+    update();
+}
+
+void LayoutCanvas::setSnapping(bool on)
+{
+    snapping_ = on;
+}
+
+const core::LayoutItem* LayoutCanvas::itemAt(QPoint at) const
 {
     const core::Layout* l = layout();
-    const QRectF box      = pageRect();
-    if (l == nullptr || l->pages.empty() || box.isEmpty()) return {};
-    const core::LayoutPage& page = *activePage();
-    const double sx              = static_cast<double>(page.w) / box.width();
-    const double sy              = static_cast<double>(page.h) / box.height();
-    return core::PaperRect{static_cast<core::Um>((device.left() - box.left()) * sx),
-                           static_cast<core::Um>((device.top() - box.top()) * sy),
-                           static_cast<core::Um>(device.width() * sx),
-                           static_cast<core::Um>(device.height() * sy)};
+    if (l == nullptr) return nullptr;
+    // THE TOPMOST, by paint order: what is in front is what the eye means.
+    const core::LayoutItem* hit = nullptr;
+    for (std::size_t i = 0; i < l->items.size(); ++i) {
+        if (l->page_of(i) != page_) continue;
+        const core::LayoutItem& item = l->items[i];
+        if (!deviceFrom(item.frame).adjusted(-2, -2, 2, 2).contains(at)) continue;
+        if (hit == nullptr || item.z >= hit->z) hit = &item;
+    }
+    return hit;
 }
 
 LayoutCanvas::Grip LayoutCanvas::gripAt(const QPoint& at) const
 {
     const core::Layout* l = layout();
-    if (l == nullptr || selected_.isEmpty()) return Grip::None;
-    const core::LayoutItem* item = l->find(selected_.toStdString());
-    if (item == nullptr) return Grip::None;
+    if (l == nullptr || selection_.size() != 1) return Grip::None;
+    const core::LayoutItem* item = l->find(primary_.toStdString());
+    if (item == nullptr || item->locked) return Grip::None;
 
     const QRectF box = deviceFrom(item->frame);
     if (box.isEmpty()) return Grip::None;
@@ -386,143 +586,477 @@ Qt::CursorShape LayoutCanvas::cursorFor(Grip grip)
     return Qt::ArrowCursor;
 }
 
-core::PaperRect LayoutCanvas::dragged(const QPoint& at) const
+void LayoutCanvas::snapTargets(std::vector<core::Um>& xs, std::vector<core::Um>& ys) const
 {
-    const QRectF box      = pageRect();
-    const core::Layout* l = layout();
-    if (l == nullptr || box.isEmpty()) return start_;
-    const core::LayoutPage& page = *activePage();
+    const core::Layout* l        = layout();
+    const core::LayoutPage* page = activePage();
+    if (l == nullptr || page == nullptr) return;
 
-    const double sx = static_cast<double>(page.w) / box.width();
-    const double sy = static_cast<double>(page.h) / box.height();
-    const auto dx   = static_cast<core::Um>((at.x() - press_.x()) * sx);
-    const auto dy   = static_cast<core::Um>((at.y() - press_.y()) * sy);
-
-    core::PaperRect out = start_;
-    switch (grip_) {
-    case Grip::Body:
-        out.x = snapped(start_.x + dx);
-        out.y = snapped(start_.y + dy);
-        break;
-    case Grip::Left:
-    case Grip::TopLeft:
-    case Grip::BottomLeft:
-        out.x = snapped(start_.x + dx);
-        out.w = start_.w - (out.x - start_.x);
-        break;
-    case Grip::Right:
-    case Grip::TopRight:
-    case Grip::BottomRight: out.w = snapped(start_.w + dx); break;
-    default: break;
+    // THE PAGE: its edges, its middle, and the margin the sheet is drawn to.
+    xs = {0, page->w / 2, page->w};
+    ys = {0, page->h / 2, page->h};
+    if (l->margin > 0) {
+        xs.push_back(l->margin);
+        xs.push_back(page->w - l->margin);
+        ys.push_back(l->margin);
+        ys.push_back(page->h - l->margin);
     }
-    switch (grip_) {
-    case Grip::Top:
-    case Grip::TopLeft:
-    case Grip::TopRight:
-        out.y = snapped(start_.y + dy);
-        out.h = start_.h - (out.y - start_.y);
-        break;
-    case Grip::Bottom:
-    case Grip::BottomLeft:
-    case Grip::BottomRight: out.h = snapped(start_.h + dy); break;
-    default: break;
+    // AND EVERY ITEM THAT IS NOT MOVING: its edges and its centre — the lines a
+    // title block is lined up with and a legend is hung from.
+    for (std::size_t i = 0; i < l->items.size(); ++i) {
+        if (l->page_of(i) != page_) continue;
+        const core::LayoutItem& item = l->items[i];
+        const QString id             = QString::fromStdString(item.id);
+        if (std::any_of(starts_.begin(), starts_.end(),
+                        [&id](const ItemFrame& moving) { return moving.first == id; }))
+            continue;
+        xs.insert(xs.end(), {item.frame.x, item.frame.x + item.frame.w / 2, item.frame.right()});
+        ys.insert(ys.end(), {item.frame.y, item.frame.y + item.frame.h / 2, item.frame.bottom()});
+    }
+}
+
+core::Um LayoutCanvas::snapAxis(std::initializer_list<core::Um> edges,
+                                const std::vector<core::Um>& targets, bool vertical)
+{
+    const double per_um = pixelsPerMm() / 1000.0;
+    if (per_um <= 0.0) return 0;
+    const auto reach = static_cast<core::Um>(kSnapPx / per_um);
+    core::Um best    = reach + 1;
+    core::Um move    = 0;
+    core::Um at      = 0;
+    for (const core::Um edge : edges)
+        for (const core::Um target : targets) {
+            const core::Um d = target - edge;
+            if (std::abs(d) < std::abs(best)) {
+                best = d;
+                move = d;
+                at   = target;
+            }
+        }
+    if (std::abs(best) > reach) return 0;
+    guides_.push_back(SnapLine{vertical, at});
+    return move;
+}
+
+void LayoutCanvas::dragTo(const QPoint& at, Qt::KeyboardModifiers modifiers)
+{
+    const core::LayoutPage* page = activePage();
+    const double per_um          = pixelsPerMm() / 1000.0;
+    if (page == nullptr || per_um <= 0.0) return;
+    guides_.clear();
+
+    auto dx = static_cast<core::Um>((at.x() - press_.x()) / per_um);
+    auto dy = static_cast<core::Um>((at.y() - press_.y()) / per_um);
+
+    std::vector<core::Um> xs;
+    std::vector<core::Um> ys;
+    if (snapping_) snapTargets(xs, ys);
+
+    if (gesture_ == Gesture::Move) {
+        // SHIFT KEEPS THE MOVE ON ONE AXIS — the one it is mostly along.
+        if ((modifiers & Qt::ShiftModifier) != 0) {
+            if (std::abs(dx) > std::abs(dy))
+                dy = 0;
+            else
+                dx = 0;
+        }
+        const core::PaperRect group = union_of(starts_);
+        core::Um snapped_x          = 0;
+        core::Um snapped_y          = 0;
+        if (snapping_) {
+            const core::Um left = group.x + dx;
+            const core::Um top  = group.y + dy;
+            snapped_x           = snapAxis({left, left + group.w / 2, left + group.w}, xs, true);
+            snapped_y           = snapAxis({top, top + group.h / 2, top + group.h}, ys, false);
+        }
+        // CAUGHT BY A GUIDE, it goes exactly there; free, it lands on a whole
+        // millimetre measured from where it started.
+        dx    = snapped_x != 0 || !guides_.empty() ? dx + snapped_x : whole(dx);
+        dy    = snapped_y != 0 || !guides_.empty() ? dy + snapped_y : whole(dy);
+        live_ = starts_;
+        for (auto& [id, frame] : live_) {
+            frame.x += dx;
+            frame.y += dy;
+        }
+        return;
     }
 
-    // A MINIMUM OF ONE MILLIMETRE, so a resize that crosses its own edge leaves
-    // something to grab rather than an item nobody can ever select again.
-    out.w = std::max<core::Um>(out.w, kSnap);
-    out.h = std::max<core::Um>(out.h, kSnap);
-    return out;
+    if (gesture_ == Gesture::Resize && !starts_.empty()) {
+        const core::PaperRect start = starts_.front().second;
+        core::PaperRect out         = start;
+        const bool west =
+            grip_ == Grip::Left || grip_ == Grip::TopLeft || grip_ == Grip::BottomLeft;
+        const bool east =
+            grip_ == Grip::Right || grip_ == Grip::TopRight || grip_ == Grip::BottomRight;
+        const bool north = grip_ == Grip::Top || grip_ == Grip::TopLeft || grip_ == Grip::TopRight;
+        const bool south =
+            grip_ == Grip::Bottom || grip_ == Grip::BottomLeft || grip_ == Grip::BottomRight;
+        if (west) {
+            core::Um edge = start.x + dx;
+            edge += snapping_ ? snapAxis({edge}, xs, true) : 0;
+            edge  = guides_.empty() ? whole(edge) : edge;
+            out.x = std::min(edge, start.right() - kWhole);
+            out.w = start.right() - out.x;
+        }
+        if (east) {
+            core::Um edge = start.right() + dx;
+            edge += snapping_ ? snapAxis({edge}, xs, true) : 0;
+            out.w = std::max<core::Um>(kWhole, (guides_.empty() ? whole(edge) : edge) - start.x);
+        }
+        const std::size_t vertical_guides = guides_.size();
+        if (north) {
+            core::Um edge = start.y + dy;
+            edge += snapping_ ? snapAxis({edge}, ys, false) : 0;
+            edge  = guides_.size() == vertical_guides ? whole(edge) : edge;
+            out.y = std::min(edge, start.bottom() - kWhole);
+            out.h = start.bottom() - out.y;
+        }
+        if (south) {
+            core::Um edge = start.bottom() + dy;
+            edge += snapping_ ? snapAxis({edge}, ys, false) : 0;
+            out.h = std::max<core::Um>(
+                kWhole, (guides_.size() == vertical_guides ? whole(edge) : edge) - start.y);
+        }
+        // SHIFT KEEPS THE PROPORTION from a corner — a logo does not squash.
+        if ((modifiers & Qt::ShiftModifier) != 0 && (west || east) && (north || south) &&
+            start.w > 0 && start.h > 0) {
+            const double ratio = static_cast<double>(start.h) / static_cast<double>(start.w);
+            const auto h       = static_cast<core::Um>(std::lround(out.w * ratio));
+            if (north) out.y = start.bottom() - h;
+            out.h = h;
+        }
+        live_ = {ItemFrame{starts_.front().first, out}};
+        return;
+    }
+
+    if (gesture_ == Gesture::Draw) {
+        const QPointF here = paperAt(at);
+        core::Um x         = static_cast<core::Um>(here.x());
+        core::Um y         = static_cast<core::Um>(here.y());
+        if (snapping_) {
+            x += snapAxis({x}, xs, true);
+            y += snapAxis({y}, ys, false);
+        }
+        x          = whole(x);
+        y          = whole(y);
+        core::Um w = std::abs(x - drawn_.x);
+        core::Um h = std::abs(y - drawn_.y);
+        if ((modifiers & Qt::ShiftModifier) != 0) w = h = std::max(w, h);
+        live_ = {
+            ItemFrame{drawKind_, core::PaperRect{x < drawn_.x ? drawn_.x - w : drawn_.x,
+                                                 y < drawn_.y ? drawn_.y - h : drawn_.y, w, h}}};
+    }
 }
 
 void LayoutCanvas::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() != Qt::LeftButton) return;
+    setFocus(Qt::MouseFocusReason);
     const core::Layout* l = layout();
     if (l == nullptr) return;
-
     const QPoint at = event->pos();
+    press_          = at;
+    guides_.clear();
 
-    // THE SELECTED ITEM'S HANDLES WIN over anything under them: a handle sitting
+    // A HAND ON THE PAPER: the middle button, or Space held, pans.
+    if (event->button() == Qt::MiddleButton || (event->button() == Qt::LeftButton && spaceHeld_)) {
+        if (fit_) {
+            const QRectF box = pageRect();
+            scale_           = box.width() / static_cast<double>(activePage()->w);
+            corner_          = box.topLeft();
+            fit_             = false;
+        }
+        gesture_ = Gesture::Pan;
+        panFrom_ = corner_;
+        setCursor(Qt::ClosedHandCursor);
+        return;
+    }
+    if (event->button() != Qt::LeftButton) return;
+
+    // A TOOL DRAWS A BOX, from where it was pressed.
+    if (!drawKind_.isEmpty()) {
+        const QPointF paper = paperAt(at);
+        drawn_              = core::PaperRect{whole(static_cast<core::Um>(paper.x())),
+                                 whole(static_cast<core::Um>(paper.y())), 0, 0};
+        live_               = {ItemFrame{drawKind_, drawn_}};
+        gesture_            = Gesture::Draw;
+        return;
+    }
+
+    // THE PICKED ITEM'S HANDLES WIN over anything under them: a handle sitting
     // on top of another item is still this item's handle, which is what lets a
     // small box be resized while it overlaps a big one.
-    if (const Grip grip = gripAt(at); grip != Grip::None) {
-        const core::LayoutItem* item = l->find(selected_.toStdString());
-        if (item != nullptr && !item->locked) {
-            grip_     = grip;
-            dragging_ = true;
-            press_    = at;
-            start_    = item->frame;
-            live_     = start_;
+    if (const Grip grip = gripAt(at); grip != Grip::None && grip != Grip::Body) {
+        const core::LayoutItem* item = l->find(primary_.toStdString());
+        if (item != nullptr) {
+            grip_    = grip;
+            gesture_ = Gesture::Resize;
+            starts_  = {ItemFrame{primary_, item->frame}};
+            live_    = starts_;
             return;
         }
     }
 
-    // OTHERWISE THE TOPMOST ITEM UNDER THE POINTER, by paint order: what is in
-    // front is what the eye means.
-    const core::LayoutItem* hit = nullptr;
-    for (const core::LayoutItem& item : l->items) {
-        if (!deviceFrom(item.frame).contains(at)) continue;
-        if (hit == nullptr || item.z >= hit->z) hit = &item;
+    const core::LayoutItem* hit = itemAt(at);
+    const bool adding           = (event->modifiers() & Qt::ShiftModifier) != 0;
+    if (hit == nullptr) {
+        // EMPTY PAPER STARTS A MARQUEE; Shift keeps what was picked.
+        if (!adding) setSelection({});
+        gesture_ = Gesture::Marquee;
+        marquee_ = QRectF(at, at);
+        return;
     }
-    select(hit != nullptr ? QString::fromStdString(hit->id) : QString());
+
+    const QString id = QString::fromStdString(hit->id);
+    if (adding) {
+        // SHIFT TOGGLES ONE ITEM IN OR OUT, and moves nothing.
+        QStringList next = selection_;
+        if (next.contains(id))
+            next.removeAll(id);
+        else
+            next << id;
+        setSelection(next);
+        return;
+    }
+    if (!selection_.contains(id)) setSelection({id});
+
+    // THE WHOLE PICK MOVES, less what is locked.
+    starts_.clear();
+    for (const QString& one : std::as_const(selection_))
+        if (const core::LayoutItem* item = l->find(one.toStdString());
+            item != nullptr && !item->locked)
+            starts_.push_back(ItemFrame{one, item->frame});
+    if (!starts_.empty()) {
+        gesture_ = Gesture::Move;
+        live_    = starts_;
+    }
 }
 
 void LayoutCanvas::mouseMoveEvent(QMouseEvent* event)
 {
-    if (dragging_) {
-        live_ = dragged(event->pos());
+    const QPoint at     = event->pos();
+    const QPointF paper = paperAt(at);
+    if (const core::LayoutPage* page = activePage(); page != nullptr)
+        emit cursorAt(paper.x() / 1000.0, paper.y() / 1000.0,
+                      paper.x() >= 0 && paper.y() >= 0 && paper.x() <= page->w &&
+                          paper.y() <= page->h);
+
+    switch (gesture_) {
+    case Gesture::Pan:
+        corner_    = panFrom_ + (at - press_);
+        cachePage_ = -1;
         update();
         return;
+    case Gesture::Marquee:
+        marquee_ = QRectF(press_, at).normalized();
+        update();
+        return;
+    case Gesture::Move:
+    case Gesture::Resize:
+    case Gesture::Draw:
+        dragTo(at, event->modifiers());
+        update();
+        return;
+    case Gesture::None: break;
     }
-    setCursor(cursorFor(gripAt(event->pos())));
+
+    // NOT PRESSED: say what a press here would do.
+    if (!drawKind_.isEmpty()) {
+        setCursor(Qt::CrossCursor);
+        return;
+    }
+    if (spaceHeld_) {
+        setCursor(Qt::OpenHandCursor);
+        return;
+    }
+    const Grip grip              = gripAt(at);
+    const core::LayoutItem* over = itemAt(at);
+    setCursor(grip != Grip::None
+                  ? cursorFor(grip)
+                  : (over != nullptr && !over->locked ? Qt::SizeAllCursor : Qt::ArrowCursor));
+    const QString hovered = over != nullptr ? QString::fromStdString(over->id) : QString();
+    if (hovered != hover_) {
+        hover_ = hovered;
+        update();
+    }
 }
 
 void LayoutCanvas::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (!dragging_ || event->button() != Qt::LeftButton) return;
-    dragging_ = false;
-    grip_     = Grip::None;
+    const Gesture was = gesture_;
+    gesture_          = Gesture::None;
+    grip_             = Grip::None;
+    guides_.clear();
+    if (was == Gesture::None) return;
 
-    // ONE COMMAND, AT THE END OF THE GESTURE. The motion was drawn; only the
-    // result is recorded, or a drag across the page would be four hundred undo
-    // entries.
-    if (live_.x != start_.x || live_.y != start_.y || live_.w != start_.w || live_.h != start_.h)
-        emit itemMoved(selected_, live_);
+    if (was == Gesture::Pan) {
+        setCursor(spaceHeld_ ? Qt::OpenHandCursor : Qt::ArrowCursor);
+        return;
+    }
+    if (was == Gesture::Marquee) {
+        // EVERY ITEM THE MARQUEE TOUCHES, the way a frame picks on the map.
+        const core::Layout* l = layout();
+        QStringList next =
+            (event->modifiers() & Qt::ShiftModifier) != 0 ? selection_ : QStringList{};
+        if (l != nullptr && marquee_.width() > 2 && marquee_.height() > 2)
+            for (std::size_t i = 0; i < l->items.size(); ++i) {
+                if (l->page_of(i) != page_) continue;
+                const QString id = QString::fromStdString(l->items[i].id);
+                if (deviceFrom(l->items[i].frame).intersects(marquee_) && !next.contains(id))
+                    next << id;
+            }
+        marquee_ = {};
+        setSelection(next);
+        return;
+    }
+    if (was == Gesture::Draw) {
+        const core::PaperRect box = live_.empty() ? core::PaperRect{} : live_.front().second;
+        const QString kind        = drawKind_;
+        live_.clear();
+        setDrawKind(QString());
+        // A CLICK, NOT A DRAG, is a request for the kind's own size about the
+        // click — what `emit itemDrawn` with an empty frame says.
+        if (box.w < 2 * kWhole || box.h < 2 * kWhole)
+            emit itemDrawn(kind, core::PaperRect{drawn_.x, drawn_.y, 0, 0});
+        else
+            emit itemDrawn(kind, box);
+        emit drawFinished();
+        update();
+        return;
+    }
+
+    // A MOVE OR A RESIZE: ONE COMMAND, AT THE END OF THE GESTURE. The motion
+    // was drawn; only the result is recorded, or a drag across the page would
+    // be four hundred undo entries.
+    QVector<ItemFrame> changed;
+    for (std::size_t i = 0; i < live_.size() && i < starts_.size(); ++i)
+        if (!(live_[i].second == starts_[i].second)) changed.push_back(live_[i]);
+    live_.clear();
+    starts_.clear();
     update();
+    if (changed.size() == 1)
+        emit itemMoved(changed.front().first, changed.front().second);
+    else if (!changed.isEmpty())
+        emit itemsMoved(changed);
 }
 
 void LayoutCanvas::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton && !selected_.isEmpty()) emit itemActivated(selected_);
+    if (event->button() != Qt::LeftButton) return;
+    if (const core::LayoutItem* hit = itemAt(event->pos()); hit != nullptr)
+        emit itemActivated(QString::fromStdString(hit->id));
+}
+
+void LayoutCanvas::wheelEvent(QWheelEvent* event)
+{
+    const double steps = event->angleDelta().y() / 120.0;
+    if (steps == 0.0) return;
+    zoomBy(std::pow(1.2, steps), event->position());
+    event->accept();
 }
 
 void LayoutCanvas::keyPressEvent(QKeyEvent* event)
 {
     const core::Layout* l = layout();
-    if (l == nullptr || selected_.isEmpty()) {
+    if (event->key() == Qt::Key_Space && !event->isAutoRepeat()) {
+        spaceHeld_ = true;
+        setCursor(Qt::OpenHandCursor);
+        return;
+    }
+    if (event->key() == Qt::Key_Escape) {
+        if (!drawKind_.isEmpty()) {
+            setDrawKind(QString());
+            emit drawFinished();
+        } else {
+            setSelection({});
+        }
+        return;
+    }
+    if (event->key() == Qt::Key_Plus || event->key() == Qt::Key_Equal) {
+        zoomBy(1.25);
+        return;
+    }
+    if (event->key() == Qt::Key_Minus) {
+        zoomBy(0.8);
+        return;
+    }
+    if (event->key() == Qt::Key_0) {
+        zoomToFit();
+        return;
+    }
+    if (l == nullptr) {
         QWidget::keyPressEvent(event);
         return;
     }
-    const core::LayoutItem* item = l->find(selected_.toStdString());
-    if (item == nullptr || item->locked) {
-        QWidget::keyPressEvent(event);
+    if (event->matches(QKeySequence::SelectAll)) {
+        QStringList all;
+        for (std::size_t i = 0; i < l->items.size(); ++i)
+            if (l->page_of(i) == page_) all << QString::fromStdString(l->items[i].id);
+        setSelection(all);
+        return;
+    }
+    if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) &&
+        !selection_.isEmpty()) {
+        emit deleteRequested();
         return;
     }
 
-    // ARROW KEYS NUDGE BY A MILLIMETRE, Shift by ten. The keyboard reaches every
-    // gesture the mouse does (ui.md R21), and a millimetre is the unit the rest
-    // of the window is written in.
-    const core::Um step   = (event->modifiers() & Qt::ShiftModifier) != 0 ? 10 * kSnap : kSnap;
-    core::PaperRect moved = item->frame;
+    // ARROW KEYS NUDGE BY A MILLIMETRE, Shift by ten, the whole pick at once.
+    const core::Um step = (event->modifiers() & Qt::ShiftModifier) != 0 ? 10 * kWhole : kWhole;
+    core::Um dx         = 0;
+    core::Um dy         = 0;
     switch (event->key()) {
-    case Qt::Key_Left: moved.x -= step; break;
-    case Qt::Key_Right: moved.x += step; break;
-    case Qt::Key_Up: moved.y -= step; break;
-    case Qt::Key_Down: moved.y += step; break;
+    case Qt::Key_Left: dx = -step; break;
+    case Qt::Key_Right: dx = step; break;
+    case Qt::Key_Up: dy = -step; break;
+    case Qt::Key_Down: dy = step; break;
     default: QWidget::keyPressEvent(event); return;
     }
-    emit itemMoved(selected_, moved);
+    QVector<ItemFrame> moved;
+    for (const QString& id : std::as_const(selection_))
+        if (const core::LayoutItem* item = l->find(id.toStdString());
+            item != nullptr && !item->locked) {
+            core::PaperRect frame = item->frame;
+            frame.x += dx;
+            frame.y += dy;
+            moved.push_back(ItemFrame{id, frame});
+        }
+    if (moved.size() == 1)
+        emit itemMoved(moved.front().first, moved.front().second);
+    else if (!moved.isEmpty())
+        emit itemsMoved(moved);
+}
+
+void LayoutCanvas::keyReleaseEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Space && !event->isAutoRepeat()) {
+        spaceHeld_ = false;
+        setCursor(drawKind_.isEmpty() ? Qt::ArrowCursor : Qt::CrossCursor);
+        return;
+    }
+    QWidget::keyReleaseEvent(event);
+}
+
+void LayoutCanvas::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    cachePage_ = -1;
+    if (fit_) emit zoomChanged(zoomPercent());
+}
+
+void LayoutCanvas::contextMenuEvent(QContextMenuEvent* event)
+{
+    if (const core::LayoutItem* hit = itemAt(event->pos()); hit != nullptr) {
+        const QString id = QString::fromStdString(hit->id);
+        if (!selection_.contains(id)) setSelection({id});
+    }
+    if (!selection_.isEmpty()) emit contextRequested(event->globalPos());
+}
+
+void LayoutCanvas::leaveEvent(QEvent* event)
+{
+    hover_.clear();
+    update();
+    QWidget::leaveEvent(event);
 }
 
 void LayoutCanvas::applyTheme(ThemeMode mode)
@@ -531,39 +1065,69 @@ void LayoutCanvas::applyTheme(ThemeMode mode)
     update();
 }
 
-/// THE TWO MILLIMETRE SCALES, and the selection's span lit on them.
+void LayoutCanvas::paintSheet(QPainter& p, const QRectF& box)
+{
+    const core::Layout* l = layout();
+    if (l == nullptr) return;
+    const qreal dpr        = devicePixelRatioF();
+    const QSize wanted     = (box.size() * dpr).toSize();
+    const std::uint64_t at = controller_.document().revision();
+    if (cache_.isNull() || cachePage_ != page_ || cacheRevision_ != at || cacheSize_ != wanted ||
+        cacheSheet_ != sheet_) {
+        cache_ = QImage(wanted, QImage::Format_ARGB32_Premultiplied);
+        cache_.setDevicePixelRatio(dpr);
+        cache_.fill(Qt::white);
+        QPainter sheet(&cache_);
+        sheet.setRenderHint(QPainter::Antialiasing, true);
+        sheet.setRenderHint(QPainter::TextAntialiasing, true);
+
+        LayoutFacts facts;
+        facts.sheet = QString::fromStdString(l->name);
+        // `Bus::on_current_file` is what KAYDET reads to know where the drawing
+        // came from; an unsaved drawing answers with nothing and `<proje>` is
+        // then empty, which is the truth rather than a made-up name.
+        if (controller_.bus().on_current_file) {
+            const QFileInfo file(QString::fromStdString(controller_.bus().on_current_file()));
+            facts.project     = file.fileName();
+            facts.project_dir = file.absolutePath();
+        }
+        facts.crs  = QString::fromStdString(controller_.document().crs().id());
+        facts.date = QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
+
+        // THE SCREEN'S OWN DPI, so a 0.25 mm hairline on the sheet is a hairline
+        // here too — the designer shows what the printer will do, at a different
+        // size (`layout_render.hpp`). The SAME function the PDF, the printer and
+        // the image export go through (ui.md R36).
+        const double dpi = logicalDpiX() > 0 ? logicalDpiX() : 96.0;
+        paint_layout_page(sheet, QRectF(QPointF(0, 0), box.size()), controller_.document(), *l,
+                          page_, dpi, facts, /*margin_guide=*/true);
+        sheet.end();
+        cachePage_     = page_;
+        cacheRevision_ = at;
+        cacheSize_     = wanted;
+        cacheSheet_    = sheet_;
+    }
+    p.drawImage(box.topLeft(), cache_);
+}
+
+/// THE TWO MILLIMETRE SCALES, and the pick's span lit on them.
 ///
 /// WHAT IT ANSWERS. "Where on the paper is this, and how wide is it" — asked of
-/// the drawing rather than of a property field. The lit span is the whole point:
-/// it turns four numbers a user would otherwise read one at a time into one
-/// picture, and it moves live while a frame is dragged, so the drag itself is
-/// measured rather than merely watched.
+/// the drawing rather than of a property field. The lit span turns four numbers
+/// a user would otherwise read one at a time into one picture, and it moves
+/// live while a frame is dragged, so the drag itself is measured.
 ///
-/// THE STEP IS CHOSEN FROM THE ZOOM, not fixed. A 5 mm tick on an A0 sheet
-/// fitted to a laptop is a grey smear; the coarsest step whose ticks stay at
-/// least four pixels apart is used instead, so the scale stays readable at every
-/// paper size this program can open.
-void LayoutCanvas::paintRulers(QPainter& p, const QRectF& box, const core::LayoutItem* item) const
+/// THE STEP IS CHOSEN FROM THE ZOOM, not fixed: the coarsest step whose ticks
+/// stay at least four pixels apart, so the scale stays readable at every paper
+/// size and every zoom this window allows.
+void LayoutCanvas::paintRulers(QPainter& p, const QRectF& box, const QRectF* lit) const
 {
     const Tokens& t              = theme_ == ThemeMode::Dark ? darkTokens() : lightTokens();
     const core::LayoutPage* page = activePage();
     if (page == nullptr || box.width() <= 0.0) return;
-
-    // THE PEN AND THE BRUSH GO BACK AS THEY WERE.
-    //
-    // Without this the corner's `bgStrip` brush was still set when the caller
-    // drew the selection's outline next, so the picked box came out FILLED with
-    // the ruler's own grey — barely visible in the light theme and a black hole
-    // over the map frame in the dark one. A helper that paints has to leave the
-    // painter as it found it.
     p.save();
 
-    const double per_mm = box.width() / (static_cast<double>(page->w) / 1000.0);
-
-    // TICKS AND NUMBERS ARE CHOSEN SEPARATELY, from the same ladder. A tick is
-    // legible at four pixels apart; a three-digit number needs closer to fifty,
-    // and pinning the numbers to "every fifth tick" put 25 mm labels shoulder to
-    // shoulder on an A3 and left an A0 with almost none.
+    const double per_mm     = box.width() / (static_cast<double>(page->w) / 1000.0);
     const core::Um step     = ruler_step(per_mm, 4.0);
     const core::Um labelled = std::max(ruler_step(per_mm, 46.0), step);
 
@@ -572,20 +1136,26 @@ void LayoutCanvas::paintRulers(QPainter& p, const QRectF& box, const core::Layou
     p.drawRect(QRectF(0, 0, width(), kRulerPx));
     p.drawRect(QRectF(0, 0, kRulerPx, height()));
 
-    // THE LIT SPAN, under the ticks so the numbers stay legible on top of it.
-    if (item != nullptr) {
-        const QRectF lit = dragging_ ? deviceFrom(live_) : deviceFrom(item->frame);
+    // THE PAPER'S OWN SPAN on each scale, a step lighter than the pasteboard's,
+    // so the ruler says where the sheet begins and ends as well as where the
+    // pick sits.
+    p.setBrush(t.bgSunken);
+    p.drawRect(QRectF(box.left(), 0, box.width(), kRulerPx));
+    p.drawRect(QRectF(0, box.top(), kRulerPx, box.height()));
+
+    if (lit != nullptr) {
         p.setBrush(t.accentWash);
-        p.drawRect(QRectF(lit.left(), 0, lit.width(), kRulerPx));
-        p.drawRect(QRectF(0, lit.top(), kRulerPx, lit.height()));
+        p.drawRect(QRectF(lit->left(), 0, lit->width(), kRulerPx));
+        p.drawRect(QRectF(0, lit->top(), kRulerPx, lit->height()));
         p.setPen(QPen(t.accent, 2.0));
-        p.drawLine(QPointF(lit.left(), kRulerPx - 1.0), QPointF(lit.right(), kRulerPx - 1.0));
-        p.drawLine(QPointF(kRulerPx - 1.0, lit.top()), QPointF(kRulerPx - 1.0, lit.bottom()));
+        p.drawLine(QPointF(lit->left(), kRulerPx - 1.0), QPointF(lit->right(), kRulerPx - 1.0));
+        p.drawLine(QPointF(kRulerPx - 1.0, lit->top()), QPointF(kRulerPx - 1.0, lit->bottom()));
         p.setPen(Qt::NoPen);
     }
 
     QFont small = p.font();
-    small.setPointSizeF(std::max(7.0, small.pointSizeF() - 2.0));
+    small.setFamily(QStringLiteral("IBM Plex Mono"));
+    small.setPointSizeF(std::max(7.0, small.pointSizeF() - 2.5));
     p.setFont(small);
 
     const auto ticks = [&](bool horizontal) {
@@ -594,7 +1164,8 @@ void LayoutCanvas::paintRulers(QPainter& p, const QRectF& box, const core::Layou
         const double scale    = horizontal ? box.width() / static_cast<double>(extent)
                                            : box.height() / static_cast<double>(extent);
         for (core::Um at = 0; at <= extent; at += step) {
-            const double pos  = origin + static_cast<double>(at) * scale;
+            const double pos = origin + static_cast<double>(at) * scale;
+            if (pos < kRulerPx || pos > (horizontal ? width() : height())) continue;
             const bool named  = at % labelled == 0;
             const double from = named ? 4.0 : kRulerPx - 5.0;
             p.setPen(QPen(named ? t.textFaint : t.rulerTick, 1.0));
@@ -603,10 +1174,6 @@ void LayoutCanvas::paintRulers(QPainter& p, const QRectF& box, const core::Layou
             else
                 p.drawLine(QPointF(from, pos), QPointF(kRulerPx - 1.0, pos));
             if (!named) continue;
-
-            // THE NUMBER RIDES THE TICK, and the vertical scale reads
-            // top-to-bottom like the page coordinate it names — no rotated
-            // text, which at 7 pt is a smudge on every platform.
             p.setPen(t.textDim);
             const QString text = QString::number(at / 1000);
             if (horizontal)
@@ -637,7 +1204,7 @@ void LayoutCanvas::paintEvent(QPaintEvent*)
 {
     const Tokens& t = theme_ == ThemeMode::Dark ? darkTokens() : lightTokens();
     QPainter p(this);
-    p.fillRect(rect(), t.bgApp);
+    p.fillRect(rect(), t.bgCanvas);
 
     const core::Layout* l = layout();
     const QRectF box      = pageRect();
@@ -650,104 +1217,183 @@ void LayoutCanvas::paintEvent(QPaintEvent*)
     // A SHADOW UNDER THE SHEET: the one piece of chrome that says "this is
     // paper on a table" without a word. Three falling passes rather than one
     // hard offset — a single 40% rectangle reads as a second sheet behind the
-    // first, which is the opposite of what a shadow is for.
-    //
-    // SAVED AND RESTORED, AND THAT IS NOT TIDINESS.
-    //
-    // `paint_layout_page` below is the SAME function the PDF, the printer and
-    // the image export go through, and it draws into the painter it is handed.
-    // Handed one with a brush still set, it filled every parcel on the sheet
-    // with that brush — the shadow's black at 10% over white paper, which is
-    // the pale grey a user sees inside the map frame and nowhere in the file
-    // they print. A preview that claims a fill the sheet does not have is a
-    // preview lying about a document a licensed engineer signs.
-    //
-    // The SCOPE is what fixes it. A bare `setBrush(Qt::NoBrush)` after the loop
-    // works until the next piece of chrome is added above this line.
+    // first. SAVED AND RESTORED: `paint_layout_page` draws into the painter it
+    // is handed, and a brush left set here filled every parcel on the preview.
     p.save();
     p.setPen(Qt::NoPen);
-    for (const auto& [drop, alpha] : {std::pair{6.0, 12}, std::pair{4.0, 18}, std::pair{2.0, 26}}) {
+    for (const auto& [drop, alpha] : {std::pair{8.0, 14}, std::pair{5.0, 20}, std::pair{2.0, 30}}) {
         p.setBrush(QColor(0, 0, 0, alpha));
-        p.drawRect(box.adjusted(-drop + 2, -drop + 4, drop + 2, drop + 4));
+        p.drawRect(box.adjusted(-drop + 2, -drop + 5, drop + 2, drop + 5));
     }
     p.restore();
 
-    LayoutFacts facts;
-    facts.sheet = QString::fromStdString(l->name);
-    // `Bus::on_current_file` is what KAYDET reads to know where the drawing came
-    // from; an unsaved drawing answers with nothing and `<proje>` is then empty,
-    // which is the truth rather than a made-up name.
-    facts.project =
-        controller_.bus().on_current_file
-            ? QFileInfo(QString::fromStdString(controller_.bus().on_current_file())).fileName()
-            : QString();
-    facts.crs  = QString::fromStdString(controller_.document().crs().id());
-    facts.date = QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
-
-    // AND WHERE THE PROJECT LIVES, so a logo stored beside it is found after the
-    // folder has been copied to somebody else's machine (`LayoutFacts`).
-    if (controller_.bus().on_current_file)
-        facts.project_dir =
-            QFileInfo(QString::fromStdString(controller_.bus().on_current_file())).absolutePath();
-
-    // THE SCREEN'S OWN DPI, so a 0.25 mm hairline on the sheet is a hairline
-    // here too — the designer shows what the printer will do, at a different
-    // size (`layout_render.hpp`).
-    const double dpi = logicalDpiX() > 0 ? logicalDpiX() : 96.0;
-    paint_layout_page(p, box, controller_.document(), *l, page_, dpi, facts,
-                      /*margin_guide=*/true);
-
+    paintSheet(p, box);
     p.setBrush(Qt::NoBrush);
     p.setPen(QPen(t.lineHard, 1.0));
     p.drawRect(box);
 
-    const core::LayoutItem* item = selected_.isEmpty() ? nullptr : l->find(selected_.toStdString());
-    paintRulers(p, box, item);
+    p.setRenderHint(QPainter::Antialiasing, false);
 
-    if (item == nullptr) return;
+    // THE ITEM UNDER THE POINTER, outlined faintly: what a click would take.
+    if (!hover_.isEmpty() && !selection_.contains(hover_) && gesture_ == Gesture::None)
+        if (const core::LayoutItem* over = l->find(hover_.toStdString()); over != nullptr) {
+            QColor faint = t.accent;
+            faint.setAlpha(120);
+            p.setPen(QPen(faint, 1.0, Qt::DashLine));
+            p.drawRect(deviceFrom(over->frame));
+        }
 
-    const QRectF chosen = dragging_ ? deviceFrom(live_) : deviceFrom(item->frame);
-    p.setPen(QPen(t.accent, 1.0, item->locked ? Qt::DashLine : Qt::SolidLine));
-    p.drawRect(chosen);
+    // THE PICKS: an outline each — dashed when locked, because a locked box
+    // does not move — and, while a gesture carries them, the box they will end
+    // at, washed, over the place they are leaving.
+    std::vector<QRectF> picked;
+    for (const QString& id : std::as_const(selection_))
+        if (const core::LayoutItem* item = l->find(id.toStdString()); item != nullptr) {
+            QRectF shown = deviceFrom(item->frame);
+            for (const auto& [moving, frame] : live_)
+                if (moving == id) shown = deviceFrom(frame);
+            picked.push_back(shown);
+            if (!live_.empty() && gesture_ != Gesture::Draw) {
+                p.fillRect(shown, t.accentWash);
+            }
+            p.setPen(QPen(t.accent, 1.0, item->locked ? Qt::DashLine : Qt::SolidLine));
+            p.drawRect(shown);
+        }
 
-    // NO HANDLES ON A LOCKED ITEM: a handle that refuses to drag is a control
-    // that lies about what it does.
-    if (item->locked) return;
-    p.setBrush(t.accent);
-    p.setPen(QPen(Qt::white, 1.0));
-    const double g = kGripPx / 2.0;
-    for (const QPointF& corner :
-         {chosen.topLeft(), QPointF(chosen.center().x(), chosen.top()), chosen.topRight(),
-          QPointF(chosen.right(), chosen.center().y()), chosen.bottomRight(),
-          QPointF(chosen.center().x(), chosen.bottom()), chosen.bottomLeft(),
-          QPointF(chosen.left(), chosen.center().y())})
-        p.drawRect(QRectF(corner.x() - g, corner.y() - g, 2 * g, 2 * g));
+    // THE BOX A TOOL IS DRAWING, and its size beside it.
+    if (gesture_ == Gesture::Draw && !live_.empty()) {
+        const QRectF drawn = deviceFrom(live_.front().second);
+        p.fillRect(drawn, t.accentWash);
+        p.setPen(QPen(t.accent, 1.0, Qt::DashLine));
+        p.drawRect(drawn);
+    }
+
+    // SMART GUIDES: the page line, margin or edge the drag has caught.
+    if (!guides_.empty()) {
+        p.setPen(QPen(t.accent, 1.0));
+        for (const SnapLine& guide : guides_) {
+            const QRectF line =
+                deviceFrom(guide.vertical ? core::PaperRect{guide.at, 0, 0, activePage()->h}
+                                          : core::PaperRect{0, guide.at, activePage()->w, 0});
+            p.drawLine(line.topLeft(), line.bottomRight());
+        }
+    }
+
+    // A MARQUEE, washed.
+    if (gesture_ == Gesture::Marquee && marquee_.width() > 1) {
+        p.fillRect(marquee_, t.accentWash);
+        p.setPen(QPen(t.accent, 1.0, Qt::DashLine));
+        p.drawRect(marquee_);
+    }
+
+    // THE HANDLES, on one unlocked pick. Several picks move together and show
+    // their shared box instead; resizing one of a group is a job for the panel.
+    const core::LayoutItem* one =
+        selection_.size() == 1 ? l->find(primary_.toStdString()) : nullptr;
+    if (one != nullptr && !one->locked && !picked.empty()) {
+        const QRectF chosen = picked.back();
+        p.setBrush(t.accent);
+        p.setPen(QPen(Qt::white, 1.0));
+        const double g = kGripPx / 2.0;
+        for (const QPointF& corner :
+             {chosen.topLeft(), QPointF(chosen.center().x(), chosen.top()), chosen.topRight(),
+              QPointF(chosen.right(), chosen.center().y()), chosen.bottomRight(),
+              QPointF(chosen.center().x(), chosen.bottom()), chosen.bottomLeft(),
+              QPointF(chosen.left(), chosen.center().y())})
+            p.drawRect(QRectF(corner.x() - g, corner.y() - g, 2 * g, 2 * g));
+    } else if (picked.size() > 1) {
+        QRectF group = picked.front();
+        for (const QRectF& r : picked)
+            group = group.united(r);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(t.accent, 1.0, Qt::DotLine));
+        p.drawRect(group.adjusted(-3, -3, 3, 3));
+    }
+
+    // THE MEASUREMENT OF A GESTURE, beside it: where the box is and how big,
+    // in the millimetres the fields will say once it is let go.
+    if (!live_.empty() && gesture_ != Gesture::None && gesture_ != Gesture::Pan) {
+        const core::PaperRect f =
+            gesture_ == Gesture::Move ? union_of(live_) : live_.front().second;
+        const QString said = gesture_ == Gesture::Move
+                                 ? tr("%1, %2 mm").arg(mm_shown(f.x), mm_shown(f.y))
+                                 : tr("%1 × %2 mm").arg(mm_shown(f.w), mm_shown(f.h));
+        QFont mono         = p.font();
+        mono.setFamily(QStringLiteral("IBM Plex Mono"));
+        mono.setPointSizeF(std::max(8.0, mono.pointSizeF() - 1.0));
+        p.setFont(mono);
+        const QRectF at = deviceFrom(f);
+        const QFontMetricsF fm(mono);
+        const QRectF chip(at.right() + 8, at.bottom() + 6, fm.horizontalAdvance(said) + 12, 20);
+        p.setPen(Qt::NoPen);
+        p.setBrush(t.accent);
+        p.drawRoundedRect(chip, 3, 3);
+        p.setPen(t.onAccent);
+        p.drawText(chip, Qt::AlignCenter, said);
+    }
+
+    // THE RULERS LAST, over the pasteboard, with the pick's span lit.
+    QRectF span;
+    for (const QRectF& r : picked)
+        span = span.isNull() ? r : span.united(r);
+    if (gesture_ == Gesture::Draw && !live_.empty()) span = deviceFrom(live_.front().second);
+    paintRulers(p, box, span.isNull() ? nullptr : &span);
 }
 
-} // namespace kentos::app
-
 // ======================================================== LayoutDesigner =====
-
-namespace kentos::app {
 
 LayoutDesigner::LayoutDesigner(Controller& controller, QString layout, QWidget* parent)
     : DialogFrame(parent), controller_(controller), name_(std::move(layout))
 {
-    setHeading(Glyph::Print, tr("Çıktı Yerleşimi Tasarımcısı"), QStringLiteral("— %1").arg(name_));
+    // THE NAME IS THE SYSTEM TITLE BAR'S, the way §8 has it for the style
+    // designer: `Çıktı Yerleşimi Tasarımcısı — Pafta`. The window draws only
+    // its own 48 px footer.
+    setHeading(Glyph::Layout, tr("Çıktı Yerleşimi Tasarımcısı"), QStringLiteral("— %1").arg(name_));
+    setFooterHeight(48);
     setBody(buildBody());
-    resize(1180, 760);
+
+    // THE STYLE DESIGNER'S SIZE, because it is the same kind of window — a
+    // thing to work on with a property column beside it (design.md §4, §8).
+    // It opens at 1280 × 820 where the screen has that and never wider than
+    // the screen. 1040 × 680 is the least at which the tool row, the rail, a
+    // sheet that can be read and the inspector all fit without cutting any of
+    // them: every row below is measured against it.
+    setMinimumSize(1040, 680);
+    QSize room(1280, 820);
+    if (const QScreen* screen = QGuiApplication::primaryScreen(); screen != nullptr) {
+        const QSize free = screen->availableSize();
+        room             = QSize(std::min(room.width(), free.width() - 48),
+                                 std::min(room.height(), free.height() - 64));
+    }
+    resize(room.expandedTo(minimumSize()));
 
     auto* close = new Button(ButtonRole::Secondary, tr("Kapat"), std::nullopt, this);
     connect(close, &QPushButton::clicked, this, &QDialog::accept);
     footer()->addWidget(close);
 
-    auto* print = new Button(ButtonRole::Secondary, tr("Yazdır…"), Glyph::Print, this);
-    connect(print, &QPushButton::clicked, this, [this] { exportSheet(); });
-    footer()->addWidget(print);
-
     auto* pdf = new Button(ButtonRole::Primary, tr("PDF'e aktar…"), Glyph::Export, this);
+    pdf->setToolTip(tr("Yerleşimi PDF olarak yazar: YAZDIR yerlesim=… dosya=…"));
     connect(pdf, &QPushButton::clicked, this, [this] { exportSheet(); });
     footer()->addWidget(pdf);
+
+    // THE KEYBOARD OF A PAGE EDITOR. A modal window takes the keys the main
+    // window's actions would have had, so the ones a user reaches for here are
+    // declared here. A field being typed in keeps Ctrl+Z for its own text: a
+    // line edit claims its standard keys before a shortcut sees them.
+    const auto key = [this](const QKeySequence& keys, auto&& act) {
+        auto* shortcut = new QShortcut(keys, this);
+        connect(shortcut, &QShortcut::activated, this, std::forward<decltype(act)>(act));
+    };
+    key(QKeySequence::Undo, [this] {
+        controller_.runLine(QStringLiteral("GERİAL"), command::Origin::Gui);
+        refresh();
+    });
+    key(QKeySequence::Redo, [this] {
+        controller_.runLine(QStringLiteral("YİNELE"), command::Origin::Gui);
+        refresh();
+    });
+    key(QKeySequence(Qt::CTRL | Qt::Key_D), [this] { duplicatePicked(); });
+    key(QKeySequence(Qt::CTRL | Qt::Key_L), [this] { toggleLockPicked(); });
 
     // THE WINDOW FOLLOWS THE DOCUMENT, not its own record of it: a `ÇIKTIÖĞE`
     // line typed on the command line while this is open redraws it, which is
@@ -756,6 +1402,7 @@ LayoutDesigner::LayoutDesigner(Controller& controller, QString layout, QWidget* 
 
     refresh();
     LayoutDesigner::applyTheme(theme());
+    canvas_->setFocus();
 }
 
 const core::Layout* LayoutDesigner::layout() const
@@ -763,264 +1410,491 @@ const core::Layout* LayoutDesigner::layout() const
     return controller_.document().layouts().find(name_.toStdString());
 }
 
+void LayoutDesigner::setViewWindow(core::Box2 window)
+{
+    viewWindow_ = window;
+    buildProperties();
+}
+
 QWidget* LayoutDesigner::buildBody()
 {
-    auto* body = new QWidget(this);
-    auto* row  = new QHBoxLayout(body);
+    auto* body   = new QWidget(this);
+    auto* column = new QVBoxLayout(body);
+    column->setContentsMargins(0, 0, 0, 0);
+    column->setSpacing(0);
+
+    // The canvas first: the strips and the inspector all talk to it.
+    canvas_ = new LayoutCanvas(controller_, body);
+    canvas_->setSheet(name_, 0);
+
+    column->addWidget(buildToolRow());
+
+    auto* middle = new QWidget(body);
+    auto* row    = new QHBoxLayout(middle);
     row->setContentsMargins(0, 0, 0, 0);
     row->setSpacing(0);
+    row->addWidget(buildToolRail());
+    row->addWidget(canvas_, 1);
+    row->addWidget(buildInspector());
+    column->addWidget(middle, 1);
+    column->addWidget(buildStatusStrip());
 
-    // ---- left: what is on the sheet, and what can be added -------------------
-    auto* left = new QWidget(body);
-    left->setFixedWidth(212);
-    auto* leftColumn = new QVBoxLayout(left);
-    leftColumn->setContentsMargins(12, 12, 8, 12);
-    leftColumn->setSpacing(8);
-    // ---- which page, and the three things one can do to pages --------------
-    //
-    // ONE PAGE IS SHOWN AT A TIME, which is what a sheet is: the canvas draws
-    // it, the item list holds its items and every drag is measured against its
-    // paper. Without this the designer could open a two-page layout and only
-    // ever reach the first one.
-    //
-    // A PAGER, NOT A FORM FIELD. This used to be a full-height labelled input
-    // under a section heading — three rows and ninety pixels to answer "which
-    // of one page". It is one strip now: step back, the number (still typed,
-    // because a sixty-page atlas is not paged through by clicking), how many
-    // there are, step forward, and the three page verbs. No heading, because a
-    // row of arrows around a number does not need to be told it is a pager.
-    auto* pager    = new QWidget(left);
-    auto* pagerRow = new QHBoxLayout(pager);
-    pagerRow->setContentsMargins(0, 0, 0, 0);
-    pagerRow->setSpacing(4);
-
-    const auto stepper = [&](Glyph glyph, const QString& tip, int by) {
-        // GHOST, NOT ICON. `Icon` draws a 32 px box, and six boxes in a row at
-        // the top of the panel are six rectangles competing with the sheet for
-        // a reader's eye. These are inline actions, which is what Ghost is for
-        // (`widgets.hpp`): the glyph alone, chrome only under the pointer.
-        auto* button = new Button(ButtonRole::Ghost, QString(), glyph, pager);
-        button->setToolTip(tip);
-        button->setAccessibleName(tip);
-        button->setControlSize(ControlSize::Compact);
-        connect(button, &QPushButton::clicked, this, [this, by] {
-            const core::Layout* l = layout();
-            if (l == nullptr) return;
-            canvas_->setSheet(
-                name_, std::clamp(canvas_->page() + by, 0, static_cast<int>(l->pages.size()) - 1));
-            refresh();
-        });
-        pagerRow->addWidget(button);
-        return button;
-    };
-    stepper(Glyph::ChevronLeft, tr("Önceki sayfa"), -1);
-
-    pageField_ = new Field(number_of(1, 9999), pager);
-    pageField_->setFixedHeight(static_cast<int>(ControlSize::Compact));
-    pageField_->setFixedWidth(46);
-    pageField_->setAccessibleName(tr("Sayfa"));
-    connect(pageField_, &Field::committed, this, [this](const QString& typed) {
-        if (filling_) return;
-        const core::Layout* l = layout();
-        if (l == nullptr) return;
-        const int wanted = std::clamp(typed.toInt() - 1, 0, static_cast<int>(l->pages.size()) - 1);
-        canvas_->setSheet(name_, wanted);
+    // ---- what the canvas reports -------------------------------------------
+    connect(canvas_, &LayoutCanvas::selectionChanged, this, [this](const QString&) {
+        pane_ = canvas_->selection().isEmpty() ? Pane::Sheet : Pane::Item;
         refresh();
     });
-    pagerRow->addWidget(pageField_);
-
-    // HOW MANY THERE ARE, beside the number rather than in a help line under
-    // it: "3" means nothing without "/ 12".
-    pageCount_ = new QLabel(pager);
-    pageCount_->setObjectName(QStringLiteral("formHelp"));
-    pagerRow->addWidget(pageCount_);
-
-    stepper(Glyph::ChevronRight, tr("Sonraki sayfa"), 1);
-    pagerRow->addStretch(1);
-
-    struct PageVerb
-    {
-        const char* verb;
-        const char* label;
-        Glyph glyph;
-    };
-
-    static constexpr PageVerb kPageVerbs[] = {
-        {"sayfaekle", "Sayfa ekle", Glyph::Plus},
-        {"sayfacogalt", "Sayfayı çoğalt", Glyph::Copy},
-        {"sayfasil", "Sayfayı sil", Glyph::Trash},
-    };
-    for (const PageVerb& one : kPageVerbs) {
-        auto* button = new Button(ButtonRole::Ghost, QString(), one.glyph, pager);
-        button->setToolTip(tr(one.label));
-        button->setAccessibleName(tr(one.label));
-        button->setControlSize(ControlSize::Compact);
-        connect(button, &Button::clicked, this, [this, verb = one.verb] { pageVerb(verb); });
-        pagerRow->addWidget(button);
-    }
-    leftColumn->addWidget(pager);
-
-    itemsHead_ = new FormSection(tr("ÖĞELER"), QString(), left);
-    leftColumn->addWidget(itemsHead_);
-    // THE LIST TAKES WHAT IT NEEDS AND NO MORE, so the air in this column
-    // gathers UNDER the add bar instead of opening a hole between the four
-    // names on the sheet and the nine words that add a fifth.
-    leftColumn->addWidget(buildItemList(), 1);
-
-    // ---- what can be added ---------------------------------------------------
-    //
-    // LABELLED, IN TWO COLUMNS. These were eight 32 px icon squares in a flow
-    // that wrapped 5 + 3, and an icon square is a guessing game: the tooltip
-    // only answers a question the user has to think to ask. Nine words in two
-    // columns cost the same strip of panel and answer it without being asked.
-    leftColumn->addWidget(new FormSection(tr("EKLE"), QString(), left));
-
-    auto* adders = new QWidget(left);
-    auto* grid   = new QGridLayout(adders);
-    grid->setContentsMargins(0, 0, 0, 0);
-    grid->setHorizontalSpacing(4);
-    grid->setVerticalSpacing(4);
-    int at = 0;
-    for (const Kind& one : kKinds) {
-        auto* button = new Button(ButtonRole::Ghost, tr(one.label), one.glyph, adders);
-        button->setControlSize(ControlSize::Compact);
-        button->setToolTip(tr("%1 ekle").arg(tr(one.label)));
-        const QString kind = QString::fromUtf8(one.word);
-        connect(button, &QPushButton::clicked, this, [this, kind] { addItem(kind); });
-        grid->addWidget(button, at / 2, at % 2);
-        ++at;
-    }
-    grid->setColumnStretch(0, 1);
-    grid->setColumnStretch(1, 1);
-    leftColumn->addWidget(adders);
-
-    // DISABLED WITH NOTHING PICKED. It used to be lit at all times and silently
-    // do nothing when pressed, which is a control that lies about what it does.
-    remove_ = new Button(ButtonRole::Danger, tr("Seçili öğeyi sil"), Glyph::Trash, left);
-    remove_->setControlSize(ControlSize::Compact);
-    remove_->setEnabled(false);
-    connect(remove_, &QPushButton::clicked, this, [this] {
-        if (canvas_->selected().isEmpty()) return;
-        controller_.runLine(QStringLiteral("ÇIKTIÖĞE islem=sil yerlesim=%1 ad=%2")
-                                .arg(quoted(name_), quoted(canvas_->selected())),
-                            command::Origin::Gui);
+    connect(canvas_, &LayoutCanvas::itemMoved, this,
+            [this](const QString& id, core::PaperRect frame) {
+                // THE GESTURE BECOMES THE COMMAND. This is the line a script
+                // would type, so what a hand can do a batch job can do too.
+                controller_.runLine(QStringLiteral("ÇIKTIÖĞE islem=tasi yerlesim=%1 ad=%2 x=%3 "
+                                                   "y=%4 genislik=%5 yukseklik=%6")
+                                        .arg(quoted(name_), quoted(id), mm_text(frame.x),
+                                             mm_text(frame.y), mm_text(frame.w), mm_text(frame.h)),
+                                    command::Origin::Gui);
+                refresh();
+            });
+    connect(canvas_, &LayoutCanvas::itemsMoved, this, [this](const QVector<ItemFrame>& frames) {
+        QStringList lines;
+        for (const auto& [id, frame] : frames)
+            lines << QStringLiteral("ÇIKTIÖĞE islem=tasi yerlesim=%1 ad=%2 x=%3 y=%4")
+                         .arg(quoted(name_), quoted(id), mm_text(frame.x), mm_text(frame.y));
+        controller_.runLines(lines, tr("%1 öğeyi taşı").arg(frames.size()), command::Origin::Gui);
         refresh();
     });
-    leftColumn->addWidget(remove_);
-    leftColumn->addStretch(1);
-    row->addWidget(left);
-
-    // ---- middle: the page ----------------------------------------------------
-    auto* middle       = new QWidget(body);
-    auto* middleColumn = new QVBoxLayout(middle);
-    middleColumn->setContentsMargins(0, 0, 0, 0);
-    middleColumn->setSpacing(0);
-
-    canvas_ = new LayoutCanvas(controller_, middle);
-    canvas_->setSheet(name_, 0);
-    connect(canvas_, &LayoutCanvas::selectionChanged, this, [this](const QString& id) {
-        if (items_ == nullptr) return;
-        filling_ = true;
-        for (int i = 0; i < items_->count(); ++i)
-            if (items_->item(i)->data(Qt::UserRole).toString() == id) items_->setCurrentRow(i);
-        filling_ = false;
-        refresh();
+    connect(canvas_, &LayoutCanvas::itemDrawn, this, &LayoutDesigner::placeItem);
+    connect(canvas_, &LayoutCanvas::drawFinished, this, [this] {
+        if (tools_ != nullptr && tools_->button(0) != nullptr) tools_->button(0)->setChecked(true);
+        if (const core::Layout* l = layout(); l != nullptr) refreshStatus(*l);
     });
-    connect(
-        canvas_, &LayoutCanvas::itemMoved, this, [this](const QString& id, core::PaperRect frame) {
-            // THE GESTURE BECOMES THE COMMAND. This is the line a script
-            // would type, so what a hand can do a batch job can do too.
-            controller_.runLine(QStringLiteral("ÇIKTIÖĞE islem=tasi yerlesim=%1 ad=%2 x=%3 y=%4 "
-                                               "genislik=%5 yukseklik=%6")
-                                    .arg(quoted(name_), quoted(id), mm_text(frame.x),
-                                         mm_text(frame.y), mm_text(frame.w), mm_text(frame.h)),
-                                command::Origin::Gui);
-            refresh();
-        });
-    middleColumn->addWidget(canvas_, 1);
-
-    // THE HINT LIVES UNDER THE DRAWING IT IS ABOUT.
-    //
-    // It used to hang at the bottom of the inspector, a thousand pixels below
-    // the panel it shared a column with and nowhere near the sheet whose
-    // gestures it describes. It is one line about the canvas; it belongs under
-    // the canvas.
-    status_ = new QLabel(middle);
-    status_->setObjectName(QStringLiteral("formHelp"));
-    status_->setWordWrap(true);
-    status_->setContentsMargins(kRulerPx + 8, 4, 12, 8);
-    middleColumn->addWidget(status_);
-    row->addWidget(middle, 1);
-
-    // ---- right: the selected item's properties -------------------------------
-    auto* right = new QWidget(body);
-    right->setFixedWidth(288);
-    auto* rightColumn = new QVBoxLayout(right);
-    rightColumn->setContentsMargins(8, 12, 12, 12);
-    rightColumn->setSpacing(8);
-    // A NAME, NOT AN EYEBROW.
-    //
-    // This was `ÖZELLİKLER` in tracked-out capitals over a column of property
-    // rows: a label naming the obvious, in the one typographic treatment that
-    // every generated panel reaches for. What a reader needs here is WHICH of
-    // the eleven boxes on the sheet these numbers belong to, so the heading is
-    // the thing's name in sentence case, with its id and its size under it in
-    // the dim line. It is also the only type in this window larger than the
-    // body, which is what gives the column a top.
-    headName_   = new QLabel(right);
-    QFont named = headName_->font();
-    named.setPointSizeF(named.pointSizeF() + 2.0);
-    headName_->setFont(named);
-    rightColumn->addWidget(headName_);
-
-    headKind_ = new QLabel(right);
-    headKind_->setObjectName(QStringLiteral("formHelp"));
-    rightColumn->addWidget(headKind_);
-    rightColumn->addSpacing(4);
-
-    auto* scroll = new QScrollArea(right);
-    scroll->setWidgetResizable(true);
-    scroll->setFrameShape(QFrame::NoFrame);
-    properties_     = new QWidget(scroll);
-    propertyColumn_ = new QVBoxLayout(properties_);
-    propertyColumn_->setContentsMargins(0, 0, 0, 0);
-    propertyColumn_->setSpacing(8);
-    scroll->setWidget(properties_);
-    rightColumn->addWidget(scroll, 1);
-
-    row->addWidget(right);
-
+    connect(canvas_, &LayoutCanvas::itemActivated, this, [this](const QString& id) {
+        canvas_->select(id);
+        pane_ = Pane::Item;
+        refresh();
+        // THE FIRST FIELD TAKES THE KEYBOARD, the way R53 has a tool opened for
+        // its figure put its value in the first field.
+        if (properties_ != nullptr)
+            if (auto* first = properties_->findChild<Field*>(); first != nullptr) first->setFocus();
+    });
+    connect(canvas_, &LayoutCanvas::deleteRequested, this, &LayoutDesigner::deletePicked);
+    connect(canvas_, &LayoutCanvas::contextRequested, this,
+            [this](const QPoint& at) { itemMenu()->popup(at); });
+    connect(canvas_, &LayoutCanvas::cursorAt, this, [this](double x, double y, bool on) {
+        if (cursorReadout_ == nullptr) return;
+        cursorReadout_->setText(on ? tr("X %1   Y %2 mm")
+                                         .arg(QString::number(x, 'f', 1).replace('.', ','),
+                                              QString::number(y, 'f', 1).replace('.', ','))
+                                   : tr("kâğıdın dışında"));
+    });
+    connect(canvas_, &LayoutCanvas::zoomChanged, this, [this](double percent) {
+        if (zoomReadout_ != nullptr)
+            zoomReadout_->setText(QStringLiteral("%%1").arg(std::lround(percent)));
+    });
     return body;
 }
 
-QWidget* LayoutDesigner::buildItemList()
+QWidget* LayoutDesigner::buildToolRow()
 {
-    items_ = new QListWidget(this);
+    auto* bar = new QWidget(this);
+    bar->setObjectName(QStringLiteral("layoutToolRow"));
+    bar->setAttribute(Qt::WA_StyledBackground, true);
+    bar->setFixedHeight(40);
+    auto* row = new QHBoxLayout(bar);
+    row->setContentsMargins(8, 0, 8, 1);
+    row->setSpacing(2);
+
+    const auto rule = [bar, row] {
+        row->addSpacing(6);
+        row->addWidget(strip_rule(bar, true));
+        row->addSpacing(6);
+    };
+    const auto tool = [bar, row](Glyph glyph, const QString& tip) {
+        Button* b = strip_button(glyph, tip, bar);
+        row->addWidget(b);
+        return b;
+    };
+
+    // ---- history ------------------------------------------------------------
+    connect(tool(Glyph::Undo, tr("Geri al (Ctrl+Z)")), &QPushButton::clicked, this, [this] {
+        controller_.runLine(QStringLiteral("GERİAL"), command::Origin::Gui);
+        refresh();
+    });
+    connect(tool(Glyph::Redo, tr("Yinele (Ctrl+Shift+Z)")), &QPushButton::clicked, this, [this] {
+        controller_.runLine(QStringLiteral("YİNELE"), command::Origin::Gui);
+        refresh();
+    });
+    rule();
+
+    // ---- lining the pick up -------------------------------------------------
+    //
+    // SIX BUTTONS, NOT A MENU. Alignment is done a dozen times on one sheet,
+    // and a menu makes every one of them two clicks and a read. Horizontal
+    // three, a gap, vertical three — the way the glyphs themselves are drawn.
+    struct Align
+    {
+        Glyph glyph;
+        const char* tip;
+        int how;
+    };
+
+    static constexpr Align kAligns[] = {
+        {Glyph::LayoutAlignLeft, "Sol kenarları hizala", 0},
+        {Glyph::LayoutAlignCentre, "Yatayda ortala", 1},
+        {Glyph::LayoutAlignRight, "Sağ kenarları hizala", 2},
+        {Glyph::LayoutAlignTop, "Üst kenarları hizala", 3},
+        {Glyph::LayoutAlignMiddle, "Dikeyde ortala", 4},
+        {Glyph::LayoutAlignBottom, "Alt kenarları hizala", 5},
+    };
+    for (const Align& one : kAligns) {
+        Button* b =
+            tool(one.glyph, tr("%1 — tek öğe kenar payına göre hizalanır").arg(tr(one.tip)));
+        connect(b, &QPushButton::clicked, this, [this, how = one.how] { alignPicked(how); });
+        needOne_.push_back(b);
+        if (one.how == 2) row->addSpacing(6);
+    }
+    rule();
+
+    Button* across = tool(Glyph::LayoutSpreadAcross,
+                          tr("Yatayda dağıt — aradaki boşluklar eşitlenir; en az üç öğe"));
+    connect(across, &QPushButton::clicked, this, [this] { spreadPicked(true); });
+    Button* down = tool(Glyph::LayoutSpreadDown,
+                        tr("Dikeyde dağıt — aradaki boşluklar eşitlenir; en az üç öğe"));
+    connect(down, &QPushButton::clicked, this, [this] { spreadPicked(false); });
+    needThree_ = {across, down};
+    rule();
+
+    // ---- the stack and the pick itself --------------------------------------
+    Button* front = tool(Glyph::LayoutFront, tr("En öne getir"));
+    connect(front, &QPushButton::clicked, this, [this] { restackPicked(QStringLiteral("on")); });
+    Button* back = tool(Glyph::LayoutBack, tr("En arkaya gönder"));
+    connect(back, &QPushButton::clicked, this, [this] { restackPicked(QStringLiteral("back")); });
+    rule();
+    Button* copy = tool(Glyph::Duplicate, tr("Çoğalt — kopyası yanına (Ctrl+D)"));
+    connect(copy, &QPushButton::clicked, this, &LayoutDesigner::duplicatePicked);
+    lockButton_ = tool(Glyph::Lock, tr("Kilitle (Ctrl+L)"));
+    connect(lockButton_, &QPushButton::clicked, this, &LayoutDesigner::toggleLockPicked);
+    Button* remove = tool(Glyph::Trash, tr("Sil (Delete)"));
+    connect(remove, &QPushButton::clicked, this, &LayoutDesigner::deletePicked);
+    needOne_.insert(needOne_.end(), {front, back, copy, lockButton_, remove});
+
+    row->addStretch(1);
+
+    // ---- the page -----------------------------------------------------------
+    //
+    // WHICH PAGE, AND WHAT A PAGE CAN HAVE DONE TO IT, in one place: the
+    // arrows step, the name opens the list of pages and the three page verbs.
+    pagePrev_ = tool(Glyph::ChevronLeft, tr("Önceki sayfa"));
+    connect(pagePrev_, &QPushButton::clicked, this, [this] { showPage(canvas_->page() - 1); });
+    pageMenu_ = new Button(ButtonRole::Ghost, tr("Sayfa 1 / 1"), std::nullopt, bar);
+    pageMenu_->setControlSize(ControlSize::Compact);
+    pageMenu_->setToolTip(tr("Sayfalar: gidin, ekleyin, çoğaltın, silin"));
+    auto* pages = new QMenu(pageMenu_);
+    connect(pages, &QMenu::aboutToShow, this, [this, pages] {
+        pages->clear();
+        const core::Layout* l = layout();
+        if (l == nullptr) return;
+        for (std::size_t i = 0; i < l->pages.size(); ++i) {
+            const core::LayoutPage& page = l->pages[i];
+            QAction* go                  = pages->addAction(
+                tr("Sayfa %1 — %2 × %3 mm").arg(i + 1).arg(page.w / 1000).arg(page.h / 1000));
+            go->setCheckable(true);
+            go->setChecked(static_cast<int>(i) == canvas_->page());
+            connect(go, &QAction::triggered, this, [this, i] { showPage(static_cast<int>(i)); });
+        }
+        pages->addSeparator();
+        connect(pages->addAction(tr("Sayfa ekle")), &QAction::triggered, this,
+                [this] { pageVerb("sayfaekle"); });
+        connect(pages->addAction(tr("Bu sayfayı çoğalt")), &QAction::triggered, this,
+                [this] { pageVerb("sayfacogalt"); });
+        QAction* drop = pages->addAction(tr("Bu sayfayı sil"));
+        drop->setEnabled(l->pages.size() > 1);
+        connect(drop, &QAction::triggered, this, [this] { pageVerb("sayfasil"); });
+    });
+    pageMenu_->setMenuArrow(pages);
+    row->addWidget(pageMenu_);
+    pageNext_ = tool(Glyph::ChevronRight, tr("Sonraki sayfa"));
+    connect(pageNext_, &QPushButton::clicked, this, [this] { showPage(canvas_->page() + 1); });
+    rule();
+
+    // ---- the view -----------------------------------------------------------
+    snapSwitch_ = tool(Glyph::Snap, tr("Yakala — sürüklerken sayfanın kenarına, ortasına, kenar "
+                                       "payına ve öteki öğelerin kenar ve ortalarına"));
+    snapSwitch_->setCheckable(true);
+    snapSwitch_->setChecked(true);
+    connect(snapSwitch_, &QAbstractButton::toggled, this,
+            [this](bool on) { canvas_->setSnapping(on); });
+    rule();
+
+    connect(tool(Glyph::ZoomOut, tr("Uzaklaş (−)")), &QPushButton::clicked, this,
+            [this] { canvas_->zoomBy(0.8); });
+    zoomReadout_ = new Button(ButtonRole::Ghost, QStringLiteral("%100"), std::nullopt, bar);
+    zoomReadout_->setControlSize(ControlSize::Compact);
+    zoomReadout_->setToolTip(tr("Yakınlaştırma: %100 kâğıdın ekrandaki gerçek boyudur"));
+    zoomReadout_->setMinimumWidth(64);
+    auto* zooms = new QMenu(zoomReadout_);
+    connect(zooms->addAction(tr("Sayfayı sığdır")), &QAction::triggered, this,
+            [this] { canvas_->zoomToFit(); });
+    zooms->addSeparator();
+    for (const int percent : {50, 100, 200, 400})
+        connect(zooms->addAction(QStringLiteral("%%1").arg(percent)), &QAction::triggered, this,
+                [this, percent] {
+                    const double now = canvas_->zoomPercent();
+                    if (now > 0.0) canvas_->zoomBy(percent / now);
+                });
+    zoomReadout_->setMenuArrow(zooms);
+    row->addWidget(zoomReadout_);
+    connect(tool(Glyph::ZoomIn, tr("Yakınlaş (+)")), &QPushButton::clicked, this,
+            [this] { canvas_->zoomBy(1.25); });
+    connect(tool(Glyph::Fit, tr("Sayfayı sığdır (0)")), &QPushButton::clicked, this,
+            [this] { canvas_->zoomToFit(); });
+    connect(tool(Glyph::LayoutRealSize, tr("Gerçek boy — kâğıt ekranda kendi ölçüsünde")),
+            &QPushButton::clicked, this, [this] { canvas_->zoomToRealSize(); });
+    return bar;
+}
+
+QWidget* LayoutDesigner::buildToolRail()
+{
+    auto* rail = new QWidget(this);
+    rail->setObjectName(QStringLiteral("layoutRail"));
+    rail->setAttribute(Qt::WA_StyledBackground, true);
+    rail->setFixedWidth(47); // 32 + 7 each side + the 1 px edge
+    auto* column = new QVBoxLayout(rail);
+    column->setContentsMargins(7, 8, 8, 8);
+    column->setSpacing(2);
+
+    // ---- the tools: pick, or draw one of the nine ---------------------------
+    //
+    // A TOOL IS A MODE, as it is in every page editor: press Harita, drag a box
+    // on the paper, and the map frame is where the box was; a click without a
+    // drag puts the kind's own size there. Down the sheet's edge, as a toolbox,
+    // because what is ADDED to a sheet and what is DONE to the pick are two
+    // different questions and one row for both was a row wider than a laptop.
+    tools_ = new QButtonGroup(rail);
+    tools_->setExclusive(true);
+    Button* pick = strip_button(Glyph::Select, tr("Seç ve taşı (Esc)"), rail);
+    pick->setCheckable(true);
+    pick->setChecked(true);
+    tools_->addButton(pick, 0);
+    column->addWidget(pick);
+
+    const auto rule = [rail, column] {
+        column->addSpacing(5);
+        column->addWidget(strip_rule(rail, false), 0, Qt::AlignHCenter);
+        column->addSpacing(5);
+    };
+    rule();
+    int at = 1;
+    for (const Kind& one : kKinds) {
+        Button* b =
+            strip_button(one.glyph,
+                         tr("%1 ekle — kâğıtta sürükleyerek çizin; tıklamak öntanımlı boyda koyar")
+                             .arg(tr(one.label)),
+                         rail);
+        b->setCheckable(true);
+        b->setProperty("tool", QString::fromUtf8(one.word));
+        tools_->addButton(b, at++);
+        column->addWidget(b);
+        // THREE FAMILIES: what describes the map, what decorates the sheet,
+        // what reports the data.
+        if (one.which == core::LayoutItemKind::NorthArrow ||
+            one.which == core::LayoutItemKind::Shape)
+            rule();
+    }
+    column->addStretch(1);
+
+    connect(tools_, &QButtonGroup::idClicked, this, [this](int id) {
+        canvas_->setDrawKind(
+            id <= 0 ? QString() : QString::fromUtf8(kKinds[static_cast<std::size_t>(id - 1)].word));
+        canvas_->setFocus();
+        if (const core::Layout* l = layout(); l != nullptr) refreshStatus(*l);
+    });
+    return rail;
+}
+
+QWidget* LayoutDesigner::buildInspector()
+{
+    auto* inspector = new QWidget(this);
+    inspector->setObjectName(QStringLiteral("layoutInspector"));
+    inspector->setAttribute(Qt::WA_StyledBackground, true);
+    inspector->setFixedWidth(kInspector);
+    auto* column = new QVBoxLayout(inspector);
+    column->setContentsMargins(13, 10, 8, 0); // 1 of the 13 is the edge
+    column->setSpacing(6);
+
+    // ---- what is on the page, top first -------------------------------------
+    auto* head    = new QWidget(inspector);
+    auto* headRow = new QHBoxLayout(head);
+    headRow->setContentsMargins(0, 0, 6, 0);
+    headRow->setSpacing(8);
+    auto* listed = new QLabel(tr("ÖĞELER"), head);
+    listed->setObjectName(QStringLiteral("groupCaption"));
+    headRow->addWidget(listed);
+    headRow->addStretch(1);
+    itemsCount_ = new QLabel(head);
+    itemsCount_->setObjectName(QStringLiteral("formHelp"));
+    headRow->addWidget(itemsCount_);
+    column->addWidget(head);
+
+    items_ = new QListWidget(inspector);
     items_->setObjectName(QStringLiteral("layoutItems"));
     items_->setFrameShape(QFrame::NoFrame);
     items_->setMouseTracking(true);
-    rows_ = new ItemRow(items_);
-    items_->setItemDelegate(rows_);
-    connect(items_, &QListWidget::currentRowChanged, this, [this](int at) {
-        if (filling_ || at < 0 || items_->item(at) == nullptr) return;
-        canvas_->select(items_->item(at)->data(Qt::UserRole).toString());
+    items_->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    items_->setContextMenuPolicy(Qt::CustomContextMenu);
+    items_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    items_->setFixedHeight(kListRows * 28 + 2);
+    items_->setAccessibleName(tr("Öğeler"));
+    auto* rows   = new ItemRow(items_);
+    rows->onLock = [this](const QString& id) {
+        const core::Layout* l = layout();
+        if (l == nullptr) return;
+        const core::LayoutItem* item = l->find(id.toStdString());
+        if (item == nullptr) return;
+        controller_.runLine(
+            QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=%1 ad=%2 kilit=%3")
+                .arg(quoted(name_), quoted(id),
+                     item->locked ? QStringLiteral("hayir") : QStringLiteral("evet")),
+            command::Origin::Gui);
+        refresh();
+    };
+    rows_ = rows;
+    items_->setItemDelegate(rows);
+    connect(items_, &QListWidget::itemSelectionChanged, this, [this] {
+        if (filling_) return;
+        QStringList picked;
+        for (int i = 0; i < items_->count(); ++i)
+            if (items_->item(i)->isSelected())
+                picked << items_->item(i)->data(Qt::UserRole).toString();
+        // THE ROW LAST CLICKED is the one the inspector describes.
+        if (QListWidgetItem* current = items_->currentItem();
+            current != nullptr && current->isSelected()) {
+            const QString id = current->data(Qt::UserRole).toString();
+            picked.removeAll(id);
+            picked << id;
+        }
+        canvas_->setSelection(picked);
     });
-    return items_;
+    connect(items_, &QListWidget::customContextMenuRequested, this, [this](const QPoint& at) {
+        if (QListWidgetItem* row = items_->itemAt(at); row != nullptr && !row->isSelected())
+            canvas_->select(row->data(Qt::UserRole).toString());
+        if (!canvas_->selection().isEmpty()) itemMenu()->popup(items_->viewport()->mapToGlobal(at));
+    });
+    column->addWidget(items_);
+
+    auto* divide = new QWidget(inspector);
+    divide->setObjectName(QStringLiteral("layoutStripRule"));
+    divide->setAttribute(Qt::WA_StyledBackground, true);
+    divide->setFixedHeight(1);
+    column->addSpacing(4);
+    column->addWidget(divide);
+    column->addSpacing(4);
+
+    // ---- the inspector ------------------------------------------------------
+    //
+    // `ÖĞE | SAYFA`: what is picked, or the sheet itself. The sheet always
+    // exists, so there is never an empty column telling the user to click.
+    paneSwitch_ = new Segment(inspector);
+    paneSwitch_->setControlSize(ControlSize::Compact);
+    paneSwitch_->addOption(tr("Öğe"), tr("Seçili öğenin ayarları"));
+    paneSwitch_->addOption(tr("Sayfa"), tr("Kâğıt, yön, kenar payı, çözünürlük, sayfalar"));
+    paneSwitch_->setContentsMargins(0, 0, 6, 0);
+    connect(paneSwitch_, &Segment::currentChanged, this, [this](int at) {
+        if (filling_) return;
+        pane_ = at == 0 ? Pane::Item : Pane::Sheet;
+        buildProperties();
+    });
+    column->addWidget(paneSwitch_);
+
+    // A NAME, NOT AN EYEBROW: which of the boxes on the sheet these numbers
+    // belong to — its picture, its name, and under them its kind, its id and
+    // its size.
+    auto* who    = new QWidget(inspector);
+    auto* whoRow = new QHBoxLayout(who);
+    whoRow->setContentsMargins(0, 6, 6, 2);
+    whoRow->setSpacing(10);
+    headGlyph_ = new QLabel(who);
+    headGlyph_->setFixedSize(24, 24);
+    whoRow->addWidget(headGlyph_, 0, Qt::AlignTop);
+    auto* names     = new QWidget(who);
+    auto* nameStack = new QVBoxLayout(names);
+    nameStack->setContentsMargins(0, 0, 0, 0);
+    nameStack->setSpacing(1);
+    headName_   = new QLabel(names);
+    QFont named = headName_->font();
+    named.setPointSizeF(named.pointSizeF() + 1.5);
+    named.setWeight(QFont::DemiBold);
+    headName_->setFont(named);
+    nameStack->addWidget(headName_);
+    headKind_ = new QLabel(names);
+    headKind_->setObjectName(QStringLiteral("formHelp"));
+    nameStack->addWidget(headKind_);
+    whoRow->addWidget(names, 1);
+    column->addWidget(who);
+
+    // INSIDE A SCROLL AREA, with room for the bar and under the last row:
+    // flush against the viewport the bar is drawn ON the editors, and the last
+    // row is cut in half by the edge the moment the page is a pixel too tall
+    // (the style designer's own two lessons, `style_designer.cpp`).
+    scroll_ = new QScrollArea(inspector);
+    scroll_->setWidgetResizable(true);
+    scroll_->setFrameShape(QFrame::NoFrame);
+    scroll_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    properties_     = new QWidget(scroll_);
+    propertyColumn_ = new QVBoxLayout(properties_);
+    propertyColumn_->setContentsMargins(0, 0, 14, 16);
+    propertyColumn_->setSpacing(6);
+    scroll_->setWidget(properties_);
+    column->addWidget(scroll_, 1);
+    return inspector;
 }
 
-void LayoutDesigner::addItem(const QString& kind)
+QWidget* LayoutDesigner::buildStatusStrip()
 {
-    controller_.runLine(
-        QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=%1 tur=%2").arg(quoted(name_), kind),
-        command::Origin::Gui);
+    auto* strip = new QWidget(this);
+    strip->setObjectName(QStringLiteral("layoutStatus"));
+    strip->setAttribute(Qt::WA_StyledBackground, true);
+    strip->setFixedHeight(26);
+    auto* row = new QHBoxLayout(strip);
+    row->setContentsMargins(12, 1, 12, 0);
+    row->setSpacing(18);
 
-    // THE NEW ITEM IS SELECTED, because adding one and then having to find it is
-    // two gestures for one intention. It is the last in the list, since `ekle`
-    // appends.
-    if (const core::Layout* l = layout(); l != nullptr && !l->items.empty())
-        canvas_->select(QString::fromStdString(l->items.back().id));
-    refresh();
+    // WHERE THE POINTER IS, in paper millimetres, in mono so the digits stand
+    // still while it moves.
+    cursorReadout_ = new QLabel(tr("kâğıdın dışında"), strip);
+    cursorReadout_->setObjectName(QStringLiteral("layoutCursor"));
+    cursorReadout_->setMinimumWidth(150);
+    row->addWidget(cursorReadout_);
+
+    pickReadout_ = new QLabel(strip);
+    pickReadout_->setObjectName(QStringLiteral("formHelp"));
+    row->addWidget(pickReadout_);
+
+    // WHAT THE CHECKS FOUND, as a control: it opens the sheet's page of the
+    // inspector where the list is. A count nobody can open is a number to
+    // worry about.
+    troubleReadout_ = new Button(ButtonRole::Ghost, QString(), Glyph::Warning, strip);
+    troubleReadout_->setControlSize(ControlSize::Compact);
+    connect(troubleReadout_, &QPushButton::clicked, this, [this] {
+        pane_ = Pane::Sheet;
+        buildProperties();
+    });
+    row->addWidget(troubleReadout_);
+
+    row->addStretch(1);
+    // THE HINT GIVES WAY FIRST. It is advice; what is picked and where the
+    // pointer is are facts, and at the window's least width the advice was
+    // eating the last letters of the pick's size.
+    hint_ = new QLabel(strip);
+    hint_->setObjectName(QStringLiteral("formHelp"));
+    hint_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    hint_->setMinimumWidth(1);
+    hint_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    row->addWidget(hint_, 1);
+    return strip;
 }
+
+// ---------------------------------------------------------------- the edits --
 
 void LayoutDesigner::edit(const QString& arguments, const QString& verb)
 {
@@ -1028,6 +1902,17 @@ void LayoutDesigner::edit(const QString& arguments, const QString& verb)
     controller_.runLine(QStringLiteral("ÇIKTIÖĞE islem=%1 yerlesim=%2 ad=%3 %4")
                             .arg(verb, quoted(name_), quoted(canvas_->selected()), arguments),
                         command::Origin::Gui);
+    refresh();
+}
+
+void LayoutDesigner::editAll(const QString& arguments, const QString& label)
+{
+    QStringList lines;
+    for (const QString& id : canvas_->selection())
+        lines << QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=%1 ad=%2 %3")
+                     .arg(quoted(name_), quoted(id), arguments);
+    if (lines.isEmpty()) return;
+    controller_.runLines(lines, label, command::Origin::Gui);
     refresh();
 }
 
@@ -1045,15 +1930,10 @@ void LayoutDesigner::sheetEdit(const QString& change)
     const core::LayoutPage& page = l->pages[static_cast<std::size_t>(shown)];
     const QString at = l->pages.size() > 1 ? QStringLiteral(" sayfa=%1").arg(shown + 1) : QString();
 
-    // ALL FOUR, EVERY TIME — and this is not belt and braces.
-    //
-    // `islem=sayfa` DEFAULTS what it is not told: an omitted `kagit` is A4, an
-    // omitted `yon` is dikey, an omitted `kenar` is 10. So a line that says only
-    // `yon=yatay` does not turn an A3 sideways — it turns it into an A4 and
-    // resets the margin on the way. Four fields that each quietly undid the
-    // other three is not a panel anybody can use, so the panel writes the sheet
-    // as it should END UP, with the field the user touched overriding what is
-    // there now. The line is also what a hand would type to get this sheet.
+    // ALL FOUR, EVERY TIME — and this is not belt and braces. `islem=sayfa`
+    // DEFAULTS what it is not told: an omitted `kagit` is A4, an omitted `yon`
+    // is dikey, an omitted `kenar` is 10. So the panel writes the sheet as it
+    // should END UP, with the field the user touched overriding what is there.
     const QString paper =
         l->paper.empty() ? QStringLiteral("ozel") : QString::fromStdString(l->paper);
     QString whole =
@@ -1062,8 +1942,6 @@ void LayoutDesigner::sheetEdit(const QString& change)
             .arg(l->margin / 1000)
             .arg(l->dpi);
     // A CUSTOM PAPER CARRIES ITS SIZE, because `ozel` without one is refused.
-    // The command swaps the two for `yon=yatay`, so they are given the way it
-    // expects them: the portrait pair.
     if (l->paper.empty())
         whole += QStringLiteral(" genislik=%1 yukseklik=%2")
                      .arg(std::min(page.w, page.h) / 1000)
@@ -1078,324 +1956,907 @@ void LayoutDesigner::sheetEdit(const QString& change)
 /// ONE PAGE VERB, ON THE PAGE THAT IS SHOWING.
 ///
 /// The designer holds no page logic of its own: it writes the command line a
-/// hand would type, and the command does the work. That is what keeps the
-/// mouse and the keyboard equal clients (Article 1.2) and what puts the gesture
-/// in the journal as something a script can replay.
+/// hand would type, and the command does the work.
 void LayoutDesigner::pageVerb(const char* verb)
 {
     const core::Layout* l = layout();
     if (l == nullptr) return;
-    const int shown = std::clamp(canvas_->page(), 0, static_cast<int>(l->pages.size()) - 1);
-
+    const std::size_t was = l->pages.size();
+    const int shown       = std::clamp(canvas_->page(), 0, static_cast<int>(was) - 1);
     controller_.runLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=%1 ad=%2 sayfa=%3")
                             .arg(QString::fromUtf8(verb), quoted(name_))
                             .arg(shown + 1),
                         command::Origin::Gui);
 
     // THE PAGE THAT IS NOW SHOWING may not be the one that was: deleting the
-    // last page has to leave the canvas on a page that exists.
+    // last page has to leave the canvas on a page that exists, and a new page
+    // is the one a user wants to look at. `l` is stale from the line above on.
     const core::Layout* after = layout();
-    if (after != nullptr && !after->pages.empty())
-        canvas_->setSheet(name_, std::clamp(shown, 0, static_cast<int>(after->pages.size()) - 1));
+    if (after != nullptr && !after->pages.empty()) {
+        int next = shown;
+        if (std::string_view(verb) != "sayfasil" && after->pages.size() > was) next = shown + 1;
+        canvas_->setSheet(name_, std::clamp(next, 0, static_cast<int>(after->pages.size()) - 1));
+    }
+    pane_ = Pane::Sheet;
     refresh();
 }
+
+void LayoutDesigner::showPage(int index)
+{
+    const core::Layout* l = layout();
+    if (l == nullptr || index < 0 || index >= static_cast<int>(l->pages.size()) ||
+        index == canvas_->page())
+        return;
+    canvas_->setSheet(name_, index);
+    pane_ = Pane::Sheet;
+    refresh();
+}
+
+void LayoutDesigner::addItem(const QString& kind)
+{
+    QString line =
+        QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=%1 tur=%2").arg(quoted(name_), kind);
+    if (canvas_->page() > 0) line += QStringLiteral(" sayfa=%1").arg(canvas_->page() + 1);
+    controller_.runLine(line, command::Origin::Gui);
+
+    // THE NEW ITEM IS PICKED, because adding one and then having to find it is
+    // two gestures for one intention. It is the last in the list: `ekle` appends.
+    if (const core::Layout* l = layout(); l != nullptr && !l->items.empty())
+        canvas_->select(QString::fromStdString(l->items.back().id));
+    pane_ = Pane::Item;
+    refresh();
+}
+
+void LayoutDesigner::placeItem(const QString& kind, core::PaperRect frame)
+{
+    const core::Layout* l        = layout();
+    const core::LayoutPage* page = canvas_->activePage();
+    const Kind* one              = kind_named(kind);
+    if (l == nullptr || page == nullptr || one == nullptr) return;
+
+    // A CLICK PUTS THE KIND'S OWN SIZE ABOUT THE CLICK, kept on the paper.
+    if (frame.w <= 0 || frame.h <= 0) {
+        const auto w = core::um_from_mm(static_cast<std::int64_t>(one->w_mm));
+        const auto h = core::um_from_mm(static_cast<std::int64_t>(one->h_mm));
+        frame        = core::PaperRect{std::clamp<core::Um>(frame.x - w / 2, 0, page->w - w),
+                                std::clamp<core::Um>(frame.y - h / 2, 0, page->h - h), w, h};
+    }
+    QString line = QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=%1 tur=%2 x=%3 y=%4 genislik=%5 "
+                                  "yukseklik=%6")
+                       .arg(quoted(name_), kind, mm_text(frame.x), mm_text(frame.y),
+                            mm_text(frame.w), mm_text(frame.h));
+    if (canvas_->page() > 0) line += QStringLiteral(" sayfa=%1").arg(canvas_->page() + 1);
+    controller_.runLine(line, command::Origin::Gui);
+    if (const core::Layout* after = layout(); after != nullptr && !after->items.empty())
+        canvas_->select(QString::fromStdString(after->items.back().id));
+    pane_ = Pane::Item;
+    refresh();
+}
+
+void LayoutDesigner::alignPicked(int how)
+{
+    const core::Layout* l = layout();
+    if (l == nullptr || canvas_->selection().isEmpty()) return;
+    std::vector<ItemFrame> picked;
+    for (const QString& id : canvas_->selection())
+        if (const core::LayoutItem* item = l->find(id.toStdString());
+            item != nullptr && !item->locked)
+            picked.push_back(ItemFrame{id, item->frame});
+    if (picked.empty()) return;
+
+    // SEVERAL LINE UP WITH THEIR SHARED BOX; ONE WITH THE MARGIN — QGIS's rule,
+    // and the only one that makes a single title block's `ortala` mean centre
+    // it on the sheet.
+    core::PaperRect bounds = union_of(picked);
+    if (picked.size() == 1) {
+        const core::LayoutPage* page = canvas_->activePage();
+        bounds =
+            core::PaperRect{l->margin, l->margin, page->w - 2 * l->margin, page->h - 2 * l->margin};
+    }
+    QStringList lines;
+    for (auto& [id, f] : picked) {
+        core::PaperRect to = f;
+        switch (how) {
+        case 0: to.x = bounds.x; break;
+        case 1: to.x = bounds.x + (bounds.w - f.w) / 2; break;
+        case 2: to.x = bounds.right() - f.w; break;
+        case 3: to.y = bounds.y; break;
+        case 4: to.y = bounds.y + (bounds.h - f.h) / 2; break;
+        default: to.y = bounds.bottom() - f.h; break;
+        }
+        if (to == f) continue;
+        lines << QStringLiteral("ÇIKTIÖĞE islem=tasi yerlesim=%1 ad=%2 x=%3 y=%4")
+                     .arg(quoted(name_), quoted(id), mm_text(to.x, 2), mm_text(to.y, 2));
+    }
+    if (lines.isEmpty()) return;
+    controller_.runLines(lines, tr("hizala"), command::Origin::Gui);
+    refresh();
+}
+
+void LayoutDesigner::spreadPicked(bool across)
+{
+    const core::Layout* l = layout();
+    if (l == nullptr) return;
+    std::vector<ItemFrame> picked;
+    for (const QString& id : canvas_->selection())
+        if (const core::LayoutItem* item = l->find(id.toStdString());
+            item != nullptr && !item->locked)
+            picked.push_back(ItemFrame{id, item->frame});
+    if (picked.size() < 3) {
+        if (hint_ != nullptr) hint_->setText(tr("Dağıtmak için en az üç öğe seçin."));
+        return;
+    }
+    std::sort(picked.begin(), picked.end(), [across](const ItemFrame& a, const ItemFrame& b) {
+        return across ? a.second.x < b.second.x : a.second.y < b.second.y;
+    });
+    // THE GAPS, not the positions, are made equal: the first and the last stay
+    // where they are and what lies between them is shared out.
+    core::Um filled = 0;
+    for (const auto& [id, f] : picked)
+        filled += across ? f.w : f.h;
+    const core::PaperRect bounds = union_of(picked);
+    const core::Um span          = across ? bounds.w : bounds.h;
+    const core::Um gap           = (span - filled) / static_cast<core::Um>(picked.size() - 1);
+    core::Um at                  = across ? bounds.x : bounds.y;
+    QStringList lines;
+    for (auto& [id, f] : picked) {
+        core::PaperRect to = f;
+        if (across)
+            to.x = at;
+        else
+            to.y = at;
+        at += (across ? f.w : f.h) + gap;
+        if (to == f) continue;
+        lines << QStringLiteral("ÇIKTIÖĞE islem=tasi yerlesim=%1 ad=%2 x=%3 y=%4")
+                     .arg(quoted(name_), quoted(id), mm_text(to.x, 2), mm_text(to.y, 2));
+    }
+    if (lines.isEmpty()) return;
+    controller_.runLines(lines, tr("dağıt"), command::Origin::Gui);
+    refresh();
+}
+
+void LayoutDesigner::restackPicked(const QString& to)
+{
+    const core::Layout* l = layout();
+    if (l == nullptr || canvas_->selection().isEmpty()) return;
+    std::int32_t top    = 0;
+    std::int32_t bottom = 0;
+    for (const core::LayoutItem& other : l->items) {
+        top    = std::max(top, other.z);
+        bottom = std::min(bottom, other.z);
+    }
+    QStringList lines;
+    int offset = 0;
+    for (const QString& id : canvas_->selection()) {
+        const core::LayoutItem* item = l->find(id.toStdString());
+        if (item == nullptr) continue;
+        std::int32_t z = item->z;
+        // THE ENDS OF THE STACK are computed from what is there, and several
+        // picks keep their own order among themselves.
+        if (to == QStringLiteral("on")) z = std::min(top + 1 + offset, 1000);
+        if (to == QStringLiteral("back")) z = std::max(bottom - 1 - offset, -1000);
+        if (to == QStringLiteral("up")) z = std::min(item->z + 1, 1000);
+        if (to == QStringLiteral("down")) z = std::max(item->z - 1, -1000);
+        ++offset;
+        lines << QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=%1 ad=%2 sira=%3")
+                     .arg(quoted(name_), quoted(id))
+                     .arg(z);
+    }
+    controller_.runLines(lines, tr("sırala"), command::Origin::Gui);
+    refresh();
+}
+
+void LayoutDesigner::duplicatePicked()
+{
+    const core::Layout* l = layout();
+    if (l == nullptr || canvas_->selection().isEmpty()) return;
+    const std::size_t before = l->items.size();
+    QStringList lines;
+    for (const QString& id : canvas_->selection())
+        lines << QStringLiteral("ÇIKTIÖĞE islem=cogalt yerlesim=%1 ad=%2")
+                     .arg(quoted(name_), quoted(id));
+    controller_.runLines(lines, tr("çoğalt"), command::Origin::Gui);
+
+    // THE COPIES ARE PICKED, so the next drag moves them and not the originals.
+    QStringList copies;
+    if (const core::Layout* after = layout(); after != nullptr)
+        for (std::size_t i = before; i < after->items.size(); ++i)
+            copies << QString::fromStdString(after->items[i].id);
+    canvas_->setSelection(copies);
+    refresh();
+}
+
+void LayoutDesigner::toggleLockPicked()
+{
+    const core::Layout* l = layout();
+    if (l == nullptr || canvas_->selection().isEmpty()) return;
+    bool any_open = false;
+    for (const QString& id : canvas_->selection())
+        if (const core::LayoutItem* item = l->find(id.toStdString());
+            item != nullptr && !item->locked)
+            any_open = true;
+    editAll(any_open ? QStringLiteral("kilit=evet") : QStringLiteral("kilit=hayir"),
+            any_open ? tr("kilitle") : tr("kilidi aç"));
+}
+
+void LayoutDesigner::deletePicked()
+{
+    if (canvas_->selection().isEmpty()) return;
+    QStringList lines;
+    for (const QString& id : canvas_->selection())
+        lines << QStringLiteral("ÇIKTIÖĞE islem=sil yerlesim=%1 ad=%2")
+                     .arg(quoted(name_), quoted(id));
+    controller_.runLines(lines, tr("sil"), command::Origin::Gui);
+    canvas_->setSelection({});
+    refresh();
+}
+
+QMenu* LayoutDesigner::itemMenu()
+{
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    connect(menu->addAction(tr("En öne getir")), &QAction::triggered, this,
+            [this] { restackPicked(QStringLiteral("on")); });
+    connect(menu->addAction(tr("Bir öne")), &QAction::triggered, this,
+            [this] { restackPicked(QStringLiteral("up")); });
+    connect(menu->addAction(tr("Bir arkaya")), &QAction::triggered, this,
+            [this] { restackPicked(QStringLiteral("down")); });
+    connect(menu->addAction(tr("En arkaya gönder")), &QAction::triggered, this,
+            [this] { restackPicked(QStringLiteral("back")); });
+    menu->addSeparator();
+    connect(menu->addAction(tr("Çoğalt\tCtrl+D")), &QAction::triggered, this,
+            &LayoutDesigner::duplicatePicked);
+    const core::Layout* l = layout();
+    bool any_open         = false;
+    if (l != nullptr)
+        for (const QString& id : canvas_->selection())
+            if (const core::LayoutItem* item = l->find(id.toStdString());
+                item != nullptr && !item->locked)
+                any_open = true;
+    connect(menu->addAction(any_open ? tr("Kilitle\tCtrl+L") : tr("Kilidi aç\tCtrl+L")),
+            &QAction::triggered, this, &LayoutDesigner::toggleLockPicked);
+    menu->addSeparator();
+    connect(menu->addAction(tr("Sil\tDelete")), &QAction::triggered, this,
+            &LayoutDesigner::deletePicked);
+    return menu;
+}
+
+// ------------------------------------------------------------- the refresh --
 
 void LayoutDesigner::refresh()
 {
     const core::Layout* l = layout();
     if (l == nullptr) {
-        if (status_ != nullptr) status_->setText(tr("Çıktı yerleşimi silinmiş: %1").arg(name_));
+        if (hint_ != nullptr) hint_->setText(tr("Çıktı yerleşimi silinmiş: %1").arg(name_));
         return;
     }
-
-    filling_             = true;
-    const QString chosen = canvas_->selected();
-
-    // HOW MANY ARE ON THIS PAGE. Counted before the list is filled, because the
-    // heading's note and the status strip both say it and a second walk of the
-    // same vector to answer the same question twice is a second answer waiting
-    // to disagree.
-    std::size_t here = 0;
-    for (std::size_t i = 0; i < l->items.size(); ++i)
-        if (l->page_of(i) == canvas_->page()) ++here;
-
-    items_->clear();
-    // PAINT ORDER, TOP FIRST: the list reads the way the sheet looks.
-    std::vector<std::size_t> ordered(l->items.size());
-    std::iota(ordered.begin(), ordered.end(), std::size_t{0});
-    std::stable_sort(ordered.begin(), ordered.end(),
-                     [&](std::size_t a, std::size_t b) { return l->items[a].z > l->items[b].z; });
-    for (const std::size_t at : ordered) {
-        // ONLY THIS PAGE'S. A list that showed every page's items would let a
-        // click select something that is not on the sheet in front of it.
-        if (l->page_of(at) != canvas_->page()) continue;
-        const core::LayoutItem* item = &l->items[at];
-        auto* row                    = new QListWidgetItem(item_name(*item), items_);
-        row->setData(Qt::UserRole, QString::fromStdString(item->id));
-        row->setData(Qt::UserRole + 1, static_cast<int>(glyph_of(item->kind)));
-        row->setData(Qt::UserRole + 2,
-                     QStringLiteral("%1×%2").arg(mm_text(item->frame.w), mm_text(item->frame.h)));
-        row->setData(Qt::UserRole + 3, item->locked);
-        // THE ID IS STILL REACHABLE, because it is what a command line takes —
-        // it is just no longer the first thing a reader has to step over.
-        row->setToolTip(
-            item->locked
-                ? tr("%1 · %2 · kilitli")
-                      .arg(QString::fromStdString(item->id),
-                           QString::fromUtf8(core::layout_item_kind_label(item->kind)))
-                : tr("%1 · %2").arg(QString::fromStdString(item->id),
-                                    QString::fromUtf8(core::layout_item_kind_label(item->kind))));
-        if (QString::fromStdString(item->id) == chosen) items_->setCurrentItem(row);
-    }
-    if (pageField_ != nullptr) {
-        const int shown = std::clamp(canvas_->page(), 0, static_cast<int>(l->pages.size()) - 1);
-        pageField_->setValue(QString::number(shown + 1));
-        if (pageCount_ != nullptr) pageCount_->setText(tr("/ %1").arg(l->pages.size()));
-    }
-    if (itemsHead_ != nullptr) itemsHead_->setNote(here == 0 ? tr("boş") : tr("%1 öğe").arg(here));
-    if (remove_ != nullptr) remove_->setEnabled(!chosen.isEmpty());
-    filling_ = false;
-
     canvas_->refresh();
-    buildProperties();
-
-    status_->setText(tr("Kutuları sürükleyin, köşelerinden boyutlandırın; ok tuşları 1 mm, "
-                        "Shift ile 10 mm kaydırır."));
-}
-
-QWidget* LayoutDesigner::buildProperties()
-{
-    // Cleared and rebuilt, rather than kept and reconciled: the fields a Map
-    // shows and the fields a Label shows have nothing in common past the frame,
-    // and a panel that hid half its widgets would be a panel whose layout
-    // depends on what was selected before.
-    while (QLayoutItem* old = propertyColumn_->takeAt(0)) {
-        if (QWidget* w = old->widget(); w != nullptr) {
-            // UNPARENTED FIRST, THEN DELETED LATER — and the order is the whole
-            // bug. `takeAt` removes the widget from the LAYOUT immediately, but
-            // `deleteLater` leaves it a visible CHILD of the panel until the
-            // event loop next spins. In between it is unmanaged: it keeps
-            // drawing at whatever coordinates it last had.
-            //
-            // So every rebuild painted the new rows ON TOP OF the old ones:
-            // the empty-state hint and both toggle rows landed in the same few
-            // pixels, which is the pile-up a user sees as a broken panel after
-            // touching a switch. Nothing was laid out wrong; the previous panel
-            // had simply never left.
-            w->setParent(nullptr);
-            w->deleteLater();
-        }
-        delete old;
-    }
-
-    const core::Layout* l = layout();
-    if (l == nullptr) return properties_;
-    const core::LayoutItem* item =
-        canvas_->selected().isEmpty() ? nullptr : l->find(canvas_->selected().toStdString());
 
     filling_ = true;
-    if (item == nullptr)
-        buildSheetProperties(*l);
-    else
-        buildItemProperties(*l, *item);
-    propertyColumn_->addStretch(1);
+    refreshItems(*l);
     filling_ = false;
 
-    // AND THE NEW ROWS ARE TOLD WHICH THEME THEY ARE IN.
+    if (canvas_->selection().isEmpty()) pane_ = Pane::Sheet;
+    buildProperties();
+    refreshToolRow(*l);
+    refreshStatus(*l);
+}
+
+void LayoutDesigner::refreshItems(const core::Layout& l)
+{
+    // PAINT ORDER, TOP FIRST: the list reads the way the sheet looks, and only
+    // this page's items are in it — a row for something on another page would
+    // pick a box that is not on the paper in front of the user.
+    items_->clear();
+    std::vector<std::size_t> ordered(l.items.size());
+    std::iota(ordered.begin(), ordered.end(), std::size_t{0});
+    std::stable_sort(ordered.begin(), ordered.end(),
+                     [&](std::size_t a, std::size_t b) { return l.items[a].z > l.items[b].z; });
+    const QStringList picked = canvas_->selection();
+    std::size_t here         = 0;
+    for (const std::size_t at : ordered) {
+        if (l.page_of(at) != canvas_->page()) continue;
+        ++here;
+        const core::LayoutItem& item = l.items[at];
+        const QString id             = QString::fromStdString(item.id);
+        auto* row                    = new QListWidgetItem(item_name(item), items_);
+        row->setData(Qt::UserRole, id);
+        row->setData(Qt::UserRole + 1, static_cast<int>(glyph_of(item.kind)));
+        row->setData(Qt::UserRole + 2, QStringLiteral("%1×%2").arg(mm_text(item.frame.w, 0),
+                                                                   mm_text(item.frame.h, 0)));
+        row->setData(Qt::UserRole + 3, item.locked);
+        // THE ID IS STILL REACHABLE, because it is what a command line takes —
+        // it is just no longer the first thing a reader has to step over.
+        row->setToolTip(tr("%1 · %2%3")
+                            .arg(id, QString::fromUtf8(core::layout_item_kind_label(item.kind)),
+                                 item.locked ? tr(" · kilitli") : QString()));
+        if (picked.contains(id)) row->setSelected(true);
+        if (id == canvas_->selected()) items_->setCurrentItem(row, QItemSelectionModel::NoUpdate);
+    }
+    if (itemsCount_ != nullptr)
+        itemsCount_->setText(here == 0 ? tr("bu sayfada öğe yok") : tr("%1 öğe").arg(here));
+}
+
+void LayoutDesigner::refreshToolRow(const core::Layout& l)
+{
+    const QStringList picked = canvas_->selection();
+    int open                 = 0;
+    for (const QString& id : picked)
+        if (const core::LayoutItem* item = l.find(id.toStdString());
+            item != nullptr && !item->locked)
+            ++open;
+
+    // WHAT THE PICK ALLOWS, said by the buttons themselves: a greyed align is
+    // an answer, a live one that does nothing when pressed is a question.
+    for (Button* b : needOne_)
+        b->setEnabled(!picked.isEmpty());
+    for (Button* b : needThree_)
+        b->setEnabled(picked.size() >= 3);
+
+    // THE PADLOCK SAYS WHAT IS, pressed while every picked item is locked, so
+    // a click reads as the switch it is.
+    if (lockButton_ != nullptr) {
+        const bool all_locked = !picked.isEmpty() && open == 0;
+        lockButton_->setCheckable(true);
+        lockButton_->setChecked(all_locked);
+        const QString said = all_locked ? tr("Kilidi aç (Ctrl+L)") : tr("Kilitle (Ctrl+L)");
+        lockButton_->setToolTip(said);
+        lockButton_->setAccessibleName(said);
+    }
+
+    const int count = static_cast<int>(l.pages.size());
+    const int at    = std::clamp(canvas_->page(), 0, std::max(0, count - 1));
+    if (pageMenu_ != nullptr) pageMenu_->setText(tr("Sayfa %1 / %2").arg(at + 1).arg(count));
+    if (pagePrev_ != nullptr) pagePrev_->setEnabled(at > 0);
+    if (pageNext_ != nullptr) pageNext_->setEnabled(at + 1 < count);
+    if (zoomReadout_ != nullptr)
+        zoomReadout_->setText(QStringLiteral("%%1").arg(std::lround(canvas_->zoomPercent())));
+}
+
+void LayoutDesigner::refreshStatus(const core::Layout& l)
+{
+    if (pickReadout_ != nullptr) {
+        const QStringList picked = canvas_->selection();
+        if (picked.isEmpty()) {
+            const core::LayoutPage* page = canvas_->activePage();
+            pickReadout_->setText(page == nullptr ? QString()
+                                                  : tr("Sayfa %1 · %2 × %3 mm")
+                                                        .arg(canvas_->page() + 1)
+                                                        .arg(page->w / 1000)
+                                                        .arg(page->h / 1000));
+        } else if (picked.size() == 1) {
+            const core::LayoutItem* item = l.find(picked.front().toStdString());
+            pickReadout_->setText(
+                item == nullptr
+                    ? QString()
+                    : tr("%1 · %2 × %3 mm")
+                          .arg(item_name(*item), mm_shown(item->frame.w), mm_shown(item->frame.h)));
+        } else {
+            pickReadout_->setText(tr("%1 öğe seçili").arg(picked.size()));
+        }
+    }
+    if (troubleReadout_ != nullptr) {
+        const std::vector<std::string> trouble = core::layout_trouble(l, controller_.document());
+        troubleReadout_->setVisible(!trouble.empty());
+        troubleReadout_->setText(trouble.size() == 1 ? tr("1 uyarı")
+                                                     : tr("%1 uyarı").arg(trouble.size()));
+        troubleReadout_->setToolTip(tr("Denetim — ayrıntı Sayfa sekmesinde"));
+    }
+    if (hint_ != nullptr) {
+        if (!canvas_->drawKind().isEmpty())
+            hint_->setText(tr("Kâğıtta sürükleyerek çizin; tıklamak öntanımlı boyda koyar."));
+        else if (canvas_->selection().isEmpty())
+            hint_->setText(tr("Tıklayarak seçin ya da boş kâğıtta çerçeve çekin."));
+        else
+            hint_->setText(tr("Sürükleyin ya da köşeden boyutlandırın; oklar 1 mm kaydırır."));
+    }
+}
+
+// ------------------------------------------------------- the inspector rows --
+
+void LayoutDesigner::group(const QString& title, const QString& note)
+{
+    auto* heading = new QWidget(properties_);
+    auto* line    = new QHBoxLayout(heading);
+    // AIR ABOVE A HEADING, NONE BELOW: the rows under it are its, the rows
+    // above are someone else's.
+    line->setContentsMargins(0, propertyColumn_->count() == 0 ? 2 : 14, 0, 2);
+    line->setSpacing(8);
+    auto* caption = new QLabel(title, heading);
+    caption->setObjectName(QStringLiteral("groupCaption"));
+    line->addWidget(caption);
+    line->addStretch(1);
+    if (!note.isEmpty()) {
+        auto* said = new QLabel(note, heading);
+        said->setObjectName(QStringLiteral("formHelp"));
+        line->addWidget(said);
+    }
+    propertyColumn_->addWidget(heading);
+}
+
+QWidget* LayoutDesigner::row(const QString& caption, QWidget* editor)
+{
+    auto* cell = new QWidget(properties_);
+    auto* line = new QHBoxLayout(cell);
+    line->setContentsMargins(0, 0, 0, 0);
+    line->setSpacing(6);
+
+    // ONE LINE HIGH AND AT THE TOP: beside an editor of two stacked buttons
+    // or a list of ticks, the caption names the first line, not the middle of
+    // the stack.
+    auto* label = new QLabel(caption, cell);
+    label->setObjectName(QStringLiteral("formCaption"));
+    label->setFixedSize(kCaption, static_cast<int>(ControlSize::Regular));
+    label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    label->setBuddy(editor);
+    line->addWidget(label, 0, Qt::AlignTop);
+
+    // THE ROW NEVER OUTGROWS THE COLUMN. Left to Qt, an editor's minimum is
+    // its widest text, and the scroll area answers a row wider than its
+    // viewport by widening the page — with no horizontal bar, the right end of
+    // every row then disappears under the column's edge. An explicit minimum
+    // overrides the hint and the row takes what the column has.
     //
-    // `DialogFrame::applyTheme` walks the children ONCE, when the window is
-    // built. Everything here is built again on every selection, after that walk
-    // has run — so a control made now keeps `Themed`'s default, which is DARK.
-    // The grid drop-down came out black-on-white in the light theme for exactly
-    // that reason: nobody had told it. The panel tells its own children, since
-    // it is the only thing that knows they are new.
-    applyThemeToChildren(properties_, theme());
-    return properties_;
+    // REPARENTED AND SHOWN: an editor is built on the column before its row
+    // exists, and a widget moved to a new parent is hidden by the move —
+    // shown, it comes up with its row.
+    editor->setParent(cell);
+    editor->setMinimumWidth(1);
+    editor->show();
+    line->addWidget(editor, 1);
+    propertyColumn_->addWidget(cell);
+    return cell;
 }
 
-/// TWO FIELDS ON ONE LINE, because `x` and `y` are one fact.
-///
-/// `FormRow` stacks its label over its editor, so four framing numbers in four
-/// rows ran two hundred pixels down a three-hundred-pixel-wide column and still
-/// left the rest of it empty. Position is a pair and size is a pair; pairing
-/// them halves the run and puts the two numbers a user compares side by side.
-QWidget* LayoutDesigner::pairOf(QWidget* left, QWidget* right)
+void LayoutDesigner::help(const QString& text)
 {
-    auto* both = new QWidget(properties_);
-    auto* row  = new QHBoxLayout(both);
-    row->setContentsMargins(0, 0, 0, 0);
-    row->setSpacing(8);
-    // TOP-ALIGNED. One of a pair often carries a help line and the other does
-    // not; centred, the taller one pushes the shorter one's LABEL down and the
-    // two captions sit on different baselines, which reads as a mistake.
-    row->addWidget(left, 1, Qt::AlignTop);
-    row->addWidget(right, 1, Qt::AlignTop);
-    return both;
+    auto* said = new QLabel(text, properties_);
+    said->setObjectName(QStringLiteral("formHelp"));
+    said->setWordWrap(true);
+    said->setContentsMargins(kCaption + 6, 0, 0, 2);
+    propertyColumn_->addWidget(said);
 }
 
-/// A millimetre field that writes `name=` on the selected item when committed.
-FormRow* LayoutDesigner::mmRow(const QString& label, core::Um value, const char* name)
+QWidget* LayoutDesigner::mmEditor(core::Um value, const char* name, const QString& spoken,
+                                  int decimals)
 {
-    FieldSpec spec = decimal_of(1);
+    FieldSpec spec = decimal_of(decimals);
     spec.suffix    = QStringLiteral("mm");
     auto* field    = new Field(spec, properties_);
     field->setFixedHeight(static_cast<int>(ControlSize::Regular));
-    field->setValue(mm_text(value));
-    field->setAccessibleName(label);
+    const QString shown = mm_text(value, decimals);
+    field->setValue(shown);
+    field->setAccessibleName(spoken);
     const QString key = QString::fromUtf8(name);
-    connect(field, &Field::committed, this, [this, key](const QString& typed) {
+    connect(field, &Field::committed, this, [this, key, decimals, shown](const QString& typed) {
         if (filling_) return;
-        edit(QStringLiteral("%1=%2").arg(key, QString::number(typed.toDouble(), 'f', 1)));
+        QString number = typed.trimmed();
+        number.replace(QLatin1Char(','), QLatin1Char('.'));
+        bool ok            = false;
+        const double value = number.toDouble(&ok);
+        const QString said = QString::number(value, 'f', decimals);
+        // A FIELD LEFT AS IT WAS WRITES NOTHING: a visit is not an edit, and
+        // one that ran a command put a no-op on the undo stack.
+        if (!ok || said == shown) return;
+        edit(QStringLiteral("%1=%2").arg(key, said));
     });
-    return new FormRow(label, field, properties_);
+    return field;
 }
 
-/// A whole-number field that writes `name=` on the selected item.
-FormRow* LayoutDesigner::countRow(const QString& label, long long value, const char* name, int most)
+QWidget* LayoutDesigner::countEditor(long long value, const char* name, const QString& spoken,
+                                     int least, int most, const QString& unit)
 {
-    auto* field = new Field(number_of(0, most), properties_);
+    auto* field = new Field(number_of(least, most, unit), properties_);
     field->setFixedHeight(static_cast<int>(ControlSize::Regular));
     field->setValue(QString::number(value));
-    field->setAccessibleName(label);
+    field->setAccessibleName(spoken);
     const QString key = QString::fromUtf8(name);
-    connect(field, &Field::committed, this, [this, key](const QString& typed) {
+    connect(field, &Field::committed, this, [this, key, value](const QString& typed) {
         if (filling_) return;
-        edit(QStringLiteral("%1=%2").arg(key).arg(typed.toLongLong()));
+        bool ok             = false;
+        const long long got = typed.trimmed().toLongLong(&ok);
+        if (!ok || got == value) return;
+        edit(QStringLiteral("%1=%2").arg(key).arg(got));
     });
-    return new FormRow(label, field, properties_);
+    return field;
 }
 
-/// A free-text field that writes `name=` on the selected item, quoted.
-FormRow* LayoutDesigner::textRow(const QString& label, const QString& value, const char* name,
-                                 const QString& hint)
+QWidget* LayoutDesigner::textEditor(const QString& value, const char* name, const QString& spoken,
+                                    const QString& hint)
 {
     FieldSpec spec   = field_of(FieldKind::Text);
     spec.placeholder = hint;
     auto* field      = new Field(spec, properties_);
     field->setFixedHeight(static_cast<int>(ControlSize::Regular));
     field->setValue(value);
-    field->setAccessibleName(label);
+    field->setAccessibleName(spoken);
     const QString key = QString::fromUtf8(name);
-    connect(field, &Field::committed, this, [this, key](const QString& typed) {
-        if (filling_) return;
+    connect(field, &Field::committed, this, [this, key, value](const QString& typed) {
+        if (filling_ || typed == value) return;
         edit(QStringLiteral("%1=%2").arg(key, quoted(typed)));
     });
-    return new FormRow(label, field, properties_);
+    return field;
 }
 
-/// THE SHEET'S OWN PROPERTIES, shown whenever no item is picked.
-///
-/// WHAT THIS REPLACES. The panel used to say "Bir öğe seçin." into three hundred
-/// pixels of width and a thousand of height — a whole column of the window spent
-/// telling the user to do something rather than letting them do anything. A
-/// sheet always exists, always has a paper size, an orientation, a margin and an
-/// export resolution, and NONE of those four were reachable from this window at
-/// all: they are arguments of `ÇIKTIYERLEŞİMİ` that only a typed command line
-/// could set. The empty state and the missing settings were the same hole.
+QWidget* LayoutDesigner::colourEditor(std::uint32_t value, const char* name, const QString& spoken)
+{
+    auto* field = new Field(field_of(FieldKind::Colour), properties_);
+    field->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    // THE FIELD'S OWN FORMAT, `0xAARRGGBB` (`fields.hpp`) — hex digits in
+    // capitals, the prefix not: the old line upper-cased the whole string and
+    // the field showed `0XFF000000`.
+    field->setValue(QStringLiteral("0x%1").arg(
+        QStringLiteral("%1").arg(value, 8, 16, QLatin1Char('0')).toUpper()));
+    field->setAccessibleName(spoken);
+    const QString key = QString::fromUtf8(name);
+    connect(field, &Field::committed, this, [this, key, value](const QString& typed) {
+        if (filling_) return;
+        bool ok                 = false;
+        const std::uint32_t got = typed.mid(2).toUInt(&ok, 16);
+        if (!ok || got == value) return;
+        edit(QStringLiteral("%1=%2").arg(key, colour_word(got)));
+    });
+    return field;
+}
+
+QWidget* LayoutDesigner::switchEditor(bool on, const char* name, const QString& spoken)
+{
+    // A SWITCH AND ITS WORD, left-aligned in the editor column: the pill says
+    // the state by its knob's side and the word says it in text (§13).
+    auto* holder = new QWidget(properties_);
+    holder->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    auto* line = new QHBoxLayout(holder);
+    line->setContentsMargins(0, 0, 0, 0);
+    line->setSpacing(8);
+    auto* pill = new ToggleSwitch(holder);
+    pill->setChecked(on);
+    pill->setAccessibleName(spoken);
+    auto* word = new QLabel(on ? tr("açık") : tr("kapalı"), holder);
+    word->setObjectName(QStringLiteral("formHelp"));
+    line->addWidget(pill);
+    line->addWidget(word);
+    line->addStretch(1);
+    const QString key = QString::fromUtf8(name);
+    connect(pill, &QAbstractButton::toggled, this, [this, key](bool checked) {
+        if (filling_) return;
+        edit(QStringLiteral("%1=%2").arg(key, checked ? QStringLiteral("evet")
+                                                      : QStringLiteral("hayir")));
+    });
+    return holder;
+}
+
+QWidget* LayoutDesigner::wordsEditor(const QStringList& shown, const QStringList& words,
+                                     int current, const char* name, const QString& spoken)
+{
+    auto* choice = new Segment(properties_);
+    choice->setControlSize(ControlSize::Compact);
+    for (const QString& one : shown)
+        choice->addOption(one);
+    choice->setCurrent(current);
+    choice->setAccessibleName(spoken);
+    const QString key = QString::fromUtf8(name);
+    connect(choice, &Segment::currentChanged, this, [this, key, words](int at) {
+        if (filling_ || at < 0 || at >= words.size()) return;
+        edit(QStringLiteral("%1=%2").arg(key, words.at(at)));
+    });
+    return choice;
+}
+
+QWidget* LayoutDesigner::mapEditor(const core::Layout& l, const core::LayoutItem& item)
+{
+    // WHICH MAP FRAME IT BELONGS TO. A scale bar, a north arrow and a legend all
+    // describe one map; a sheet with two frames had no way to say which, so the
+    // second frame's scale bar quietly described the first.
+    auto* bound = new ComboBox(properties_);
+    bound->addItem(tr("İlk harita"), QStringLiteral("ilk"));
+    for (const core::LayoutItem& other : l.items)
+        if (other.kind == core::LayoutItemKind::Map)
+            bound->addItem(QString::fromStdString(other.id), QString::fromStdString(other.id));
+    const int chosen = bound->findData(QString::fromStdString(item.linked_map));
+    bound->setCurrentIndex(chosen >= 0 ? chosen : 0);
+    bound->setAccessibleName(tr("Bağlı harita"));
+    connect(bound, &QComboBox::currentIndexChanged, this, [this, bound](int at) {
+        if (filling_ || at < 0) return;
+        edit(QStringLiteral("harita=%1").arg(quoted(bound->itemData(at).toString())));
+    });
+    return bound;
+}
+
+// ----------------------------------------------------------- the inspector --
+
+void LayoutDesigner::buildProperties()
+{
+    const core::Layout* l = layout();
+    if (l == nullptr || propertyColumn_ == nullptr) return;
+    const QStringList picked = canvas_->selection();
+    const core::LayoutItem* item =
+        picked.size() == 1 ? l->find(picked.front().toStdString()) : nullptr;
+    if (picked.isEmpty()) pane_ = Pane::Sheet;
+
+    // THE SAME SUBJECT KEEPS ITS PLACE. Every committed value rebuilds the
+    // column, and a rebuild that went back to the top threw the user out of
+    // the grid settings at the bottom after every number they typed; and the
+    // field the keyboard was going to next is found again by its name.
+    const QString subject = pane_ == Pane::Sheet
+                                ? QStringLiteral("sayfa:%1").arg(canvas_->page())
+                                : QStringLiteral("öğe:%1").arg(picked.join(QLatin1Char('|')));
+    const bool same       = subject == shownFor_;
+    const int keep        = same && scroll_ != nullptr ? scroll_->verticalScrollBar()->value() : 0;
+    QString focused;
+    for (QWidget* w = QApplication::focusWidget(); w != nullptr; w = w->parentWidget())
+        if (auto* field = qobject_cast<Field*>(w);
+            field != nullptr && properties_->isAncestorOf(field)) {
+            focused = field->accessibleName();
+            break;
+        }
+
+    // Cleared and rebuilt, rather than kept and reconciled: the fields a Map
+    // shows and the fields a Label shows have nothing in common past the frame.
+    //
+    // HIDDEN, UNPARENTED, THEN DELETED LATER — and each step is a bug it once
+    // was. `takeAt` removes a row from the LAYOUT at once, but `deleteLater`
+    // leaves it a visible CHILD until the loop next spins, painting under the
+    // new rows; so it is unparented. And a row built a moment ago still has
+    // the show its layout QUEUED for it (`QLayout::addChildWidget`): unparented
+    // without being hidden first, that queued show ran on a widget with no
+    // parent and opened it as a window of its own, which took the activation
+    // from this one. An explicit `hide` is the one state the queued show
+    // respects. Not `delete`: a field's own `committed` is what rebuilds this
+    // column, and deleting it inside its own signal is a use after free.
+    while (QLayoutItem* old = propertyColumn_->takeAt(0)) {
+        if (QWidget* w = old->widget(); w != nullptr) {
+            w->hide();
+            w->setParent(nullptr);
+            w->deleteLater();
+        }
+        delete old;
+    }
+
+    filling_ = true;
+    if (paneSwitch_ != nullptr) paneSwitch_->setCurrent(pane_ == Pane::Item ? 0 : 1);
+    const Tokens& t = tokensOf(theme());
+    const qreal dpr = devicePixelRatioF();
+    if (pane_ == Pane::Sheet) {
+        buildSheetProperties(*l);
+        if (headGlyph_ != nullptr)
+            headGlyph_->setPixmap(glyph_pixmap(Glyph::Document, t.textDim, 24, dpr));
+    } else if (item == nullptr) {
+        buildGroupProperties(*l);
+        if (headGlyph_ != nullptr)
+            headGlyph_->setPixmap(glyph_pixmap(Glyph::SelectArea, t.accent, 24, dpr));
+    } else {
+        buildItemProperties(*l, *item);
+        if (headGlyph_ != nullptr)
+            headGlyph_->setPixmap(glyph_pixmap(glyph_of(item->kind), t.accent, 24, dpr));
+    }
+    propertyColumn_->addStretch(1);
+    filling_ = false;
+
+    // AND THE NEW ROWS ARE TOLD WHICH THEME THEY ARE IN: `DialogFrame::applyTheme`
+    // walked the children once, when the window was built, and everything here is
+    // built again on every pick.
+    applyThemeToChildren(properties_, theme());
+
+    // SHOWN NOW, not when the loop gets round to the show their layout queued:
+    // the column is painted, measured and scrolled below, and a row that is
+    // still hidden is a row with no height.
+    for (QWidget* w : properties_->findChildren<QWidget*>(Qt::FindDirectChildrenOnly))
+        if (w->isHidden() && !w->testAttribute(Qt::WA_WState_ExplicitShowHide)) w->show();
+
+    shownFor_ = subject;
+    if (scroll_ != nullptr) {
+        propertyColumn_->activate();
+        properties_->resize(scroll_->viewport()->width(), std::max(properties_->sizeHint().height(),
+                                                                   scroll_->viewport()->height()));
+        scroll_->verticalScrollBar()->setValue(keep);
+    }
+    if (!focused.isEmpty())
+        for (Field* field : properties_->findChildren<Field*>())
+            if (field->accessibleName() == focused) {
+                field->setFocus(Qt::TabFocusReason);
+                break;
+            }
+}
+
+/// THE SHEET'S OWN SETTINGS, its pages, and what the checks found on it.
 void LayoutDesigner::buildSheetProperties(const core::Layout& l)
 {
     const int shown = std::clamp(canvas_->page(), 0, static_cast<int>(l.pages.size()) - 1);
     const core::LayoutPage& page = l.pages[static_cast<std::size_t>(shown)];
 
-    if (headName_ != nullptr) headName_->setText(tr("Sayfa %1").arg(shown + 1));
+    if (headName_ != nullptr) headName_->setText(QString::fromStdString(l.name));
     if (headKind_ != nullptr)
-        headKind_->setText(
-            tr("%1 × %2 mm · %3 sayfa").arg(page.w / 1000).arg(page.h / 1000).arg(l.pages.size()));
+        headKind_->setText(tr("Sayfa %1 / %2 · %3 × %4 mm")
+                               .arg(shown + 1)
+                               .arg(l.pages.size())
+                               .arg(page.w / 1000)
+                               .arg(page.h / 1000));
+
+    group(tr("KÂĞIT"), l.pages.size() > 1 ? tr("bu sayfa") : QString());
 
     // WHICH PAPER. The command takes the six ISO sizes and `ozel`; a sheet that
-    // came from a custom size shows it and keeps it until the user picks
-    // another.
+    // came from a custom size shows it and keeps it until the user picks another.
     auto* paper = new ComboBox(properties_);
-    for (const char* one : {"A5", "A4", "A3", "A2", "A1", "A0", "ozel"})
+    for (const char* one : {"A5", "A4", "A3", "A2", "A1", "A0"})
         paper->addItem(QString::fromUtf8(one), QString::fromUtf8(one));
+    paper->addItem(tr("Özel"), QStringLiteral("ozel"));
     const int at = paper->findData(QString::fromStdString(l.paper));
     paper->setCurrentIndex(at >= 0 ? at : paper->count() - 1);
+    paper->setAccessibleName(tr("Kâğıt boyu"));
     connect(paper, &QComboBox::currentIndexChanged, this, [this, paper](int chosen) {
         if (filling_ || chosen < 0) return;
         sheetEdit(QStringLiteral("kagit=%1").arg(paper->itemData(chosen).toString()));
     });
+    row(tr("Boy"), paper);
 
-    auto* facing = new Segment(properties_);
-    facing->setControlSize(ControlSize::Regular);
-    facing->addOption(tr("Dikey"));
-    facing->addOption(tr("Yatay"));
     // READ FROM THE PAGE, not from the layout's flag: on a multi-page sheet the
     // flag describes the sheet as a whole and a page may disagree with it.
+    auto* facing = new Segment(properties_);
+    facing->setControlSize(ControlSize::Compact);
+    facing->addOption(tr("Dikey"));
+    facing->addOption(tr("Yatay"));
     facing->setCurrent(page.w > page.h ? 1 : 0);
+    facing->setAccessibleName(tr("Yön"));
     connect(facing, &Segment::currentChanged, this, [this](int chosen) {
         if (filling_) return;
         sheetEdit(QStringLiteral("yon=%1").arg(chosen == 1 ? QStringLiteral("yatay")
                                                            : QStringLiteral("dikey")));
     });
+    row(tr("Yön"), facing);
 
-    propertyColumn_->addWidget(pairOf(new FormRow(tr("Kâğıt"), paper, properties_),
-                                      new FormRow(tr("Yön"), facing, properties_)));
-
-    FieldSpec edgeSpec = number_of(0, 200);
-    edgeSpec.suffix    = QStringLiteral("mm");
-    auto* edge         = new Field(edgeSpec, properties_);
+    auto* edge = new Field(number_of(0, 200, QStringLiteral("mm")), properties_);
     edge->setFixedHeight(static_cast<int>(ControlSize::Regular));
     edge->setValue(QString::number(l.margin / 1000));
-    edge->setAccessibleName(tr("Kenar boşluğu"));
-    connect(edge, &Field::committed, this, [this](const QString& typed) {
-        if (filling_) return;
-        sheetEdit(QStringLiteral("kenar=%1").arg(typed.toInt()));
+    edge->setAccessibleName(tr("Kenar payı"));
+    const long long margin = l.margin / 1000;
+    connect(edge, &Field::committed, this, [this, margin](const QString& typed) {
+        bool ok             = false;
+        const long long got = typed.trimmed().toLongLong(&ok);
+        if (filling_ || !ok || got == margin) return;
+        sheetEdit(QStringLiteral("kenar=%1").arg(got));
     });
-    auto* edgeRow = new FormRow(tr("Kenar boşluğu"), edge, properties_);
-    edgeRow->setHelp(tr("kılavuz · kırpma değil"));
+    row(tr("Kenar payı"), edge);
+    help(tr("Kılavuz çizgisidir; çıktıyı kırpmaz."));
 
-    FieldSpec dpiSpec = number_of(72, 4800);
-    dpiSpec.suffix    = QStringLiteral("dpi");
-    auto* dpi         = new Field(dpiSpec, properties_);
+    auto* dpi = new Field(number_of(72, 4800, QStringLiteral("dpi")), properties_);
     dpi->setFixedHeight(static_cast<int>(ControlSize::Regular));
     dpi->setValue(QString::number(l.dpi));
     dpi->setAccessibleName(tr("Çözünürlük"));
-    connect(dpi, &Field::committed, this, [this](const QString& typed) {
-        if (filling_) return;
-        sheetEdit(QStringLiteral("dpi=%1").arg(typed.toInt()));
+    const long long was_dpi = l.dpi;
+    connect(dpi, &Field::committed, this, [this, was_dpi](const QString& typed) {
+        bool ok             = false;
+        const long long got = typed.trimmed().toLongLong(&ok);
+        if (filling_ || !ok || got == was_dpi) return;
+        sheetEdit(QStringLiteral("dpi=%1").arg(got));
     });
-    // NO HELP LINE: the label says `Çözünürlük` and the field says `dpi`, and a
-    // third line saying "export resolution" is the same fact a third time.
-    auto* dpiRow = new FormRow(tr("Çözünürlük"), dpi, properties_);
+    row(tr("Çözünürlük"), dpi);
 
-    propertyColumn_->addWidget(pairOf(edgeRow, dpiRow));
+    // ---- the pages ----------------------------------------------------------
+    group(tr("SAYFALAR"), l.pages.size() == 1 ? tr("1 sayfa") : tr("%1 sayfa").arg(l.pages.size()));
+    // THE WHOLE WIDTH, not the editor column: three labelled buttons do not
+    // fit in 190 px, and cut to `Ekl · Çoğ · Si` they said nothing at all.
+    auto* verbs = new QWidget(properties_);
+    auto* line  = new QHBoxLayout(verbs);
+    line->setContentsMargins(0, 0, 0, 0);
+    line->setSpacing(6);
+    auto* add = new Button(ButtonRole::Secondary, tr("Ekle"), Glyph::Plus, verbs);
+    add->setControlSize(ControlSize::Compact);
+    add->setToolTip(tr("Bu sayfanın ardına boş bir sayfa ekler"));
+    connect(add, &QPushButton::clicked, this, [this] { pageVerb("sayfaekle"); });
+    auto* twin = new Button(ButtonRole::Secondary, tr("Çoğalt"), Glyph::Duplicate, verbs);
+    twin->setControlSize(ControlSize::Compact);
+    twin->setToolTip(tr("Bu sayfayı öğeleriyle birlikte kopyalar"));
+    connect(twin, &QPushButton::clicked, this, [this] { pageVerb("sayfacogalt"); });
+    auto* drop = new Button(ButtonRole::Secondary, tr("Sil"), Glyph::Trash, verbs);
+    drop->setControlSize(ControlSize::Compact);
+    drop->setEnabled(l.pages.size() > 1);
+    drop->setToolTip(l.pages.size() > 1 ? tr("Bu sayfayı öğeleriyle siler; geri alınabilir")
+                                        : tr("Yerleşimin tek sayfası silinemez"));
+    connect(drop, &QPushButton::clicked, this, [this] { pageVerb("sayfasil"); });
+    line->addWidget(add, 1);
+    line->addWidget(twin, 1);
+    line->addWidget(drop, 1);
+    propertyColumn_->addWidget(verbs);
 
-    propertyColumn_->addWidget(new FormSection(tr("YERLEŞİM"), QString(), properties_));
-
+    // ---- the layout ---------------------------------------------------------
+    group(tr("YERLEŞİM"));
     auto* named = new Field(field_of(FieldKind::Text), properties_);
     named->setFixedHeight(static_cast<int>(ControlSize::Regular));
     named->setValue(QString::fromStdString(l.name));
     named->setAccessibleName(tr("Yerleşim adı"));
     connect(named, &Field::committed, this, [this](const QString& typed) {
-        if (filling_ || typed.trimmed().isEmpty() || typed == name_) return;
+        if (filling_ || typed.trimmed().isEmpty() || typed.trimmed() == name_) return;
         controller_.runLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=ad ad=%1 yeni_ad=%2")
                                 .arg(quoted(name_), quoted(typed.trimmed())),
                             command::Origin::Gui);
         // THE WINDOW FOLLOWS THE RENAME. It holds the sheet BY NAME, so a
         // designer that kept the old one would be looking at a layout that no
         // longer exists and would report it as deleted on the next refresh.
+        if (controller_.document().layouts().find(typed.trimmed().toStdString()) == nullptr) return;
         name_ = typed.trimmed();
         canvas_->setSheet(name_, canvas_->page());
-        setWindowTitle(tr("Çıktı yerleşimi — %1").arg(name_));
+        setHeading(Glyph::Layout, tr("Çıktı Yerleşimi Tasarımcısı"),
+                   QStringLiteral("— %1").arg(name_));
         refresh();
     });
-    propertyColumn_->addWidget(new FormRow(tr("Ad"), named, properties_));
+    row(tr("Ad"), named);
 
-    auto* hint = new QLabel(tr("Bir öğeye tıklayın; ayarları burada açılır."), properties_);
-    hint->setObjectName(QStringLiteral("formHelp"));
-    hint->setWordWrap(true);
-    propertyColumn_->addWidget(hint);
+    // ---- what the checks found ----------------------------------------------
+    //
+    // THE SAME CHECKS `ÇIKTIYERLEŞİMİ islem=denetle` RUNS, here where the sheet
+    // is being made: overlapping boxes, a scale bar bound to a map that is gone,
+    // a table naming a column the drawing does not have.
+    const std::vector<std::string> trouble = core::layout_trouble(l, controller_.document());
+    group(tr("DENETİM"), trouble.empty() ? tr("sorun yok") : tr("%1 uyarı").arg(trouble.size()));
+    if (trouble.empty()) {
+        auto* fine = new QLabel(tr("Her bağ bir öğeye varıyor; tablo ve grafiklerin sütunları "
+                                   "çizimde var."),
+                                properties_);
+        fine->setObjectName(QStringLiteral("formHelp"));
+        fine->setWordWrap(true);
+        propertyColumn_->addWidget(fine);
+    } else {
+        // ONE WRAPPED LINE PER FINDING, with the warning's mark beside it. They
+        // were banners carrying the finding as their TITLE, and a banner's
+        // title does not wrap: the first long one — an unaimed map frame's
+        // `… nereye bakacağı söylenmemiş; boş çıkacak.` — made the column wider
+        // than itself and the whole page of settings ran out past its edge.
+        const Tokens& t = tokensOf(theme());
+        for (const std::string& one : trouble) {
+            auto* finding = new QWidget(properties_);
+            auto* beside  = new QHBoxLayout(finding);
+            beside->setContentsMargins(0, 2, 0, 2);
+            beside->setSpacing(8);
+            auto* mark = new QLabel(finding);
+            mark->setPixmap(glyph_pixmap(Glyph::Warning, t.warn, 14, devicePixelRatioF()));
+            mark->setFixedSize(14, 16);
+            beside->addWidget(mark, 0, Qt::AlignTop);
+            auto* said = new QLabel(QString::fromStdString(one), finding);
+            said->setObjectName(QStringLiteral("formHelp"));
+            said->setProperty("tone", QStringLiteral("warn"));
+            said->setWordWrap(true);
+            said->setMinimumWidth(1);
+            beside->addWidget(said, 1);
+            propertyColumn_->addWidget(finding);
+        }
+    }
 }
 
-/// EVERY SETTING THE COMMAND TAKES, for the item that is picked.
-///
-/// WHAT WAS MISSING. `ÇIKTIÖĞE islem=ayarla` accepts seventeen arguments and
-/// this panel offered nine of them. A user could not rename an item, move it to
-/// another page, change what covers what, tell a map frame which layers to draw
-/// or how far apart its grid lines run, cap a table's rows, choose its columns,
-/// or bind a scale bar to a second map frame — all of it reachable by typing a
-/// command and none of it by the window built to do exactly that job. That is
-/// what "çok kısır" was: not a style, an absence.
+/// WHAT SEVERAL PICKS SHARE: the list of them and the gestures for all of them.
+void LayoutDesigner::buildGroupProperties(const core::Layout& l)
+{
+    const QStringList picked = canvas_->selection();
+    std::vector<ItemFrame> frames;
+    for (const QString& id : picked)
+        if (const core::LayoutItem* item = l.find(id.toStdString()); item != nullptr)
+            frames.push_back(ItemFrame{id, item->frame});
+    const core::PaperRect bounds = union_of(frames);
+    if (headName_ != nullptr) headName_->setText(tr("%1 öğe seçili").arg(picked.size()));
+    if (headKind_ != nullptr)
+        headKind_->setText(tr("birlikte %1 × %2 mm").arg(mm_shown(bounds.w), mm_shown(bounds.h)));
+
+    group(tr("SEÇİLENLER"));
+    for (const QString& id : picked)
+        if (const core::LayoutItem* item = l.find(id.toStdString()); item != nullptr) {
+            auto* one = new QLabel(tr("%1 · %2 × %3 mm%4")
+                                       .arg(item_name(*item), mm_shown(item->frame.w),
+                                            mm_shown(item->frame.h),
+                                            item->locked ? tr(" · kilitli") : QString()),
+                                   properties_);
+            one->setObjectName(QStringLiteral("formCaption"));
+            propertyColumn_->addWidget(one);
+        }
+    auto* said = new QLabel(tr("Hizalamak, dağıtmak, sıralamak, çoğaltmak ve kilitlemek için "
+                               "araç satırını kullanın; hepsi seçilenlerin tümüne uygulanır "
+                               "ve tek adımda geri alınır."),
+                            properties_);
+    said->setObjectName(QStringLiteral("formHelp"));
+    said->setWordWrap(true);
+    propertyColumn_->addWidget(said);
+}
+
+/// EVERY SETTING THE COMMAND TAKES, for the item that is picked, in the order a
+/// person decides them: where it sits, what it shows, how it looks.
 void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::LayoutItem& item)
 {
     using core::LayoutItemKind;
@@ -1404,70 +2865,443 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
     const QString kindWord = QString::fromUtf8(core::layout_item_kind_label(item.kind));
     if (headName_ != nullptr) headName_->setText(shownAs);
     if (headKind_ != nullptr) {
-        // THE KIND IS SAID ONCE. An item with no writing of its own is CALLED
-        // by its kind, so repeating it underneath reads as `Harita · Harita`.
-        const QString size =
-            tr("%1 · %2×%3 mm")
-                .arg(QString::fromStdString(item.id), mm_text(item.frame.w), mm_text(item.frame.h));
+        // THE KIND IS SAID ONCE. An item with no writing of its own is CALLED by
+        // its kind, so repeating it underneath reads as `Harita · Harita`.
+        const QString size = tr("%1 · %2 × %3 mm")
+                                 .arg(QString::fromStdString(item.id), mm_shown(item.frame.w),
+                                      mm_shown(item.frame.h));
         headKind_->setText(shownAs == kindWord ? size : kindWord + QStringLiteral(" · ") + size);
     }
 
-    propertyColumn_->addWidget(new FormSection(tr("YERLEŞTİRME"), QString(), properties_));
-    propertyColumn_->addWidget(
-        pairOf(mmRow(tr("Sol (x)"), item.frame.x, "x"), mmRow(tr("Üst (y)"), item.frame.y, "y")));
-    propertyColumn_->addWidget(pairOf(mmRow(tr("Genişlik"), item.frame.w, "genislik"),
-                                      mmRow(tr("Yükseklik"), item.frame.h, "yukseklik")));
+    // ---- where it sits -----------------------------------------------------
+    group(tr("KONUM VE BOYUT"), item.locked ? tr("kilitli — taşınmaz") : QString());
+    row(tr("X — soldan"), mmEditor(item.frame.x, "x", tr("X, kâğıdın solundan")));
+    row(tr("Y — üstten"), mmEditor(item.frame.y, "y", tr("Y, kâğıdın üstünden")));
+    row(tr("Genişlik"), mmEditor(item.frame.w, "genislik", tr("Genişlik")));
+    row(tr("Yükseklik"), mmEditor(item.frame.h, "yukseklik", tr("Yükseklik")));
 
-    // ---- which page it sits on, and what covers what ------------------------
-    auto* onPage = new Field(number_of(1, static_cast<int>(l.pages.size())), properties_);
-    onPage->setFixedHeight(static_cast<int>(ControlSize::Regular));
-    onPage->setValue(QString::number(canvas_->page() + 1));
-    onPage->setAccessibleName(tr("Sayfa"));
-    connect(onPage, &Field::committed, this, [this](const QString& typed) {
+    FieldSpec turnSpec = decimal_of(1);
+    turnSpec.suffix    = QStringLiteral("°");
+    auto* turn         = new Field(turnSpec, properties_);
+    turn->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    const QString turned =
+        QString::number(static_cast<double>(item.rotation_udeg) / 1000000.0, 'f', 1);
+    turn->setValue(turned);
+    turn->setAccessibleName(tr("Döndürme, saat yönünde"));
+    connect(turn, &Field::committed, this, [this, turned](const QString& typed) {
         if (filling_) return;
-        // A PAGE MOVE IS A MOVE, so it goes through `tasi` like every other one.
-        edit(QStringLiteral("sayfa=%1").arg(typed.toInt()), QStringLiteral("tasi"));
+        QString number = typed.trimmed();
+        number.replace(QLatin1Char(','), QLatin1Char('.'));
+        bool ok            = false;
+        const QString said = QString::number(number.toDouble(&ok), 'f', 1);
+        if (!ok || said == turned) return;
+        edit(QStringLiteral("aci=%1").arg(said));
     });
+    row(tr("Döndürme"), turn);
 
-    auto* order    = new QWidget(properties_);
-    auto* orderRow = new QHBoxLayout(order);
-    orderRow->setContentsMargins(0, 0, 0, 0);
-    orderRow->setSpacing(4);
-    const auto shove = [&](Glyph glyph, const QString& tip, int to) {
-        auto* button = new Button(ButtonRole::Ghost, QString(), glyph, order);
-        button->setToolTip(tip);
-        button->setAccessibleName(tip);
-        button->setControlSize(ControlSize::Regular);
-        connect(button, &QPushButton::clicked, this,
-                [this, to] { edit(QStringLiteral("sira=%1").arg(to)); });
-        orderRow->addWidget(button);
-    };
-    // THE TOP AND THE BOTTOM OF THE STACK, computed from what is actually
-    // there. A fixed ±1000 would work once and then pile every shoved item on
-    // the same number, so a second shove would do nothing.
-    std::int32_t top    = item.z;
-    std::int32_t bottom = item.z;
-    for (const core::LayoutItem& other : l.items) {
-        top    = std::max(top, other.z);
-        bottom = std::min(bottom, other.z);
+    if (l.pages.size() > 1) {
+        auto* onPage = new Field(number_of(1, static_cast<int>(l.pages.size())), properties_);
+        onPage->setFixedHeight(static_cast<int>(ControlSize::Regular));
+        onPage->setValue(QString::number(canvas_->page() + 1));
+        onPage->setAccessibleName(tr("Sayfa"));
+        const int here = canvas_->page() + 1;
+        connect(onPage, &Field::committed, this, [this, here](const QString& typed) {
+            bool ok       = false;
+            const int got = typed.trimmed().toInt(&ok);
+            if (filling_ || !ok || got == here) return;
+            // A PAGE MOVE IS A MOVE, so it goes through `tasi` like every other one.
+            edit(QStringLiteral("sayfa=%1").arg(got), QStringLiteral("tasi"));
+        });
+        row(tr("Sayfa"), onPage);
     }
-    shove(Glyph::ChevronUp, tr("Öne getir"), std::min(top + 1, 1000));
-    shove(Glyph::ChevronDown, tr("Arkaya gönder"), std::max(bottom - 1, -1000));
 
-    auto* z = new Field(number_of(-1000, 1000), order);
-    z->setFixedHeight(static_cast<int>(ControlSize::Regular));
-    z->setValue(QString::number(item.z));
-    z->setAccessibleName(tr("Çizim sırası"));
-    connect(z, &Field::committed, this, [this](const QString& typed) {
-        if (filling_) return;
-        edit(QStringLiteral("sira=%1").arg(typed.toInt()));
-    });
-    orderRow->addWidget(z, 1);
+    // ---- what it shows ------------------------------------------------------
+    const core::Document& doc = controller_.document();
+    switch (item.kind) {
+    case LayoutItemKind::Map: {
+        group(tr("HARİTA"),
+              item.scale == 0 ? tr("ölçek çerçeveye uyar") : tr("1:%1").arg(item.scale));
 
-    propertyColumn_->addWidget(pairOf(new FormRow(tr("Sayfa"), onPage, properties_),
-                                      new FormRow(tr("Sıra"), order, properties_)));
+        // THE SCALE, TYPED OR PICKED. 1:1000 is typed far more often than
+        // 1:1316, and the menu beside the box holds the round plan scales a
+        // pafta is drawn at — faster than four keystrokes and cannot be
+        // mistyped. `0` hands the scale back to the frame.
+        auto* scaleBox = new QWidget(properties_);
+        auto* scaleRow = new QHBoxLayout(scaleBox);
+        scaleRow->setContentsMargins(0, 0, 0, 0);
+        scaleRow->setSpacing(6);
+        auto* scale = new Field(number_of(0, 100000000), properties_);
+        scale->setFixedHeight(static_cast<int>(ControlSize::Regular));
+        scale->setValue(QString::number(item.scale));
+        scale->setAccessibleName(tr("Ölçek paydası; 0 çerçeveye uyar"));
+        const long long was_scale = item.scale;
+        connect(scale, &Field::committed, this, [this, was_scale](const QString& typed) {
+            bool ok             = false;
+            const long long got = typed.trimmed().toLongLong(&ok);
+            if (filling_ || !ok || got == was_scale) return;
+            edit(QStringLiteral("olcek=%1").arg(got));
+        });
+        auto* presets = new Button(ButtonRole::Secondary, tr("Seç"), std::nullopt, scaleBox);
+        presets->setControlSize(ControlSize::Regular);
+        presets->setToolTip(tr("Plan ölçekleri"));
+        auto* scales = new QMenu(presets);
+        connect(scales->addAction(tr("Çerçeveye uyar")), &QAction::triggered, this,
+                [this] { edit(QStringLiteral("olcek=0")); });
+        scales->addSeparator();
+        for (const long long one : kScales)
+            connect(scales->addAction(QStringLiteral("1:%1").arg(one)), &QAction::triggered, this,
+                    [this, one] { edit(QStringLiteral("olcek=%1").arg(one)); });
+        presets->setMenuArrow(scales);
+        scale->setParent(scaleBox);
+        scale->setMinimumWidth(1);
+        scaleRow->addWidget(scale, 1);
+        scaleRow->addWidget(presets);
+        row(tr("Ölçek 1 :"), scaleBox);
 
-    // ---- what it is called --------------------------------------------------
+        // WHERE IT LOOKS: the whole drawing, or what the main window shows.
+        auto* aims    = new QWidget(properties_);
+        auto* aimsRow = new QVBoxLayout(aims);
+        aimsRow->setContentsMargins(0, 0, 0, 0);
+        aimsRow->setSpacing(6);
+        auto* whole =
+            new Button(ButtonRole::Secondary, tr("Çizimin tamamı"), Glyph::ZoomExtents, aims);
+        whole->setToolTip(tr("Çerçeveyi çizimin tamamını gösterecek biçimde ayarlar"));
+        connect(whole, &QPushButton::clicked, this,
+                [this] { aimAt(controller_.document().extent()); });
+        aimsRow->addWidget(whole);
+        if (!viewWindow_.empty()) {
+            auto* view =
+                new Button(ButtonRole::Secondary, tr("Ana pencereden al"), Glyph::ViewWindow, aims);
+            view->setToolTip(tr("Çerçeveyi ana pencerede o an görünen alana çevirir"));
+            connect(view, &QPushButton::clicked, this, [this] { aimAt(viewWindow_); });
+            aimsRow->addWidget(view);
+        }
+        row(tr("Kapsam"), aims);
+
+        // WHICH LAYERS IT DRAWS: a list to tick, not names to type. Nothing
+        // ticked means every visible layer, which is the common case, and says
+        // so with a switch rather than with an empty box.
+        group(tr("KATMANLAR"),
+              item.layers.empty() ? tr("görünür hepsi") : tr("%1 katman").arg(item.layers.size()));
+        auto* all    = new QWidget(properties_);
+        auto* allRow = new QHBoxLayout(all);
+        allRow->setContentsMargins(0, 0, 0, 0);
+        allRow->setSpacing(8);
+        auto* every = new ToggleSwitch(all);
+        every->setChecked(item.layers.empty());
+        every->setAccessibleName(tr("Görünür bütün katmanlar"));
+        auto* everyWord = new QLabel(tr("görünür bütün katmanlar"), all);
+        everyWord->setObjectName(QStringLiteral("formHelp"));
+        allRow->addWidget(every);
+        allRow->addWidget(everyWord);
+        allRow->addStretch(1);
+        all->setFixedHeight(static_cast<int>(ControlSize::Regular));
+        connect(every, &QAbstractButton::toggled, this, [this](bool on) {
+            if (filling_) return;
+            if (on) {
+                edit(QStringLiteral("katmanlar=hepsi"));
+                return;
+            }
+            // SWITCHED OFF, THE LIST STARTS AS WHAT THE MAP DREW: every layer
+            // that is visible now, each a tick the user can take away.
+            QStringList words;
+            for (const core::Layer& layer : controller_.document().layers())
+                if (layer.visible)
+                    words << QStringLiteral("katmanlar=%1")
+                                 .arg(quoted(QString::fromStdString(layer.name)));
+            if (!words.isEmpty()) edit(words.join(QLatin1Char(' ')));
+        });
+        row(tr("Hepsi"), all);
+        if (!item.layers.empty())
+            for (const core::Layer& layer : doc.layers()) {
+                const QString name = QString::fromStdString(layer.name);
+                auto* tick         = new CheckBox(name, properties_);
+                tick->setChecked(std::find(item.layers.begin(), item.layers.end(), layer.name) !=
+                                 item.layers.end());
+                connect(tick, &QAbstractButton::toggled, this, [this, name](bool on) {
+                    if (filling_) return;
+                    const core::Layout* sheet = layout();
+                    const core::LayoutItem* map =
+                        sheet == nullptr ? nullptr : sheet->find(canvas_->selected().toStdString());
+                    if (map == nullptr) return;
+                    QStringList kept;
+                    for (const std::string& one : map->layers)
+                        if (QString::fromStdString(one) != name)
+                            kept << QString::fromStdString(one);
+                    if (on) kept << name;
+                    QStringList words;
+                    for (const QString& one : kept)
+                        words << QStringLiteral("katmanlar=%1").arg(quoted(one));
+                    edit(words.isEmpty() ? QStringLiteral("katmanlar=hepsi")
+                                         : words.join(QLatin1Char(' ')));
+                });
+                row(QString(), tick);
+            }
+
+        // ---- the grid ------------------------------------------------------
+        group(tr("KOORDİNAT IZGARASI"));
+        auto* style = new ComboBox(properties_);
+        for (const auto& [word, text] :
+             {std::pair{"yok", "Yok"}, std::pair{"arti", "Artı — kesişimlerde"},
+              std::pair{"cizgi", "Çizgi — tam ızgara"}, std::pair{"centik", "Çentik — kenarda"}})
+            style->addItem(tr(text), QString::fromUtf8(word));
+        style->setCurrentIndex(static_cast<int>(item.grid));
+        style->setAccessibleName(tr("Izgara biçimi"));
+        connect(style, &QComboBox::currentIndexChanged, this, [this, style](int at) {
+            if (filling_ || at < 0) return;
+            edit(QStringLiteral("izgara=%1").arg(style->itemData(at).toString()));
+        });
+        row(tr("Biçim"), style);
+        if (item.grid != core::GridStyle::None) {
+            FieldSpec spacing = decimal_of(1);
+            spacing.suffix    = QStringLiteral("m");
+            auto* step        = new Field(spacing, properties_);
+            step->setFixedHeight(static_cast<int>(ControlSize::Regular));
+            const QString stepped =
+                QString::number(static_cast<double>(item.grid_interval) / 1000.0, 'f', 1);
+            step->setValue(stepped);
+            step->setAccessibleName(tr("Izgara aralığı, zeminde metre; 0 ölçeğe göre"));
+            connect(step, &Field::committed, this, [this, stepped](const QString& typed) {
+                if (filling_) return;
+                QString number = typed.trimmed();
+                number.replace(QLatin1Char(','), QLatin1Char('.'));
+                bool ok            = false;
+                const double value = number.toDouble(&ok);
+                if (!ok || QString::number(value, 'f', 1) == stepped) return;
+                edit(QStringLiteral("izgara_aralik=%1").arg(std::llround(value * 1000.0)));
+            });
+            row(tr("Aralık"), step);
+            help(tr("Zeminde metre; 0 ölçeğe uygun bir aralık seçer."));
+            row(tr("Yazılar"),
+                wordsEditor({tr("Yok"), tr("Dışta"), tr("İçte")},
+                            {QStringLiteral("yok"), QStringLiteral("dis"), QStringLiteral("ic")},
+                            static_cast<int>(item.grid_labels), "izgara_etiket",
+                            tr("Koordinat yazıları")));
+            row(tr("Renk"), colourEditor(item.grid_colour, "izgara_renk", tr("Izgara rengi")));
+            row(tr("Çizgi kalınlığı"),
+                mmEditor(item.grid_width, "izgara_kalinlik", tr("Izgara çizgi kalınlığı"), 2));
+            row(tr("Yazı boyu"),
+                mmEditor(item.grid_text_height, "izgara_yazi", tr("Koordinat yazısı boyu")));
+        }
+        break;
+    }
+    case LayoutItemKind::Label: {
+        group(tr("METİN"));
+        row(tr("Yazı"), textEditor(QString::fromStdString(item.text), "metin", tr("Yazı"),
+                                   tr("yazı ya da <yerlesim>")));
+
+        // THE FIELDS A LABEL CAN CARRY, named and explained in a menu: `<olcek>`
+        // is remembered by nobody and misspelled by everybody.
+        auto* fields =
+            new Button(ButtonRole::Secondary, tr("Alan ekle"), Glyph::Function, properties_);
+        fields->setControlSize(ControlSize::Compact);
+        fields->setToolTip(tr("Yazının sonuna, çizilirken çözülen bir alan ekler"));
+        auto* menu             = new QMenu(fields);
+        const std::string text = item.text;
+        for (const auto& [word, what] :
+             {std::pair{"<yerlesim>", "yerleşimin adı"}, std::pair{"<olcek>", "haritanın ölçeği"},
+              std::pair{"<tarih>", "bugünün tarihi"}, std::pair{"<crs>", "koordinat sistemi"},
+              std::pair{"<proje>", "çizim dosyasının adı"}, std::pair{"<sayfa>", "sayfa numarası"}})
+            connect(
+                menu->addAction(QStringLiteral("%1 — %2").arg(QString::fromUtf8(word), tr(what))),
+                &QAction::triggered, this, [this, text, w = QString::fromUtf8(word)] {
+                    const QString now = QString::fromStdString(text);
+                    edit(QStringLiteral("metin=%1")
+                             .arg(quoted(now.isEmpty() ? w : now + QLatin1Char(' ') + w)));
+                });
+        fields->setMenuArrow(menu);
+        auto* holder = new QWidget(properties_);
+        auto* line   = new QHBoxLayout(holder);
+        line->setContentsMargins(0, 0, 0, 0);
+        fields->setParent(holder);
+        line->addWidget(fields);
+        line->addStretch(1);
+        row(QString(), holder);
+
+        row(tr("Yazı boyu"), mmEditor(item.text_height, "yazi", tr("Yazı boyu")));
+        row(tr("Renk"), colourEditor(item.text_colour, "yazi_renk", tr("Yazı rengi")));
+        row(tr("Yatay"),
+            wordsEditor({tr("Sol"), tr("Orta"), tr("Sağ")},
+                        {QStringLiteral("sol"), QStringLiteral("orta"), QStringLiteral("sag")},
+                        item.align_h, "yatay_hizala", tr("Yatay hizalama")));
+        row(tr("Dikey"),
+            wordsEditor({tr("Üst"), tr("Orta"), tr("Alt")},
+                        {QStringLiteral("ust"), QStringLiteral("orta"), QStringLiteral("alt")},
+                        item.align_v, "dikey_hizala", tr("Dikey hizalama")));
+        break;
+    }
+    case LayoutItemKind::ScaleBar:
+        group(tr("ÖLÇEK ÇUBUĞU"));
+        row(tr("Harita"), mapEditor(l, item));
+        row(tr("Bölüm"),
+            countEditor(item.style > 0 ? item.style : 4, "bolum", tr("Bölüm sayısı"), 1, 10));
+        row(tr("Yazı boyu"), mmEditor(item.text_height, "yazi", tr("Yazı boyu")));
+        row(tr("Renk"), colourEditor(item.text_colour, "yazi_renk", tr("Çubuk ve yazı rengi")));
+        help(tr("Çubuk yuvarlak bir uzunluk seçer ve kutusunun içinde kalır."));
+        break;
+    case LayoutItemKind::NorthArrow:
+        group(tr("KUZEY OKU"));
+        row(tr("Harita"), mapEditor(l, item));
+        row(tr("Renk"), colourEditor(item.text_colour, "yazi_renk", tr("Ok rengi")));
+        break;
+    case LayoutItemKind::Legend:
+        group(tr("LEJANT"));
+        row(tr("Başlık"),
+            textEditor(QString::fromStdString(item.text), "metin", tr("Başlık"), tr("başlıksız")));
+        row(tr("Harita"), mapEditor(l, item));
+        row(tr("Yazı boyu"), mmEditor(item.text_height, "yazi", tr("Yazı boyu")));
+        row(tr("Renk"), colourEditor(item.text_colour, "yazi_renk", tr("Yazı rengi")));
+        break;
+    case LayoutItemKind::Picture: {
+        group(tr("RESİM"));
+        auto* file    = new QWidget(properties_);
+        auto* fileRow = new QHBoxLayout(file);
+        fileRow->setContentsMargins(0, 0, 0, 0);
+        fileRow->setSpacing(6);
+        QWidget* path = textEditor(QString::fromStdString(item.text), "metin", tr("Resim dosyası"),
+                                   tr("resim yolu"));
+        path->setParent(file);
+        path->setMinimumWidth(1);
+        auto* browse = new Button(Glyph::Open, tr("Resim seçin…"), file);
+        connect(browse, &QPushButton::clicked, this, [this] {
+            const QString chosen =
+                QFileDialog::getOpenFileName(this, tr("Resim seçin"), QString(),
+                                             tr("Resimler (*.png *.jpg *.jpeg *.bmp *.gif *.svg)"));
+            if (!chosen.isEmpty()) edit(QStringLiteral("metin=%1").arg(quoted(chosen)));
+        });
+        fileRow->addWidget(path, 1);
+        fileRow->addWidget(browse);
+        row(tr("Dosya"), file);
+        help(tr("Çizimin yanındaki bir resim göreli yolla yazılırsa proje taşınınca da bulunur."));
+        break;
+    }
+    case LayoutItemKind::Shape: {
+        group(tr("ŞEKİL"));
+        auto* shape = new ComboBox(properties_);
+        for (const auto& [word, text] : {std::pair{"dikdortgen", "Dikdörtgen"},
+                                         std::pair{"elips", "Elips"}, std::pair{"cizgi", "Çizgi"}})
+            shape->addItem(tr(text), QString::fromUtf8(word));
+        shape->setCurrentIndex(static_cast<int>(item.shape));
+        shape->setAccessibleName(tr("Şekil"));
+        connect(shape, &QComboBox::currentIndexChanged, this, [this, shape](int at) {
+            if (filling_ || at < 0) return;
+            edit(QStringLiteral("sekil=%1").arg(shape->itemData(at).toString()));
+        });
+        row(tr("Biçim"), shape);
+        row(tr("Çizgi rengi"), colourEditor(item.frame_colour, "cerceve_renk", tr("Çizgi rengi")));
+        row(tr("Kalınlık"),
+            mmEditor(item.frame_width, "cerceve_kalinlik", tr("Çizgi kalınlığı"), 2));
+        row(tr("Dolgu"), switchEditor(item.background, "zemin", tr("Dolgu")));
+        if (item.background)
+            row(tr("Dolgu rengi"),
+                colourEditor(item.background_colour, "zemin_renk", tr("Dolgu rengi")));
+        break;
+    }
+    case LayoutItemKind::Table:
+    case LayoutItemKind::Chart: {
+        const bool table = item.kind == LayoutItemKind::Table;
+        group(table ? tr("TABLO") : tr("GRAFİK"));
+        auto* source = new ComboBox(properties_);
+        source->addItem(tr("Katman seçin"), QString());
+        for (const core::Layer& layer : doc.layers())
+            source->addItem(QString::fromStdString(layer.name), QString::fromStdString(layer.name));
+        const int chosen = source->findData(QString::fromStdString(item.text));
+        source->setCurrentIndex(chosen >= 0 ? chosen : 0);
+        source->setAccessibleName(tr("Kaynak katman"));
+        connect(source, &QComboBox::currentIndexChanged, this, [this, source](int at) {
+            if (filling_ || at <= 0) return;
+            edit(QStringLiteral("metin=%1").arg(quoted(source->itemData(at).toString())));
+        });
+        row(tr("Katman"), source);
+
+        // THE COLUMNS, from the drawing's own schema: a table ticks the ones
+        // it shows (none ticked is all of them), a chart counts one.
+        QStringList columns;
+        const core::AttrTable& attributes = doc.attributes();
+        for (std::size_t c = 0; c < attributes.columns(); ++c)
+            if (const core::AttrColumn* column = attributes.column(static_cast<core::AttrId>(c));
+                column != nullptr)
+                columns << QString::fromStdString(column->spec().id);
+        if (table) {
+            group(tr("SÜTUNLAR"),
+                  item.columns.empty() ? tr("hepsi") : tr("%1 sütun").arg(item.columns.size()));
+            if (columns.isEmpty()) help(tr("Çizimde öznitelik sütunu yok."));
+            for (const QString& name : columns) {
+                auto* tick = new CheckBox(name, properties_);
+                tick->setChecked(item.columns.empty() ||
+                                 std::find(item.columns.begin(), item.columns.end(),
+                                           name.toStdString()) != item.columns.end());
+                connect(tick, &QAbstractButton::toggled, this, [this, name, columns](bool on) {
+                    if (filling_) return;
+                    const core::Layout* sheet = layout();
+                    const core::LayoutItem* shownItem =
+                        sheet == nullptr ? nullptr : sheet->find(canvas_->selected().toStdString());
+                    if (shownItem == nullptr) return;
+                    // NONE NAMED IS ALL OF THEM, so the first untick starts
+                    // from the full list rather than from nothing.
+                    QStringList kept;
+                    if (shownItem->columns.empty())
+                        kept = columns;
+                    else
+                        for (const std::string& one : shownItem->columns)
+                            kept << QString::fromStdString(one);
+                    kept.removeAll(name);
+                    if (on) kept << name;
+                    QStringList words;
+                    for (const QString& one : kept)
+                        words << QStringLiteral("sutunlar=%1").arg(quoted(one));
+                    edit(words.isEmpty() || kept.size() == columns.size()
+                             ? QStringLiteral("sutunlar=hepsi")
+                             : words.join(QLatin1Char(' ')));
+                });
+                row(QString(), tick);
+            }
+            group(tr("GÖRÜNÜŞ"));
+            row(tr("Satır sınırı"),
+                countEditor(item.row_limit, "satir_siniri",
+                            tr("Satır sınırı; 0 kutuya sığdığı kadar"), 0, 100000));
+            help(tr("0 kutuya sığdığı kadar satır gösterir."));
+        } else {
+            auto* counted = new ComboBox(properties_);
+            counted->addItem(tr("Sütun seçin"), QString());
+            for (const QString& name : columns)
+                counted->addItem(name, name);
+            const int held = item.columns.empty()
+                                 ? 0
+                                 : counted->findData(QString::fromStdString(item.columns.front()));
+            counted->setCurrentIndex(std::max(held, 0));
+            counted->setAccessibleName(tr("Sayılacak sütun"));
+            connect(counted, &QComboBox::currentIndexChanged, this, [this, counted](int at) {
+                if (filling_ || at <= 0) return;
+                edit(QStringLiteral("sutunlar=%1").arg(quoted(counted->itemData(at).toString())));
+            });
+            row(tr("Sütun"), counted);
+            row(tr("Harita"), mapEditor(l, item));
+        }
+        row(tr("Yazı boyu"), mmEditor(item.text_height, "yazi", tr("Yazı boyu")));
+        row(tr("Yazı rengi"), colourEditor(item.text_colour, "yazi_renk", tr("Yazı rengi")));
+        break;
+    }
+    }
+
+    // ---- how it looks -------------------------------------------------------
+    if (item.kind != LayoutItemKind::Shape) {
+        group(tr("ÇERÇEVE VE ZEMİN"));
+        row(tr("Çerçeve"), switchEditor(item.frame_visible, "cerceve", tr("Çerçeve")));
+        if (item.frame_visible) {
+            row(tr("Çerçeve rengi"),
+                colourEditor(item.frame_colour, "cerceve_renk", tr("Çerçeve rengi")));
+            row(tr("Kalınlık"),
+                mmEditor(item.frame_width, "cerceve_kalinlik", tr("Çerçeve kalınlığı"), 2));
+        }
+        row(tr("Zemin"), switchEditor(item.background, "zemin", tr("Zemin")));
+        if (item.background)
+            row(tr("Zemin rengi"),
+                colourEditor(item.background_colour, "zemin_renk", tr("Zemin rengi")));
+    }
+
+    group(tr("ÖĞE"));
+    row(tr("Kilitli"), switchEditor(item.locked, "kilit", tr("Kilitli — taşınmaz, boyutlanmaz")));
     auto* named = new Field(field_of(FieldKind::Text), properties_);
     named->setFixedHeight(static_cast<int>(ControlSize::Regular));
     named->setValue(QString::fromStdString(item.id));
@@ -1482,158 +3316,48 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
         canvas_->select(typed.trimmed());
         refresh();
     });
-    auto* namedRow = new FormRow(tr("Ad"), named, properties_);
-    namedRow->setHelp(tr("Komut satırının ad= ile andığı ad"));
-    propertyColumn_->addWidget(namedRow);
-
-    // ---- what only some kinds have ------------------------------------------
-    //
-    // `İÇERİK` RATHER THAN THE KIND'S NAME. The heading at the top of the panel
-    // already says this is a map frame; writing `HARİTA` again four rows under
-    // it repeats what the reader has not had time to forget. What these rows
-    // have in common across every kind is that they decide what the box SHOWS —
-    // a map's scale and layers, a table's columns, a legend's map — as against
-    // the rows above, which decide where it sits.
-    if (has_content_rows(item.kind))
-        propertyColumn_->addWidget(new FormSection(tr("İÇERİK"), QString(), properties_));
-
-    if (item.kind == LayoutItemKind::Label || item.kind == LayoutItemKind::Picture ||
-        item.kind == LayoutItemKind::Table || item.kind == LayoutItemKind::Legend) {
-        const QString hint = item.kind == LayoutItemKind::Picture ? tr("resim yolu")
-                             : item.kind == LayoutItemKind::Table ? tr("katman adı")
-                                                                  : tr("yazı");
-        auto* row          = textRow(tr("Metin"), QString::fromStdString(item.text), "metin", hint);
-        if (item.kind == LayoutItemKind::Label)
-            row->setHelp(tr("<yerlesim>, <olcek>, <tarih>, <crs>, <proje>"));
-        propertyColumn_->addWidget(row);
-    }
-
-    if (item.kind == LayoutItemKind::Map) {
-        auto* scale = new Field(field_of(FieldKind::Number), properties_);
-        scale->setFixedHeight(static_cast<int>(ControlSize::Regular));
-        scale->setValue(QString::number(item.scale));
-        scale->setAccessibleName(tr("Ölçek 1:N"));
-        connect(scale, &Field::committed, this, [this](const QString& typed) {
-            if (filling_) return;
-            edit(QStringLiteral("olcek=%1").arg(typed.toLongLong()));
-        });
-        auto* scaleRow = new FormRow(tr("Ölçek 1:N"), scale, properties_);
-        scaleRow->setHelp(tr("0 = pencereye uyar"));
-        propertyColumn_->addWidget(scaleRow);
-
-        auto* grid = new ComboBox(properties_);
-        for (const auto& [word, label] :
-             {std::pair{"yok", tr("yok")}, std::pair{"arti", tr("artı")},
-              std::pair{"cizgi", tr("çizgi")}, std::pair{"centik", tr("çentik")}})
-            grid->addItem(label, QString::fromUtf8(word));
-        grid->setCurrentIndex(static_cast<int>(item.grid));
-        connect(grid, &QComboBox::currentIndexChanged, this, [this, grid](int at) {
-            if (filling_ || at < 0) return;
-            edit(QStringLiteral("izgara=%1").arg(grid->itemData(at).toString()));
-        });
-
-        auto* spacing = countRow(tr("Aralık"), item.grid_interval, "izgara_aralik", 1000000000);
-        spacing->setHelp(tr("zemin mm"));
-        propertyColumn_->addWidget(pairOf(new FormRow(tr("Izgara"), grid, properties_), spacing));
-
-        // WHICH LAYERS IT DRAWS. Empty means every visible one, which is the
-        // default and the common case; `hepsi` is how the command line clears a
-        // list back to it, so the help says so rather than leaving a user to
-        // guess that deleting the text does the same thing.
-        auto* drawn = textRow(tr("Katmanlar"), joined(item.layers), "katmanlar",
-                              tr("görünür bütün katmanlar"));
-        drawn->setHelp(tr("virgülle ayırın · boş = görünür hepsi"));
-        propertyColumn_->addWidget(drawn);
-    }
-
-    if (item.kind == LayoutItemKind::Table) {
-        auto* columns = textRow(tr("Sütunlar"), joined(item.columns), "sutunlar",
-                                tr("katmanın bütün sütunları"));
-        columns->setHelp(tr("virgülle ayırın · boş = hepsi"));
-        propertyColumn_->addWidget(columns);
-
-        auto* cap = countRow(tr("Satır sınırı"), item.row_limit, "satir_siniri", 100000);
-        cap->setHelp(tr("0 = kutuya kaç satır sığarsa"));
-        propertyColumn_->addWidget(cap);
-    }
-
-    // WHICH MAP FRAME IT BELONGS TO. A scale bar, a north arrow and a legend all
-    // describe one map; a sheet with two frames had no way to say which, so the
-    // second frame's scale bar quietly described the first.
-    if (item.kind == LayoutItemKind::ScaleBar || item.kind == LayoutItemKind::NorthArrow ||
-        item.kind == LayoutItemKind::Legend || item.kind == LayoutItemKind::Chart) {
-        auto* bound = new ComboBox(properties_);
-        bound->addItem(tr("ilk harita"), QStringLiteral("ilk"));
-        for (const core::LayoutItem& other : l.items)
-            if (other.kind == LayoutItemKind::Map)
-                bound->addItem(QString::fromStdString(other.id), QString::fromStdString(other.id));
-        const int chosen = bound->findData(QString::fromStdString(item.linked_map));
-        bound->setCurrentIndex(chosen >= 0 ? chosen : 0);
-        connect(bound, &QComboBox::currentIndexChanged, this, [this, bound](int at) {
-            if (filling_ || at < 0) return;
-            edit(QStringLiteral("harita=%1").arg(quoted(bound->itemData(at).toString())));
-        });
-        propertyColumn_->addWidget(new FormRow(tr("Harita"), bound, properties_));
-    }
-
-    if (item.kind != LayoutItemKind::Map)
-        propertyColumn_->addWidget(mmRow(tr("Yazı yüksekliği"), item.text_height, "yazi"));
-
-    // ---- the two switches ---------------------------------------------------
-    //
-    // TWO ROWS, NOT ONE PILE. They were a `ToggleSwitch` and a bare `QLabel`
-    // pushed into a horizontal strip, which made them the only two controls in
-    // the window that did not read like the rest of the form — and made the
-    // panel's own rebuild bug show up here first.
-    // NO HELP LINES UNDER THESE TWO. A switch labelled `Çerçeve` and a switch
-    // labelled `Kilit` say what they do; a dim line under each repeating it in
-    // other words is the most decoration per fact anywhere in this panel.
-    const auto toggle = [&](const QString& label, bool on, const char* argument) {
-        auto* box = new ToggleSwitch(properties_);
-        box->setChecked(on);
-        box->setAccessibleName(label);
-        const QString key = QString::fromUtf8(argument);
-        connect(box, &QAbstractButton::toggled, this, [this, key](bool checked) {
-            if (filling_) return;
-            edit(QStringLiteral("%1=%2").arg(key, checked ? QStringLiteral("evet")
-                                                          : QStringLiteral("hayir")));
-        });
-        return new FormRow(label, box, properties_);
-    };
-    propertyColumn_->addWidget(pairOf(toggle(tr("Çerçeve"), item.frame_visible, "cerceve"),
-                                      toggle(tr("Kilit"), item.locked, "kilit")));
+    row(tr("Ad"), named);
+    help(tr("Komut satırı ve betik öğeyi ad= ile bu adla anar."));
 }
 
 void LayoutDesigner::showItem(const QString& id)
 {
     if (canvas_ == nullptr) return;
+    // `select` reports the change and the column is rebuilt from there; a
+    // second refresh here only built it twice.
+    pane_ = id.isEmpty() ? Pane::Sheet : Pane::Item;
+    if (canvas_->selection() == (id.isEmpty() ? QStringList{} : QStringList{id})) {
+        refresh();
+        return;
+    }
     canvas_->select(id);
-    refresh();
 }
 
 void LayoutDesigner::aimAt(core::Box2 window)
 {
     const core::Layout* l = layout();
     if (l == nullptr) return;
-    const core::LayoutItem* map = l->first_map();
+    // THE PICKED MAP, if a map is picked; the first one otherwise.
+    const core::LayoutItem* map = nullptr;
+    if (const core::LayoutItem* picked = l->find(canvas_->selected().toStdString());
+        picked != nullptr && picked->kind == core::LayoutItemKind::Map)
+        map = picked;
+    if (map == nullptr) map = l->first_map();
     if (map == nullptr) {
-        if (status_ != nullptr)
-            status_->setText(tr("Bu yerleşimde harita çerçevesi yok; ekleyip yeniden deneyin."));
+        if (hint_ != nullptr)
+            hint_->setText(tr("Bu yerleşimde harita çerçevesi yok; ekleyip yeniden deneyin."));
         return;
     }
+    if (window.empty()) return;
 
-    // THE NAME IS TAKEN BEFORE THE DOCUMENT MOVES, and that is not tidiness.
-    //
-    // `map` points INTO the document's layout. `runLine` below dispatches
-    // `ÇIKTIÖĞE islem=ayarla`, which rewrites the layout's item vector — and the
-    // pointer is then dangling. Reading `map->id` after it crashed the program
-    // in `strlen` on a garbage address, intermittently, which is the worst shape
-    // a use-after-free takes: it looked like a flaky test for weeks.
+    // THE NAME IS TAKEN BEFORE THE DOCUMENT MOVES. `map` points INTO the
+    // document's layout, and the command below rewrites the item vector — the
+    // pointer then dangles. Reading `map->id` after it crashed the program in
+    // `strlen`, intermittently, for weeks.
     const QString aimed = QString::fromStdString(map->id);
 
-    // METRES ON THE LINE, and the key written twice — the parser's own shape for
-    // a window (`YAZDIR pencere=`). Writing `Mm` here made the frame a thousand
-    // times too wide the first time this was tried.
+    // METRES ON THE LINE, and the key written twice — the parser's own shape
+    // for a window (`YAZDIR pencere=`).
     const auto metres = [](core::Mm v) {
         return QString::number(static_cast<double>(v) / 1000.0, 'f', 3);
     };
@@ -1643,6 +3367,7 @@ void LayoutDesigner::aimAt(core::Box2 window)
                                  metres(window.min_y), metres(window.max_x), metres(window.max_y)),
                         command::Origin::Gui);
     canvas_->select(aimed);
+    pane_ = Pane::Item;
     refresh();
 }
 
@@ -1651,7 +3376,6 @@ void LayoutDesigner::exportSheet()
     const QString path = QFileDialog::getSaveFileName(
         this, tr("Yerleşimi PDF olarak kaydet"), name_ + QStringLiteral(".pdf"), tr("PDF (*.pdf)"));
     if (path.isEmpty()) return;
-
     controller_.runLine(
         QStringLiteral("YAZDIR yerlesim=%1 dosya=%2").arg(quoted(name_), quoted(path)),
         command::Origin::Gui);
@@ -1663,13 +3387,12 @@ void LayoutDesigner::applyTheme(ThemeMode mode)
     if (canvas_ != nullptr) canvas_->applyTheme(mode);
 
     // AND THE ITEM ROWS. A delegate is not a widget, so `DialogFrame` never
-    // reaches it: it kept the dark tokens it was built with and drew the names
-    // in #DFE5EA on a light panel, which is a list that looks disabled.
-    // A STATIC CAST, and it is sound: `rows_` is only ever assigned the
-    // `ItemRow` built in `buildItemList`. `qobject_cast` cannot help here —
+    // reaches it. A STATIC CAST, and it is sound: `rows_` is only ever assigned
+    // the `ItemRow` built in `buildInspector`; `qobject_cast` cannot help —
     // `ItemRow` lives in this file's anonymous namespace and has no meta-object.
     if (rows_ != nullptr) static_cast<ItemRow*>(rows_)->setTheme(mode);
     if (items_ != nullptr) items_->viewport()->update();
+    if (layout() != nullptr) buildProperties();
 }
 
 QStringList LayoutDesigner::probeDrive()
@@ -1677,7 +3400,6 @@ QStringList LayoutDesigner::probeDrive()
     QStringList said;
     const core::Layout* l = layout();
     if (l == nullptr) return {QStringLiteral("yerleşim yok")};
-    (void)l;
 
     canvas_->select(QStringLiteral("baslik"));
     said << QStringLiteral("seçim: %1").arg(canvas_->selected());
@@ -1686,9 +3408,7 @@ QStringList LayoutDesigner::probeDrive()
     // uses, so driving it drives the real path rather than a shortcut.
     if (const core::LayoutItem* title = l->find("baslik"); title != nullptr) {
         // THE VALUE IS COPIED BEFORE THE COMMAND RUNS. `set_layouts` replaces the
-        // whole list, so `title` dangles the moment the move is applied — reading
-        // it afterwards reported the start as 0.0 mm, which is what a freed
-        // `std::string`'s neighbour happened to hold.
+        // whole list, so `title` dangles the moment the move is applied.
         const core::PaperRect was = title->frame;
         core::PaperRect moved     = was;
         moved.x += core::um_from_mm(25);
@@ -1714,21 +3434,15 @@ QStringList LayoutDesigner::probeDrive()
 
     // ---- THE PREVIEW DOES NOT FILL WHAT THE SHEET LEAVES EMPTY --------------
     //
-    // WHAT THIS CAUGHT, and it was on screen for months. The canvas drew the
-    // sheet's drop shadow and then called `paint_layout_page` — the SAME
-    // function the PDF and the printer go through — without giving the painter
-    // back. The shadow's brush was still set, so every parcel on the sheet came
-    // out filled with black at ten percent: a pale grey inside the map frame
-    // that appears in no file this program writes. A user reported it as "why
-    // is the map background grey", which is exactly what it looked like.
-    //
-    // MEASURED AS THE SHARE OF UNTOUCHED PAPER. The probe's drawing puts two
-    // parcels across most of the map frame; filled, they cover a quarter of the
-    // page and the share falls well under the bar, and outlined they leave it
-    // white. It is a blunt measure on purpose: a subtler one would need the
-    // sheet rendered twice and compared, which is a test that fails on a
-    // font-hinting difference between two machines.
+    // The canvas once drew the sheet's drop shadow and then called
+    // `paint_layout_page` without giving the painter back: every parcel came
+    // out filled with the shadow's black at ten percent, a pale grey inside the
+    // map frame that appears in no file this program writes. MEASURED AS THE
+    // SHARE OF UNTOUCHED PAPER: filled, the probe's parcels would cover a
+    // quarter of the page; outlined, they leave it white.
+    canvas_->zoomToFit();
     if (canvas_ != nullptr && canvas_->sheetRect().width() > 100) {
+        canvas_->repaint();
         const QImage sheet = canvas_->grab(canvas_->sheetRect()).toImage();
         std::size_t paper  = 0;
         const std::size_t all =
@@ -1742,11 +3456,9 @@ QStringList LayoutDesigner::probeDrive()
 
     // ---- THE SHEET'S OWN SETTINGS, THROUGH THE PANEL'S OWN PATH -------------
     //
-    // WHAT THIS GUARDS. `islem=sayfa` DEFAULTS every argument it is not given,
-    // so a line carrying only `kenar=15` also makes the sheet A4 and turns it
-    // upright. Four inspector fields that each undid the other three would have
-    // shipped as "changing the margin resized my paper". One field is touched
-    // here and the other three are checked for having stayed put.
+    // `islem=sayfa` DEFAULTS every argument it is not given, so a line carrying
+    // only `kenar=15` also makes the sheet A4 and turns it upright. One field is
+    // touched here and the other three are checked for having stayed put.
     sheetEdit(QStringLiteral("kenar=15"));
     if (const core::Layout* sheet = layout(); sheet != nullptr)
         said << QStringLiteral("sayfa: %1 %2 · kenar %3 mm · %4 dpi · %5×%6")
@@ -1757,12 +3469,9 @@ QStringList LayoutDesigner::probeDrive()
                     .arg(sheet->pages.front().w / 1000)
                     .arg(sheet->pages.front().h / 1000);
 
-    // AND THE RESOLUTION, which until now no client could change after the
-    // layout was made.
-    //
-    // BOTH BEFORE THE LEGEND IS ADDED, deliberately: the caller's next step is
-    // a `GERİAL` that must undo the LAST gesture this makes, and it checks the
-    // item count. A settings change landing after it would be what came back.
+    // AND THE RESOLUTION. BOTH BEFORE THE LEGEND IS ADDED, deliberately: the
+    // caller's next step is a `GERİAL` that must undo the LAST gesture this
+    // makes, and it checks the item count.
     sheetEdit(QStringLiteral("dpi=600"));
     if (const core::Layout* sheet = layout(); sheet != nullptr)
         said << QStringLiteral("sayfa: %1 %2 · kenar %3 mm · %4 dpi")

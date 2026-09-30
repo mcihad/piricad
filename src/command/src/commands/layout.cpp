@@ -1079,14 +1079,17 @@ Task<void> run_item(Context& ctx)
     Bus& bus                      = ctx.session().bus();
     const core::LayoutStore& have = bus.document().layouts();
 
-    static constexpr const char* kVerbs[] = {"listele", "ekle", "sil", "tasi", "ayarla", "ad"};
-    auto verb = co_await ctx.text("islem", "İşlem: listele / ekle / sil / tasi / ayarla / ad");
+    static constexpr const char* kVerbs[] = {"listele", "ekle", "sil",   "tasi",
+                                             "ayarla",  "ad",   "cogalt"};
+    auto verb =
+        co_await ctx.text("islem", "İşlem: listele / ekle / sil / tasi / ayarla / ad / cogalt");
     if (!verb) co_return;
     const char* resolved = canonical_verb(*verb, kVerbs);
     if (resolved == nullptr) {
         ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
                                      "Tanınmayan işlem: '" + *verb +
-                                         "'. İşlemler: listele / ekle / sil / tasi / ayarla / ad"));
+                                         "'. İşlemler: listele / ekle / sil / tasi / ayarla / ad / "
+                                         "cogalt"));
         co_return;
     }
     const std::string op = resolved;
@@ -1208,6 +1211,46 @@ Task<void> run_item(Context& ctx)
                 co_return;
             }
             ctx.record("yeni_ad", fresh);
+        } else if (op == "cogalt") {
+            // A COPY BESIDE IT, five millimetres down and to the right, on the
+            // same page and on top of everything: where a person looks for the
+            // copy they just made. Every setting and every link comes along — a
+            // copied scale bar still states the scale of the map its original
+            // does — and the line may move or restyle the copy at once, because
+            // the settings it carries are applied to the copy (`apply_properties`).
+            const LayoutItem* source = target->find(*id);
+            if (source == nullptr) {
+                ctx.session().fail(
+                    core::err(core::ErrorCode::NotFound,
+                              "'" + sheet + "' yerleşiminde öğe yok: '" + *id + "'."));
+                co_return;
+            }
+            LayoutItem copy   = *source;
+            copy.key          = core::LayoutItemKey::None; ///< a copy is another item
+            const Value fresh = ctx.argument("yeni_ad");
+            copy.id           = fresh.empty() ? free_id(*target, source->id) : fresh.as_text();
+            if (target->find(copy.id) != nullptr) {
+                ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                             "'" + sheet + "' yerleşiminde '" + copy.id +
+                                                 "' adlı bir öğe zaten var."));
+                co_return;
+            }
+            copy.frame.x += um(5);
+            copy.frame.y += um(5);
+            copy.locked       = false;
+            std::int32_t top  = copy.z;
+            std::int32_t page = 0;
+            for (std::size_t i = 0; i < target->items.size(); ++i) {
+                top = std::max(top, target->items[i].z);
+                if (&target->items[i] == source) page = target->page_of(i);
+            }
+            copy.z = std::min(top + 1, 1000);
+            ctx.record("yeni_ad", Value::text(copy.id));
+            target->item_pages.resize(target->items.size(), 0);
+            target->items.push_back(std::move(copy));
+            target->item_pages.push_back(page);
+            LayoutItem& made = target->items.back();
+            if (!apply_properties(ctx, bus, *target, made, made.id)) co_return;
         } else if (op == "tasi" || op == "ayarla") {
             LayoutItem* item = target->find(*id);
             if (item == nullptr) {
@@ -1470,7 +1513,8 @@ KENTOS_COMMAND(layout_item)
         .params =
             {
                 Param::choice("islem", Arity::exactly(1),
-                              {"listele", "ekle", "sil", "tasi", "ayarla", "ad"}, "Ne yapılacağı")
+                              {"listele", "ekle", "sil", "tasi", "ayarla", "ad", "cogalt"},
+                              "Ne yapılacağı")
                     .en("action"),
                 Param::text("yerlesim", Arity::optional(),
                             "Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez")
@@ -1524,7 +1568,8 @@ KENTOS_COMMAND(layout_item)
                 Param::integer_range("sayfa", Arity::optional(), 1, 10000,
                                      "Öğenin duracağı sayfa (1'den başlar); tasi ile verilir")
                     .en("page"),
-                Param::text("yeni_ad", Arity::optional(), "islem=ad için öğenin yeni adı")
+                Param::text("yeni_ad", Arity::optional(),
+                            "islem=ad için öğenin yeni adı; islem=cogalt için kopyanın adı")
                     .en("new_name"),
                 Param::integer_range("satir_siniri", Arity::optional(), 0, 100000,
                                      "Tablo öğesinin yazacağı en çok satır; 0 = kutuya kaç satır "
@@ -1610,6 +1655,7 @@ KENTOS_COMMAND(layout_item)
                 {"tasi", Effect::DocumentEdit},
                 {"ayarla", Effect::DocumentEdit},
                 {"ad", Effect::DocumentEdit},
+                {"cogalt", Effect::DocumentEdit},
             },
     };
 }

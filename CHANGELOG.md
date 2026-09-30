@@ -6,6 +6,35 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — çıktı yerleşimi tasarımcısı yeniden kuruldu
+
+- Solda **araç sütunu**: seç ve dokuz öğe türü; öğe kâğıtta sürüklenerek çizilir,
+  tıklamak türün öntanımlı boyunda koyar. Üstte **araç satırı**: geri al / yinele, altı
+  hizalama, iki dağıtma, en öne / en arkaya, çoğalt, kilitle, sil, sayfalar arasında
+  gezinme, yakalama ve yakınlaştırma.
+- Kâğıtta tekerlekle yakınlaştırma, Boşluk ya da orta düğmeyle kaydırma, çerçeveyle ve
+  Shift ile çoklu seçim, sayfa kenarına, kenar payına ve öteki öğelere yakalayan mavi
+  kılavuzlar, sürüklerken ölçü etiketi, sağ tık menüsü.
+- Sağda öğe listesi (satırdan kilitleme) ve **denetçi**: Stil Tasarımcısı'nın "solda ad,
+  sağda değer" satırlarıyla, kararın verildiği sırada gruplanmış bütün ayarlar; haritanın
+  katmanları ve tablonun sütunları işaretlenerek seçilir, harita ölçeği plan
+  ölçeklerinden seçilebilir, metne yer tutucu menüden eklenir.
+- `ÇIKTIÖĞE islem=cogalt`: seçili öğenin kopyası yanına, en üste ve aynı sayfaya.
+- Pencere 1280 × 820 açılır ve 1040 × 680'e kadar küçüldüğünde hiçbir şey kesilmez.
+
+### Düzeltildi — ölçek çubuğu kutusundan taşıyordu
+
+- Çubuğun bölüm uzunluğu yukarı yuvarlanıyordu; 1:625'te 133 mm'lik bir kutuya 320 mm'lik
+  bir çubuk çiziliyordu. Artık yuvarlak uzunluk aşağı yuvarlanır ve çubuk, sayıları ve
+  birimiyle birlikte kutunun içinde kalır.
+
+### Düzeltildi — segmentin seçili hücresi, form alanının ikinci düzenlemesi
+
+- Ortadaki ya da sondaki seçili segment hücresinin sol kenarı görünmüyordu; seçili hücre
+  artık dört kenarıyla vurgulanır. Bu, programdaki bütün segmentlerde geçerlidir.
+- Bir form alanına Enter ile değer yazdıktan sonra aynı alana yazılan ikinci değer
+  bildirilmiyordu.
+
 ### Eklendi — çıktı öğesinin görünümü komuttan ayarlanır
 
 - `ÇIKTIÖĞE` döndürmeyi (`aci`), çerçeve rengini ve kalınlığını, zemini ve zemin

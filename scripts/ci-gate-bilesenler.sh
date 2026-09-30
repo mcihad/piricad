@@ -134,6 +134,8 @@ else
         bekle "[bilesen] $role · devre dışı · 30 px"
     done
     bekle "[bilesen] iconButton · etkin · 32 px"
+    bekle "[bilesen] iconButton · araç çubuğu · 32 px"
+    bekle "[bilesen] iconButton · araç çubuğu, basılı · 32 px"
 
     # The three heights, side by side.
     bekle "[bilesen] secondary · compact · 24 px"

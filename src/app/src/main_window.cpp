@@ -12031,6 +12031,9 @@ void MainWindow::openLayoutDesigner(const QString& layout, core::Box2 window)
 {
     LayoutDesigner designer(*controller_, layout, this);
     designer.applyTheme(theme_);
+    // WHAT THIS WINDOW SHOWS, for the map frame's `Ana pencereden al`: the
+    // area a user has just framed on the map is the one they mean to print.
+    designer.setViewWindow(canvas_->view().visible_box());
     if (!window.empty()) designer.aimAt(window);
     designer.exec();
 }

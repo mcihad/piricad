@@ -1881,7 +1881,7 @@ def layout_item(
         locked — Öğeyi taşımaya kapatır
         frame — Öğenin çevresine çerçeve çizer
         page — Öğenin duracağı sayfa (1'den başlar); tasi ile verilir
-        new_name — islem=ad için öğenin yeni adı
+        new_name — islem=ad için öğenin yeni adı; islem=cogalt için kopyanın adı
         max_rows — Tablo öğesinin yazacağı en çok satır; 0 = kutuya kaç satır sığıyorsa o kadar
         fields — Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; anahtar birden çok kez yazılır. Verilmezse katmanın bütün sütunları, 'hepsi' listeyi boşaltır
         layers — Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır

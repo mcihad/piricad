@@ -2767,7 +2767,7 @@ cad.layout_item(
 | `locked` | `bool` | `kilit` | Öğeyi taşımaya kapatır |
 | `frame` | `bool` | `cerceve` | Öğenin çevresine çerçeve çizer |
 | `page` | `int` | `sayfa` | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir |
-| `new_name` | `str` | `yeni_ad` | islem=ad için öğenin yeni adı |
+| `new_name` | `str` | `yeni_ad` | islem=ad için öğenin yeni adı; islem=cogalt için kopyanın adı |
 | `max_rows` | `int` | `satir_siniri` | Tablo öğesinin yazacağı en çok satır; 0 = kutuya kaç satır sığıyorsa o kadar |
 | `fields` | `list[str]` | `sutunlar` | Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; anahtar birden çok kez yazılır. Verilmezse katmanın bütün sütunları, 'hepsi' listeyi boşaltır |
 | `layers` | `list[str]` | `katmanlar` | Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır |

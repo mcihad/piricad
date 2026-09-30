@@ -1556,7 +1556,7 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `kilit` | bool | isteğe bağlı | Öğeyi taşımaya kapatır |
 | `cerceve` | bool | isteğe bağlı | Öğenin çevresine çerçeve çizer |
 | `sayfa` | integer | isteğe bağlı | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir |
-| `yeni_ad` | text | isteğe bağlı | islem=ad için öğenin yeni adı |
+| `yeni_ad` | text | isteğe bağlı | islem=ad için öğenin yeni adı; islem=cogalt için kopyanın adı |
 | `satir_siniri` | integer | isteğe bağlı | Tablo öğesinin yazacağı en çok satır; 0 = kutuya kaç satır sığıyorsa o kadar |
 | `sutunlar` | text | 0–64 | Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; anahtar birden çok kez yazılır. Verilmezse katmanın bütün sütunları, 'hepsi' listeyi boşaltır |
 | `katmanlar` | text | 0–64 | Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır |
@@ -8547,7 +8547,8 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "sil",
             "tasi",
             "ayarla",
-            "ad"
+            "ad",
+            "cogalt"
           ],
           "description": "Ne yapılacağı (metin)"
         },
@@ -8683,7 +8684,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "yeni_ad": {
           "type": "string",
-          "description": "islem=ad için öğenin yeni adı (metin)"
+          "description": "islem=ad için öğenin yeni adı; islem=cogalt için kopyanın adı (metin)"
         },
         "satir_siniri": {
           "type": "integer",

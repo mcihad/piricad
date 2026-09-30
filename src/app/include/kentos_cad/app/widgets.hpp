@@ -141,6 +141,16 @@ public:
     /// list and does not say it is a list nobody opens.
     void setMenuArrow(QMenu* menu);
 
+    /// The TOOLBAR form of an icon button: the same 32 × 32 and 16 px glyph,
+    /// with no border and no ground until the pointer is over it or it is on.
+    ///
+    /// design.md §15.1 gives toolbars to the ghost. The icon role's border is
+    /// right for one icon beside a field — a lone square reads as a control —
+    /// and wrong for twenty in a row, where every square is drawn and the row
+    /// reads as a grid of boxes rather than as a toolbar. Checkable, it is the
+    /// mode switch's pressed look: `--accent-wash` and `--accent-edge`.
+    void setBare(bool bare);
+
     void applyTheme(ThemeMode mode) override;
 
 protected:

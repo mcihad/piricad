@@ -980,6 +980,49 @@ TEST_CASE("Çıktı öğesi: döndürme, renkler, zemin, hizalama ve ızgara kom
     CHECK(spelled);
 }
 
+TEST_CASE("Çıktı öğesi: çoğalt, kopyayı yanına, en üste ve aynı haritaya bağlı koyar")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfaekle ad=Pafta sayfa=1", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=tasi ad=olcek sayfa=2", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=olcek kilit=evet bolum=6", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=cogalt ad=olcek", Origin::Test).ok());
+    const core::Layout* l = r.doc.layouts().find("Pafta");
+    REQUIRE(l != nullptr);
+    const core::LayoutItem* was  = l->find("olcek");
+    const core::LayoutItem* copy = l->find("olcek2");
+    REQUIRE(was != nullptr);
+    REQUIRE(copy != nullptr);
+    CHECK(copy->frame.x == was->frame.x + core::um_from_mm(5));
+    CHECK(copy->frame.y == was->frame.y + core::um_from_mm(5));
+    CHECK(copy->style == 6);      // its settings come along
+    CHECK(copy->locked == false); // a copy is free to move
+    CHECK(copy->key != was->key); // and is another item
+    for (const core::LayoutItem& other : l->items)
+        if (&other != copy) CHECK(copy->z > other.z);
+    std::int32_t page = -1;
+    for (std::size_t i = 0; i < l->items.size(); ++i)
+        if (l->items[i].id == "olcek2") page = l->page_of(i);
+    CHECK(page == 1); // the original's page, the second one
+
+    // THE LINE MAY PLACE THE COPY AT ONCE.
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=cogalt ad=olcek yeni_ad=olcek_alt x=20 y=250",
+                              Origin::Test)
+                .ok());
+    const core::LayoutItem* placed = r.doc.layouts().find("Pafta")->find("olcek_alt");
+    REQUIRE(placed != nullptr);
+    CHECK(placed->frame.x == core::um_from_mm(20));
+    CHECK(placed->frame.y == core::um_from_mm(250));
+    const auto taken =
+        r.bus.execute_line("ÇIKTIÖĞE islem=cogalt ad=olcek yeni_ad=olcek2", Origin::Test);
+    REQUIRE_FALSE(taken.ok());
+    CHECK(taken.error().message.find("zaten var") != std::string::npos);
+}
+
 TEST_CASE("Çıktı öğesi: yalnız bir türe ait ayar başka türe verilince adıyla reddedilir")
 {
     Rig r;

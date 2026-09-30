@@ -917,6 +917,10 @@ bool Field::eventFilter(QObject* watched, QEvent* event)
             cancel();
             return true;
         }
+        // TYPING AGAIN AFTER ENTER IS A SECOND EDIT. A form field keeps the
+        // focus when Enter commits it, and without this the next value typed
+        // into the same box and confirmed the same way was never reported.
+        done_ = false;
 
         // THE PICKER OPENS FROM THE KEYBOARD — Alt+Down or F4, the keys a combo
         // box answers to — because the button beside the line takes no focus
@@ -947,6 +951,11 @@ bool Field::eventFilter(QObject* watched, QEvent* event)
     // does: Qt's stylesheets have no `:focus-within`, so the state is carried as
     // a property and repolished by hand.
     if (event->type() == QEvent::FocusIn && spec_.frame == FieldFrame::Box) {
+        // A FORM FIELD IS EDITED MORE THAN ONCE. A cell's editor lives for one
+        // edit and `beginEditing` opens it; a field in a form is the same
+        // widget every time the user comes back to it, and each visit is an
+        // edit of its own that must be able to commit.
+        done_ = false;
         setProperty("state", QStringLiteral("focus"));
         style()->unpolish(this);
         style()->polish(this);

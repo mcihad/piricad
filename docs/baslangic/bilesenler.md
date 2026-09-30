@@ -43,6 +43,11 @@ Altı rol vardır. Rol, düğmenin ne kadar önemli olduğunu ve ne yapacağın�
 | **Kip anahtarı** | basılıyken mavi kenar ve dolgu | açık/kapalı bir durumu taşır | `Düzenleme` |
 | **Simge düğmesi** | 32×32 piksel kare, yalnız simge | yeri dar araç eylemleri; adını ipucu söyler | dişli, ayar simgesi |
 
+Simge düğmesinin bir de **araç çubuğu** biçimi vardır: aynı 32×32 kare, ama kenarı ve
+zemini yoktur; üzerine gelince zemini belirir, basılı bir araçsa (örneğin Çıktı
+Yerleşimi Tasarımcısı'nda seçili öğe aracı) mavi kenar ve dolgu taşır. Yan yana
+yirmi çerçeveli kare bir araç çubuğu değil, bir kutu ızgarasıdır.
+
 Menü açan bir düğmenin sağında küçük bir ok vardır; ok yazıya yazılmaz, düğme çizer.
 Katman Özellikleri penceresindeki `Stil` düğmesi böyledir.
 

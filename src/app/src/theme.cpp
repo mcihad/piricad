@@ -430,6 +430,25 @@ QString themeStyleSheet(ThemeMode mode)
         QWidget#symbolColumn             { background: %(panel)s;
                                            border-left: 1px solid %(lineHard)s; }
 
+        /* ---- layout designer ----------------------------------------------- */
+        /* The sheet editor wears the shell's own chrome: the tool row and the
+         * rail are toolbars, the inspector a column with a hard edge against
+         * the pasteboard, and the status line the darkest strip, as the main
+         * window's is. */
+        QWidget#layoutToolRow            { background: %(raised)s;
+                                           border-bottom: 1px solid %(lineHard)s; }
+        QWidget#layoutRail               { background: %(raised)s;
+                                           border-right: 1px solid %(lineHard)s; }
+        QWidget#layoutInspector          { background: %(window)s;
+                                           border-left: 1px solid %(lineHard)s; }
+        QWidget#layoutStatus             { background: %(strip)s;
+                                           border-top: 1px solid %(lineHard)s; }
+        QWidget#layoutStripRule          { background: %(separator)s; }
+        /* Where the pointer is on the paper: a figure, in the readout ink, on
+         * the strip's own ground rather than on a patch of the window's. */
+        QLabel#layoutCursor              { background: transparent; color: %(readout)s;
+                                           font-family: "IBM Plex Mono"; font-size: 11px; }
+
         /* ---- style designer, §8 -------------------------------------------- */
         /*
          * THE SAME LANGUAGE THE TABLES SPEAK. The lists in this window were
@@ -1037,6 +1056,15 @@ QString themeStyleSheet(ThemeMode mode)
         QPushButton#iconButton            { padding: 0px; } /* 32×32 fixed by `Button` */
         QPushButton#iconButton:hover      { background: %(hoverIcon)s; color: %(onHover)s; }
         QPushButton#iconButton:checked    { background: %(wash)s; border-color: %(accentEdge)s; }
+        /* The toolbar's icon button (`Button::setBare`): no chrome until the
+         * pointer or its own state asks for it. */
+        QPushButton#iconButton[bare="true"]          { border: 1px solid transparent;
+                                                       background: transparent; }
+        QPushButton#iconButton[bare="true"]:hover    { background: %(hoverIcon)s; }
+        QPushButton#iconButton[bare="true"]:checked  { background: %(wash)s;
+                                                       border: 1px solid %(accentEdge)s; }
+        QPushButton#iconButton[bare="true"]:disabled { background: transparent;
+                                                       border: 1px solid transparent; }
 
         /* ---- selection controls -------------------------------------------- */
         /*
@@ -1081,6 +1109,16 @@ QString themeStyleSheet(ThemeMode mode)
         QPushButton#segment[edge="only"]  { border-radius: 4px; }
         QPushButton#segment[size="regular"] { padding: 0px 16px; font-size: 12px; }
         QPushButton#segment:hover         { background: %(hoverIcon)s; }
+        /* THE LIT OPTION IS FRAMED ON ALL FOUR SIDES. The rule above that drops
+         * a neighbour's left border also dropped the lit option's own, so a lit
+         * middle option showed its accent frame open on the left, closed by the
+         * grey edge of the option before it. `Segment` marks that option
+         * `lit="next"` and it gives its right edge up; the lit one takes the
+         * left edge back, in accent. */
+        QPushButton#segment[edge="mid"]:checked,
+        QPushButton#segment[edge="last"]:checked { border-left: 1px solid %(accentEdge)s; }
+        QPushButton#segment[lit="next"]   { border-right: none; }
+        QPushButton#segment:checked:hover { background: %(wash)s; }
 
         QSlider::groove:horizontal        { height: 4px; background: %(lineSoft)s;
                                             border-radius: 2px; }

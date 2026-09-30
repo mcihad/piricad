@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstdint>
 #include <numbers>
+#include <tuple>
+#include <utility>
 
 #include <QFont>
 #include <QPainter>
@@ -2227,6 +2229,228 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.drawLine(QPointF(12.0, 9.6), QPointF(12.0, 14.0));
         break;
     }
+    case Glyph::LayoutAlignLeft:
+    case Glyph::LayoutAlignCentre:
+    case Glyph::LayoutAlignRight: {
+        // TWO BARS AND THE RULE THEY MEET: the rule is where the edges go.
+        const bool left   = g == Glyph::LayoutAlignLeft;
+        const bool centre = g == Glyph::LayoutAlignCentre;
+        const auto bar    = [&](qreal y, qreal w) {
+            const qreal x = left ? 5.0 : centre ? 12.0 - w / 2.0 : 19.0 - w;
+            QPainterPath path;
+            path.addRect(QRectF(x, y, w, 4.6));
+            face(p, path, k, 1.3);
+        };
+        bar(5.6, 9.0);
+        bar(13.4, 14.0);
+        p.setPen(centre ? QPen(c, 1.5, Qt::DashLine, Qt::FlatCap) : stroke(c, 1.7));
+        const qreal x = left ? 3.6 : centre ? 12.0 : 20.4;
+        p.drawLine(QPointF(x, 3.0), QPointF(x, 21.0));
+        break;
+    }
+    case Glyph::LayoutAlignTop:
+    case Glyph::LayoutAlignMiddle:
+    case Glyph::LayoutAlignBottom: {
+        const bool top    = g == Glyph::LayoutAlignTop;
+        const bool middle = g == Glyph::LayoutAlignMiddle;
+        const auto bar    = [&](qreal x, qreal h) {
+            const qreal y = top ? 5.0 : middle ? 12.0 - h / 2.0 : 19.0 - h;
+            QPainterPath path;
+            path.addRect(QRectF(x, y, 4.6, h));
+            face(p, path, k, 1.3);
+        };
+        bar(5.6, 9.0);
+        bar(13.4, 14.0);
+        p.setPen(middle ? QPen(c, 1.5, Qt::DashLine, Qt::FlatCap) : stroke(c, 1.7));
+        const qreal y = top ? 3.6 : middle ? 12.0 : 20.4;
+        p.drawLine(QPointF(3.0, y), QPointF(21.0, y));
+        break;
+    }
+    case Glyph::LayoutSpreadAcross:
+    case Glyph::LayoutSpreadDown: {
+        // THREE BOXES, TWO EQUAL GAPS, and the gaps marked: it is the spacing
+        // that the command makes equal, not the boxes.
+        const bool across = g == Glyph::LayoutSpreadAcross;
+        for (const qreal at : {3.0, 10.0, 17.0}) {
+            QPainterPath path;
+            path.addRect(across ? QRectF(at, 8.0, 4.0, 8.0) : QRectF(8.0, at, 8.0, 4.0));
+            face(p, path, k, 1.3);
+        }
+        p.setPen(stroke(k.note, 1.3));
+        for (const qreal gap : {8.5, 15.5}) {
+            if (across)
+                p.drawLine(QPointF(gap, 4.0), QPointF(gap, 20.0));
+            else
+                p.drawLine(QPointF(4.0, gap), QPointF(20.0, gap));
+        }
+        break;
+    }
+    case Glyph::LayoutFront:
+    case Glyph::LayoutBack: {
+        // TWO SHEETS, ONE OVER THE OTHER, and the SOLID one is the one that
+        // moves: on top for `en öne`, underneath for `en arkaya`. They were a
+        // pale face and a small arrow, and at 16 px in the toolbar's grey the
+        // face vanished and the two buttons were the same picture.
+        const bool front = g == Glyph::LayoutFront;
+        const QRectF under(3.5, 9.5, 11.0, 11.0);
+        const QRectF over(9.5, 3.5, 11.0, 11.0);
+        if (front) {
+            p.setPen(stroke(c, 1.5));
+            p.setBrush(Qt::NoBrush);
+            p.drawRect(under);
+            // A paper edge round the lifted sheet parts it from the one below.
+            p.setPen(QPen(k.paper, 2.0));
+            p.setBrush(c);
+            p.drawRect(over);
+        } else {
+            p.setPen(Qt::NoPen);
+            p.setBrush(c);
+            p.drawRect(under);
+            p.setPen(stroke(c, 1.5));
+            p.setBrush(k.paper);
+            p.drawRect(over);
+        }
+        break;
+    }
+    case Glyph::LayoutRealSize:
+        // `1:1`, drawn rather than typeset, so it is the same mark in every font.
+        p.setPen(stroke(c, 1.9));
+        p.drawLine(QPointF(7.0, 6.0), QPointF(7.0, 18.0));
+        p.drawLine(QPointF(4.8, 8.0), QPointF(7.0, 6.0));
+        p.drawLine(QPointF(17.0, 6.0), QPointF(17.0, 18.0));
+        p.drawLine(QPointF(14.8, 8.0), QPointF(17.0, 6.0));
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(12.0, 9.4), 1.3, 1.3);
+        p.drawEllipse(QPointF(12.0, 15.0), 1.3, 1.3);
+        break;
+    case Glyph::LayoutMap: {
+        // A NEATLINE AND THE GROUND IN IT: a parcel, and the grid's crosses.
+        p.setPen(stroke(c, 1.5));
+        p.setBrush(k.paper);
+        p.drawRect(QRectF(3.2, 4.2, 17.6, 15.6));
+        QPainterPath parcel;
+        parcel.moveTo(6.4, 16.8);
+        parcel.lineTo(8.2, 8.2);
+        parcel.lineTo(15.6, 7.2);
+        parcel.lineTo(17.6, 15.0);
+        parcel.closeSubpath();
+        face(p, parcel, k, 1.3);
+        p.setPen(stroke(k.note, 1.1));
+        for (const QPointF at : {QPointF(12.0, 12.0), QPointF(6.2, 6.8), QPointF(17.8, 6.8)}) {
+            p.drawLine(at - QPointF(1.4, 0.0), at + QPointF(1.4, 0.0));
+            p.drawLine(at - QPointF(0.0, 1.4), at + QPointF(0.0, 1.4));
+        }
+        break;
+    }
+    case Glyph::LayoutLabel:
+        // A LETTER AND ITS LINES: what a caption is on a sheet.
+        p.setPen(stroke(k.note, 2.0));
+        p.drawLine(QPointF(5.0, 5.0), QPointF(13.0, 5.0));
+        p.drawLine(QPointF(9.0, 5.0), QPointF(9.0, 13.6));
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(4.0, 17.0), QPointF(20.0, 17.0));
+        p.drawLine(QPointF(4.0, 20.4), QPointF(15.0, 20.4));
+        p.drawLine(QPointF(15.4, 7.6), QPointF(20.0, 7.6));
+        p.drawLine(QPointF(15.4, 11.2), QPointF(20.0, 11.2));
+        break;
+    case Glyph::LayoutScaleBar: {
+        // ALTERNATING SEGMENTS: black, white, black — the bar a reader measures with.
+        const QRectF bar(3.0, 10.0, 18.0, 4.4);
+        p.setPen(stroke(c, 1.3));
+        p.setBrush(k.paper);
+        p.drawRect(bar);
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawRect(QRectF(3.0, 10.0, 4.5, 4.4));
+        p.drawRect(QRectF(12.0, 10.0, 4.5, 4.4));
+        p.setPen(stroke(k.note, 1.2));
+        for (const qreal x : {3.0, 12.0, 21.0})
+            p.drawLine(QPointF(x, 16.6), QPointF(x, 19.0));
+        break;
+    }
+    case Glyph::LayoutNorth: {
+        // THE KITE THE SHEET DRAWS, half filled, and its N.
+        QPainterPath lit;
+        lit.moveTo(12.0, 2.8);
+        lit.lineTo(8.0, 16.0);
+        lit.lineTo(12.0, 13.4);
+        lit.closeSubpath();
+        p.setPen(stroke(c, 1.3));
+        p.setBrush(k.shape);
+        p.drawPath(lit);
+        QPainterPath dark;
+        dark.moveTo(12.0, 2.8);
+        dark.lineTo(16.0, 16.0);
+        dark.lineTo(12.0, 13.4);
+        dark.closeSubpath();
+        p.setBrush(k.paper);
+        p.drawPath(dark);
+        p.setPen(stroke(k.note, 1.5));
+        p.drawLine(QPointF(9.6, 21.4), QPointF(9.6, 17.6));
+        p.drawLine(QPointF(9.6, 17.6), QPointF(14.4, 21.4));
+        p.drawLine(QPointF(14.4, 21.4), QPointF(14.4, 17.6));
+        break;
+    }
+    case Glyph::LayoutLegend:
+        // THREE SWATCHES AND THEIR WORDS: which gösterim means what.
+        for (const auto& [y, ink] :
+             {std::pair{4.4, k.shape}, std::pair{10.4, k.data}, std::pair{16.4, k.add}}) {
+            p.setPen(stroke(c, 1.1));
+            p.setBrush(ink);
+            p.drawRect(QRectF(3.4, y, 5.2, 3.8));
+            p.setPen(stroke(c, 1.4));
+            p.drawLine(QPointF(11.0, y + 1.9), QPointF(20.6, y + 1.9));
+        }
+        break;
+    case Glyph::LayoutPicture:
+        p.setPen(stroke(c, 1.5));
+        p.setBrush(k.paper);
+        p.drawRect(QRectF(3.2, 4.6, 17.6, 14.8));
+        {
+            QPainterPath hill;
+            hill.moveTo(4.4, 18.2);
+            hill.lineTo(10.0, 11.0);
+            hill.lineTo(13.6, 15.0);
+            hill.lineTo(16.0, 12.6);
+            hill.lineTo(19.6, 18.2);
+            hill.closeSubpath();
+            face(p, hill, k, 1.2);
+        }
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.data);
+        p.drawEllipse(QPointF(15.8, 8.6), 1.9, 1.9);
+        break;
+    case Glyph::LayoutShape: {
+        p.setPen(stroke(c, 1.5));
+        p.setBrush(Qt::NoBrush);
+        p.drawRect(QRectF(3.4, 3.4, 11.0, 11.0));
+        QPainterPath round;
+        round.addEllipse(QPointF(14.6, 14.6), 6.2, 6.2);
+        face(p, round, k, 1.4);
+        break;
+    }
+    case Glyph::LayoutTable:
+        p.setPen(Qt::NoPen);
+        p.setBrush(k.data);
+        p.drawRect(QRectF(3.4, 4.4, 17.2, 4.0));
+        p.setPen(stroke(c, 1.3));
+        p.setBrush(Qt::NoBrush);
+        p.drawRect(QRectF(3.4, 4.4, 17.2, 15.2));
+        p.drawLine(QPointF(3.4, 13.4), QPointF(20.6, 13.4));
+        p.drawLine(QPointF(11.0, 8.4), QPointF(11.0, 19.6));
+        break;
+    case Glyph::LayoutChart:
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(3.0, 20.0), QPointF(21.0, 20.0));
+        p.setPen(Qt::NoPen);
+        for (const auto& [x, top, ink] :
+             {std::tuple{5.0, 12.0, k.shape}, std::tuple{10.2, 6.0, k.data},
+              std::tuple{15.4, 15.0, k.add}}) {
+            p.setBrush(ink);
+            p.drawRect(QRectF(x, top, 3.8, 20.0 - top));
+        }
+        break;
     case Glyph::LayerFromObject: {
         // THE LAYER TAKEN FROM WHAT IS POINTED AT: an object at the top left,
         // the pointer on it, and the layer stack below that it hands on — the

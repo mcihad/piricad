@@ -286,14 +286,15 @@ alınır.
 
 #### Tasarımcıdan
 
-Tasarımcının **sağ sütunu**, hiçbir öğe seçili değilken sayfanın kendi ayarlarını
-gösterir ve her biri bir `ÇIKTIYERLEŞİMİ islem=sayfa` satırı yazar:
+Tasarımcının denetçisindeki **Sayfa** bölümü — hiçbir öğe seçili değilken kendiliğinden
+açılır — sayfanın kendi ayarlarını gösterir ve her biri bir `ÇIKTIYERLEŞİMİ islem=sayfa`
+satırı yazar:
 
 | Alan | Yazdığı satır |
 |---|---|
 | **Kâğıt** | `kagit=A3` |
 | **Yön** | `yon=yatay` |
-| **Kenar boşluğu** | `kenar=15` |
+| **Kenar payı** | `kenar=15` |
 | **Çözünürlük** | `dpi=600` |
 | **Ad** | `islem=ad yeni_ad=…` |
 
@@ -302,8 +303,10 @@ sayfa `A3 yatay` olarak anılmaya devam eder. Çok sayfalı bir yerleşimde ekra
 sayfa `sayfa=` ile hedeflenir; bu durumda yerleşimin kâğıt adı olduğu gibi kalır,
 çünkü iki sayfa farklı boyda olduğu anda tek bir ad artık doğru değildir.
 
-Sol üstteki şerit sayfalar arasında gezer: `‹`, yazılabilir sayfa numarası, kaç sayfa
-olduğu, `›`, sonra sayfa ekleme, çoğaltma ve silme.
+Araç satırının sağındaki **`‹` Sayfa 1 / 3 ▾ `›`** sayfalar arasında gezer; ortadaki
+düğme sayfaların listesini ve sayfa ekleme, çoğaltma ve silmeyi açar. Aynı üç işlem
+Sayfa bölümünde **Ekle**, **Çoğalt** ve **Sil** düğmeleri olarak da durur; tek sayfalı
+bir yerleşimin sayfası silinemez.
 
 ### Betik
 

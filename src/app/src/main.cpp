@@ -602,6 +602,40 @@ int main(int argc, char** argv)
             check(controller->document().layouts().find("Ada 1284")->items.size() == before - 1,
                   "GERİAL son jesti geri almadı");
 
+            // ---- THE SCALE BAR STAYS IN ITS BOX (reported defect) -----------
+            //
+            // The bar's segment was a round length rounded UP, so a 130 mm box
+            // at 1:500 drew a 160 mm bar and its numbers ran on across the
+            // page. Rendered through the printer's own path, nothing in the
+            // bar's band may be inked to the right of the bar's frame: in the
+            // default sheet that band holds the bar alone.
+            if (const kentos::core::Layout* sheet =
+                    controller->document().layouts().find("Ada 1284");
+                sheet != nullptr)
+                if (const kentos::core::LayoutItem* bar = sheet->find("olcek"); bar != nullptr) {
+                    constexpr double kPerMm            = 4.0;
+                    const kentos::core::LayoutPage& pg = sheet->pages.front();
+                    const auto px                      = [](kentos::core::Um um) {
+                        return static_cast<int>(static_cast<double>(um) / 1000.0 * kPerMm);
+                    };
+                    QImage paper(px(pg.w), px(pg.h), QImage::Format_RGB32);
+                    paper.fill(Qt::white);
+                    {
+                        QPainter onto(&paper);
+                        kentos::app::paint_layout_page(onto,
+                                                       QRectF(QPointF(0, 0), QSizeF(paper.size())),
+                                                       controller->document(), *sheet, 0,
+                                                       kPerMm * 25.4, kentos::app::LayoutFacts{});
+                    }
+                    int spilled = 0;
+                    for (int y = px(bar->frame.y); y < px(bar->frame.bottom()); ++y)
+                        for (int x = px(bar->frame.right()) + 2; x < paper.width(); ++x)
+                            if (qGray(paper.pixel(x, y)) < 128) ++spilled;
+                    (void)std::fprintf(stdout, "[tasarim] ölçek çubuğu kutu dışı mürekkep: %d px\n",
+                                       spilled);
+                    check(spilled == 0, "ÖLÇEK ÇUBUĞU KUTUSUNDAN TAŞIYOR");
+                }
+
             // ---- A FLOATED PANEL CAN BE MOVED (reported defect) -------------
             //
             // The panel headers ARE the docks' title bars, and one that keeps
@@ -1133,15 +1167,22 @@ int main(int argc, char** argv)
             window.endCommand(); ///< the export is a job; the sheet waits for it
             window.runScriptLine(
                 QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"));
+            // A PAFTA AS ONE IS LAID OUT: the map on the left, the title block
+            // down the right — title, north, scale, legend, table — each moved
+            // to its place by the same `ÇIKTIÖĞE` lines a hand would give.
             for (const char* line :
-                 {"ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=harita izgara=arti",
-                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=kuzey ad=kuzey x=380 y=36 genislik=24 "
-                  "yukseklik=30",
-                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=olcek ad=olcek x=312 y=74 genislik=90 "
+                 {"ÇIKTIÖĞE islem=tasi yerlesim=Pafta ad=harita x=10 y=10 genislik=292 "
+                  "yukseklik=277",
+                  "ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=harita izgara=arti",
+                  "ÇIKTIÖĞE islem=tasi yerlesim=Pafta ad=baslik x=310 y=10 genislik=100 "
+                  "yukseklik=18",
+                  "ÇIKTIÖĞE islem=tasi yerlesim=Pafta ad=kuzey x=384 y=34 genislik=22 "
+                  "yukseklik=28",
+                  "ÇIKTIÖĞE islem=tasi yerlesim=Pafta ad=olcek x=310 y=68 genislik=100 "
                   "yukseklik=12",
-                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=lejant ad=lejant x=312 y=94 genislik=96 "
+                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=lejant ad=lejant x=310 y=90 genislik=100 "
                   "yukseklik=70",
-                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=tablo ad=tablo x=312 y=172 genislik=96 "
+                  "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=tablo ad=tablo x=310 y=168 genislik=100 "
                   "yukseklik=60 metin=\"Kadastro Parselleri\""})
                 window.runScriptLine(QString::fromUtf8(line));
         });
@@ -1174,20 +1215,56 @@ int main(int argc, char** argv)
             later(closeModal);
         }
         if (wanted("yerlesim")) {
+            // THE WINDOW AT THE SIZE IT OPENS AT, not at the size of whatever
+            // it was grabbed on: the designer sizes itself from the screen, and
+            // a shot is only a review of what a user sees if it does the same.
             later([&window] {
                 window.openLayoutDesigner(QStringLiteral("Pafta"),
                                           window.controller()->document().extent());
             });
+            const auto designer = [] {
+                return qobject_cast<kentos::app::LayoutDesigner*>(
+                    QApplication::activeModalWidget());
+            };
+            const auto pose = [designer](const QString& id) {
+                if (auto* open = designer(); open != nullptr) open->showItem(id);
+            };
+            later([pose] { pose(QString()); });
             later([shot] {
                 shot(QStringLiteral("pencere-yerlesim"), QApplication::activeModalWidget());
             });
-            later([] {
-                if (auto* designer = qobject_cast<kentos::app::LayoutDesigner*>(
-                        QApplication::activeModalWidget()))
-                    designer->showItem(QStringLiteral("harita"));
+            // THE SHEET'S PAGE WITH FINDINGS ON IT (reported defect): a map
+            // drawn with the rail's tool and not yet aimed, the most common
+            // finding there is — its long line once pushed the column out past
+            // its own edge. Put back with one Ctrl+Z before the next pose.
+            later([&window] {
+                window.runScriptLine(QStringLiteral(
+                    "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=harita ad=yer x=312 y=240 "
+                    "genislik=96 yukseklik=46"));
             });
+            later([pose] { pose(QString()); });
             later([shot] {
-                shot(QStringLiteral("pencere-yerlesim-harita"), QApplication::activeModalWidget());
+                shot(QStringLiteral("pencere-yerlesim-denetim"), QApplication::activeModalWidget());
+            });
+            later([&window, pose] {
+                window.runScriptLine(QStringLiteral("GERİAL"));
+                pose(QString());
+            });
+            for (const char* id : {"harita", "baslik", "olcek", "tablo"}) {
+                later([pose, id] { pose(QString::fromUtf8(id)); });
+                later([shot, id] {
+                    shot(QStringLiteral("pencere-yerlesim-%1").arg(QString::fromUtf8(id)),
+                         QApplication::activeModalWidget());
+                });
+            }
+            // AND AT THE LEAST IT MAY BE: nothing may be cut at 1040 × 680.
+            later([designer] {
+                if (auto* open = designer(); open != nullptr) open->resize(open->minimumSize());
+            });
+            later([pose] { pose(QStringLiteral("harita")); });
+            later([shot] {
+                shot(QStringLiteral("pencere-yerlesim-en-kucuk"),
+                     QApplication::activeModalWidget());
             });
             later(closeModal);
         }

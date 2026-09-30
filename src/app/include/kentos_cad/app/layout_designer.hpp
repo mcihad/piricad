@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // KentOSCad — app: the layout designer.
 //
-// WHAT IT IS. A window onto one sheet: the page in the middle, the items listed
-// on the left, the selected item's properties on the right, and a bar that adds
-// a new item. A box is picked by clicking it, moved by dragging it and resized
-// by its corner handles.
+// WHAT IT IS. A drafting table for one sheet: a tool strip along the top, the
+// pages and the items on the left, the paper in the middle — zoomed and panned
+// like a drawing, with rulers, smart guides and a marquee — the settings of what
+// is picked on the right, and a status strip under it all. It is QGIS's print
+// layout in this program's own components (design.md §15–§16), because that is
+// the shape a cartographer already knows.
 //
-// AND EVERY ONE OF THOSE GESTURES LEAVES AS A COMMAND. Dragging a title block
-// emits `ÇIKTIÖĞE islem=tasi ad=baslik x=… y=…`; typing in a property field
-// emits `islem=ayarla`. Nothing here writes to the document directly, which is
-// not ceremony: it is what makes the designer undoable with the same Ctrl+Z as
-// the rest of the program, journalled, scriptable and reachable by a model
-// (CLAUDE.md 1.1, 1.2, 5.15). A designer that owned its own edits would be a
-// second editing system with a second undo stack, which is exactly what this
-// program refuses to have.
+// AND EVERY ONE OF ITS GESTURES LEAVES AS A COMMAND. Dragging a title block
+// emits `ÇIKTIÖĞE islem=tasi ad=baslik x=… y=…`; drawing a box with the Harita
+// tool emits `ÇIKTIÖĞE islem=ekle tur=harita x=… y=… genislik=… yukseklik=…`;
+// typing in a property field emits `islem=ayarla`. Nothing here writes to the
+// document directly, which is not ceremony: it is what makes the designer
+// undoable with the same Ctrl+Z as the rest of the program, journalled,
+// scriptable and reachable by a model (CLAUDE.md 1.1, 1.2, 5.15). A designer
+// that owned its own edits would be a second editing system with a second undo
+// stack, which is exactly what this program refuses to have.
 //
-// ONE COMMAND PER GESTURE, NOT PER PIXEL. A drag writes one line when the mouse
-// is RELEASED, with the box it ended at; the motion in between is drawn but not
-// recorded. Otherwise a single drag across a page would be four hundred undo
-// entries and four hundred journal lines.
+// ONE COMMAND PER GESTURE, NOT PER PIXEL. A drag writes when the mouse is
+// RELEASED, with the boxes it ended at; the motion in between is drawn but not
+// recorded. A gesture on several items at once — a group drag, an alignment —
+// is ONE batch (`Controller::runLines`), so it is one Ctrl+Z (ui.md R40).
 #pragma once
 
 #include "kentos_cad/app/dialog_chrome.hpp"
@@ -26,11 +29,20 @@
 
 #include "kentos_cad/core/layout.hpp"
 
+#include <QImage>
 #include <QString>
+#include <QStringList>
+#include <QVector>
 #include <QWidget>
 
-class QPainter;
+#include <functional>
+#include <utility>
+#include <vector>
+
+class QButtonGroup;
 class QListWidget;
+class QMenu;
+class QPainter;
 class QScrollArea;
 class QStyledItemDelegate;
 class QVBoxLayout;
@@ -41,6 +53,9 @@ namespace kentos::app {
 class Controller;
 /// The inline editor; see fields.hpp.
 class Field;
+
+/// One item's box, named: what a group gesture ends with.
+using ItemFrame = std::pair<QString, core::PaperRect>;
 
 /// The page itself: draws the sheet and turns mouse gestures into geometry.
 ///
@@ -68,58 +83,134 @@ public:
 
     const QString& sheet() const noexcept { return sheet_; }
 
-    /// Which item is picked, or empty.
-    const QString& selected() const noexcept { return selected_; }
+    /// The item the panel describes — the last one picked — or empty.
+    const QString& selected() const noexcept { return primary_; }
+
+    /// Every picked item, the primary one last.
+    const QStringList& selection() const noexcept { return selection_; }
 
     /// The sheet's rectangle inside this widget, in device pixels.
     ///
     /// Public because a test needs to look at the PAPER and not at the chrome
-    /// around it: the rulers and the surround are this window's, and a check
+    /// around it: the rulers and the pasteboard are this window's, and a check
     /// that what the preview draws matches what the printer draws has to
     /// compare the same area.
     QRect sheetRect() const;
 
+    /// Picks `id` alone; empty clears the pick.
     void select(const QString& id);
+
+    /// Picks exactly these, the last one the primary.
+    void setSelection(const QStringList& ids);
 
     /// Re-reads the document. Called after any command touches the layout.
     void refresh();
 
+    // ---- the view --------------------------------------------------------------
+
+    /// Zooms by `factor` about a widget point, which stays where it is.
+    void zoomBy(double factor, QPointF about);
+
+    /// Zooms by `factor` about the middle of the view.
+    void zoomBy(double factor);
+
+    /// The whole page, fitted inside the view — the state it opens in, and the
+    /// state it keeps across a resize until the user zooms.
+    void zoomToFit();
+
+    /// The paper at its own size on this screen: a 10 mm box is 10 mm here.
+    void zoomToRealSize();
+
+    /// How big the paper is drawn against its own size, in per cent.
+    double zoomPercent() const;
+
+    // ---- the tools -------------------------------------------------------------
+
+    /// Arms drawing a new item of `kind` (`harita`, `metin`, … — `tur=`'s own
+    /// words); empty goes back to picking.
+    void setDrawKind(const QString& kind);
+
+    const QString& drawKind() const noexcept { return drawKind_; }
+
+    /// Whether a drag snaps to the page, its margin and the other items' edges
+    /// and centres. On by default; the strip's `Yakala` switches it.
+    void setSnapping(bool on);
+
+    bool snapping() const noexcept { return snapping_; }
+
     void applyTheme(ThemeMode mode) override;
 
 signals:
-    /// The user picked an item, or cleared the pick with an empty string.
+    /// The primary pick changed; empty when nothing is picked.
     void selectionChanged(const QString& id);
 
-    /// A drag ended. The window turns this into `ÇIKTIÖĞE islem=tasi`.
+    /// One item's box changed — a resize, or the probe's drag.
     void itemMoved(const QString& id, core::PaperRect frame);
+
+    /// Several boxes changed in one gesture: a group drag or a nudge.
+    void itemsMoved(const QVector<kentos::app::ItemFrame>& frames);
+
+    /// A box was drawn with a tool. An EMPTY frame is a click: the window
+    /// places the kind's own default size about `frame.x`, `frame.y`.
+    void itemDrawn(const QString& kind, core::PaperRect frame);
+
+    /// The drawing tool is put down — drawn, or cancelled with Esc.
+    void drawFinished();
 
     /// An item was double-clicked; the window puts the focus in its properties.
     void itemActivated(const QString& id);
 
+    /// Delete or Backspace with something picked.
+    void deleteRequested();
+
+    /// The pointer's place on the paper, in millimetres; `onPage` false off it.
+    void cursorAt(double x_mm, double y_mm, bool onPage);
+
+    /// The zoom changed; `percent` against the paper's own size.
+    void zoomChanged(double percent);
+
+    /// The context menu was asked for at `global`, over the current pick.
+    void contextRequested(const QPoint& global);
+
 protected:
-    /// Draws the sheet through `paint_layout_page`, then the selection's frame
-    /// and its eight handles on top.
+    /// The pasteboard, the sheet as the printer draws it, the guides, the picks
+    /// and their handles, and the two millimetre rulers.
     void paintEvent(QPaintEvent* event) override;
 
-    /// Picks an item, or takes hold of the selected one's handle.
+    /// Picks, takes hold of a handle, starts a marquee, a drawn box or a pan.
     void mousePressEvent(QMouseEvent* event) override;
 
-    /// Drags the held item, or just shows which handle is under the pointer.
+    /// Carries the gesture, or shows what the pointer is over.
     void mouseMoveEvent(QMouseEvent* event) override;
 
-    /// Ends the drag and reports the frame it ended at — ONE command per
-    /// gesture, not per pixel.
+    /// Ends the gesture and reports it — ONE command per gesture.
     void mouseReleaseEvent(QMouseEvent* event) override;
 
     /// Asks the window to put the focus in the item's properties.
     void mouseDoubleClickEvent(QMouseEvent* event) override;
 
-    /// Arrow keys nudge the selection by a millimetre, Shift by ten, so the
-    /// keyboard reaches every gesture the mouse does (ui.md R21).
+    /// The wheel zooms about the pointer, as it does on the map.
+    void wheelEvent(QWheelEvent* event) override;
+
+    /// Arrow keys nudge the pick by a millimetre, Shift by ten; Delete deletes,
+    /// Esc puts the tool down or clears the pick, Ctrl+A picks the page, `+`,
+    /// `-` and `0` zoom — the keyboard reaches every gesture (ui.md R21).
     void keyPressEvent(QKeyEvent* event) override;
 
+    /// Space held is a hand on the paper.
+    void keyReleaseEvent(QKeyEvent* event) override;
+
+    /// A fitted view stays fitted as the window is resized.
+    void resizeEvent(QResizeEvent* event) override;
+
+    /// Picks what is under the pointer, then asks for the menu.
+    void contextMenuEvent(QContextMenuEvent* event) override;
+
+    /// The pointer left: no hover outline, no coordinate.
+    void leaveEvent(QEvent* event) override;
+
 private:
-    /// Which handle of the selected item is under `at`, or `None`.
+    /// Which handle of the picked item is under `at`, or `None`.
     ///
     /// EIGHT HANDLES AND A BODY, the shape every page editor has had since
     /// PageMaker: four corners resize both ways, four edges resize one way, and
@@ -137,47 +228,91 @@ private:
         Left,
     };
 
+    /// What the held button is doing.
+    enum class Gesture : std::uint8_t { None, Move, Resize, Marquee, Draw, Pan };
+
+    /// A guide the last drag snapped to: a line across the page.
+    struct SnapLine
+    {
+        bool vertical{true}; ///< a vertical line at `at` across the page, or a horizontal one
+        core::Um at{0};      ///< where, in paper micrometres
+    };
+
     /// The layout as it stands, or null when the document has no such sheet.
     const core::Layout* layout() const;
 
-    /// The page's rectangle inside this widget, fitted and centred inside the
-    /// rulers' gutter.
+    /// The page's rectangle inside this widget: fitted, or placed by the zoom.
     QRectF pageRect() const;
 
-    /// Draws the two millimetre scales and lights `item`'s span on them.
-    ///
-    /// THE SPAN IS THE POINT, not the ticks: it says where on the paper the
-    /// selection sits and how wide it is, as one picture rather than as four
-    /// numbers read one at a time — and it follows a drag, so the gesture is
-    /// measured while it happens.
-    void paintRulers(QPainter& p, const QRectF& box, const core::LayoutItem* item) const;
+    /// Device pixels per paper millimetre, as drawn now.
+    double pixelsPerMm() const;
 
-    /// A paper point from a widget point, and back.
-    core::PaperRect paperFrom(const QRectF& device) const;
+    /// Paper micrometres from a widget point, and a widget rectangle from a box.
+    QPointF paperAt(QPointF widget) const;
     QRectF deviceFrom(const core::PaperRect& paper) const;
+
+    /// The item at `at` drawn on top, or null.
+    const core::LayoutItem* itemAt(QPoint at) const;
 
     Grip gripAt(const QPoint& at) const;
     static Qt::CursorShape cursorFor(Grip grip);
 
-    /// The frame a drag from `press_` to `at` produces, snapped to the page's
-    /// millimetre grid and kept at or above a minimum size.
-    core::PaperRect dragged(const QPoint& at) const;
+    /// The x and y a moving box can snap to on this page: its edges and centre,
+    /// its margin, and every item's that is not moving.
+    void snapTargets(std::vector<core::Um>& xs, std::vector<core::Um>& ys) const;
+
+    /// The smallest move within reach that puts one of `edges` on one of
+    /// `targets`; zero and no line when none is near. Records the line.
+    core::Um snapAxis(std::initializer_list<core::Um> edges, const std::vector<core::Um>& targets,
+                      bool vertical);
+
+    /// The frames a drag from the press to `at` produces.
+    void dragTo(const QPoint& at, Qt::KeyboardModifiers modifiers);
+
+    /// Draws the two millimetre scales and lights the pick's span on them.
+    void paintRulers(QPainter& p, const QRectF& box, const QRectF* lit) const;
+
+    /// The sheet as the printer draws it, cached until the document, the zoom
+    /// or the page changes: a drag repaints on every mouse move, and a map
+    /// frame redrawn at sixty frames a second is a drag that stutters.
+    void paintSheet(QPainter& p, const QRectF& box);
 
     Controller& controller_;
     QString sheet_;
     int page_{0};
-    QString selected_;
+    QStringList selection_;
+    QString primary_;
+    QString hover_;
+    QString drawKind_;
+    bool snapping_{true};
 
+    // The view: fitted, or a scale and the widget point of the paper's corner.
+    bool fit_{true};
+    double scale_{1.0}; ///< device pixels per paper micrometre when not fitted
+    QPointF corner_{};  ///< the paper's top-left in widget pixels when not fitted
+
+    Gesture gesture_{Gesture::None};
     Grip grip_{Grip::None};
-    bool dragging_{false};
     QPoint press_{};
-    core::PaperRect start_{};
-    core::PaperRect live_{};
+    QPointF panFrom_{};
+    bool spaceHeld_{false};
+    std::vector<ItemFrame> starts_;
+    std::vector<ItemFrame> live_;
+    QRectF marquee_{};
+    core::PaperRect drawn_{};
+    std::vector<SnapLine> guides_;
+
+    QImage cache_;
+    std::uint64_t cacheRevision_{0};
+    QSize cacheSize_{};
+    QString cacheSheet_;
+    int cachePage_{-1};
 
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-/// The window: the page, the item list, the properties and the export bar.
+/// The window: the tool strip, the pages and items, the paper, the settings and
+/// the status strip.
 class LayoutDesigner : public DialogFrame
 {
     Q_OBJECT
@@ -200,6 +335,10 @@ public:
     /// frame on the canvas does before this window opens.
     void aimAt(core::Box2 window);
 
+    /// What the main window's map shows, so a map frame can be aimed at it from
+    /// here (`Ana pencereden al`). Empty hides the button.
+    void setViewWindow(core::Box2 window);
+
     /// Drives the window the way a hand would, for `KENTOS_LAYOUT_PROBE`: picks
     /// an item, drags it, retypes a property and reports what the document ended
     /// up with.
@@ -211,25 +350,57 @@ public:
     int probeBlankPaper() const noexcept { return blankPaperPercent_; }
 
 private:
-    /// Which page the canvas shows, as a number the user types. Pages are counted
-    /// from one here and from zero in the array.
-    Field* pageField_{nullptr};
-
-    /// Runs one of the page verbs of `core.layout` on the active page.
-    void pageVerb(const char* verb);
+    /// Which of the two the inspector shows.
+    enum class Pane : std::uint8_t { Item, Sheet };
 
     QWidget* buildBody();
-    QWidget* buildItemList();
-    QWidget* buildProperties();
 
-    /// Refills the list and the property panel from the document.
+    /// The row over the sheet: history, arranging the pick, the page and the
+    /// view — every one a bare 32 px icon with its name in the tooltip.
+    QWidget* buildToolRow();
+
+    /// The column of tools down the sheet's left edge: pick, and the nine kinds
+    /// of item a sheet is made of.
+    QWidget* buildToolRail();
+
+    /// The items on the page, and under them the inspector for the pick.
+    QWidget* buildInspector();
+
+    QWidget* buildStatusStrip();
+
+    /// Refills the list, the inspector, the rows and the strips from the document.
     void refresh();
 
-    /// Runs one `ÇIKTIÖĞE` line for the selected item and refreshes.
+    void refreshItems(const core::Layout& l);
+
+    /// What the tool row can do for the pick, and which page is showing.
+    void refreshToolRow(const core::Layout& l);
+
+    /// The status strip: the pick, the checks and the hint.
+    void refreshStatus(const core::Layout& l);
+
+    /// Refills the inspector for what is picked, or for the sheet.
+    void buildProperties();
+
+    /// The sheet's own settings — paper, orientation, margin, resolution,
+    /// pages, name — and what the checks found.
+    void buildSheetProperties(const core::Layout& l);
+
+    /// Every setting `ÇIKTIÖĞE` takes for `item`, grouped the way a person
+    /// decides them: where it sits, what it shows, how it looks.
+    void buildItemProperties(const core::Layout& l, const core::LayoutItem& item);
+
+    /// What several picks share: the list of them and the gestures for all.
+    void buildGroupProperties(const core::Layout& l);
+
+    /// Runs one `ÇIKTIÖĞE` line for the primary pick and refreshes.
     ///
     /// `verb` is `ayarla` for everything except moving an item to another page,
     /// which is a move and goes through `tasi` like every other one.
     void edit(const QString& arguments, const QString& verb = QStringLiteral("ayarla"));
+
+    /// Runs one `ÇIKTIÖĞE` line for EVERY picked item, as one batch.
+    void editAll(const QString& arguments, const QString& label);
 
     /// Runs one `ÇIKTIYERLEŞİMİ islem=sayfa` line for the page on screen, with
     /// `change` overriding the sheet as it stands.
@@ -239,37 +410,88 @@ private:
     /// also resize the sheet to A4. See the source for the rest.
     void sheetEdit(const QString& change);
 
-    /// Fills the inspector with the sheet's own settings — paper, orientation,
-    /// margin, resolution and name. Shown whenever no item is picked, because a
-    /// sheet always exists and "select an item" is not worth a column.
-    void buildSheetProperties(const core::Layout& l);
+    /// Runs one of the page verbs of `core.layout` on the active page.
+    void pageVerb(const char* verb);
 
-    /// Fills the inspector with every setting `ÇIKTIÖĞE` takes for `item`.
-    void buildItemProperties(const core::Layout& l, const core::LayoutItem& item);
+    /// Shows page `index` (0-based) of the sheet.
+    void showPage(int index);
 
-    /// Two form rows on one line — position is a pair, size is a pair.
-    QWidget* pairOf(QWidget* left, QWidget* right);
-
-    /// A paper-millimetre row that writes `name=` on the selected item.
-    FormRow* mmRow(const QString& label, core::Um value, const char* name);
-
-    /// A whole-number row that writes `name=` on the selected item.
-    FormRow* countRow(const QString& label, long long value, const char* name, int most);
-
-    /// A text row that writes a quoted `name=` on the selected item.
-    FormRow* textRow(const QString& label, const QString& value, const char* name,
-                     const QString& hint);
-
-    /// Adds an item of `kind` and selects it.
+    /// Adds an item of `kind` at its default place and picks it.
     void addItem(const QString& kind);
 
-    /// Exports the sheet: `Dışa aktar` asks for a path and runs `YAZDIR`.
+    /// Adds an item of `kind` in `frame`, drawn with a tool — or about the click
+    /// when `frame` is empty — and picks it.
+    void placeItem(const QString& kind, core::PaperRect frame);
+
+    /// Moves the picked items so their edges or centres line up.
+    void alignPicked(int how);
+
+    /// Spreads the picked items so the gaps between them are equal.
+    void spreadPicked(bool across);
+
+    /// Raises or lowers the picked items: `to` is `on`, `up`, `down` or `back`.
+    void restackPicked(const QString& to);
+
+    /// Copies the picked items beside themselves and picks the copies.
+    void duplicatePicked();
+
+    /// Locks the pick, or unlocks it when every picked item is locked already.
+    void toggleLockPicked();
+
+    /// Deletes the picked items, as one batch.
+    void deletePicked();
+
+    /// The menu the items' rows and the canvas share.
+    QMenu* itemMenu();
+
+    /// Exports the sheet: asks for a path and runs `YAZDIR`.
     void exportSheet();
 
     const core::Layout* layout() const;
 
+    // ---- the inspector's rows: design.md §8's `110px | 1fr` grid ----------
+    //
+    // A CAPTION BESIDE ITS VALUE, not above it. §16.1 stacks them for the
+    // four-column record form; §8 is a property column, read down the values,
+    // and stacked there every property took two lines and the column ran out of
+    // width and height at once (see `form_cell` in `style_designer.cpp`).
+
+    /// A group heading, with an optional note at its far end.
+    void group(const QString& title, const QString& note = QString());
+
+    /// One row: `caption` in the fixed column, `editor` in the rest.
+    QWidget* row(const QString& caption, QWidget* editor);
+
+    /// A dim line under the last row, in the editor column.
+    void help(const QString& text);
+
+    /// A paper-millimetre field that writes `name=` on the pick.
+    QWidget* mmEditor(core::Um value, const char* name, const QString& spoken, int decimals = 1);
+
+    /// A whole-number field that writes `name=` on the pick.
+    QWidget* countEditor(long long value, const char* name, const QString& spoken, int least,
+                         int most, const QString& unit = QString());
+
+    /// A free-text field that writes a quoted `name=` on the pick.
+    QWidget* textEditor(const QString& value, const char* name, const QString& spoken,
+                        const QString& hint);
+
+    /// A colour field that writes `name=#RRGGBB` on the pick.
+    QWidget* colourEditor(std::uint32_t value, const char* name, const QString& spoken);
+
+    /// A switch that writes `name=evet|hayir` on the pick.
+    QWidget* switchEditor(bool on, const char* name, const QString& spoken);
+
+    /// Several words, one written: a segment that writes `name=<word>`.
+    QWidget* wordsEditor(const QStringList& shown, const QStringList& words, int current,
+                         const char* name, const QString& spoken);
+
+    /// Which map frame an item belongs to.
+    QWidget* mapEditor(const core::Layout& l, const core::LayoutItem& item);
+
     Controller& controller_;
     QString name_;
+    core::Box2 viewWindow_{};
 
     LayoutCanvas* canvas_{nullptr};
     QListWidget* items_{nullptr};
@@ -277,24 +499,44 @@ private:
     /// Draws the item rows; see `ItemRow` in the source.
     QStyledItemDelegate* rows_{nullptr};
 
-    /// The inspector's heading: the name of what is being inspected, one step
-    /// larger than the body — the only type in this window that is.
-    QLabel* headName_{nullptr};
+    /// The rail's tools: 0 picks, 1… are `kKinds` in order.
+    QButtonGroup* tools_{nullptr};
 
-    /// The dim line under it: the kind, the id and the size.
+    /// The tool row's buttons that act on the pick, enabled by what is picked.
+    std::vector<Button*> needOne_;   ///< anything picked
+    std::vector<Button*> needThree_; ///< three or more picked
+    Button* lockButton_{nullptr};
+    Button* snapSwitch_{nullptr};
+    Button* pagePrev_{nullptr};
+    Button* pageNext_{nullptr};
+    Button* pageMenu_{nullptr};
+    Button* zoomReadout_{nullptr};
+
+    /// The inspector's heading: the name of what is being inspected, and under
+    /// it the kind, the id and the size.
+    QLabel* headGlyph_{nullptr};
+    QLabel* headName_{nullptr};
     QLabel* headKind_{nullptr};
 
-    /// The `ÖĞELER` heading, whose note carries the count.
-    FormSection* itemsHead_{nullptr};
+    /// `Öğe | Sayfa`, over the inspector.
+    Segment* paneSwitch_{nullptr};
+    Pane pane_{Pane::Sheet};
 
-    /// `2 / 7`, beside the page number rather than in a help line under it.
-    QLabel* pageCount_{nullptr};
+    QLabel* itemsCount_{nullptr};
 
-    /// Lit only while something is picked.
-    Button* remove_{nullptr};
+    QScrollArea* scroll_{nullptr};
     QWidget* properties_{nullptr};
     QVBoxLayout* propertyColumn_{nullptr};
-    QLabel* status_{nullptr};
+
+    /// What the inspector was last built for — the pane and the pick — so a
+    /// rebuild for the SAME subject keeps its scroll position and a rebuild
+    /// for another one starts at the top.
+    QString shownFor_;
+
+    QLabel* cursorReadout_{nullptr};
+    QLabel* pickReadout_{nullptr};
+    Button* troubleReadout_{nullptr};
+    QLabel* hint_{nullptr};
 
     /// See `probeBlankPaper`.
     int blankPaperPercent_{-1};

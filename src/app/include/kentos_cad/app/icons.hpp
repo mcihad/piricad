@@ -306,6 +306,26 @@ enum class Glyph {
     HatchInside,        ///< the region round a click inside it, hatched: TARAMA yontem=ic
     HatchExclude,       ///< a hatch with the selected caption left free: TARAMA disarida=
     LayerFromObject,    ///< a layer stack and the object it is taken from: katman= from a click
+    LayoutAlignLeft,    ///< two bars flush against a rule on their left: align left edges
+    LayoutAlignCentre,  ///< two bars centred on a dashed rule: align horizontal centres
+    LayoutAlignRight,   ///< two bars flush against a rule on their right: align right edges
+    LayoutAlignTop,     ///< two bars hanging from a rule: align top edges
+    LayoutAlignMiddle,  ///< two bars centred on a dashed rule across: align vertical centres
+    LayoutAlignBottom,  ///< two bars standing on a rule: align bottom edges
+    LayoutSpreadAcross, ///< three boxes with equal gaps along a row: distribute horizontally
+    LayoutSpreadDown,   ///< three boxes with equal gaps down a column: distribute vertically
+    LayoutFront,        ///< the front box filled over another, an arrow up: bring to front
+    LayoutBack,         ///< the back box filled under another, an arrow down: send to back
+    LayoutRealSize,     ///< `1:1` — the sheet at its own size on the screen
+    LayoutMap,          ///< a map frame: ground and a parcel inside a neatline, grid crosses
+    LayoutLabel,        ///< a letter over the lines of a caption: a text item
+    LayoutScaleBar,     ///< alternating segments on a bar with its ticks: a scale bar item
+    LayoutNorth,        ///< an arrow over its N: a north arrow item
+    LayoutLegend,       ///< three swatches and their lines: a legend item
+    LayoutPicture,      ///< a frame with a hill and a sun: a picture item
+    LayoutShape,        ///< a square and a circle over it: a shape item
+    LayoutTable,        ///< a header row and a grid: a table item
+    LayoutChart,        ///< three bars on a base line: a chart item
     SelectWindow,       ///< a solid frame, the objects wholly inside it: SEÇ PENCERE
     SelectCrossing,     ///< a dashed frame and the line crossing it: SEÇ KESEN
     SelectPolygon,      ///< a solid polygon round an object: SEÇ ÇOKGEN

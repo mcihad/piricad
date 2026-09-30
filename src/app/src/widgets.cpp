@@ -231,6 +231,11 @@ void Button::setMenuArrow(QMenu* menu)
     restyle(this, "menu", true);
 }
 
+void Button::setBare(bool bare)
+{
+    restyle(this, "bare", bare);
+}
+
 void Button::refreshIcon()
 {
     if (!glyph_) return;
@@ -524,6 +529,17 @@ void Segment::setCurrent(int index)
     } else {
         buttons_[index]->setChecked(true);
     }
+
+    // THE OPTION BEFORE THE LIT ONE GIVES UP ITS RIGHT EDGE. Neighbours share
+    // one line — every option after the first drops its left border — so a lit
+    // option in the middle had no left edge of its own: the line there was the
+    // grey right edge of the option before it, and the accent frame the
+    // standard draws round the lit cell (`bileşen_standardı.png`) was open on
+    // one side. The sheet gives the lit option its left edge back in accent;
+    // this takes the grey one away so the two are not drawn side by side.
+    for (int i = 0; i < static_cast<int>(buttons_.size()); ++i)
+        restyle(buttons_[i], "lit", i + 1 == index ? QStringLiteral("next") : QString());
+
     if (changed) emit currentChanged(index);
 }
 
@@ -1992,6 +2008,21 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
                               "iconButton", "devre dışı");
         iconOff->setEnabled(false);
         grid->addWidget(iconOff, 2, column);
+
+        // THE SAME BUTTON ON A TOOLBAR (`Button::setBare`): no chrome at rest,
+        // and the mode switch's pressed look while it is on.
+        ++column;
+        grid->addWidget(caption(QStringLiteral("Araç çubuğu")), 0, column);
+        auto* bare = shown(new Button(Glyph::Select, QStringLiteral("Seç"), sheet), "iconButton",
+                           "araç çubuğu");
+        bare->setBare(true);
+        grid->addWidget(bare, 1, column);
+        auto* bareOn = shown(new Button(Glyph::Select, QStringLiteral("Seç"), sheet), "iconButton",
+                             "araç çubuğu, basılı");
+        bareOn->setBare(true);
+        bareOn->setCheckable(true);
+        bareOn->setChecked(true);
+        grid->addWidget(bareOn, 2, column);
 
         // The three heights, side by side, so a reader sees the whole scale.
         ++column;

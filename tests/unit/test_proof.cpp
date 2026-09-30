@@ -2939,6 +2939,55 @@ TEST_CASE("PROOF: ÇIKTIÖĞE ekle ve ayarla — arayüz, komut satırı, betik 
     CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
 }
 
+TEST_CASE("PROOF: ÇIKTIÖĞE çoğalt — arayüz, komut satırı, betik ve oynatma aynı kopyayı bırakır")
+{
+    // The designer's `Çoğalt` (Ctrl+D) sends one `cogalt` line per pick; the
+    // copy is named by the command, so a replay must name it the same way.
+    const std::vector<std::string> setup{"ALAN 0,0 100,0 100,80 0,80",
+                                         "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"};
+    const std::vector<std::string> lines{
+        "ÇIKTIÖĞE islem=cogalt yerlesim=Pafta ad=olcek",
+        "ÇIKTIÖĞE islem=cogalt yerlesim=Pafta ad=baslik yeni_ad=alt_baslik x=20 y=280"};
+    Rig gui;
+    for (const auto& line : setup)
+        REQUIRE(gui.bus.execute_line(line, Origin::Gui).ok());
+    for (const auto& line : lines) {
+        auto started = gui.bus.begin_interactive(line, Origin::Gui);
+        REQUIRE(started.ok());
+        REQUIRE(gui.bus.finish(*started.value()).ok());
+    }
+    Rig cli;
+    for (const auto& line : setup)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    for (const auto& line : lines)
+        REQUIRE(cli.bus.execute_line(line, Origin::CommandLine).ok());
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        REQUIRE(runner
+                    .run_text(R"({"ad":"Kanıt","komutlar":[
+                      {"cmd":"core.area","args":{"noktalar":[[0,0],[100000,0],[100000,80000],[0,80000]]}},
+                      {"cmd":"core.layout","args":{"islem":"ekle","ad":"Pafta","kagit":"A3","yon":"yatay"}},
+                      {"cmd":"core.layout_item","args":{"islem":"cogalt","yerlesim":"Pafta","ad":"olcek"}},
+                      {"cmd":"core.layout_item","args":{"islem":"cogalt","yerlesim":"Pafta","ad":"baslik",
+                        "yeni_ad":"alt_baslik","x":20,"y":280}}]})")
+                    .ok());
+    }
+    const core::Layout* sheet = gui.doc.layouts().find("Pafta");
+    REQUIRE(sheet != nullptr);
+    REQUIRE(sheet->find("olcek2") != nullptr);
+    REQUIRE(sheet->find("alt_baslik") != nullptr);
+    CHECK_EQ(sheet->find("alt_baslik")->frame.y, core::um_from_mm(280));
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
 TEST_CASE("PROOF: RENK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
 {
     // The colour chip's road: nothing selected, the objects asked for, then the
