@@ -25,6 +25,7 @@
       "cacheVariables": {
         "PIRICAD_WITH_RHI": "ON",
         "PIRICAD_WITH_TEXT": "ON",
+        "PIRICAD_WITH_PYTHON": "ON",
         "PIRICAD_WITH_DWG": "OFF"
       }
     },

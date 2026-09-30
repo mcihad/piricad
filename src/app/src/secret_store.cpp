@@ -16,6 +16,19 @@
 
 #include <wincred.h>
 #elif defined(PIRICAD_KEYCHAIN_SECRET_SERVICE)
+// Qt defines `signals`, `slots` and `emit` as macros; GLib's GDBus headers use
+// `signals` as a plain struct field, so the macro has to be out of the way while
+// libsecret's transitive GIO/GObject headers are read. Qt's own headers are all
+// included above this point, so nothing here needs the macro back.
+#if defined(signals)
+#undef signals
+#endif
+#if defined(slots)
+#undef slots
+#endif
+#if defined(emit)
+#undef emit
+#endif
 #include <libsecret/secret.h>
 #endif
 #endif
