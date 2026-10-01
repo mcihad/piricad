@@ -4,6 +4,7 @@
 #include "piricad/core/text.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 
 namespace piricad::core {
@@ -504,6 +505,20 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
     entry.label      = optional_string(j, kKeyLabel);
     entry.source_ref = optional_string(j, kKeyRef);
 
+    entry.geometry = optional_string(j, "geometri");
+    if (!entry.geometry.empty() && entry.geometry != "alan" && entry.geometry != "cizgi" &&
+        entry.geometry != "nokta")
+        return err(ErrorCode::ValidationFailed, where + ": geometri alan/cizgi/nokta olmalı.");
+    if (const Json* tags = j.find("etiketler"); tags != nullptr) {
+        if (!tags->is_array())
+            return err(ErrorCode::ParseError, where + ": etiketler dizi olmalı.");
+        for (const Json& tag : tags->as_array()) {
+            if (!tag.is_string())
+                return err(ErrorCode::ParseError, where + ": etiket metin olmalı.");
+            entry.tags.push_back(tag.as_string());
+        }
+    }
+
     if (const Json* v = j.find(kKeyRetired); v != nullptr) {
         if (!v->is_bool())
             return err(ErrorCode::ParseError,
@@ -645,9 +660,23 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
             const auto measure = [&](const char* key, Measure& out) -> Status {
                 const Json* v = declared.find(key);
                 if (v == nullptr) return ok();
-                if (!v->is_number())
-                    return err(ErrorCode::ParseError, at + ": '" + key + "' sayı olmalı.");
-                out = Measure{static_cast<std::int32_t>(v->as_double()), unit};
+                Unit measure_unit = unit;
+                if (v->is_object()) {
+                    if (const Json* u = v->find("birim"); u != nullptr) {
+                        if (!u->is_string())
+                            return err(ErrorCode::ParseError, at + ": birim metin olmalı.");
+                        const auto parsed = unit_from_name(u->as_string());
+                        if (!parsed)
+                            return err(ErrorCode::ValidationFailed, at + ": bilinmeyen birim.");
+                        measure_unit = *parsed;
+                    }
+                    v = v->find("deger");
+                }
+                if (v == nullptr || !v->is_number() || !std::isfinite(v->as_double()) ||
+                    v->as_double() < -2147483648.0 || v->as_double() > 2147483647.0)
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + key + "' geçerli tam ölçü olmalı.");
+                out = Measure{static_cast<std::int32_t>(v->as_double()), measure_unit};
                 return ok();
             };
             if (auto st = measure(kKeyLayerSize, layer.size); !st) return st.error();
@@ -674,6 +703,44 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
                     return err(ErrorCode::ParseError,
                                at + ": '" + kKeyLayerText + "' metin olmalı.");
                 layer.text = t->as_string();
+            }
+            if (const Json* enabled = declared.find("etkin"); enabled != nullptr) {
+                if (!enabled->is_bool())
+                    return err(ErrorCode::ParseError, at + ": etkin evet/hayır olmalı.");
+                layer.enabled = enabled->as_bool();
+            }
+            if (const Json* opacity = declared.find("opaklik"); opacity != nullptr) {
+                if (!opacity->is_number() || opacity->as_double() < 0 || opacity->as_double() > 255)
+                    return err(ErrorCode::ParseError, at + ": opaklik 0..255 olmalı.");
+                layer.opacity = static_cast<std::uint8_t>(opacity->as_double());
+            }
+            if (const Json* cap = declared.find("uc"); cap != nullptr) {
+                if (!cap->is_string()) return err(ErrorCode::ParseError, at + ": uc metin olmalı.");
+                const auto parsed = line_cap_from_name(cap->as_string());
+                if (!parsed)
+                    return err(ErrorCode::ValidationFailed, at + ": bilinmeyen uc biçimi.");
+                layer.cap = *parsed;
+            }
+            if (const Json* join = declared.find("birlesim"); join != nullptr) {
+                if (!join->is_string())
+                    return err(ErrorCode::ParseError, at + ": birlesim metin olmalı.");
+                const auto parsed = line_join_from_name(join->as_string());
+                if (!parsed)
+                    return err(ErrorCode::ValidationFailed, at + ": bilinmeyen birlesim biçimi.");
+                layer.join = *parsed;
+            }
+            if (const Json* bindings = declared.find("baglar"); bindings != nullptr) {
+                if (!bindings->is_array())
+                    return err(ErrorCode::ParseError, at + ": baglar dizi olmalı.");
+                for (const Json& binding : bindings->as_array()) {
+                    const auto property =
+                        symbol_property_from_name(optional_string(binding, "ozellik"));
+                    const auto value_type   = attr_type_from_name(optional_string(binding, "tur"));
+                    const std::string field = optional_string(binding, "alan");
+                    if (!property || !value_type || field.empty())
+                        return err(ErrorCode::ValidationFailed, at + ": geçersiz özellik bağı.");
+                    layer.bindings.push_back(SymbolBinding{field, *property, *value_type});
+                }
             }
             // The picture a `gorsel-*` layer draws, named by its id in this
             // package's own `gorseller` table and stored as the file that table
@@ -1026,6 +1093,7 @@ std::uint64_t StyleCatalog::content_hash() const
         h = fnv1a(e.id, h);
         h = fnv1a(e.label, h);
         h = fnv1a(e.source_ref, h);
+        if (!e.geometry.empty()) h = fnv1a(e.geometry, h);
         h = fnv1a_int(static_cast<std::int64_t>(e.appearance.rgba), h);
         h = fnv1a_int(e.appearance.width_um, h);
         h = fnv1a_int(e.appearance.dash, h);

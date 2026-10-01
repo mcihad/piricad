@@ -6,6 +6,79 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeldi — kesişen alanlarda kaybolan tarama
+
+- Aynı stildeki ayrı polygonların kesişimi yanlışlıkla delik sayılıyordu.
+  Sahne ve PDF'de dolgu, çizgili/noktalı tarama ve görsel dolgu artık kesişimi
+  de gösterir; gerçek iç halkalar ve içbükey sınırlar korunur.
+- Saat yönünde ve tersinde çizilmiş alanlar, iç içe alanlar ve başka bir
+  alanın örttüğü delikler gerçek çizim görüntülerinde sınanır. Çizimler aynı
+  stil gruplarında kalır; polygon başına ek çizim çağrısı oluşmaz.
+
+### Düzeldi — stil ölçüleri ve birleşik alan sembolleri
+
+- Kâğıt/zemin/piksel seçimi önizleme ölçeğine göre ölçüyü dönüştürür; mm → px
+  geçişinde 1000 kat sıçrama ve 100/500 px'lik ok adımları giderildi.
+- Genel ve katman opaklığı yalnız opaklığı değiştirir; birimler, kalınlık,
+  kaydırma, faz ve hassas açı değerleri korunur. Genel birim dönüşümü fazı da kapsar.
+- Önizlemede açık bir çizim ölçeği var: yakınlaştırma zemin ölçülerini büyütür,
+  kâğıt/piksel ölçülerini sabit tutar. Negatif faz ve tarama kaydırması düzenlenebilir.
+- QGIS'teki gibi görünür Sembol kökü ve ayrı kenarlık/dolgu/tarama katmanları;
+  yeni alan katmanı menüsü, uygun başlangıç aralığı ve kenarlığın altında dolgu sırası.
+
+### Değişti — KentOS sembol kitaplığı ve stil çalışma alanı
+
+- KentOS'tan 695 sembol ve 81 SVG öğesi, özgün dizin yapısı ve kategori yollarıyla
+  aktarıldı; PiriCAD açılışta bu kitaplığı yükler. Kaynak tanımlar korunur.
+- Düzenleyici katman listesi, geniş önizleme ve özellik formundan oluşan üç sürekli
+  sütuna geçti. Form etiketi üstte, ilişkili alanlar yan yana, kontroller 30 px.
+  Koyu/açık tema, dar pencere ve gerçek sembol ekran görüntüleri kontrol edildi.
+- Sembolün bütün katmanları, ayrı ölçü birimleri, özellik bağları, görünürlüğü ve
+  SVG baytları tek komutla uygulanır; tek geri alma adımıdır. Kullanıcı sembolleri
+  kaydedilince kitaplığa eklenir ve sonraki açılışta yüklenir.
+- Çizgi aralığı/fazı, kaydırması ve ince çizgi kalınlıkları korunur. Kaynak ifade
+  motoru ve bileşik SVG parçalarının ayrı alanlarla düzenlenmesi henüz taşınmadı;
+  ayrıntılar `data/styles/README.md` içindedir.
+
+- Yerel dosya yazıcısı çizgi işaretçilerinin fazını atlıyordu. Faz ve bağımsız
+  birimi artık isteğe bağlı veri bloklarında saklanır; SVG içeren üç geometri
+  türü ve karışık birimli sembol tam içerik parmak iziyle gidiş-dönüş sınanır.
+
+### Düzeltildi — Ribbon sekme hizası ve açılır liste okunaklılığı
+
+- Nesne seçimiyle açılan ek sekmenin üst çizgisi başlıkla ortalandı;
+  SARibbon'un tek taraflı kenar boşluğu çizgiyi sağa kaydırmıyor.
+- Ribbon açılır listelerinin seçili satırı açık ve koyu temada okunaklı.
+  Ortak liste stili, kutuların farklı nesne adlarından etkilenmiyor.
+
+### Düzeltildi — Tarama yakınlaştırması ve çoklu seçim
+
+- Büyük koordinatlarda zoom sırasında tarama çizgileri yer değiştiriyordu:
+  faz hesabı artık ekranın yuvarlanmış aralığından değil asıl desen aralığından
+  yapılır. Tarama içeren stillerde kâğıt/piksel aralıklarının başlangıcı da zoomdan
+  bağımsız ekran/baskı kafesine bağlandı; zemine bağlı desenler dünya kafesini korur.
+  Ekran ve baskı aynı sahne yolunu kullanır; geometri değişmez.
+- Aynı noktadaki nesneler opak, çerçeveli ve kaydırılabilir listede görünür.
+  Satır seçimi, tür/katman/kimlikle arama ve Home/End ile doğrudan ilk/son aday
+  seçilebilir; Boşluk, Shift+Boşluk ve Esc davranışları korunur.
+
+### Düzeltildi — Koordinat dönüşümünde sistem ve yay bütünlüğü (G-01)
+
+- `DÖNÜŞTÜR` ve `OTURT sistem=` sonrasında koordinat sistemi ayarı belgeyi
+  izler; geri alma, yineleme ve başarısız işlemde de eski sistem geri gelir.
+  Dönüşüm hedefinin çözümlenmiş EPSG, dilim ve birim bilgileri korunur.
+- Yaylı çizgilerde yalnız köşeler taşınıp yay merkezleri eski dilimde kalıyordu.
+  Artık köşeler, merkezler ve yarıçaplar aynı yerel benzerlikle birlikte taşınır;
+  yaylı parsel dönüşümü reddedilmez, yaylar dairesel kalır.
+
+### Değişti — Elips ve spline kesişimleri OpenCASCADE'den (O-5)
+
+- Ortak eğri kesişim yolu `Geom2dAPI_InterCurveCurve` kullanır; elle yazılmış
+  Newton ve kiriş aday çözücüsü kaldırıldı. Rasyonel spline, düğüm aralıkları,
+  ters/kısmi elips, teğet ve ortak parçalar gerçek eğri tanımından hesaplanır.
+  Sonuç yerel çerçeveden bir kez milimetreye yuvarlanır; çözülemeyen işlem
+  boş başarı olarak sunulmaz. Elips/spline köşe yuvarlaması ayrıca açık.
+
 ### Düzeltildi — Çıktı yerleşiminde çerçeve hedefleyince çökme
 
 - **`Çizimin tamamı` ve `Ana pencereden al` programı çökertiyordu.** Harita

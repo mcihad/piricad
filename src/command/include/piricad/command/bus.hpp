@@ -1154,6 +1154,10 @@ private:
     /// aborted batch, leave behind is nothing.
     void cut_back(const core::Document::Tail& tail, LayerId active);
 
+    /// The CRS setting is a mirror of the document, including undo and rollback
+    /// (TODOS G-01); it never chooses a different system for the drawing.
+    core::Status sync_crs_setting();
+
     void journal_entry(const Session& session);
 
     /// `dispatch`, with its edits going into `nested` when given (`run_nested`).

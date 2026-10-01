@@ -231,6 +231,7 @@ public:
     }
 
 private:
+    render::PolylineBatch offsetStroke_;
     /// The frame's visible rectangle in logical pixels, plus a margin.
     ///
     /// Held rather than threaded through every emitter because the pattern
@@ -361,7 +362,7 @@ private:
 
     /// Appends one ring as a triangle fan and grows `box`. Returns the vertex count.
     std::uint32_t emit_fan(const float* xs, const float* ys, std::uint32_t count, double cx,
-                           double cy, bool flip_y, float box[4]);
+                           double cy, bool flip_y, float box[4], bool reverse = false);
 
     /// Appends the six vertices of an axis-aligned cover quad.
     std::uint32_t emit_cover(const float box[4]);
@@ -617,7 +618,7 @@ void RhiBackend::emit_segment(float x0, float y0, float x1, float y1, float alon
 }
 
 std::uint32_t RhiBackend::emit_fan(const float* xs, const float* ys, std::uint32_t count, double cx,
-                                   double cy, bool flip_y, float box[4])
+                                   double cy, bool flip_y, float box[4], bool reverse)
 {
     if (count < 3) return 0;
 
@@ -639,12 +640,14 @@ std::uint32_t RhiBackend::emit_fan(const float* xs, const float* ys, std::uint32
     const float ax = px(0);
     const float ay = py(0);
     for (std::uint32_t i = 1; i + 1 < count; ++i) {
+        const std::uint32_t b = reverse ? i + 1 : i;
+        const std::uint32_t c = reverse ? i : i + 1;
         vertex_data_.push_back(ax);
         vertex_data_.push_back(ay);
-        vertex_data_.push_back(px(i));
-        vertex_data_.push_back(py(i));
-        vertex_data_.push_back(px(i + 1));
-        vertex_data_.push_back(py(i + 1));
+        vertex_data_.push_back(px(b));
+        vertex_data_.push_back(py(b));
+        vertex_data_.push_back(px(c));
+        vertex_data_.push_back(py(c));
     }
     return (count - 2) * 3;
 }
@@ -674,9 +677,13 @@ bool RhiBackend::emit_face(const render::PolygonBatch& batch, double cx, double 
 
     std::size_t offset  = 0;
     std::uint32_t total = 0;
-    for (std::uint32_t run : batch.runs) {
+    for (std::size_t ring = 0; ring < batch.runs.size(); ++ring) {
+        const std::uint32_t run = batch.runs[ring];
+        const bool reverse      = render::fill_ring_reversed(
+            std::span(batch.xs).subspan(offset, run), std::span(batch.ys).subspan(offset, run),
+            ring < batch.is_hole.size() && batch.is_hole[ring] != 0);
         total += emit_fan(batch.xs.data() + offset, batch.ys.data() + offset, run, cx, cy,
-                          /*flip_y=*/true, box);
+                          /*flip_y=*/true, box, reverse);
         offset += run;
     }
     if (total == 0) return false;
@@ -766,7 +773,7 @@ void RhiBackend::emit_stamps(const render::MarkerOutline& glyph, const render::P
     std::uint32_t stroke_count       = 0;
 
     if (stroked) {
-        const float half = std::max(0.5f, ps.line_width_px * 0.5f);
+        const float half = std::max(0.005f, ps.line_width_px * 0.5f);
 
         const auto quad = [&](float x0, float y0, float x1, float y1) {
             const float dx  = x1 - x0;
@@ -970,10 +977,10 @@ void RhiBackend::emit_line_pattern(const render::PolygonBatch& batch, const rend
         Cmd cmd;
         cmd.kind    = Cmd::Kind::Line;
         cmd.clipped = true;
-        cmd.uniform =
-            push_uniform(faded(ps.line_rgba, ps.opacity), std::max(0.5f, ps.line_width_px * 0.5f));
-        cmd.first = first;
-        cmd.count = count;
+        cmd.uniform = push_uniform(faded(ps.line_rgba, ps.opacity),
+                                   std::max(0.005f, ps.line_width_px * 0.5f));
+        cmd.first   = first;
+        cmd.count   = count;
         cmds_.push_back(cmd);
     }
 
@@ -1050,14 +1057,15 @@ std::uint32_t RhiBackend::picture_slot(const render::PassStyle& ps, int wanted_p
     if (ps.image.empty() || ps.image_key == 0) return 0;
 
     const int bucket        = std::clamp(wanted_px, 8, 512);
-    const std::uint64_t key = ps.image_key ^ (static_cast<std::uint64_t>(bucket) << 48);
+    const std::uint64_t key = ps.image_key ^ (static_cast<std::uint64_t>(bucket) << 48) ^
+                              (static_cast<std::uint64_t>(ps.line_rgba) << 16);
 
     auto it = pictures_.find(key);
     if (it == pictures_.end()) {
         // Decoded ONCE and cached even when it fails, so a picture this build
         // cannot read costs one attempt rather than one attempt per frame.
         Picture entry;
-        entry.cpu = decode_symbol_image(ps.image, bucket);
+        entry.cpu = decode_symbol_image(ps.image, bucket, ps.line_rgba);
         if (!entry.cpu.isNull()) {
             entry.cpu    = entry.cpu.convertToFormat(QImage::Format_RGBA8888);
             entry.width  = entry.cpu.width();
@@ -1151,9 +1159,16 @@ void RhiBackend::emit_picture_along(const render::PolylineBatch& batch, const re
         }
         render::place_along_run(run_x_.data(), run_y_.data(), run, ps.placement, interval,
                                 static_cast<double>(ps.phase_px),
-                                grown(visible_, std::max(width, height)), stamps_);
+                                grown(visible_, std::max(width, height)), stamps_, ps.fixed_pitch,
+                                ps.svg_placement);
         offset += run;
     }
+
+    if (!ps.picture_rotates)
+        for (auto& stamp : stamps_) {
+            stamp.cos_a = 1.0f;
+            stamp.sin_a = 0.0f;
+        }
 
     emit_picture_stamps(slot, static_cast<float>(width), static_cast<float>(height), ps,
                         /*clipped=*/false);
@@ -1174,7 +1189,12 @@ void RhiBackend::emit_picture_centres(const render::PolygonBatch& batch,
     stamps_.clear();
 
     std::size_t offset = 0;
+    std::size_t ring   = 0;
     for (std::uint32_t run : batch.runs) {
+        if (ring < batch.is_hole.size() && batch.is_hole[ring++]) {
+            offset += run;
+            continue;
+        }
         float min_x = 1e30f, min_y = 1e30f, max_x = -1e30f, max_y = -1e30f;
         for (std::uint32_t v = 0; v < run; ++v) {
             const auto x = static_cast<float>(cx + static_cast<double>(batch.xs[offset + v]));
@@ -1244,8 +1264,14 @@ void RhiBackend::emit_document(const render::DrawList& list, double cx, double c
     for (std::uint32_t index : list.order) {
         if (index >= list.passes.size()) continue;
 
-        const render::PassStyle& ps       = list.passes[index];
-        const render::PolylineBatch& line = list.polylines[index];
+        const render::PassStyle& ps = list.passes[index];
+        const bool shifted =
+            ps.offset_px != 0 &&
+            (ps.type == SymbolLayerType::SimpleLine || ps.type == SymbolLayerType::RasterLine ||
+             ps.type == SymbolLayerType::MarkerLine || ps.type == SymbolLayerType::HashLine);
+        if (shifted)
+            render::offset_polyline(list.polylines[index], double(ps.offset_px), offsetStroke_);
+        const render::PolylineBatch& line = shifted ? offsetStroke_ : list.polylines[index];
         const render::PolygonBatch& face  = list.polygons[index];
 
         switch (ps.type) {
@@ -1296,14 +1322,14 @@ void RhiBackend::emit_document(const render::DrawList& list, double cx, double c
                 const int dash_count = std::min<int>(ps.dash_count, 8);
                 for (int i = 0; i < dash_count; ++i)
                     dash[i] = static_cast<float>(ps.dash_lengths[i]) * 0.01f *
-                              std::max(1.0f, line.width_px);
+                              std::max(0.01f, line.width_px);
 
                 Cmd cmd;
-                cmd.kind = Cmd::Kind::Line;
-                cmd.uniform =
-                    push_uniform(line.rgba, std::max(0.5f, line.width_px * 0.5f), dash, dash_count);
-                cmd.first = first;
-                cmd.count = count;
+                cmd.kind    = Cmd::Kind::Line;
+                cmd.uniform = push_uniform(line.rgba, std::max(0.005f, line.width_px * 0.5f), dash,
+                                           dash_count);
+                cmd.first   = first;
+                cmd.count   = count;
                 cmds_.push_back(cmd);
             }
             break;
@@ -1412,12 +1438,12 @@ void RhiBackend::emit_overlay(const render::Overlay& overlay, std::size_t from, 
             // KESEN selection box reads as dashed before any label does, and four
             // on two is what Qt's own dash line draws — so the two backends agree
             // without the widget having to describe a pattern.
-            const float w       = std::max(1.0f, batch.width_px);
+            const float w       = std::max(0.01f, batch.width_px);
             const float dash[2] = {4.0f * w, 2.0f * w};
 
             Cmd cmd;
             cmd.kind    = Cmd::Kind::Line;
-            cmd.uniform = push_uniform(batch.rgba, std::max(0.5f, batch.width_px * 0.5f),
+            cmd.uniform = push_uniform(batch.rgba, std::max(0.005f, batch.width_px * 0.5f),
                                        batch.dashed ? dash : nullptr, batch.dashed ? 2 : 0);
             cmd.first   = first;
             cmd.count   = count;
@@ -1718,13 +1744,12 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
         if (!line_->create()) return false;
     }
 
-    // ---- fills: even-odd stencil, then one cover quad ------------------------
+    // ---- fills: nonzero winding stencil, then one cover quad -----------------
     //
-    // No triangulator, on purpose. A stencil invert over a triangle fan produces
-    // the even-odd rule the QPainter backend gets from `Qt::OddEvenFill`, which is
-    // what punches a courtyard ring out of its parcel without either backend
-    // having to know which ring was declared a hole. Adding CDT for this would be
-    // a dependency for a thing the depth-stencil buffer already does.
+    // Opposite triangle directions increment/decrement winding, including the
+    // negative triangles of a concave fan. Exteriors were normalised in emit_face;
+    // holes subtract their own face while independent overlapping faces add up.
+    // Inverting the stencil erased every even overlap of same-style objects.
     QRhiVertexInputLayout flat;
     flat.setBindings({{2 * sizeof(float)}});
     flat.setAttributes({{0, 0, QRhiVertexInputAttribute::Float2, 0}});
@@ -1733,7 +1758,7 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
         QRhiGraphicsPipeline::StencilOpState op;
         op.failOp      = QRhiGraphicsPipeline::Keep;
         op.depthFailOp = QRhiGraphicsPipeline::Keep;
-        op.passOp      = QRhiGraphicsPipeline::Invert;
+        op.passOp      = QRhiGraphicsPipeline::IncrementAndWrap;
         op.compareOp   = QRhiGraphicsPipeline::Always;
 
         QRhiGraphicsPipeline::TargetBlend none;
@@ -1752,6 +1777,7 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
         fill_stencil_->setDepthWrite(false);
         fill_stencil_->setStencilTest(true);
         fill_stencil_->setStencilFront(op);
+        op.passOp = QRhiGraphicsPipeline::DecrementAndWrap;
         fill_stencil_->setStencilBack(op);
         fill_stencil_->setStencilReadMask(0xFF);
         fill_stencil_->setStencilWriteMask(0xFF);
@@ -1761,9 +1787,9 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
     }
 
     {
-        // The cover pass paints where the stencil is odd AND resets it to zero as
+        // The cover pass paints where the winding is nonzero AND resets it to zero as
         // it goes, so the next fill starts from a clean buffer without a second
-        // clear. `failOp = Zero` is what does the resetting on the even pixels.
+        // clear. `failOp = Zero` also resets pixels with no coverage.
         QRhiGraphicsPipeline::StencilOpState op;
         op.failOp      = QRhiGraphicsPipeline::StencilZero;
         op.depthFailOp = QRhiGraphicsPipeline::StencilZero;

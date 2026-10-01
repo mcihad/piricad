@@ -27,8 +27,8 @@ belgeden uzak tutun.
 
 | Nesne | Nasıl taşınır |
 |---|---|
-| Çizgi, çoklu çizgi, alan (parsel), nokta, yaylı çoklu çizgi, spline | **Her köşesi** PROJ ile, tek tek; parselin yasal geometrisinde hiçbir şey yaklaşık değildir |
-| Daire, yay, elips, tarama, ölçü, lider, blok referansı | Çapası (merkezi, ekleme noktası, ilk noktası) PROJ ile **tam**; biçimi o noktadaki **yerel dönme ve ölçekle**: daire daire, yay yay kalır; yazı ve blok, iki dilimin grid kuzeyleri arasındaki açı kadar döner |
+| Çizgi, köşeli çoklu çizgi, düz kenarlı alan (parsel), nokta, spline | **Her köşesi** PROJ ile, tek tek; parselin yasal geometrisinde hiçbir şey yaklaşık değildir |
+| Daire, yay, yaylı çoklu çizgi (yaylı parsel dahil), elips, tarama, ölçü, lider, blok referansı | Çapası (merkezi, ekleme noktası, ilk noktası) PROJ ile **tam**; biçimi o noktadaki **yerel dönme ve ölçekle**: daire daire, yay yay kalır; yazı ve blok, iki dilimin grid kuzeyleri arasındaki açı kadar döner |
 | Blok tanımının içi | **Dokunulmaz**: tanım kendi koordinatındadır, referansı taşınınca bütün kopyalar taşınır |
 
 [Dış referanslar](xref.md) bu tabloda yoktur: tanımları kendi dosyalarının koordinatındadır.
@@ -44,7 +44,14 @@ uzaktaki bir noktada binde üç kadar. 5 m yarıçaplı bir daire yeni haritada 
 
 Sayıları taşınmış ama koordinat sistemi hâlâ eski sistemi söyleyen bir çizim,
 hiç dönüştürülmemiş olandan **daha kötüdür**: aşağıdaki her okuyucu etikete
-güvenir. Bu yüzden dönüşüm belgenin CRS'ini de yazar.
+güvenir. Bu yüzden dönüşüm belgenin CRS'ini, çözümlenmiş sistem bilgilerini ve
+`AYAR koordinat_sistemi` değerini birlikte günceller. Geri alma ve yineleme de
+bu bilgileri çizimle birlikte değiştirir.
+
+Yaylı çizgide ilk köşe PROJ ile taşınır; diğer köşeler, yay merkezleri ve
+yarıçapları aynı yerel dönme ve ölçekle birlikte taşınır. Yaylar dairesel kalır.
+Bu, bütün eğriye uygulanan yerel benzerlik yaklaşımıdır: uzun bir eğride her
+noktanın ayrı PROJ dönüşümüyle birebir aynı sonucu vaat etmez.
 
 ## Adlar
 
@@ -125,7 +132,7 @@ yeni sistemi gösterir.
 
 ## Geri alma
 
-**Tek adımdır ve bu bir gerekliliktir**: çizimin her köşesi ya taşınır ya hiçbiri
+**Tek adımdır; koordinat sistemi ayarı da birlikte geri alınır**: çizimin her köşesi ya taşınır ya hiçbiri
 taşınmaz. Yarı dönüştürülmüş bir kadastro paftası Anayasa 1.6'nın adını koyduğu
 hatadır ve burada iki yarısı da makul görünür.
 
@@ -151,7 +158,12 @@ Dönüştürecek bir şey yok.
 
 > `Bu dönüşümün bir ucu coğrafi (derece)…`
 
-Hedef ya da kaynak derece cinsinden. Projeksiyonlu bir sistem seçin.
+Hedef ya da kaynak derece cinsinden. Metre sayan bir projeksiyonlu sistem seçin.
+
+> `Çizim bu sisteme dönüştürülemez. …`
+
+Hedef koordinat sistemi metre dışında bir birimle sayıyor. Çizimde milimetre
+saklandığından dönüşüm reddedilir; metre sayan bir hedef seçin.
 
 ## İlgili
 

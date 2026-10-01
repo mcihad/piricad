@@ -1,0 +1,11 @@
+# O-5: OCCT kesişimleri büyük TUREF koordinatlarında, ortak komut yolundan.
+# Elips y = 3 m'de x = ±8 m'de kesilir. İki zıt parabol y = 2,5 m'de
+# x = 1,464 m ve 8,536 m'de (bir kez mm'ye yuvarlanmış) kesilir.
+# Sonuçların yay/spline tanımları ve günlüğü üç platformda bit-birebir karşılaştırılır.
+AYAR koordinat_sistemi EPSG:5256
+ELİPS merkez=485300,4310200 birinci=485310,4310200 ikinci=485300,4310205
+ÇİZGİ 485280,4310203 485320,4310203
+BUDA sinir=2 nesne=1 nokta=485300,4310205
+SPLINE noktalar=485330,4310200 485335,4310210 485340,4310200 derece=2
+SPLINE noktalar=485330,4310205 485335,4310195 485340,4310205 derece=2
+BUDA sinir=4 nesne=3 nokta=485335,4310205

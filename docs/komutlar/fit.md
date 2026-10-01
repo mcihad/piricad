@@ -112,7 +112,9 @@ tek tek sorar:
 taşınmaz; yarı taşınmış bir kadastro paftası Anayasa 1.6'nın adını koyduğu
 hatadır ve burada her yerden daha kötüdür, çünkü iki yarısı da makul görünür.
 
-`GERİAL` bütün çizimi eski yerine döndürür.
+`sistem=` verilirse belge ve `AYAR koordinat_sistemi` birlikte güncellenir.
+`GERİAL` bütün çizimi eski yerine, sistem bilgisini ve ayarını önceki değerine
+döndürür; `YİNELE` aynı oturtmayı ve sistemi geri getirir.
 
 ## Betikten kullanım
 

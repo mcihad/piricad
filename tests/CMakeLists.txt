@@ -405,6 +405,16 @@ if(TARGET piricad)
     # page becomes a `ÇIKTIÖĞE` line, that the window redraws from the document
     # afterwards, that one Ctrl+Z undoes the gesture, and that the sheet then
     # prints. The probe drives all four and writes a PDF.
+    # The real painter/PDF backend and the style editor's public command path.
+    # Probe diagnostics must fail the test even if a dialog closes normally.
+    add_test(NAME style-designer
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                PIRICAD_DESIGNER_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
+    set_tests_properties(style-designer PROPERTIES TIMEOUT 120 FAIL_REGULAR_EXPRESSION "BAŞARISIZ")
+
     add_test(NAME layout-designer
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen

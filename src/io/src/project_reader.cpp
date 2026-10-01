@@ -535,6 +535,16 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
     }
 
     std::span<const std::uint16_t> bind_count;
+    std::span<const std::uint8_t> symbol_layer_phase_unit;
+    if (view.has(kBlkSymbolLayerPhaseUnit) && dr.symbol_layer_count > 0) {
+        auto rows = view.column<std::uint8_t>(kBlkSymbolLayerPhaseUnit, dr.symbol_layer_count,
+                                              "sembol katmani faz birimleri");
+        if (!rows) return rows.error();
+        for (const auto unit : rows.value())
+            if (unit > static_cast<std::uint8_t>(core::Unit::Pixel))
+                return err(ErrorCode::ParseError, "Bilinmeyen sembol faz birimi.");
+        symbol_layer_phase_unit = rows.value();
+    }
     std::span<const std::uint32_t> bind_field;
     std::span<const std::uint8_t> bind_what;
     std::span<const std::uint8_t> bind_type;
@@ -602,6 +612,9 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                 if (r.first_layer + k < symbol_layer_phase.size())
                     layer.phase =
                         core::Measure{symbol_layer_phase[r.first_layer + k], layer.interval.unit};
+                if (r.first_layer + k < symbol_layer_phase_unit.size())
+                    layer.phase.unit =
+                        static_cast<core::Unit>(symbol_layer_phase_unit[r.first_layer + k]);
 
                 if (r.first_layer + k < symbol_layer_flags.size()) {
                     const std::uint8_t flags = symbol_layer_flags[r.first_layer + k];

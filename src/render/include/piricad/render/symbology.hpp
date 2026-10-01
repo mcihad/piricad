@@ -18,11 +18,17 @@
 #pragma once
 
 #include "piricad/core/style.hpp"
+#include "piricad/render/drawlist.hpp"
 
 #include <cstdint>
 #include <vector>
 
 namespace piricad::render {
+
+/// Offsets a decorative stroke in transient, origin-relative pixels. Document
+/// geometry stays unchanged; actual geometric offsets use the OCCT kernel.
+/// Output vectors are reused by the backend on subsequent frames.
+void offset_polyline(const PolylineBatch& source, double distance, PolylineBatch& output);
 
 /// One glyph placement along a line: where, and which way it faces.
 ///
@@ -75,7 +81,8 @@ struct PixelBox
 /// stamps everything, which is what this did before.
 void place_along_run(const float* xs, const float* ys, std::uint32_t count,
                      core::MarkerPlacement placement, double interval, double phase,
-                     const PixelBox& clip, std::vector<Stamp>& out);
+                     const PixelBox& clip, std::vector<Stamp>& out, bool explicit_phase = false,
+                     SvgPlacement svg_placement = SvgPlacement::Default);
 
 /// A glyph's outline in LOCAL pixels, centred on the origin.
 ///
@@ -106,12 +113,11 @@ void marker_outline(core::MarkerShape shape, double size, MarkerOutline& out);
 /// The parallel lines of a `çizgi-desen-dolgu`, over a face, at an angle.
 ///
 /// Appended as flat segments in SCREEN pixels: x0, y0, x1, y1 per line, one line
-/// through `anchor` and every `spacing` from it. The ANCHOR IS THE GROUND'S (TODOS
-/// C-11): a point of the pattern's own lattice in world coordinates, brought to
-/// the screen by the scene (`PassStyle::anchor_x`), so the pattern stays put on
-/// the parcel as the view pans, lines up across two hatches of one pattern, and
-/// passes through the hatch's own origin. A caller with no anchor gives the
-/// face's centre, which keeps the pattern continuous across the face.
+/// through `anchor` and every `spacing` from it. The scene (`PassStyle::anchor_x`)
+/// supplies the ground lattice for ground intervals (TODOS C-11), preserving
+/// the hatch's own origin and alignment across parcels. Paper/pixel intervals
+/// use the output lattice, preserving their phase while zoom changes the map
+/// scale. A caller with no anchor gives the face's centre.
 ///
 /// `clip` IS WHY THIS FUNCTION IS FAST, and it is not an optimisation that can be
 /// skipped. The spacing is in PIXELS while the face is in world units, so at 1:1

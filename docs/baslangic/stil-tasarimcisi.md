@@ -15,56 +15,38 @@ taşıyorsa o, taşımıyorsa katmanın kendi görünümü.
 
 ## Pencerede ne nerede
 
-```text
-┌ 🎨 Katman Özellikleri — Kadastro Parselleri ─────────────── ? ✕ ┐
-│ Bilgi        │ SİMGELEYİCİ  SEMBOL BOYUT BİRİMİ  GEOMETRİ       │
-│ Kaynak       │ [Tek Sembol] [mm|harita|piksel]  [Alan|Çizgi|Nkt]│
-│ ▸Simgeleyici │──────────────────────────┬───────────────────────│
-│ Etiketler    │ HAZIR GÖSTERİMLER        │ ┌──────┐ SEMBOL KATMANLARI│
-│ 3B Görünüm   │ [grup ▾][ara…] 113 göst. │ │önizl.│ ▾ Sembol       │
-│ Şeffaflık    │ ┌──────────────────────┐ │ │      │   ✓ Nokta deseni│
-│ Ölçek        │ │ EK-1a / SINIRLAR /…  │ │ └──────┘   ✓ Dolgu      │
-│ Öznitelik F. │ │  ▬  ÜLKE SINIRI      │ │  +  ⧉  −         ▲  ▼ │
-│ Geçerlilik   │ │  ▬  İL SINIRI        │ │ KATMAN                 │
-│ Eylemler     │ │ EK-1a / SINIRLAR /…  │ │ Katman tipi  [Dolgu   ]│
-│ Bağlantılar  │ │  ◯◯ PLAN ONAMA SINIRI│ │ DOLGU                  │
-│ Sürüm        │ └──────────────────────┘ │ Dolgu rengi  [#228B22 ]│
-│              │ MPYY, EK-1a… [Seç.kullan]│ KENAR                  │
-│              │                          │ Çizgi rengi  [#000000 ]│
-│              │                          │ Kalınlık     [0 µm    ]│
-├──────────────┴──────────────────────────┴───────────────────────┤
-│ Stil ▾                              Yardım    İptal Uygula [Tamam]│
-└───────────────────────────────────────────────────────────────────┘
-```
+Pencere üç sütun taşır: solda gösterim türü ve sembol katmanları, ortada büyük
+canlı önizleme, sağda seçili katmanın özellikleri. Özellik etiketleri girdinin
+üstündedir; uç ve birleşim gibi ilişkili alanlar aynı satırda durur.
 
-Soldaki liste on üç bölüm taşır. Bugün **Bilgi**, **Simgeleyici** ve
-**Öznitelikler** doludur; kalan onu hangi fazda geleceğini kendi sayfasında yazar. Gizlenmiş bir bölüm,
-kullanıcının varlığından haberdar olamayacağı bir yetenektir; adı yazılmış bir
-bölüm ise tarihi belli bir sözdür.
+![KentOS kitaplığından seçilmiş Orman Alanı sembolü, PiriCAD'in gerçek stil tasarımcısında](stil-tasarimcisi-kentos.png)
+
+**Kitaplıktan seç…** kaynak kategori ağacı ve araması olan ayrı bir pencere açar.
+Altlıktaki **Stil ▾** menüsünden katman bilgisi ve öznitelikler sayfalarına geçilir.
 
 ### Simgeleyici satırı
 
-Üst şeritteki **SİMGELEYİCİ** açılır listesi katmandaki nesnelerin sembollerini neyin
+Soldaki **Gösterim** açılır listesi katmandaki nesnelerin sembollerini neyin
 belirlediğini seçer. QGIS'in simgeleyici listesinin bu programın kurallarına çevrilmiş
 hâlidir; her biri bir katalog paketi ve tek bir `STİL` satırına iner, o yüzden
 tasarımcıda kurduğunuz her şey komut satırından da yazılabilir.
 
 | Simgeleyici | Ne yapar |
 |---|---|
-| **Tek Sembol** | Katmandaki her nesne aynı sembolü çizer. Orta bölmede hazır gösterimler rafı durur. |
+| **Tek Sembol** | Katmandaki her nesne aynı sembolü çizer. Kitaplık ayrı pencereden açılır. |
 | **Kategorize Edilmiş** | Bir sütunun her **değeri** kendi sembolünü alır: `plan_fonksiyon = Konut` bir renk, `Ticaret` başka bir renk. |
 | **Derecelendirilmiş** | Sayısal bir sütun **aralıklara** bölünür; her aralık bir sınıftır: alanı 0–500 m² olanlar bir sembol, 500–2 000 başka bir sembol. |
 | **Kural Tabanlı** | Faz 2'de gelecek. Bir kural tek bir alan üzerinde tek sınamadır — eşitlik, liste, aralık, var — ve serbest ifade dili bu programda yoktur. |
 
-Tek Sembol dışında bir simgeleyici seçince şeride iki denetim daha gelir: **DEĞER**
+Tek Sembol dışında bir simgeleyici seçince soldaki gruba iki denetim daha gelir: **DEĞER**
 (sınıflandırılacak sütun; derecelendirmede yalnız sayısal sütunlar listelenir) ve
 **RENK SKALASI** (sınıflara verilecek renkler: *Ayrık renkler* renk çemberinde eşit
 aralıklı tonlar, *Tek renk açılımı* sembolün kendi rengini koyudan açığa, *Gri tonlar*).
 
 ### Sınıf tablosu
 
-Kategorize ya da derecelendirilmiş simgeleyicide orta bölme rafın yerine sınıf
-tablosunu gösterir:
+Kategorize ya da derecelendirilmiş simgeleyicide çalışma alanının üstünde sınıf
+tablosu görünür:
 
 ```text
 ┌──┬────────┬──────────────┬──────────────────────┬────────┐
@@ -84,7 +66,7 @@ tablosunu gösterir:
   boş olan nesneler onun sembolünü alır. Bir sınıfın işaretini kaldırırsanız nesneleri
   ‹diğer›'e düşer.
 - Bir satıra tıklayınca sağdaki sembol düzenleyici **o sınıfın** sembolünü açar;
-  başlığında `SEÇİLİ SEMBOL — Konut` yazar. Katman ekleyip renk değiştirirseniz
+  seçili sembol katmanının adı sağdaki formun başlığında görünür. Katman ekleyip renk değiştirirseniz
   tablodaki örnek anında yenilenir.
 - **Gösterim adı** hücresine çift tıklayıp lejantta okunacak adı yazabilirsiniz;
   **değer** hücresi de elle düzenlenebilir (`Ekle` ile eklenen sınıflar için).
@@ -120,26 +102,61 @@ Renk için tam sayı ya da `#RRGGBB` metin sütunu, ölçüler için sayısal s�
 her sütun seçilebilir.
 
 
-### Sembol boyut birimi — en çok kullanacağınız denetim
+### Ölçü birimleri ve önizleme ölçeği
 
-Üç düğme, üç farklı davranış:
+Boyut, aralık, kaydırma ve faz alanları kendi birim seçicisini taşır:
 
-- **Milimetre** — pafta ölçüsü. MPYY bir sınırın kalınlığını paftada milimetre
-  verir ve o kalınlık 1/1000'de de 1/5000'de de aynıdır. Ekranda
-  **yakınlaştırdığınızda sembol büyümez.**
-- **Harita birimi** — zemin ölçüsü. Orman deseninin sıklığı alana aittir; ölçekle
-  küçülmesine izin vermek okunur bir dokuyu gri bir lekeye çevirir. **Çizimle
-  birlikte büyür.**
-- **Piksel** — ham ekran pikseli. Ne paftaya ne zemine bağlıdır; ekran
-  yardımcıları dışında ender kullanılır.
+| Birim | Girdi | Ölçek değişince |
+|---|---|---|
+| **Kâğıt mm** | Paftadaki milimetre | Ekrandaki boyut sabit kalır. |
+| **Zemin m** | Çizimdeki metre | Yakınlaştırınca büyür, uzaklaştırınca küçülür. |
+| **Piksel px** | Tam sayı ekran pikseli | Ekrandaki boyut sabit kalır. |
 
-Seçim sembolün **bütün** katmanlarını birden değiştirir. Katmanlar farklı
-birimler kullanıyorsa hiçbiri işaretli görünmez ve alttaki not bunu söyler.
+**Çizim ölçeği 1:** alanı önizlemenin ölçeğidir. `+`, `−` ve tekerlek bu
+ölçeği değiştirir; **1:1000** başlangıç ölçeğine döner. Örneğin 3 m zemin aralığı
+1:500'de, 1:1000'e göre iki kat geniş görünür; 3 mm kâğıt aralığı değişmez.
+Çizgiler ekranda ayırt edilemeyecek kadar sıklaşınca tarama bir renk tonu olarak
+gösterilir; yakınlaştırınca çizgiler yeniden görünür.
+
+Birim değiştirmek mevcut boyutu **önizleme ölçeğinde koruyarak** değeri dönüştürür.
+1:1000'de 3 mm kâğıt aralığı 3 m zemine veya yaklaşık 11 px'e dönüşür. Piksel
+ölçüsü tam sayıya yuvarlanır; sıfır olmayan bir ölçü yuvarlamayla sıfır olmaz.
+Piksel alanında ok tuşu birer piksel ilerler. Bir dönüşümden sonra çizim ölçeğini
+kontrol edin: zemin ölçüsü artık o ölçekle birlikte değişir.
+
+Aynı katmanda boyut ve aralık farklı birimlerde olabilir. Sol ağaçtaki **Sembol**
+satırı bütün sembolün ayarlarını açar. Genel birim seçimi bütün ölçüleri, faz dahil,
+dönüştürür; **Opaklık** ve **Kalınlık** yalnız kendi özelliklerini değiştirir.
+Çizgi kalınlığı her zaman kâğıt milimetresidir ve ölçekle büyümez.
+
+**Otomatik**, boyut/aralık için çizicinin varsayılanını; **Aralık ile aynı**, ikinci
+eksenin birinci aralığı kullanmasını belirtir. Kaydırma ve faz negatif olabilir.
+
+### Kenarlık, dolgu ve iç tarama birlikte
+
+![Ayrı kenarlık, iç tarama ve dolgu katmanları; aralık ve kaydırma birimleri bağımsızdır](stil-tasarimcisi-katmanlar.png)
+
+**Katman ekle (+)** alan sembollerinde **Kenarlık**, **İç tarama**, **Dolgu** ve
+**Çapraz tarama** seçeneklerini sunar. Her biri aynı sembole ayrı bir katman ekler;
+mevcut kenarlığı iç taramayla birlikte kullanabilirsiniz. Çapraz tarama iki ayrı
+45°/135° tarama katmanı ekler; renk, açı, aralık ve opaklıklarını bağımsız düzenleyin.
+
+Yeni dolgu ve tarama katmanları mevcut kenarlığın altında yerleşir. Ağaçtaki en
+üst katman son çizilir; **Yukarı/Aşağı** ile sırayı değiştirin, göz simgesiyle bir
+katmanı gizleyin. İç taramanın zemini için ayrıca **Dolgu** ekleyin; tarama formunda
+çizicinin kullanmadığı bir arka plan rengi bulunmaz.
+
+Aynı stili taşıyan iki ayrı alan üst üste geldiğinde kesişimleri de dolgulu veya
+taralı görünür. İç içe çizilen ayrı bir alan kendiliğinden delik oluşturmaz;
+yalnız polygonun açıkça tanımlanmış iç halkaları boş bırakılır. Başka bir alan
+bu deliği örtüyorsa o alanın stili burada da çizilir. Sahne ve PDF aynı kurala uyar.
+
+Bu düzen [QGIS'in sembol katmanları yaklaşımını](https://docs.qgis.org/3.44/en/docs/user_manual/style_library/symbol_selector.html)
+izler: ortak sembol ayarları ile her çizgi, dolgu ve desen katmanının ayarları ayrıdır.
 
 ### Geometri
 
-İlk karar bu: sembol hangi geometri için. Üstteki şeritte, simgeleyici ve boyut
-biriminin yanında durur — üçü de sembolün *ne olduğuna* dair kararlardır, nasıl
+İlk karar bu: sembol hangi geometri için. Katman geometriyi belirtmiyorsa sol sütunda durur — üçü de sembolün *ne olduğuna* dair kararlardır, nasıl
 göründüğüne dair değil. İki şeyi birden belirler: önizlemenin hangi şekil
 üzerinde çizileceğini ve rafın hangi çekmecesinin açık olduğunu. `Çizgi`
 seçiliyken raf size alan gösterimi vermez.
@@ -150,14 +167,15 @@ hem alan taşıyan bir katmanda. Parsel katmanı alandır, yol ekseni katmanı
 geometri için kurulur.
 
 Önizleme şekli de bilerek seçilmiştir: alan için dikdörtgen, çizgi için **zikzak**
-(düz çizgi bir desenin köşede ne yaptığını gizler), nokta için tek nokta. Kare
+(düz çizgi bir desenin köşede ne yaptığını gizler), nokta için tek nokta. Büyük
 önizlemenin altındaki tek kelime — *kapalı alan*, *kırıklı çizgi*, *tek nokta* —
 resmin hangi geometri üzerinde çizildiğini söyler; sekmeyi değiştirince o da değişir.
 
 ### Hazır gösterimler
 
-Orta sütundaki raf, mevzuatın yayımladığı gösterim setidir; grupları da
-mevzuatın kendisinindir: EK-1a ortak, EK-1b MSP, EK-1c ÇDP, EK-1ç NİP, EK-1d
+**Kitaplıktan seç…** penceresinde varsayılan KentOS sistem kataloğu bulunur:
+695 sembol ve 81 SVG öğesi, kaynak kategori yollarıyla birlikte. MPYY grupları
+kaynaktaki düzeni izler: EK-1a ortak, EK-1b MSP, EK-1c ÇDP, EK-1ç NİP, EK-1d
 UİP, her ekin altında kendi bölümleri. Raf bir **liste**dir ve **ekin kendisi
 gibi bölümlenmiştir**: her grup yolu bir başlık olarak bir kez yazılır
 (`EK-1a / SINIRLAR / İDARİ SINIRLAR`), altında o bölümün gösterimleri. Her
@@ -175,7 +193,7 @@ Yürürlükten kalkmış bir gösterim satırın sağ ucunda **yürürlükte de�
 işaretlenir. Yüklenebilir olarak kalır — emekliye ayrılmış bir kimlik hiç
 düşürülmez — ama yeni bir paftada seçilmemelidir.
 
-- Arama kutusunun yanındaki açılır listeden bir ek ya da bölüm seçin, ya da
+- Soldaki kategori ağacından bir ek ya da bölüm seçin, ya da
 - Arama kutusuna yazın — arama **grubu dinlemez**, bir kelimeyi nerede olursa
   bulur.
 
@@ -195,7 +213,7 @@ orası söyler; sessizce kesilmez.
 
 ### Sembol katmanları
 
-Önizlemenin hemen yanındaki **SEMBOL KATMANLARI** listesi. **Üstten alta** okunur:
+Sol sütundaki **SEMBOL KATMANLARI** listesi. **Üstten alta** okunur:
 ilk satır en son çizilen, yani ekranda en üstte görünen katmandır. `▲` ve `▼`
 satırı gördüğünüz yöne taşır. Listede yalnız katmanlar vardır; sembolün
 **kendisine** ait özellikler (birim, renk, kalınlık, saydamlık) için önizleme
@@ -212,8 +230,8 @@ böyle kurulur.
 
 ### Katman özellikleri
 
-Listenin altında, seçili katmanın özellikleri **dört başlık** altında sıralanır;
-her satırda etiket solda, değer sağdadır:
+Sağ sütunda seçili katmanın kullandığı özellikler bulunur;
+etiketler değerlerin üstündedir:
 
 | Başlık | İçinde ne var |
 |---|---|
@@ -228,7 +246,7 @@ başlık da gösterilmez. Bir `dolgu` katmanının işaretçi yerleşimi yoktur,
 o satır orada değildir — soluk değil, yok. Görmediğiniz bir alan, çizicinin yok
 sayacağı bir alan değildir.
 
-Birim, etikette değil değerin yanındadır: kalınlık `µm`, açı `°` sonekiyle yazılır.
+Birim, etikette değil değerin yanındadır: kalınlık `mm`, açı `°` sonekiyle yazılır.
 Her ölçünün **kendi birim kutusu** vardır: boyut kâğıtta, aralık zeminde
 olabilir. İkisi aynı sembolde farklı birimlerde durabilir ve bu normaldir.
 
@@ -256,8 +274,8 @@ Her alan `STİL` komutunun bir parametresidir; hangisi olduğu
 | GEOMETRİ · Açı | `aci` |
 | GÖRÜNÜRLÜK · Saydamlık | `saydamlik` |
 
-Tip kutusunda parantez içinde yazan (`gorsel-dolgu` gibi) makine adıdır ve
-komut satırına yazacağınız şeydir.
+Tip kutusu kullanıcıya okunur adları gösterir. Komut adları STİL sayfasındaki
+parametre tablosunda bulunur.
 
 ### Sembol parametreleri
 
@@ -265,13 +283,8 @@ Bir sembol katmanı, çizeceği değeri nesnenin **öznitelik sütunundan** alab
 dairenin içine `taks` sütununu yazdırmak, çizgi kalınlığını `kat` sütununa
 sürmek gibi. Bunu bugün [`STİL alan=`](../komutlar/style.md) ile yazarsınız.
 
-Bu pencerede **henüz bir satırı yoktur**. Bir süre vardı ve çalışmıyordu: girilen
-parametre önizlemeye yansıyor, **Uygula** ise onu belgeye hiç göndermiyordu. Bunun
-yerine sütun · özellik · tür üçlüsünü seçtiren gerçek bir tablo tasarlanacak ve
-buraya, katmanın öznitelik şemasının yanına gelecek. Tarihi **Faz 2**.
-
-Sembolünde parametre olan bir katmanı bu pencerede açıp **Uygula** demek
-parametreleri **silmez**; pencere kendisinde satırı olmayan bir şeye dokunmaz.
+Sağdaki `{ }` düğmeleriyle sütun seçilir. Bağlar, bütün sembol yığını ve
+görsellerle birlikte pakete yazılır; uygulama tek `STİL` komutudur.
 
 ## Öznitelikler sayfası
 
@@ -309,11 +322,10 @@ kalemlere ayrıldı.
 
 ## Uygula
 
-**Uygula** yığındaki her **açık** sembol katmanı için bir `STİL` satırı gönderir:
-ilki sembolü kurar, kalanlar `ekle=evet` ile üstüne biner. Kapalı katmanlar
-gönderilmez. Komut günlüğünde satırların kendisini görürsünüz.
-
-Tek bir geri alma adımıdır: `GERİAL` tasarımı bütünüyle geri alır.
+**Uygula**, bütün yığını, her ölçünün birimini, özellik bağlarını ve SVG
+içeriklerini bir paket olarak tek `STİL katman=… paket=… kod=…` satırıyla uygular.
+Kapalı katmanlar da saklanır; görünürlüğü kapalı kalır. Tek bir **GERİAL** tasarımı
+bütünüyle geri alır.
 
 ## Kütüphaneye kaydet
 
@@ -329,7 +341,8 @@ paketi** olarak yazar:
 Proje dizinine değil: tasarladığınız sembol size aittir, çizimden çizime sizinle
 gelir ve birinin paftasının yanında takip edilmeyen bir dosya olarak durmamalıdır.
 
-Kaydedilen dosya normal bir gösterim paketidir, yani rafa geri alınabilir:
+Kaydedilen dosya normal bir gösterim paketidir. Kaydedince kitaplığa eklenir;
+sonraki açılışta da yüklenir. Başka bir makinede elle yüklemek için:
 
 ```
 SEMBOL paket="<ayar dizini>/stiller/benim-stilim.json"
@@ -349,7 +362,7 @@ Lisans engel değil — QGIS GPL-2.0-or-later ve uyumlu. Engeller ölçülebilir
   ise baytları ve künyesini belgenin içinde taşır — çizim e-postayla gittiğinde
   ayakta kalmasını sağlayan şey bu.
 
-Alınabilecek olan alındı: **düzenin kendisi** — ve sadeleştirilerek. QGIS bunu iki
+Düzenleyici, KentOS çalışma alanını PiriCAD bileşenleriyle kullanır. QGIS bunu iki
 pencereye bölüyor (sembol seçici ve Stil Yöneticisi) ve seçili tipin okumadığı
 alanları da soluk hâlde gösteriyor. Burada tek pencere var ve görünmeyen alan yok
 sayılan alan değildir.

@@ -27,6 +27,17 @@ Stil üç kaynaktan gelebilir; sıralama şudur:
 Aynı görünüm iki kez istendiğinde stil tablosunda **tek satır** açılır: on bin parsele aynı
 gösterimi vermek tabloya bir satır ekler, on bin satır değil.
 
+### KentOS sistem kitaplığı
+
+Stil tasarımcısının varsayılan kitaplığı `data/styles/assets/system-library.json`
+dosyasındadır. KentOS'tan 695 sembol ve 81 SVG öğesi, adları ve kategori ağacıyla
+aktarılmıştır. Özgün kaynaklar ve dönüşüm açıklaması
+[`data/styles/README.md`](../../data/styles/README.md) içindedir.
+Kitaplık seçimi `sembol_kütüphanesi` uygulama ayarıyla değiştirilir. Tasarımcının
+kaydettiği sembol, görsel baytları ve ayrı birimli ölçüleriyle çizimin içinde taşınır.
+İşaretçinin faz değeri `0x0038`, bağımsız faz birimi `0x003F` isteğe bağlı dosya
+bloklarında saklanır; eski dosyalar varsayılan birimle açılır.
+
 ### Gösterim katalogları hakkında
 
 Plan gösterimleri koda gömülmez; `data/catalogs/` altında veri olarak durur. Bir yönetmelik
@@ -112,6 +123,11 @@ verilir.
 | `alan` | Nesneden alınacak **parametreler**, virgülle: `sütun[:özellik[:tür]]` |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
+
+Çizgi desenli dolgularda `zemin` aralığı çizimin koordinatlarına bağlıdır; zoom
+desenin başlangıcını değiştirmez. `kagit` ve `piksel` aralıkları ekran/baskı
+başlangıcına bağlıdır: aralık ve çizgilerin fazı zoomdan etkilenmez. Görünür
+nesnelerin değişmesi de desenin yeniden dizilmesine yol açmaz.
 
 `renk` ve `dolgu` değerleri `KATMAN` komutundakiyle aynı düzendedir; hazır değerler için
 [Katman yönetimi](layer.md) sayfasındaki renk tablosuna bakın.

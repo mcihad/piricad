@@ -69,6 +69,15 @@ enum class PreviewGround {
     Checker ///< a fine two-tone lattice; the designer's own preview
 };
 
+struct PreviewOptions
+{
+    std::uint32_t screen_ink{0};      ///< ink contrast in the editor, never in saved symbols
+    double paper_pixels{0.0};         ///< zero: fit thumbnails; positive: explicit workspace zoom
+    double scale_denominator{1000.0}; ///< ground millimetres per paper millimetre
+    bool hole{false};                 ///< include an island to inspect fill clipping
+    bool straight{false};             ///< use a straight sample instead of a bent boundary
+};
+
 /// Draws the symbol on `shape`, on `ground`.
 ///
 /// `dpr` is the device pixel ratio to render at. A preview drawn at 1.0 and shown
@@ -78,7 +87,7 @@ enum class PreviewGround {
 QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images,
                       const core::DashStore& dashes, QSize size, std::uint32_t background,
                       PreviewShape shape, PreviewGround ground = PreviewGround::Flat,
-                      qreal dpr = 1.0);
+                      qreal dpr = 1.0, PreviewOptions options = {});
 
 /// Draws the symbol into an ALREADY-ACTIVE painter, inside `box`.
 ///

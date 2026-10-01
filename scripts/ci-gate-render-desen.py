@@ -26,6 +26,8 @@ is not this gate's: locking it here would freeze whichever answer happens to be
 in the binary. It is measured and reported separately.
 """
 import os
+import json
+from collections import deque
 import subprocess
 import sys
 import tempfile
@@ -121,7 +123,7 @@ def bul():
     return exe
 
 
-def kare(exe, yol, gpu=False):
+def kare(exe, yol, gpu=False, betik=BETIK):
     """Draws the gösterim once and writes the window to `yol`.
 
     OFFSCREEN IS NOT AN OPTION ON THE GPU PATH. Qt's offscreen platform has no
@@ -138,7 +140,7 @@ def kare(exe, yol, gpu=False):
         ortam.pop("QT_QPA_PLATFORM", None)
     else:
         ortam["QT_QPA_PLATFORM"] = "offscreen"
-    subprocess.run([exe, "--betik", BETIK], cwd=KOK, env=ortam,
+    subprocess.run([exe, "--betik", betik], cwd=KOK, env=ortam,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=180)
     return os.path.isfile(yol)
 
@@ -159,6 +161,96 @@ def olc(yol):
     kutu_koyu = koyu[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
     kutu_yesil = yesil[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
     return float(kutu_koyu.mean()), float(kutu_yesil.mean())
+
+
+def ortusme(exe, tmp):
+    """Separate same-style faces must add coverage, while real holes stay empty.
+
+    Commands build the scene; a cyan frame locates its coordinates in the real
+    window. Test the stencil for solids, line hatches and stamped markers. The
+    concave fan has negative triangles; B is clockwise, A counter-clockwise,
+    a nested face overlaps A, and a small face covers part of A's actual hole.
+    """
+    for tip in ("dolgu", "cizgi-desen-dolgu", "nokta-desen-dolgu"):
+        commands = [
+            {"cmd": "KATMAN", "args": {"ad": "ORTUSME"}},
+            {"cmd": "STİL", "args": {"katman": "ORTUSME", "tip": tip,
+             "renk": 0xffcc3377, "dolgu": 0xffcc3377, "kalinlik": 500,
+             "aralik": 12, "aralik_birim": "piksel", "boyut": 6,
+             "boyut_birim": "piksel", "sekil": "kare", "aci": 0}},
+            {"cmd": "ALAN", "args": {"noktalar": [
+             [60000, 45000], [40000, 45000], [40000, 60000], [0, 60000],
+             [0, 0], [60000, 0], [10000, 10000], [25000, 10000],
+             [25000, 25000], [10000, 25000]], "bolum": [6, 4]}},
+            {"cmd": "ALAN", "args": {"noktalar": [
+             [30000, 20000], [30000, 40000], [90000, 40000], [90000, 20000]]}},
+            {"cmd": "ALAN", "args": {"noktalar": [
+             [17000, 13000], [23000, 13000], [23000, 22000], [17000, 22000]]}},
+            {"cmd": "ALAN", "args": {"noktalar": [
+             [5000, 35000], [15000, 35000], [15000, 45000], [5000, 45000]]}},
+            {"cmd": "KATMAN", "args": {"ad": "OLCU"}},
+            {"cmd": "STİL", "args": {"katman": "OLCU", "tip": "cizgi",
+             "renk": 0xff19d6d5, "kalinlik": 500}},
+            {"cmd": "ÇOKLUÇİZGİ", "args": {"noktalar": [
+             [0, 0], [90000, 0], [90000, 80000], [0, 80000], [0, 0]]}},
+        ]
+        betik = os.path.join(tmp, f"ortusme-{tip}.json")
+        yol = os.path.join(tmp, f"ortusme-{tip}.png")
+        with open(betik, "w", encoding="utf-8") as f:
+            json.dump(commands, f, ensure_ascii=False)
+        if not kare(exe, yol, gpu=True, betik=betik):
+            print(f"render-desen: örtüşme karesi üretilemedi ({tip})", file=sys.stderr)
+            return 1
+        a = np.asarray(Image.open(yol).convert("RGB"), dtype=int)
+        cyan = (a[:, :, 1] > 150) & (a[:, :, 2] > 150) & (a[:, :, 0] < 80)
+        # The largest connected ink component is the frame, independent of UI
+        # icons, window size, sidebar widths, antialiasing or display density.
+        points = set(zip(*np.where(cyan)))
+        largest = []
+        while points:
+            start = points.pop()
+            queue = deque([start])
+            component = [start]
+            while queue:
+                y, x = queue.popleft()
+                for p in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                    if p in points:
+                        points.remove(p)
+                        queue.append(p)
+                        component.append(p)
+            if len(component) > len(largest):
+                largest = component
+        if len(largest) < 500:
+            print(f"render-desen: örtüşme ölçü çerçevesi yok ({tip})", file=sys.stderr)
+            return 1
+        ys, xs = zip(*largest)
+        left, right, top, bottom = min(xs), max(xs), min(ys), max(ys)
+        ink = (a[:, :, 0] > a[:, :, 1] + 40) & (a[:, :, 2] > a[:, :, 1] + 20)
+
+        def ratio(x, y, side):
+            x0 = round(left + (x - side / 2) / 90 * (right - left))
+            x1 = round(left + (x + side / 2) / 90 * (right - left))
+            y0 = round(bottom - (y + side / 2) / 80 * (bottom - top))
+            y1 = round(bottom - (y - side / 2) / 80 * (bottom - top))
+            return float(ink[y0:y1, x0:x1].mean())
+
+        checks = (("tek alan", 20, 35, 6, True),
+                  ("kesişim", 45, 30, 8, True),
+                  ("ikinci alan", 75, 30, 8, True),
+                  ("iç içe alan", 10, 40, 6, True),
+                  ("gerçek delik", 12.5, 17, 3, False),
+                  ("deliği örten alan", 20, 17, 3, True),
+                  ("içbükey boşluk", 50, 52, 6, False),
+                  ("dış bölge", 75, 10, 8, False))
+        for name, x, y, side, filled in checks:
+            measured = ratio(x, y, side)
+            if (filled and measured < 0.02) or (not filled and measured > 0.005):
+                print(f"render-desen: BAŞARISIZ — {tip} / {name}: "
+                      f"mürekkep %{measured * 100:.1f}", file=sys.stderr)
+                return 1
+        print(f"render-desen: OK — {tip}: kesişim, iç içe alan, gerçek delik, "
+              "deliği örten alan ve içbükey sınır")
+    return 0
 
 
 def main():
@@ -213,7 +305,7 @@ def main():
             print(f"render-desen: OK (QRhi) — desen %{murekkep*100:.1f}, "
                   f"zemin %{zemin*100:.1f}; ORMAN ALANI yeşil zemin üstünde üçgen "
                   f"ağaçlarla çiziliyor")
-            return 0
+            return ortusme(exe, tmp)
 
     motor = qgis_motoru_var(exe)
     if motor is not True:

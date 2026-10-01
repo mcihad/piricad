@@ -7,7 +7,10 @@
 #include "piricad/app/fields.hpp"
 #include "piricad/app/tokens.hpp"
 
+#include <QLineEdit>
+#include <QLocale>
 #include <algorithm>
+#include <cmath>
 
 #include <QAbstractTableModel>
 #include <QButtonGroup>
@@ -30,6 +33,60 @@
 #include <QVBoxLayout>
 
 namespace piricad::app {
+MeasureSpinBox::MeasureSpinBox(QWidget* parent) : QSpinBox(parent)
+{
+    setProperty("measureEditor", true);
+    setFixedHeight(static_cast<int>(ControlSize::Regular));
+    setKeyboardTracking(false);
+    setLocale(QLocale(QLocale::Turkish));
+}
+
+void MeasureSpinBox::setDivisor(double divisor)
+{
+    divisor_ = divisor > 0 ? divisor : 1.0;
+    lineEdit()->setText(textFromValue(value()) + suffix());
+}
+
+QString MeasureSpinBox::textFromValue(int value) const
+{
+    const int decimals = divisor_ == 1.0 ? 0 : divisor_ == 2.55 ? 1 : divisor_ == 1000000.0 ? 6 : 3;
+    QString text       = locale().toString(value / divisor_, 'f', decimals);
+    if (divisor_ != 1.0) {
+        while (text.endsWith(QLatin1Char('0')))
+            text.chop(1);
+        if (text.endsWith(locale().decimalPoint())) text.chop(1);
+    }
+    return text;
+}
+
+int MeasureSpinBox::valueFromText(const QString& text) const
+{
+    QString raw = text;
+    if (!suffix().isEmpty() && raw.endsWith(suffix())) raw.chop(suffix().size());
+    bool ok       = false;
+    double number = locale().toDouble(raw.trimmed(), &ok);
+    if (!ok) number = QLocale::c().toDouble(raw.trimmed(), &ok);
+    return ok && std::isfinite(number)
+               ? static_cast<int>(std::clamp(std::round(number * divisor_), double(minimum()),
+                                             double(maximum())))
+               : value();
+}
+
+QValidator::State MeasureSpinBox::validate(QString& text, int&) const
+{
+    QString raw = text;
+    if (!suffix().isEmpty() && raw.endsWith(suffix())) raw.chop(suffix().size());
+    raw = raw.trimmed();
+    if (raw.isEmpty() || raw == QLatin1String("-")) return QValidator::Intermediate;
+    bool ok       = false;
+    double number = locale().toDouble(raw, &ok);
+    if (!ok) number = QLocale::c().toDouble(raw, &ok);
+    if (!ok || !std::isfinite(number)) return QValidator::Invalid;
+    return number * divisor_ >= minimum() && number * divisor_ <= maximum()
+               ? QValidator::Acceptable
+               : QValidator::Intermediate;
+}
+
 namespace {
 
 // `bileşen_standardı.png`, measured: "yarıçap 4 px · kenar #363D43", a 14 px
@@ -2144,6 +2201,17 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
         grid->addWidget(combo, 2, 0);
         grid->addWidget(date, 2, 1);
         grid->addWidget(listRow, 2, 2);
+
+        auto* measure = new MeasureSpinBox(sheet);
+        measure->setObjectName(QStringLiteral("componentMeasure"));
+        measure->setRange(-1000000, 1000000);
+        measure->setValue(250);
+        measure->setSuffix(QStringLiteral(" mm"));
+        measure->setFixedHeight(static_cast<int>(ControlSize::Regular));
+        measure->setAccessibleName(QStringLiteral("Ölçü"));
+        measure->setAccessibleDescription(QStringLiteral("Milimetre olarak ölçü girin"));
+        grid->addWidget(
+            new FormRow(QStringLiteral("Ölçü"), shown(measure, "ölçü", "milimetre"), sheet), 3, 2);
 
         // FROM THE SCENE: a coordinate and an object, each typed or picked. The
         // second is shown armed, so the pressed pick button is on the sheet.

@@ -387,7 +387,7 @@ QString themeStyleSheet(ThemeMode mode)
         QMenu::item                      { padding: 6px 24px 6px 12px; border-radius: 4px; }
         QMenu::item:selected             { background: %(wash)s; color: %(text)s; }
         QMenu::item:disabled             { color: %(textFaint)s; }
-        QMenu::separator                 { height: 1px; background: %(lineSoft)s; margin: 4px 8px; }
+        QMenu::separator                 { height: 1px; background: %(lineHard)s; margin: 4px 8px; }
 
         /* ---- tool buttons: the icon buttons of tables, fields and dialogs --- */
         /*
@@ -427,8 +427,26 @@ QString themeStyleSheet(ThemeMode mode)
         QWidget#settingsSidebar,
         QWidget#designerSidebar          { background: %(strip)s;
                                            border-right: 1px solid %(lineHard)s; }
-        QWidget#symbolColumn             { background: %(panel)s;
-                                           border-left: 1px solid %(lineHard)s; }
+        QWidget#styleEditorBody            { background: %(raised)s; }
+        QWidget#styleEditorBody .QWidget,
+        QWidget#styleEditorBody QLabel,
+        QWidget#styleEditorBody QStackedWidget { background: transparent; }
+        QSplitter#styleWorkspace         { background: %(raised)s; border: none; }
+        QFrame#stylePreview               { background: %(panel)s; }
+        QLabel#styleFormGroup             { background: transparent; color: %(textDim)s;
+                                           border-top: 1px solid %(lineHard)s; padding-top: 12px;
+                                           font-size: 11px; }
+        QWidget#symbolColumn, QWidget#styleStackPanel {
+                                           background: transparent; border: none; }
+        QSplitter#styleWorkspace::handle { background: %(lineHard)s; }
+        QSplitter#styleWorkspace::handle:hover { background: %(accent)s; }
+        QLabel#stylePreviewImage          { border: 1px solid %(border)s; border-radius: 4px; }
+        QLabel#stylePanelTitle            { background: transparent; color: %(text)s;
+                                           font-size: 12px; font-weight: 600; }
+        QTreeWidget#designerList          { background: transparent; border: none; }
+        QWidget#symbolColumn QScrollArea,
+        QWidget#symbolColumn QScrollArea > QWidget > QWidget {
+                                           background: transparent; }
 
         /* ---- layout designer ----------------------------------------------- */
         /* The sheet editor wears the shell's own chrome: the tool row and the
@@ -479,7 +497,9 @@ QString themeStyleSheet(ThemeMode mode)
         QTreeWidget#designerList,
         QListWidget#designerGallery      { background: %(window)s; border: 1px solid %(border)s;
                                            border-radius: 4px; outline: none; }
-        QTreeWidget#designerList::item   { min-height: 24px; padding: 2px 6px; }
+        QSplitter#styleWorkspace QTreeWidget#designerList { background: transparent; border: none; }
+        QTreeWidget#designerList::item   { min-height: 30px; padding: 4px 6px; }
+        QTreeWidget#designerList::item:selected { background: %(wash)s; border: none; }
         QListWidget#designerGallery::item { min-height: 30px; padding: 0px 8px;
                                             border: none; }
         QListWidget#designerGallery::item:hover { background: %(hoverRow)s; }
@@ -491,7 +511,7 @@ QString themeStyleSheet(ThemeMode mode)
         QLabel#formCaption               { background: transparent; color: %(textDim)s;
                                            font-size: 11.5px; }
         QLineEdit#designerSearch,
-        QLineEdit#toolSearch             { background: %(input)s; border: 1px solid %(border)s;
+        QLineEdit#toolSearch             { background: %(panel)s; border: 1px solid %(border)s;
                                            border-radius: 4px; padding: 4px 9px;
                                            min-height: 22px; max-height: 22px;
                                            font-size: 11.5px; }
@@ -504,7 +524,7 @@ QString themeStyleSheet(ThemeMode mode)
         QTreeWidget#toolTree::item       { min-height: 24px; padding: 2px 6px; }
         QTreeWidget#toolTree::item:hover { background: %(hoverRow)s; }
         QTreeWidget#toolTree::item:selected { background: %(wash)s; color: %(text)s; }
-        QLabel#toolPreview               { background: %(input)s; border: 1px solid %(border)s;
+        QLabel#toolPreview               { background: %(panel)s; border: 1px solid %(border)s;
                                            border-radius: 4px; padding: 6px 8px;
                                            font-size: 11.5px; }
 
@@ -516,12 +536,12 @@ QString themeStyleSheet(ThemeMode mode)
         QToolButton#rowTool:pressed      { background: %(wash)s; color: %(accentHi)s;
                                            border: 1px solid %(accentEdge)s; }
         QToolButton#rowTool:disabled     { color: %(textFaint)s; }
-        QLineEdit#settingsSearch         { background: %(input)s; border: 1px solid %(border)s;
+        QLineEdit#settingsSearch         { background: %(panel)s; border: 1px solid %(border)s;
                                            border-radius: 4px; padding: 4px 8px;
                                            min-height: 20px; font-size: 11.5px; }
         QLabel#settingsProfile           { background: transparent; color: %(textFaint)s;
                                            font-size: 11px;
-                                           border-top: 1px solid %(lineSoft)s; }
+                                           border-top: 1px solid %(lineHard)s; }
         QLabel#settingsHeading           { background: transparent; color: %(text)s;
                                            font-size: 16px; font-weight: 600; }
         QLabel#rowName                   { background: transparent; color: %(text)s;
@@ -553,8 +573,7 @@ QString themeStyleSheet(ThemeMode mode)
                                            border: 2px dashed %(accent)s; }
 
         /* ---- attribute table, §9 -------------------------------------------- */
-        QWidget#rendererRow              { background: %(raised)s;
-                                           border-bottom: 1px solid %(lineHard)s; }
+        QWidget#rendererRow              { background: transparent; }
         QWidget#tableToolRow             { background: %(raised)s;
                                            border-bottom: 1px solid %(lineHard)s; }
         QWidget#tableFilterBar           { background: %(window)s;
@@ -566,11 +585,11 @@ QString themeStyleSheet(ThemeMode mode)
         QToolButton#tableTool:hover      { background: %(hoverIcon)s; }
         QToolButton#tableTool:checked    { background: %(wash)s;
                                            border: 1px solid %(accentEdge)s; }
-        QLineEdit#expressionBar          { background: %(input)s; border: 1px solid %(border)s;
+        QLineEdit#expressionBar          { background: %(panel)s; border: 1px solid %(border)s;
                                            border-radius: 4px; padding: 5px 10px;
                                            font-family: "IBM Plex Mono"; font-size: 12px;
                                            min-height: 22px; }
-        QLineEdit#tableSearch            { background: %(input)s; border: 1px solid %(border)s;
+        QLineEdit#tableSearch            { background: %(panel)s; border: 1px solid %(border)s;
                                            border-radius: 4px; padding: 5px 10px;
                                            font-size: 11.5px; min-height: 22px; }
         QWidget#statsPanel               { background: %(panel)s;
@@ -593,7 +612,7 @@ QString themeStyleSheet(ThemeMode mode)
                                            border-bottom: 1px solid %(lineHard)s; }
 
         /* The expression bar: the same box as every input, mono, one line. */
-        QPlainTextEdit#expressionEdit    { background: %(input)s; color: %(text)s;
+        QPlainTextEdit#expressionEdit    { background: %(panel)s; color: %(text)s;
                                            border: 1px solid %(border)s; border-radius: 4px;
                                            padding: 4px 8px 0px 8px;
                                            min-height: 24px; max-height: 24px; }
@@ -624,7 +643,7 @@ QString themeStyleSheet(ThemeMode mode)
                                            font-size: 12px; }
         QStackedWidget#aboutPages,
         QWidget#aboutGeneral             { background: transparent; }
-        QPlainTextEdit#aboutText         { background: %(input)s; color: %(textDim)s;
+        QPlainTextEdit#aboutText         { background: %(panel)s; color: %(textDim)s;
                                            border: 1px solid %(border)s; border-radius: 4px;
                                            padding: 6px 8px;
                                            font-family: "IBM Plex Mono", monospace;
@@ -651,21 +670,20 @@ QString themeStyleSheet(ThemeMode mode)
                                            min-height: 0px; max-height: 10000px;
                                            color: %(text)s; }
         QComboBox#comboBox::drop-down    { width: 0px; border: none; }
-        QComboBox#comboBox QAbstractItemView#comboPopup,
-        QComboBox#fieldCombo QAbstractItemView#comboPopup {
+        /* Ribbon controls have their own object names. The popup's component
+         * name remains stable, so styling must not depend on its owner's ID. */
+        QAbstractItemView#comboPopup {
                                            background: %(panel)s; color: %(text)s;
                                            border: 1px solid %(border)s; padding: 4px;
-                                           outline: none; selection-background-color: transparent;
+                                           outline: none; selection-background-color: %(wash)s;
                                            selection-color: %(text)s; }
-        QComboBox#comboBox QAbstractItemView#comboPopup::item,
-        QComboBox#fieldCombo QAbstractItemView#comboPopup::item {
+        QAbstractItemView#comboPopup::item {
                                            min-height: 26px; padding: 0px 10px; border: none;
                                            border-radius: 3px; color: %(text)s; }
-        QComboBox#comboBox QAbstractItemView#comboPopup::item:hover,
-        QComboBox#comboBox QAbstractItemView#comboPopup::item:selected,
-        QComboBox#fieldCombo QAbstractItemView#comboPopup::item:hover,
-        QComboBox#fieldCombo QAbstractItemView#comboPopup::item:selected {
+        QAbstractItemView#comboPopup::item:hover {
                                            background: %(hoverRow)s; color: %(text)s; }
+        QAbstractItemView#comboPopup::item:selected {
+                                           background: %(wash)s; color: %(text)s; }
 
         /* The words a waiting command offers, opened from the command line: the
          * shell's list, as the combo popup above draws it — panel ground, 26 px
@@ -699,10 +717,10 @@ QString themeStyleSheet(ThemeMode mode)
 
         /* The settings window's rows, §10: a soft rule under each. */
         QWidget#settingRow               { background: transparent;
-                                           border-bottom: 1px solid %(lineSoft)s; }
+                                           border-bottom: 1px solid %(lineHard)s; }
 
         /* The export window's command line: the one sentence it promises. */
-        QLabel#commandPreview            { background: %(input)s; color: %(accentHi)s;
+        QLabel#commandPreview            { background: %(panel)s; color: %(accentHi)s;
                                            border: 1px solid %(border)s; border-radius: 4px;
                                            padding: 8px 10px;
                                            font-family: "IBM Plex Mono", monospace;
@@ -725,14 +743,14 @@ QString themeStyleSheet(ThemeMode mode)
          * way would be a second answer to "what does a table look like here".
          */
         QTableView#pickList              { background: %(window)s; border: none;
-                                           gridline-color: %(lineSoft)s;
+                                           gridline-color: %(lineHard)s;
                                            font-size: 12.5px;
                                            selection-background-color: %(wash)s;
                                            selection-color: %(text)s; }
         QTableView#pickList::item        { padding: 0px 12px; border: none; }
         QTableView#pickList::item:selected { background: %(wash)s; color: %(text)s;
                                            border-left: 2px solid %(accent)s; }
-        QPushButton#segment              { background: %(input)s; color: %(textDim)s;
+        QPushButton#segment              { background: %(panel)s; color: %(textDim)s;
                                            border: 1px solid %(border)s; border-radius: 4px;
                                            padding: 4px 14px; min-height: 22px;
                                            font-size: 11.5px; }
@@ -759,7 +777,7 @@ QString themeStyleSheet(ThemeMode mode)
          * every line edit at 22 px, which is right in a dialog and wrong in a
          * row whose height its owner decides.
          */
-        QWidget#field[frame="box"]       { background: %(input)s;
+        QWidget#field[frame="box"]       { background: %(panel)s;
                                            border: 1px solid %(border)s; border-radius: 4px; }
         QWidget#field[frame="box"][state="focus"] { border: 1px solid %(accent)s; }
         /* OPAQUE, and this is the whole of it. The ground was `wash`, which is the
@@ -771,7 +789,7 @@ QString themeStyleSheet(ThemeMode mode)
          * `input` rather than a blend of the row's own ground, because a cell that
          * is open IS an input, and the shell already has one ground for those.
          * The accent border is what says "open"; the ground only has to be solid. */
-        QWidget#field[frame="cell"]      { background: %(input)s;
+        QWidget#field[frame="cell"]      { background: %(panel)s;
                                            border: 1px solid %(accent)s; border-radius: 0px; }
 
         QLineEdit#fieldLine              { background: transparent; color: %(text)s;
@@ -836,9 +854,9 @@ QString themeStyleSheet(ThemeMode mode)
          * box — read-only on a sunken ground with a lock, disabled outlined with
          * faint text — because a value with no frame reads as a caption, and the
          * reader then cannot tell a field they may not edit from a label. */
-        QWidget#field[frame="box"][state="readonly"] { border: 1px solid %(lineSoft)s;
+        QWidget#field[frame="box"][state="readonly"] { border: 1px solid %(lineHard)s;
                                             background: %(sunken)s; }
-        QWidget#field[frame="box"]:disabled { border: 1px solid %(lineSoft)s;
+        QWidget#field[frame="box"]:disabled { border: 1px solid %(lineHard)s;
                                             background: transparent; }
         QLineEdit#fieldLine[state="changed"]  { color: %(warn)s; }
         QLineEdit#fieldLine[state="derived"]  { color: %(accentHi)s; }
@@ -899,7 +917,7 @@ QString themeStyleSheet(ThemeMode mode)
                                            outline: none; }
         QTreeWidget#layerTree::item      { border: none; padding: 0px; }
         QLabel#layerFooter               { background: %(panel)s; color: %(textFaint)s;
-                                           border-top: 1px solid %(lineSoft)s;
+                                           border-top: 1px solid %(lineHard)s;
                                            font-size: 11px; }
 
         /* ---- tabs, §4: 30 px, active carries a 2 px accent edge ------------ */
@@ -913,6 +931,9 @@ QString themeStyleSheet(ThemeMode mode)
         QTabBar::tab:hover:!selected     { background: %(hoverIcon)s; color: %(text)s; }
         QTabBar::tab:selected            { background: %(panel)s; color: %(text)s;
                                            border-top: 2px solid %(accent)s; }
+
+        QFrame#pickChooser { background: %(window)s; color: %(text)s;
+                             border: 1px solid %(lineHard)s; border-radius: 4px; }
 
         /* ---- lists and trees, §11: selection and hover never look alike ---- */
         QTreeView, QTreeWidget, QListView, QListWidget, QTableView, QTableWidget {
@@ -932,7 +953,7 @@ QString themeStyleSheet(ThemeMode mode)
         }
         QHeaderView::section             { background: %(header)s; color: %(textFaint)s;
                                            border: none; border-bottom: 1px solid %(lineHard)s;
-                                           border-right: 1px solid %(lineSoft)s;
+                                           border-right: 1px solid %(lineHard)s;
                                            padding: 7px 8px; min-height: 30px;
                                            font-size: 10.5px; font-weight: 600;
                                            letter-spacing: 0.7px; }
@@ -977,12 +998,14 @@ QString themeStyleSheet(ThemeMode mode)
          * one colour for both would tell a user their own edit was invalid.
          */
         QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox {
-            background: %(input)s; color: %(text)s;
+            background: %(panel)s; color: %(text)s;
             border: 1px solid %(border)s; border-radius: 4px;
             padding: 4px 9px; min-height: 22px; max-height: 22px;
             selection-background-color: %(accent)s; selection-color: %(onAccent)s;
         }
         QPlainTextEdit, QTextEdit         { max-height: 10000px; }
+        /* 20 px content + 8 px padding + 2 px border = regular 30 px. */
+        QSpinBox[measureEditor="true"]     { min-height: 20px; max-height: 20px; }
 
         QLineEdit:hover, QSpinBox:hover,
         QDoubleSpinBox:hover                { border: 1px solid %(separator)s; }
@@ -990,7 +1013,7 @@ QString themeStyleSheet(ThemeMode mode)
         QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus,
         QDoubleSpinBox:focus,
         QLineEdit[state="focus"]          { border: 1px solid %(accent)s;
-                                            background: %(input)s; }
+                                            background: %(panel)s; }
 
         QLineEdit[state="changed"],
         QSpinBox[state="changed"], QDoubleSpinBox[state="changed"] {
@@ -1051,7 +1074,7 @@ QString themeStyleSheet(ThemeMode mode)
         QPushButton[size="large"]         { padding: 0px 20px; font-size: 12.5px; }
         QPushButton:hover                 { background: %(hoverIcon)s; color: %(text)s; }
         QPushButton:pressed               { background: %(header)s; }
-        QPushButton:disabled              { color: %(textFaint)s; border-color: %(lineSoft)s; }
+        QPushButton:disabled              { color: %(textFaint)s; border-color: %(lineHard)s; }
 
         QPushButton#primary,
         QPushButton[primary="true"]       { background: %(accent)s; color: %(onAccent)s;
@@ -1070,7 +1093,7 @@ QString themeStyleSheet(ThemeMode mode)
         QPushButton#danger                { border: 1px solid %(dangerEdge)s; color: %(danger)s; }
         QPushButton#danger:hover          { background: %(dangerWash)s; }
         QPushButton#danger:disabled       { color: %(textFaint)s;
-                                            border-color: %(lineSoft)s; }
+                                            border-color: %(lineHard)s; }
 
         QPushButton#mode:checked          { background: %(wash)s; color: %(accentHi)s;
                                             border: 1px solid %(accentEdge)s; }
@@ -1099,7 +1122,7 @@ QString themeStyleSheet(ThemeMode mode)
         QCheckBox::indicator,
         QRadioButton::indicator           { width: 14px; height: 14px;
                                             border: 1px solid %(border)s; border-radius: 3px;
-                                            background: %(input)s; }
+                                            background: %(panel)s; }
         QCheckBox::indicator:hover,
         QRadioButton::indicator:hover     { border: 1px solid %(separator)s; }
         QCheckBox::indicator:checked      { background: %(accent)s;
@@ -1108,10 +1131,10 @@ QString themeStyleSheet(ThemeMode mode)
                                             border: 1px solid %(accentLift)s; }
         QCheckBox::indicator:disabled,
         QRadioButton::indicator:disabled  { background: transparent;
-                                            border: 1px solid %(lineSoft)s; }
+                                            border: 1px solid %(lineHard)s; }
         QCheckBox:disabled, QRadioButton:disabled { color: %(textFaint)s; }
         QRadioButton::indicator           { border-radius: 7px; }
-        QRadioButton::indicator:checked   { background: %(input)s;
+        QRadioButton::indicator:checked   { background: %(panel)s;
                                             border: 4px solid %(accent)s; }
 
         /* ---- segment, slider ------------------------------------------------ */
@@ -1142,13 +1165,13 @@ QString themeStyleSheet(ThemeMode mode)
         QPushButton#segment[lit="next"]   { border-right: none; }
         QPushButton#segment:checked:hover { background: %(wash)s; }
 
-        QSlider::groove:horizontal        { height: 4px; background: %(lineSoft)s;
+        QSlider::groove:horizontal        { height: 4px; background: %(lineHard)s;
                                             border-radius: 2px; }
         QSlider::sub-page:horizontal      { background: %(accent)s; border-radius: 2px; }
         QSlider::handle:horizontal        { width: 12px; height: 12px; margin: -5px 0px;
                                             border-radius: 6px; background: %(readout)s; }
 
-        QGroupBox                         { background: transparent; border: 1px solid %(lineSoft)s;
+        QGroupBox                         { background: transparent; border: 1px solid %(lineHard)s;
                                             border-radius: 4px; margin-top: 10px;
                                             padding: 10px 10px 9px 10px;
                                             color: %(textFaint)s; font-size: 10.5px;
@@ -1182,7 +1205,7 @@ QString themeStyleSheet(ThemeMode mode)
         QSplitter::handle:hover           { background: %(accent)s; }
 
         QFrame[frameShape="4"],
-        QFrame[frameShape="5"]            { color: %(lineSoft)s; }
+        QFrame[frameShape="5"]            { color: %(lineHard)s; }
 
         /* ---- named roles the shell asks for by object name ----------------- */
         QLabel#sectionTitle               { color: %(text)s; font-size: 16px; font-weight: 600; }
@@ -1206,7 +1229,7 @@ QString themeStyleSheet(ThemeMode mode)
         /* A colour is a FIELD of the form, so it is the height of one. Its face
            and its ink are set per value in `show_colour`. */
         QToolButton#colourField           { border-radius: 4px; padding: 0px;
-                                            min-height: 22px; max-height: 22px;
+                                            min-height: 28px; max-height: 28px;
                                             /* The base QToolButton rule clamps every tool
                                                button to a 30 px square, which is right for
                                                an icon button and wrong for a field: it left
@@ -1221,9 +1244,9 @@ QString themeStyleSheet(ThemeMode mode)
         .replace(QStringLiteral("%(panel)s"), t.bgPanel.name())
         .replace(QStringLiteral("%(raised)s"), t.bgRaised.name())
         .replace(QStringLiteral("%(header)s"), t.bgHeader.name())
-        .replace(QStringLiteral("%(input)s"), t.bgInput.name())
+        .replace(QStringLiteral("%(panel)s"), t.bgInput.name())
         .replace(QStringLiteral("%(lineHard)s"), t.lineHard.name())
-        .replace(QStringLiteral("%(lineSoft)s"), t.lineSoft.name())
+        .replace(QStringLiteral("%(lineHard)s"), t.lineSoft.name())
         .replace(QStringLiteral("%(border)s"), t.border.name())
         .replace(QStringLiteral("%(text)s"), t.text.name())
         .replace(QStringLiteral("%(textDim)s"), t.textDim.name())

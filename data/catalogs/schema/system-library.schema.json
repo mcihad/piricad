@@ -1,0 +1,374 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://piricad.org/data/catalogs/schema/system-library.schema.json",
+  "title": "KentOS uyarlanmış sistem sembol kataloğu",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "package_version",
+    "id",
+    "source",
+    "published",
+    "licence",
+    "kaynak_sha256",
+    "gorseller",
+    "stiller",
+    "kurallar"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "package_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "published": {
+      "type": "string",
+      "minLength": 1
+    },
+    "licence": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kaynak_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "kurallar": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "gorseller": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "dosya",
+          "sha256",
+          "bayt",
+          "tur"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dosya": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "bayt": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tur": {
+            "const": "svg"
+          }
+        }
+      }
+    },
+    "stiller": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "ad",
+          "bolum",
+          "etiketler",
+          "kaynak",
+          "geometri",
+          "katmanlar"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ad": {
+            "type": "string",
+            "minLength": 1
+          },
+          "bolum": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "etiketler": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "kaynak": {
+            "type": "string"
+          },
+          "geometri": {
+            "enum": [
+              "alan",
+              "cizgi",
+              "nokta"
+            ]
+          },
+          "katmanlar": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "tip",
+                "birim"
+              ],
+              "properties": {
+                "tip": {
+                  "enum": [
+                    "cizgi",
+                    "dolgu",
+                    "cizgi-desen-dolgu",
+                    "gorsel-dolgu",
+                    "gorsel-cizgi",
+                    "gorsel-isaretci"
+                  ]
+                },
+                "birim": {
+                  "enum": [
+                    "kagit",
+                    "zemin",
+                    "piksel"
+                  ]
+                },
+                "renk": {
+                  "type": "string",
+                  "pattern": "^#[0-9A-Fa-f]{8}$"
+                },
+                "dolgu_renk": {
+                  "type": "string",
+                  "pattern": "^#[0-9A-Fa-f]{8}$"
+                },
+                "kalinlik": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "aci": {
+                  "type": "integer"
+                },
+                "etkin": {
+                  "type": "boolean"
+                },
+                "opaklik": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "uc": {
+                  "enum": [
+                    "duz",
+                    "yuvarlak",
+                    "kare"
+                  ]
+                },
+                "birlesim": {
+                  "enum": [
+                    "kose",
+                    "yuvarlak",
+                    "pah"
+                  ]
+                },
+                "gorsel": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "yerlesim": {
+                  "enum": [
+                    "aralik",
+                    "tepe",
+                    "ilk",
+                    "son",
+                    "orta"
+                  ]
+                },
+                "desen": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "ifadeler": {
+                  "type": "object"
+                },
+                "boyut": {
+                  "oneOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "deger",
+                        "birim"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "deger": {
+                          "type": "integer",
+                          "minimum": -2147483648,
+                          "maximum": 2147483647
+                        },
+                        "birim": {
+                          "enum": [
+                            "kagit",
+                            "zemin",
+                            "piksel"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                "aralik": {
+                  "oneOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "deger",
+                        "birim"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "deger": {
+                          "type": "integer",
+                          "minimum": -2147483648,
+                          "maximum": 2147483647
+                        },
+                        "birim": {
+                          "enum": [
+                            "kagit",
+                            "zemin",
+                            "piksel"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                "aralik_y": {
+                  "oneOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "deger",
+                        "birim"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "deger": {
+                          "type": "integer",
+                          "minimum": -2147483648,
+                          "maximum": 2147483647
+                        },
+                        "birim": {
+                          "enum": [
+                            "kagit",
+                            "zemin",
+                            "piksel"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                "kaydirma": {
+                  "oneOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "deger",
+                        "birim"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "deger": {
+                          "type": "integer",
+                          "minimum": -2147483648,
+                          "maximum": 2147483647
+                        },
+                        "birim": {
+                          "enum": [
+                            "kagit",
+                            "zemin",
+                            "piksel"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                "faz": {
+                  "oneOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "deger",
+                        "birim"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "deger": {
+                          "type": "integer",
+                          "minimum": -2147483648,
+                          "maximum": 2147483647
+                        },
+                        "birim": {
+                          "enum": [
+                            "kagit",
+                            "zemin",
+                            "piksel"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

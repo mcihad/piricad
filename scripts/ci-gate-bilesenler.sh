@@ -36,19 +36,10 @@ fail=0
 # ---- 1. no raw control outside the set ---------------------------------------
 raw='new (QPushButton|QCheckBox|QRadioButton|QSlider|QSpinBox|QDoubleSpinBox|QProgressBar|QGroupBox|QDialogButtonBox|QComboBox)\b'
 
-# THE ONE ALLOWANCE. The style designer's per-layer property form drives its
-# numeric editors — width, size, interval, spacing, phase, opacity — through the
-# `QSpinBox` value API, three constructions in a 2 500-line file with its own
-# visual gates; rebuilding that form is that file's own change, not a side
-# effect of this one. Everything else in the designer — footer, gallery button,
-# colour lock, unit segment — is already on the set. The ceiling is the count on
-# the day this gate landed and it may only go DOWN: a new raw control there fails
-# like anywhere else.
-#
-# Removal condition: the designer's property rows are rebuilt on `FormRow` and
-# `Field`, at which point this block is deleted.
+# The designer's numeric controls now come from MeasureSpinBox. Keep the old
+# named allowance at zero so no raw spin box can be reintroduced there.
 allow_file="src/app/src/style_designer.cpp"
-allow_max=3
+allow_max=0
 
 while IFS= read -r hit; do
     file="${hit%%:*}"
@@ -162,6 +153,8 @@ else
     bekle "[bilesen] uyarı şeridi · warn"
     bekle "[bilesen] yükleniyor · etkin · 2 px"
     bekle "[bilesen] açılır liste · 3 seçenek · 30 px"
+    bekle "[bilesen] ölçü · milimetre · 30 px"
+    bekle "[bilesen] ölçü dönüşümü · mm / px / açı / yüzde · tamam"
     bekle "[bilesen] ifade · renkli · 30 px"
     bekle "[bilesen] tablo · 3 satır"
 
@@ -187,5 +180,5 @@ if [[ $fail -ne 0 ]]; then
     exit 1
 fi
 
-echo "bilesenler: OK — /src/app'te ham Qt denetimi yok (tasarımcının adlandırılmış payı dışında),"
+echo "bilesenler: OK — /src/app'te ham Qt denetimi yok,"
 echo "bilesenler:   altı rolün ve üç boyun kuralı var, canlı standart standardın sayılarını veriyor"

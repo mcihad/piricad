@@ -2783,12 +2783,6 @@ void MapCanvas::buildOverlay()
     buildBrokenLinks();
     buildPreviewGhosts();
     buildComposeTrace();
-    // THE BADGE OF A CLICK ON SEVERAL THINGS, beside and below where it landed.
-    if (!pick_badge_.empty()) {
-        const render::ScreenPointF at = render::to_f(view_.to_screen(pick_badge_at_));
-        addReadout(at.x + 16.0F, at.y + 22.0F, pick_badge_);
-    }
-
     guide_vertices_ = 0;
     guide_label_.clear();
 

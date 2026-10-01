@@ -80,6 +80,8 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `proje/19-sonuc-argumanli.pcad` | a result's origin with the arguments it was run with (TODOS F-04, stage 3): a buffer whose well moved, which can be computed again after a reopen |
 | `proje/20-sonuc-argumani-tasan.pcad` | the same with the arguments' string index past the pool — refused by name |
 | `proje/21-yay-bagi.pcad` | format 6: a caption tied to an arc of a round zone, its offset measured round the arc (the attachment record's flag byte, model.md R46g) — `min_reader_version` 6 |
+| `proje/24-sembol-faz-birimi.pcad` | marker interval in pixels and phase in ground millimetres: the optional phase and phase-unit columns must survive reopening |
+| `proje/25-sembol-faz-birimi-bozuk.pcad` | the same drawing with an invalid phase unit; the reader refuses it without changing the open document |
 | `proje/13-tarih-yuvalari.pcad` | written by the build before format 3: geometry slots no row holds (a moved point's ada number, a moved-then-corrected caption, a moved line's XDATA) — the history the reader must pass over, and the file it used to refuse (io.md R10a) |
 | `dxf/01-cizgi-ve-parsel.dxf` | a line and a parcel with a hole, with its `.prj` companion |
 | `dxf/02-koordinat-sistemsiz.dxf` | no CRS anywhere — the io.md R20 rejection path |

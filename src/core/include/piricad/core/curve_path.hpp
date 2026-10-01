@@ -23,19 +23,12 @@
 // strengths.
 //
 // ELLIPSES AND SPLINES ARE PATHS TOO, for the tools that can take them
-// (`PathScope::Curves`). Their crossings have no closed form a solver can
-// trust, so they are found the way every CAD kernel finds them: candidates
-// where the drawn chords of the two curves cross or pass within the chords'
-// own deviation, each refined by Newton's method on the exact curves
-// (`core/src/curve_eval.hpp`). OPENCASCADE IS THE GEOMETRY KERNEL NOW
-// (CLAUDE.md 2.11, core/kernel.hpp), which supersedes the reading this comment
-// used to record — that OCCT was weighed for this solve and turned down because
-// a prebuilt kernel's operation order is not pinned; its arithmetic is held to
-// §7.3 by the millimetre rounding and the golden fixtures instead. These
-// crossings move to it in TODOS O-5, and until then the hand-rolled solve
-// stays, with its one virtue kept: it SAYS when it could not decide — a
-// candidate the refinement cannot settle is reported, never silently dropped
-// (`PathMeets::unresolved`).
+// (`PathScope::Curves`). Their intersections are computed by OpenCASCADE's
+// exact 2D curve intersector through `kernel_meets` (TODOS O-5), including
+// rational B-splines, partial and reversed ellipses, tangencies and shared
+// stretches. The adapter uses local millimetres and returns each point rounded
+// ONCE. A failed kernel solve sets `PathMeets::unresolved`, never an empty
+// success. This supersedes the former chord-candidate / Newton implementation.
 //
 // TANGENCY AND OVERLAP ARE SAID, NOT GUESSED. A line that touches a circle meets
 // it at one point marked `touching`; two collinear segments share a stretch

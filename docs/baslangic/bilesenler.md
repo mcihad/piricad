@@ -30,6 +30,15 @@ aynı renklerde çizilir; bir pencerede öğrendiğiniz kural hepsinde geçerlid
   çevresinde iki piksellik mavi halka görünür; fareyle tıkladığınızda görünmez. Halka
   "klavye şu an burada" demektir.
 
+## Ölçü alanı
+
+Stil tasarımcısının ölçü alanı, kalınlığı **0,25 mm**, kaydırmayı **−0,375 mm**
+gibi okunur değerlerle gösterir. Virgüllü ve noktalı sayı girişini kabul eder.
+Piksel, hassas açı ve yüzde alanları aynı denetimi kullanır. Açı altı ondalık
+basamağa kadar gösterilir. Stil birimi değiştirilince değer, önizleme ölçeğinde
+görünür boyutu koruyacak biçimde dönüştürülür; piksel adımı 1 px olur.
+Girdi 30 px yüksekliğindedir, sayı klavyeyle ya da ok tuşlarıyla değiştirilir.
+
 ## Düğmeler
 
 Altı rol vardır. Rol, düğmenin ne kadar önemli olduğunu ve ne yapacağını söyler:
@@ -98,7 +107,8 @@ kaynak nesnesi). Kutuya değeri yazabilirsiniz — nokta için `x,y` metre, nesn
 ya da sağdaki **nişan düğmesine** basarsınız: düğme basılı kalır, kutu "sahneden
 seçiliyor…" der, durum satırı ne istendiğini söyler ve fare işaretçisi seçim işaretçisine
 döner. Tuvalde bir tık kutuyu doldurur: nokta seçerken köşeler yakalanır, nesne seçerken
-tıkladığınız yerde birden çok nesne varsa ilki alınır ve **Boşluk** sıradakine geçer; **Enter**
+tıkladığınız yerde birden çok nesne varsa çerçeveli liste açılır. Tür, katman veya kimlikle
+arayabilir ve istediğiniz satıra tıklayabilirsiniz; **Boşluk** sıradakine geçer, **Enter**
 seçileni alana yazar. **Esc** ya da sağ tık
 vazgeçer, düğmeye yeniden basmak da. Seçim yapılırken çizim seçimi değişmez.
 
@@ -241,7 +251,7 @@ bir not — `TAKBİS'ten çekildi · 14.03.2019` — vardır.
 | Pencere | Kullandığı bileşenler |
 |---|---|
 | **Ayarlar** ve **Proje Ayarları** | anahtar, açılır liste, sayı girdisi, renk kutusu; alt bantta hayalet `Varsayılanlara dön`, ikincil `İptal` / `Uygula`, birincil `Tamam` |
-| **Katman Özellikleri** | `Milimetre \| Harita birimi \| Piksel` segmenti, sınıf tablosu, `{ }` veriye bağlama düğmeleri, renk kilidi onay kutusu, menülü `Stil` düğmesi |
+| **Katman Özellikleri** | `Kâğıt mm`, `Zemin m`, `Piksel px` birim kutuları, sınıf tablosu, `{ }` veriye bağlama düğmeleri, renk kilidi onay kutusu, menülü `Stil` düğmesi |
 | **Öznitelik Tablosu** | tablo, ifade çubuğu, `Tablo \| Form` segmenti, birincil `Filtrele`, hücre içi girdiler |
 | **Yeni Sütun** | üstte etiketli form satırları, zorunlu işaretleri, birincil `Tanımla` |
 | **İçe Aktar** | ikincil `Gözat…`, bırakma çerçevesi, yükleme çizgisi, ikincil `Okumayı durdur`, uyarı şeritleri, `Katmanlar \| Alanlar` segmenti, işaret listeleri, hayalet `Tümü` / `Hiçbiri`, ikincil `İptal`, birincil `İçe aktar` |

@@ -26,11 +26,12 @@ bool looks_like_svg(std::span<const std::byte> bytes)
 /// `QSvgRenderer` is Qt's own SVG engine and it is the one QGIS rasterises its SVG
 /// markers through as well, so a symbol authored for one draws the same in the
 /// other. Nothing is hand-rolled here and nothing needs to be.
-QImage rasterise(std::span<const std::byte> bytes, int size)
+QImage rasterise(std::span<const std::byte> bytes, int size, std::uint32_t ink)
 {
-    const QByteArray data(reinterpret_cast<const char*>(bytes.data()),
-                          static_cast<qsizetype>(bytes.size()));
+    QByteArray data(reinterpret_cast<const char*>(bytes.data()),
+                    static_cast<qsizetype>(bytes.size()));
 
+    data.replace("currentColor", QColor::fromRgba(ink).name(QColor::HexRgb).toUtf8());
     QSvgRenderer renderer;
     if (!renderer.load(data)) return {};
 
@@ -85,11 +86,11 @@ QImage keyed(QImage image)
 
 } // namespace
 
-QImage decode_symbol_image(std::span<const std::byte> bytes, int wanted_px)
+QImage decode_symbol_image(std::span<const std::byte> bytes, int wanted_px, std::uint32_t ink)
 {
     if (bytes.empty()) return {};
 
-    if (looks_like_svg(bytes)) return rasterise(bytes, std::clamp(wanted_px, 8, 512));
+    if (looks_like_svg(bytes)) return rasterise(bytes, std::clamp(wanted_px, 8, 1024), ink);
 
     QImage image;
     image.loadFromData(reinterpret_cast<const uchar*>(bytes.data()),

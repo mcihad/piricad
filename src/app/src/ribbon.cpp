@@ -343,7 +343,11 @@ void RibbonBar::paintContextCategoryTab(QPainter& painter, const QString& /*titl
     // edge — visible whether the tab is chosen or not.
     const SARibbonTabBar* tabs = const_cast<RibbonBar*>(this)->ribbonTabBar();
     const int top              = tabs != nullptr ? tabs->y() + 2 : contextRect.top();
-    const QRectF cap(contextRect.left() + 2.0, top, contextRect.width() - 4.0, 3.0);
+    // SARibbon has already removed tabMargin() from contextRect. Restore it
+    // before insetting both edges equally; the default left-only 6 px margin
+    // otherwise shifts the cap's centre to the right of its folder tab.
+    const QRect tabRect = tabs != nullptr ? contextRect + tabs->tabMargin() : contextRect;
+    const QRectF cap(tabRect.left() + 2.0, top, tabRect.width() - 4.0, 3.0);
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setPen(Qt::NoPen);

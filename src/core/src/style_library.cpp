@@ -188,7 +188,11 @@ std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageRe
             if (draws_marker(l.type)) declared_marker = true;
         }
 
-        if (!row.layers.empty() && (declared_fill || declared_stroke || declared_marker))
+        if (!row.geometry.empty())
+            entry.kind = row.geometry == "alan"    ? SymbolKind::Area
+                         : row.geometry == "cizgi" ? SymbolKind::Line
+                                                   : SymbolKind::Point;
+        else if (!row.layers.empty() && (declared_fill || declared_stroke || declared_marker))
             entry.kind = declared_fill     ? SymbolKind::Area
                          : declared_stroke ? SymbolKind::Line
                                            : SymbolKind::Point;

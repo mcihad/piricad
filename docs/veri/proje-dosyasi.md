@@ -22,7 +22,7 @@ kullanın.
 |---|---|
 | Koordinat sistemi ve katalog paket sürümü | Hangi mevzuata göre çizildiği bilinmeyen bir belge sessizce açılmamalıdır |
 | Katmanlar: ad, açıklama, görünürlük, kilit, renk, ölçek sınırları, saydamlık | Katman kaydının saklanan her alanı |
-| Stil tablosu | Nesne başına renk, kalınlık, tarama, dolgu ve çizim sırası |
+| Stil tablosu ve sembol katmanları | Nesne başına renk, kalınlık, tarama, dolgu, çizim sırası ve SVG görselleri. İşaretçi aralığıyla ilk işaretçinin başlangıç mesafesi kendi birimleriyle saklanır; kaydedip açınca yerleşim değişmez |
 | Nesne satırları: sınırlayıcı kutu, bayraklar, katman, stil, tür, geometri yuvası | Ekranın ilk karesi dosyadan gelir, yeniden hesaplanmaz |
 | **Nesne ve katman anahtarları** | "Bu parsel hangisiydi?" hukuki bir sorudur; anahtar kalıcıdır ve asla yeniden kullanılmaz |
 | Silinmiş nesnelerin satırları | Silinen bir nesnenin anahtarı boşta kalır; boşluk korunmazsa o anahtar başka bir parsele verilir |

@@ -141,11 +141,11 @@ struct Meets
 {
     std::vector<Hit> hits;      ///< ordered along the first piece
     std::vector<Span> overlaps; ///< shared stretches
-    bool unresolved{false};     ///< a candidate the refinement could not settle
+    bool unresolved{false};     ///< the kernel could not settle the intersection
 };
 
 /// Every meet of two pieces, at least one of them an ellipse or a spline — the
-/// chords' candidates refined by Newton's method on the exact curves.
+/// exact curves intersected by OpenCASCADE through `core/kernel.hpp`.
 Meets meets(const PathPiece& p, const PathPiece& q);
 
 /// The box the piece's curve occupies, in the drawing.

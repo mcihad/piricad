@@ -14,7 +14,7 @@
 //
 // What it is NOT: a design for how the GPU path should work. Line widening here
 // is `QPen`, where render.md R5 requires instanced quads expanded in a vertex
-// shader; fills are `QPainterPath` with an odd-even rule, where the GPU path will
+// shader; fills are `QPainterPath` with a nonzero winding rule, where the GPU path will
 // use the stencil buffer; text is a system font, where R8 requires an msdfgen SDF
 // atlas shaped with HarfBuzz. Those are the GPU backend's problems, and keeping
 // them out of the interface is what makes them replaceable.
@@ -309,10 +309,16 @@ private:
     /// Not static, unlike the vector paths below: a raster pass reads the decoded
     /// picture cache, which belongs to this backend and outlives the frame.
     void drawPass(QPainter& painter, const render::PassStyle& ps,
-                  const render::PolylineBatch& stroke, const render::PolygonBatch& fill, double cx,
-                  double cy)
+                  const render::PolylineBatch& originalStroke, const render::PolygonBatch& fill,
+                  double cx, double cy)
     {
         using core::SymbolLayerType;
+        const bool shifted =
+            ps.offset_px != 0.0f &&
+            (ps.type == SymbolLayerType::SimpleLine || ps.type == SymbolLayerType::RasterLine ||
+             ps.type == SymbolLayerType::MarkerLine || ps.type == SymbolLayerType::HashLine);
+        if (shifted) render::offset_polyline(originalStroke, double(ps.offset_px), offsetStroke_);
+        const auto& stroke = shifted ? offsetStroke_ : originalStroke;
 
         switch (ps.type) {
         case SymbolLayerType::SimpleFill: drawSimpleFill(painter, fill, ps, cx, cy); break;
@@ -352,24 +358,30 @@ private:
         }
     }
 
-    /// The rings of a fill batch as one path with the odd-even rule.
-    ///
-    /// Odd-even winding is what punches the holes out: a courtyard ring inside its
-    /// parcel ring cancels, without this backend having to know which ring was
-    /// declared a hole. The flag is still carried in the draw list because the GPU
-    /// backend will need it explicitly.
+    /// Same-style faces share a path: exteriors add coverage and declared holes
+    /// subtract it. Odd-even would erase the overlap of two independent parcels.
     static QPainterPath fillPath(const render::PolygonBatch& batch, double cx, double cy)
     {
         QPainterPath path;
-        path.setFillRule(Qt::OddEvenFill);
+        path.setFillRule(Qt::WindingFill);
 
         std::size_t offset = 0;
-        for (std::uint32_t run : batch.runs) {
+        for (std::size_t ring = 0; ring < batch.runs.size(); ++ring) {
+            const std::uint32_t run = batch.runs[ring];
+            if (run < 3) {
+                offset += run;
+                continue;
+            }
+            const bool reverse = render::fill_ring_reversed(
+                std::span(batch.xs).subspan(offset, run), std::span(batch.ys).subspan(offset, run),
+                ring < batch.is_hole.size() && batch.is_hole[ring] != 0);
             path.moveTo(cx + static_cast<double>(batch.xs[offset]),
                         cy - static_cast<double>(batch.ys[offset]));
-            for (std::uint32_t v = 1; v < run; ++v)
-                path.lineTo(cx + static_cast<double>(batch.xs[offset + v]),
-                            cy - static_cast<double>(batch.ys[offset + v]));
+            for (std::uint32_t v = 1; v < run; ++v) {
+                const std::uint32_t at = reverse ? run - v : v;
+                path.lineTo(cx + static_cast<double>(batch.xs[offset + at]),
+                            cy - static_cast<double>(batch.ys[offset + at]));
+            }
             path.closeSubpath();
             offset += run;
         }
@@ -590,12 +602,14 @@ private:
         // A VECTOR picture is rasterised at the size it will be drawn at, so the
         // cache is keyed on that size too.
         const int bucket        = std::clamp(wanted_px, 8, 512);
-        const std::uint64_t key = ps.image_key ^ (static_cast<std::uint64_t>(bucket) << 48);
+        const std::uint64_t key = ps.image_key ^ (static_cast<std::uint64_t>(bucket) << 48) ^
+                                  (static_cast<std::uint64_t>(ps.line_rgba) << 16);
 
         const auto it = images_.find(key);
         if (it != images_.end()) return it->second;
 
-        return images_.emplace(key, decode_symbol_image(ps.image, bucket)).first->second;
+        return images_.emplace(key, decode_symbol_image(ps.image, bucket, ps.line_rgba))
+            .first->second;
     }
 
     /// The picture tiled into the face — a MPYY `tarama`.
@@ -681,7 +695,12 @@ private:
         applyInkComposition(painter, ps);
 
         std::size_t offset = 0;
+        std::size_t ring   = 0;
         for (std::uint32_t run : batch.runs) {
+            if (ring < batch.is_hole.size() && batch.is_hole[ring++]) {
+                offset += run;
+                continue;
+            }
             double min_x = 1e30, max_x = -1e30, min_y = 1e30, max_y = -1e30;
             for (std::uint32_t v = 0; v < run; ++v) {
                 const double x = cx + static_cast<double>(batch.xs[offset + v]);
@@ -815,6 +834,21 @@ private:
                 const double t = len > 0.0 ? (total * 0.5 - walked) / len : 0.0;
                 stamp(QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t), 0.0);
                 return;
+            }
+            return;
+        }
+
+        if (ps.fixed_pitch) {
+            std::vector<render::Stamp> positions;
+            render::place_along_run(batch.xs.data() + offset, batch.ys.data() + offset, run,
+                                    ps.placement, interval, double(ps.phase_px), {}, positions,
+                                    true, ps.svg_placement);
+            for (const render::Stamp& position : positions) {
+                const double degrees = ps.picture_rotates ? -std::atan2(double(position.sin_a),
+                                                                        double(position.cos_a)) *
+                                                                180.0 / 3.14159265358979323846
+                                                          : 0.0;
+                stamp(QPointF(cx + double(position.x), cy - double(position.y)), degrees);
             }
             return;
         }
@@ -1197,6 +1231,8 @@ public:
     }
 
 private:
+    render::PolylineBatch offsetStroke_;
+
     /// Draws `[from, to)` of the overlay's batches — and NOT its labels.
     ///
     /// The two used to be one function, and the label loop was not ranged: it drew

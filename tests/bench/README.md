@@ -55,6 +55,15 @@ otherwise a sub-microsecond case reports scheduler jitter as a regression.
 A pending scenario is listed rather than omitted, reports BEKLEMEDE with its
 reason, and never counts as passing.
 
+### Yerel tarama doğrulaması — 1 Ekim 2026
+
+macOS, optimize Clang/OCCT yapısında zoom fazı düzeltmesi sonrası
+`render.pan_zoom_5m` sahne kurma ölçümü **0.003 ms**. Gerçek QRhi penceresinde
+20 karelik ortanca: `desen-yuku.json` **0.359 ms / 81 çizim çağrısı**,
+`yogun-tarama.json` **0.128 ms / 27 çağrı**. İki sahne de 16 ms ve 100 çağrı
+bütçeleri içinde. Kayıtlı Linux temel değeri farklı makineye ait olduğundan
+yüzde regresyon karşılaştırması yapılmaz; bunlar yerel doğrulama ölçümleridir.
+
 ## Fixtures
 
 `fixtures.hpp` generates the cadastral grid deterministically: a five-million

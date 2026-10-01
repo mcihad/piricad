@@ -376,23 +376,15 @@ PIRICAD_SETTING(vektor_kutuphanesi)
         .names    = {"vektör_paketi", "vektor_paketi", "vector_library", "vektör"},
         .type     = SettingType::Text,
         .scope    = SettingScope::App,
-        .fallback = text_value(
-            "data/catalogs/mpyy-vektor/plan-gosterim.json"), // catalog-key: a path into
-                                                             // /data/catalogs, not a value
-        .range   = SettingRange::unbounded(),
-        .values  = {},
-        .unit    = "",
-        .summary = "Resimli paketin ÜSTÜNE yüklenecek vektör gösterim paketi. Raf her " // ui-label
-                   "kimlikten bir satır tutar ve aynı kimliği yeniden bildiren paket "
-                   "öncekinin yerine geçer: burada yeniden çizilmiş bir satır "
-                   "ekin resmini değiştirir, çizilmemiş olan resmiyle kalır ve eksilmez. "
-                   "Bir resim yeniden renklendirilemez, keskin ölçeklenemez, DWG'ye "
-                   "çizgi tipi olarak yazılamaz ve köşe dönemez — vektörü bunların "
-                   "hepsini yapar. Ayrı bir ayardır çünkü bir metin ayarı 48 bayt alır "
-                   "ve iki yol birlikte sığmaz. Boş bırakılırsa yalnız resimli paket "
-                   "yüklenir. Hangi paketin kurulu olduğu makineye ait olduğu için "
-                   "uygulama kapsamındadır.",
-        .section = "Veri Kaynakları", // ui-label
+        .fallback = text_value(""), // catalog-key: a path into
+                                    // /data/catalogs, not a value
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Sistem sembol kitaplığının üstüne yüklenecek ek paketin yolu. " // ui-label
+                    "Aynı kimlikli semboller ek paketten alınır. Boş bırakılırsa yalnız "
+                    "ana kitaplık yüklenir. Bu makineye ait bir uygulama ayarıdır.",
+        .section  = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -1159,17 +1151,16 @@ PIRICAD_SETTING(sembol_kutuphanesi)
         .type     = SettingType::Text,
         .scope    = SettingScope::App,
         .fallback = text_value(
-            "data/catalogs/mpyy/plan-gosterim.json"), // catalog-key: a path into /data/catalogs,
-                                                      // not a value out of it
+            "data/styles/assets/system-library.json"), // catalog-key: a path into /data/catalogs,
+                                                       // not a value out of it
         .range   = SettingRange::unbounded(),
         .values  = {},
         .unit    = "",
-        .summary = "Açılışta sembol rafına yüklenecek gösterim paketinin yolu. " // ui-label
-                   "Yönetmeliğin kendi paketidir ve satırlarını ekin BASTIĞI resimlerle "
-                   "taşır; vektör hâli 'vektör_paketi' ayarıyla bunun üstüne yazılır. "
-                   "Kapsamı uygulama, çünkü hangi paketin kurulu olduğu makineye aittir, "
-                   "çizime değil: bir çizim kullandığı sembolleri kendi içinde taşır ve "
-                   "rafı boş bir makinede de aynı açılır. Boş bırakılırsa raf boş başlar.",
+        .summary = "Açılışta yüklenecek sembol kitaplığının yolu. Varsayılan kitaplık " // ui-label
+                   "KentOS sistem sembollerini ve kategori ağacını taşır. Çizim kullandığı "
+                   "sembol ve görselleri içinde saklar; kitaplığın kurulu olmadığı bir "
+                   "makinede de aynı açılır. Boş bırakılırsa kitaplık boş başlar. "
+                   "Kitaplığın yolu uygulama tercihidir; kullanılan semboller projede saklanır.",
         .section = "Veri Kaynakları", // ui-label
     };
 }

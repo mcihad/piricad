@@ -2,15 +2,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: a click that hits several objects takes one AND LETS THE HAND WALK TO THE
-# OTHERS IN PLACE — no window — and the one kept holds.
+# OTHERS IN PLACE — a framed non-modal list — and the one kept holds.
 #
 # THE PROBLEM IT GUARDS. A click on a plan sheet lands on a parcel, on the ada
 # round it and on a road drawn through, all at zero distance, and the user has
 # to be able to say which one. It used to be a modal list; the user found that
 # clumsy and chose the walk other programs use (Netcad's Space through nested
 # areas, MicroStation's reset, AutoCAD's cycling): the first candidate is taken
-# at once, a badge beside the click says which of how many, Space and Shift+Space
-# walk on and back, Enter keeps, Esc puts the selection back.
+# at once. The framed, non-modal list now also offers direct row choice, search
+# and Home/End for large candidate sets (1 October 2026 user request). Space and
+# Shift+Space still walk on and back, Enter keeps, Esc puts the selection back.
 #
 # THE ORDER IS `core::pick_all`'s: nearest first, and among what the point is on
 # or inside, the SMALLEST first — the road (no area), the parcel, then the ada.
@@ -97,9 +98,19 @@ bekle "[secim] geri: 3/3 · ALAN · ADA · 3 600.00 m² — Boşluk: sıradaki |
 bekle "[secim] enter: 1 nesne, kimlik 2 | rozet yok"
 bekle "[secim] esc: 1 nesne, kimlik 2 | rozet yok"
 
+# The large candidate set is chosen directly, searched and clicked. An empty
+# search cannot commit an invisible candidate; Esc restores the prior choice.
+bekle "[secim] liste: 20 | görünür 1 | çerçeve 1 | tuval içinde 1"
+bekle "[secim] son: 20 | 1 nesne, kimlik 20"
+bekle "[secim] ilk: 1 | 1 nesne, kimlik 3"
+bekle "[secim] arama: 1 satır | 1 nesne, kimlik 20"
+bekle "[secim] satır: 1 nesne, kimlik 20 | liste kapalı"
+bekle "[secim] boş arama: -1 | seçim bekliyor 1"
+bekle "[secim] arama esc: 1 nesne, kimlik 20 | liste kapalı"
+
 if [[ $fail -ne 0 ]]; then
     exit 1
 fi
 
-echo "secim-listesi: OK — üç nesnenin üstüne tıklama pencere açmadan ilkini alıyor; rozet,"
-echo "secim-listesi:   Boşluk, Shift+Boşluk, Enter ve Esc yerinde çalışıyor"
+echo "secim-listesi: OK — çerçeveli liste, 20 adayda doğrudan seçim/arama/tıklama;"
+echo "secim-listesi:   Boşluk, Shift+Boşluk, Home/End, Enter ve Esc yerinde çalışıyor"

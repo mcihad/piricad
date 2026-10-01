@@ -17,6 +17,10 @@
 
 namespace piricad::render {
 
+/// Additional placements declared by imported vector motifs. They live with
+/// the SVG resource, so reading an older document needs no file-format change.
+enum class SvgPlacement : std::uint8_t { Default, InnerVertex, SegmentCentre };
+
 /// One symbol layer of one style, resolved to this frame's pixels.
 ///
 /// The scene builder walks each symbol's stack and produces one PASS per layer;
@@ -34,21 +38,23 @@ struct PassStyle
     core::LineCap cap{core::LineCap::Round};                          ///< how a stroke ends
     core::LineJoin join{core::LineJoin::Round};                       ///< how segments meet
 
-    float size_px{0.0f};      ///< marker diameter, or hash tick length
-    float interval_px{0.0f};  ///< spacing along a line, or the first pattern axis
-    float spacing_y_px{0.0f}; ///< the second pattern axis; 0 means square
-    float offset_px{0.0f};    ///< perpendicular offset from the geometry
-    float phase_px{0.0f};     ///< distance ALONG the line before the first marker
+    float size_px{0.0f};        ///< marker diameter, or hash tick length
+    float interval_px{0.0f};    ///< spacing along a line, or the first pattern axis
+    float spacing_y_px{0.0f};   ///< the second pattern axis; 0 means square
+    float offset_px{0.0f};      ///< perpendicular offset from the geometry
+    bool fixed_pitch{false};    ///< keep source marker spacing, including an explicit zero phase
+    bool picture_rotates{true}; ///< source SVG marks may stay upright along a line
+    SvgPlacement svg_placement{SvgPlacement::Default}; ///< placement from the SVG resource
+    float phase_px{0.0f}; ///< distance ALONG the line before the first marker
 
     std::int32_t angle_udeg{0}; ///< pattern angle, or glyph rotation
     std::uint8_t opacity{255};  ///< multiplied into this layer's colours
 
-    /// A line pattern's ANCHOR: a point its lines pass through, on the ground,
-    /// in pixels from the view centre (x right, y up) like the batch vertices.
-    /// Worked out by the scene in double from the world — the layer's `offset`
-    /// is the lines' distance from the world origin across them — and placed
-    /// within one spacing of the view centre, so the float stays small (TODOS
-    /// C-11: the pattern belongs to the ground, not to the screen).
+    /// A line pattern's anchor, in pixels from the view centre (x right, y up).
+    /// Ground intervals use the world origin; paper/pixel intervals use the
+    /// output origin. The scene applies `offset` across the lines in double and
+    /// reduces the anchor to one spacing from the centre before narrowing, so
+    /// neither large ground coordinates nor zoom can perturb the pattern phase.
     float anchor_x{0.0f};
     float anchor_y{0.0f};
     bool anchored{false};
@@ -151,6 +157,13 @@ struct PolygonBatch
     std::vector<std::uint32_t> runs;   ///< vertex count of each ring
     std::vector<std::uint8_t> is_hole; ///< parallel to runs
 };
+
+/// Whether to reverse a pixel-space fill ring so exteriors wind counter-clockwise
+/// and holes clockwise. Both backends use these directions with nonzero winding:
+/// overlapping faces add coverage; only an explicitly declared hole subtracts it.
+/// This changes drawing order only, never the stored geometry. No allocation.
+bool fill_ring_reversed(std::span<const float> xs, std::span<const float> ys,
+                        bool is_hole) noexcept;
 
 /// One caption, resolved to screen space.
 ///

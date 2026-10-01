@@ -15,6 +15,7 @@
 #include <QImage>
 
 #include <cstddef>
+#include <cstdint>
 #include <span>
 
 namespace piricad::app {
@@ -31,6 +32,7 @@ namespace piricad::app {
 /// the drawing says there is a picture and this build cannot read it — and the
 /// caller is expected to cache the null so the failure costs one attempt rather
 /// than one per frame.
-QImage decode_symbol_image(std::span<const std::byte> bytes, int wanted_px);
+QImage decode_symbol_image(std::span<const std::byte> bytes, int wanted_px,
+                           std::uint32_t ink = 0xFF000000u);
 
 } // namespace piricad::app

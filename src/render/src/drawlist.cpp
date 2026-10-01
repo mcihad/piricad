@@ -5,6 +5,26 @@
 
 namespace piricad::render {
 
+bool fill_ring_reversed(std::span<const float> xs, std::span<const float> ys, bool is_hole) noexcept
+{
+    if (xs.size() < 3 || xs.size() != ys.size()) return false;
+
+    // Orientation of decorative screen vertices, not a document area calculation.
+    // Translate to the first vertex before multiplying, as the model does: a
+    // face far from the centre must not lose its winding through cancellation.
+    double area     = 0.0;
+    const double x0 = static_cast<double>(xs[0]);
+    const double y0 = static_cast<double>(ys[0]);
+    for (std::size_t i = 1; i + 1 < xs.size(); ++i) {
+        const double ax = static_cast<double>(xs[i]) - x0;
+        const double ay = static_cast<double>(ys[i]) - y0;
+        const double bx = static_cast<double>(xs[i + 1]) - x0;
+        const double by = static_cast<double>(ys[i + 1]) - y0;
+        area += ax * by - ay * bx;
+    }
+    return area != 0.0 && ((area < 0.0) != is_hole);
+}
+
 EdgeStamps distribute_along(double length, double interval, double margin) noexcept
 {
     if (length <= 0.0 || interval <= 0.0 || margin < 0.0) return {};

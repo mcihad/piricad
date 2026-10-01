@@ -197,6 +197,7 @@ struct StyleEntry
     std::string id;         ///< stable forever; a retired id is never reused (data.md R5)
     std::string label;      ///< Turkish, what a user reads in the legend
     std::string source_ref; ///< the annex/article this row encodes, verbatim from /data
+    std::string geometry;   ///< declared alan/cizgi/nokta; empty for legacy inference
 
     /// Where this row sits in the package's OWN tree, outermost name first.
     ///

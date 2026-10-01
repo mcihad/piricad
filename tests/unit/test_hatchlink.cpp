@@ -94,6 +94,59 @@ struct Rig
 
 } // namespace
 
+TEST_CASE("TARAMA ÖRTÜŞMESİ: ayrı alanlar aynı yönde, yalnız gerçek delikler ters çizilir")
+{
+    // Regression for same-style faces cancelling one another in a shared mask.
+    // ALAN accepts either drawing direction; roles, not digitising direction,
+    // must decide which ring subtracts coverage. The document stays unchanged.
+    Rig r;
+    r.run("KATMAN ad=ORTUSME");
+    r.run("STİL katman=ORTUSME tip=cizgi-desen-dolgu aralik=12 aralik_birim=piksel");
+    r.run("ALAN 0,0 60,0 60,60 0,60 10,10 25,10 25,25 10,25 bolum=4 bolum=4");
+    r.run("ALAN 30,20 30,80 90,80 90,20"); // opposite direction, separate face
+    r.run("ALAN 17,13 23,13 23,22 17,22"); // another face inside the first one's hole
+    const auto before = r.doc.content_hash();
+    render::ViewTransform view;
+    view.set_viewport(1000, 1000);
+    view.set_centre({45'000, 40'000}, 100);
+    render::DrawList list;
+    render::build_scene(r.doc, view, {}, list);
+    REQUIRE_EQ(list.polygons.size(), 1u); // keep batching, do not split per object
+    const auto& batch = list.polygons.front();
+    REQUIRE_EQ(batch.runs.size(), 4u);
+    REQUIRE_EQ(batch.is_hole, (std::vector<std::uint8_t>{0, 1, 0, 0}));
+    std::size_t offset = 0;
+    for (std::size_t ring = 0; ring < batch.runs.size(); ++ring) {
+        const auto n       = batch.runs[ring];
+        const bool hole    = batch.is_hole[ring] != 0;
+        const bool reverse = render::fill_ring_reversed(
+            std::span(batch.xs).subspan(offset, n), std::span(batch.ys).subspan(offset, n), hole);
+        std::vector<Point2> drawn;
+        for (std::uint32_t v = 0; v < n; ++v) {
+            const auto at = offset + (reverse ? n - 1 - v : v);
+            drawn.push_back(
+                {static_cast<core::Mm>(batch.xs[at]), static_cast<core::Mm>(batch.ys[at])});
+        }
+        CHECK((core::signed_ring_area(drawn) < 0) == hole);
+        offset += n;
+    }
+    CHECK_EQ(r.doc.content_hash(), before);
+}
+
+TEST_CASE("TARAMA ÖRTÜŞMESİ: içbükey ekran halkasının yönü, kapanış ve uzak konumdan etkilenmez")
+{
+    // Concave fans contain triangles of both signs: their SUM decides the ring.
+    const std::array<float, 7> xs{10000, 10080, 10080, 10020, 10020, 10000, 10000};
+    const std::array<float, 7> ys{10000, 10000, 10020, 10020, 10080, 10080, 10000};
+    CHECK_FALSE(render::fill_ring_reversed(xs, ys, false));
+    CHECK(render::fill_ring_reversed(xs, ys, true));
+    const std::vector<float> back_x(xs.rbegin(), xs.rend());
+    const std::vector<float> back_y(ys.rbegin(), ys.rend());
+    CHECK(render::fill_ring_reversed(back_x, back_y, false));
+    CHECK_FALSE(render::fill_ring_reversed(back_x, back_y, true));
+    CHECK_FALSE(render::fill_ring_reversed({}, {}, false));
+}
+
 TEST_CASE("BAĞLI TARAMA: parselin köşesi taşınınca tarama yeni sınıra oturur; tek geri alma adımı")
 {
     Rig r;
@@ -455,6 +508,43 @@ TEST_CASE("TARAMA: ekranda desen yere bağlıdır — sahne çapası desenin kaf
         checked = true;
     }
     CHECK(checked);
+}
+
+TEST_CASE("TARAMA JITTER: zoom büyük koordinatta desenin dünya kafesini değiştirmez")
+{
+    Rig r;
+    r.run("ALAN 485300,4310200 485320,4310200 485320,4310210 485300,4310210");
+    r.run("TARAMA nesneler=1 desen=ANSI37 olcek=1000 baslangic=485303.3,4310201.7");
+    const auto layers = pattern_layers(r, 2);
+    REQUIRE_EQ(layers.size(), 2u);
+    const auto before = r.doc.content_hash();
+    render::ViewTransform view;
+    view.set_viewport(1280, 720);
+    render::DrawList list;
+    for (const double scale : {20.0, 20.0001, 20.1, 20.5, 21.0, 35.3, 40.0, 0.1234567}) {
+        view.set_centre(Point2{485'311'000, 4'310'204'000}, scale);
+        render::build_scene(r.doc, view, render::SceneOptions{}, list);
+        std::size_t family = 0;
+        for (const auto& ps : list.passes) {
+            if (ps.type != core::SymbolLayerType::LinePatternFill) continue;
+            REQUIRE(family < layers.size());
+            const auto& layer = layers[family++];
+            REQUIRE(layer.interval.unit == core::Unit::Ground);
+            REQUIRE(ps.anchored);
+            const auto t = core::sin_cos_udeg(layer.angle_udeg);
+            const double ax =
+                static_cast<double>(view.centre().x) + static_cast<double>(ps.anchor_x) * scale;
+            const double ay =
+                static_cast<double>(view.centre().y) + static_cast<double>(ps.anchor_y) * scale;
+            const double error = std::remainder(-ax * t.sin + ay * t.cos - layer.offset.value,
+                                                static_cast<double>(layer.interval.value));
+            // Only the final small anchor is a float: under 0.01 mm of phase
+            // error at these scales, far below one display pixel.
+            CHECK(std::abs(error) < 0.01);
+        }
+        CHECK_EQ(family, layers.size());
+    }
+    CHECK_EQ(r.doc.content_hash(), before);
 }
 
 TEST_CASE("TARAMADÜZENLE: kılavuzdaki örnek kelimesi kelimesine")

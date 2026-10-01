@@ -291,38 +291,38 @@ zeminli; sağda ölçek ve koordinat sistemi, veri kaynağı durumu (`cloud_done
 
 ## 8. Ekran 2 — Stil Tasarımcısı (Katman Özellikleri)
 
-QGIS'in katman özellikleri diyalogunun mantığı, TERRACAD dilinde. 1280×756 modal; çerçevesi
-ve başlığı sistemindir, adı ve niteliği (`Katman Özellikleri — Kadastro Parselleri`) sistem
-başlık çubuğunda okunur. Diyalogun kendi çizdiği tek krom, altındaki 48 px altlıktır;
-*Yardım* düğmesi bu altlığın sol ucundadır.
+KentOS stil çalışma alanının üç sütunlu düzeni, PiriCAD bileşenleriyle.
+`stil.png` sınıflandırma tablosunun; `form_örnek.png`, `form_örnek_2.png` ve
+`bileşen_standardı.png` etiket, boşluk ve kontrol ölçülerinin referansıdır.
 
-**Sol dikey sekme şeridi (186 px).** Bilgi, Kaynak, **Simgeleyici**, Etiketler, 3B Görünüm,
-Şeffaflık, Ölçek, Öznitelik Formu, Geçerlilik, Eylemler, Bağlantılar, Sürüm.
-Aktif sekme: `inset 2px 0 0 --accent`.
+**Pencere.** 1360×900 başlangıç, 1040×680 minimum. Başlık ve çerçeve işletim
+sisteminindir. Gövde üç sürekli yüzeydir; aralarında ince ayraçlar bulunur.
+İç içe kartlar ve yinelenen bölüm şeritleri yoktur. Altlık 48 px.
 
-**Üst simgeleyici şeridi.** Dört kontrol, her biri 10 px büyük harfli etiketiyle:
-SİMGELEYİCİ (`Kategorize Edilmiş`), DEĞER (ifade alanı — mono, `function` ikonu ile
-ifade düzenleyiciye geçiş), RENK SKALASI (gradyan önizlemeli açılır), SEMBOL BOYUT BİRİMİ
-(segment: Milimetre / Harita birimi / Piksel).
+**Sol sütun (260 px).** Gösterim türü ve gerektiğinde sınıflandırma sütunu,
+sembol katmanları listesi, ekle/çoğalt/sil/sırala araçları. İç kenar payı 16 px.
+Alttaki **Kitaplıktan seç…** ayrı kitaplık penceresini açar.
 
-**Kategori tablosu (sol, esnek).** Kolonlar `34 | 74 | 1fr | 1fr | 86`:
-onay kutusu · sembol önizleme (58×17, %20 dolgu + 1.5 px kontur) · değer (mono) ·
-gösterim adı (düzenlenebilir) · nesne sayısı. `‹diğer›` satırı gri ve en altta.
-Altlık: **Sınıflandır** (birincil), Ekle, Sil, Tümünü sil, *Diğer değerleri birleştir*
-onayı, `Gelişmiş ▾`.
+**Orta sütun (esnek).** Üstte geometri örneği ve yakınlaştırma; altında geniş
+canlı önizleme. Standart örnek ve adalı alan/düz çizgi seçilebilir. Alt not
+önizleme büyütmesini, kâğıt milimetresinin piksel karşılığını ve geometriyi söyler.
 
-**Sembol düzenleyici (sağ, 352 px).** Üstte 96×96 dama zeminli canlı önizleme ve
-**Sembol Katmanları** listesi (Basit dolgu / Çizgi dolgu 45° / Basit kenar çizgisi) +
-ekle, sil, çoğalt, yukarı, aşağı. Altında gruplanmış özellik listesi —
-DOLGU (renk + opaklık, dolgu stili, karışım modu), KENAR (renk, kalınlık mm, çizgi stili,
-birleşim stili), GEOMETRİ (ofset X/Y, döndürme), GÖRÜNÜRLÜK (ölçek aralığı, katman şeffaflığı).
-Satır ızgarası `110px | 1fr | 22px`; üçüncü kolondaki `data_object` ikonu her özelliğin
-**veriye bağlı geçersiz kılma** düğmesidir (ifadeyle sürülen özellik olduğunda `--accent-hi`
-renge döner).
+**Sağ sütun (360 px).** Seçili sembol katmanının adı ve özellikleri. Etiketler
+30 px yüksekliğindeki girdilerin üstünde, 4 px aralıklıdır. İlişkili kısa alanlar
+aynı satırda ikili yerleşir; satırlar arası boşluk 10 px. Tipin kullanmadığı
+alan ve boş satır gizlenir. İç kenar payı 20/18/16/18 px.
 
-**Altlık (48 px).** Solda `Stil ▾` (kopyala/yapıştır/kaydet/yükle) ve
-*Sembolü kütüphaneye kaydet*; sağda İptal · Uygula · **Tamam**. Uygula tuvali kapatmadan
-canlı yeniler.
+**Kategori tablosu.** Yalnız kategorize/derecelendirilmiş gösterimde çalışma
+alanının üstünde bulunur. Sembol, değer, ad ve nesne sayısını gösterir.
+Sınıflandırma sütunu ve renk dağılımı soldaki gösterim grubundadır.
+
+**Kitaplık.** Arama, kaynak kategori ağacı ve gerçek sembol numuneleri.
+KentOS sistem kataloğu `data/styles/assets/system-library.json` içinden yüklenir;
+özgün tanımlar `data/styles/system/` ve `system-library.kstil` içinde tutulur.
+
+**Altlık.** Solda **Stil ▾** ve Yardım, sağda İptal · Uygula · **Tamam**.
+Stil menüsü katman bilgisi ve öznitelik sayfalarına da erişir. Uygula bütün
+sembol yığınını ve görsellerini tek komutla, tek geri alma adımında kaydeder.
 
 ---
 
@@ -593,20 +593,18 @@ Hatalı bir alanın **altında** tek satır neden yazar; alan adıyla aynı hiza
 
 ### 15.2b Renk alanı
 
-Bir renk, formun bir **alanıdır**; yanına iliştirilmiş bir örnek değil. Bu yüzden
-diğer girdilerle aynı genişlikte, aynı yükseklikte durur, değerin kendisiyle
-dolar ve onaltılık karşılığı üstüne yazılır.
+Renk alanı, normal form zemini üzerinde küçük renk örneği ve onaltılık değeri
+birlikte gösterir. KentOS ve `bileşen_standardı.png` referansındaki düzen kullanılır.
 
 | | |
 |---|---|
-| Ölçü | Sütun genişliği × 22 px — komşusu olan açılır kutuyla aynı |
-| Yüzü | Değerin kendisi. Kenarı, değerin `darker(140)` hâli |
-| Yazısı | `#RRGGBB` (saydamsa `#AARRGGBB`), tek aralıklı, ortalanmış |
-| Yazı rengi | Parlaklığa göre siyah ya da beyaz — on altı milyon zeminde de okunur |
-| Dolgusuz | Kesikli kenar, boş yüz, ortada `dolgusuz`. Beyaz **değil**: beyaz bir plan renkidir |
+| Ölçü | Sütun genişliği × 30 px; renk örneği 18 × 18 px |
+| Yüzü | Normal form zemini; yalnız örnek değerin rengiyle boyanır |
+| Yazısı | `#RRGGBB` veya `#AARRGGBB`, tema metin rengiyle okunur |
+| Dolgusuz | Çizili örnek ve `dolgusuz` yazısı |
 
-Değer kullanıcının verisidir, temanın değil: jetondan gelmez ve gelemez. Yüzü
-**boyanır**, biçim yaprağıyla verilmez — bu programda tek bir yaprak vardır (§2).
+Örnek kullanıcı verisidir; tema değiştirilince renk değeri değişmez. Örnek
+boyanır, alanın kromu tek stil sayfasından gelir (§2).
 
 ### 15.3 Seçim bileşenleri
 

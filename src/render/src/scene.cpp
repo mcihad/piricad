@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <string_view>
 #include <vector>
 
@@ -42,20 +43,34 @@ bool boxes_overlap(const Box2& a, const Box2& b)
 /// prints at 8 mm therefore reached the canvas 8 px tall, about a quarter of the
 /// size it is printed at, and every published symbol in the program looked like a
 /// smudge. It is a resolution, so it comes from the screen.
-float to_pixels(const core::Measure& m, double mm_per_pixel, double pixels_per_paper_mm)
+double to_pixels(const core::Measure& m, double mm_per_pixel, double pixels_per_paper_mm)
 {
     switch (m.unit) {
-    case core::Unit::Paper:
-        return static_cast<float>(static_cast<double>(m.value) / 1000.0 * pixels_per_paper_mm);
+    case core::Unit::Paper: return static_cast<double>(m.value) / 1000.0 * pixels_per_paper_mm;
     case core::Unit::Ground:
-        return mm_per_pixel > 0.0 ? static_cast<float>(static_cast<double>(m.value) / mm_per_pixel)
-                                  : 0.0f;
-    case core::Unit::Pixel: return static_cast<float>(m.value);
+        return mm_per_pixel > 0.0 ? static_cast<double>(m.value) / mm_per_pixel : 0.0;
+    case core::Unit::Pixel: return static_cast<double>(m.value);
     }
-    return 0.0f;
+    return 0.0;
 }
 
 } // namespace
+
+core::Measure measure_in_unit(core::Measure measure, core::Unit unit, double mm_per_pixel,
+                              double pixels_per_paper_mm)
+{
+    if (measure.unit == unit) return measure;
+    if (!std::isfinite(mm_per_pixel) || mm_per_pixel <= 0.0 ||
+        !std::isfinite(pixels_per_paper_mm) || pixels_per_paper_mm <= 0.0)
+        return measure;
+    double value = to_pixels(measure, mm_per_pixel, pixels_per_paper_mm);
+    if (unit == core::Unit::Paper) value *= 1000.0 / pixels_per_paper_mm;
+    if (unit == core::Unit::Ground) value *= mm_per_pixel;
+    value = std::clamp(std::round(value), double(std::numeric_limits<std::int32_t>::min()),
+                       double(std::numeric_limits<std::int32_t>::max()));
+    if (value == 0.0 && measure.value != 0) value = measure.value > 0 ? 1.0 : -1.0;
+    return {static_cast<std::int32_t>(value), unit};
+}
 
 float stroke_width_px(const core::SymbolLayer& layer, double pixels_per_paper_mm)
 {
@@ -65,31 +80,41 @@ float stroke_width_px(const core::SymbolLayer& layer, double pixels_per_paper_mm
     // 0,5 mm boundary asked for half a pixel, hit the floor below, and every
     // weight in the annex — 0,2 mm, 0,5 mm, 1,0 mm — came out as the same hairline.
     const double px = static_cast<double>(layer.look.width_um) / 1000.0 * pixels_per_paper_mm;
-    return std::max(1.0f, static_cast<float>(px));
+    return layer.look.width_um == 0 ? 1.0f : std::max(0.01f, static_cast<float>(px));
 }
 
 PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images,
                   const core::DashStore& dashes, double mm_per_pixel, double pixels_per_paper_mm)
 {
     PassStyle ps;
-    ps.type         = sl.type;
-    ps.shape        = sl.shape;
-    ps.placement    = sl.placement;
-    ps.cap          = sl.cap;
-    ps.join         = sl.join;
-    ps.size_px      = to_pixels(sl.size, mm_per_pixel, pixels_per_paper_mm);
-    ps.interval_px  = to_pixels(sl.interval, mm_per_pixel, pixels_per_paper_mm);
-    ps.spacing_y_px = to_pixels(sl.spacing_y, mm_per_pixel, pixels_per_paper_mm);
-    ps.offset_px    = to_pixels(sl.offset, mm_per_pixel, pixels_per_paper_mm);
-    ps.phase_px     = to_pixels(sl.phase, mm_per_pixel, pixels_per_paper_mm);
-    ps.angle_udeg   = sl.angle_udeg;
-    ps.opacity      = sl.opacity;
-    ps.line_rgba    = sl.look.rgba;
-    ps.fill_rgba    = sl.look.fill_rgba;
-    ps.image        = images.bytes(sl.image);
-    ps.image_key    = images.content_key(sl.image);
-    ps.text         = sl.text;
-    ps.dash         = sl.look.dash;
+    ps.type        = sl.type;
+    ps.shape       = sl.shape;
+    ps.placement   = sl.placement;
+    ps.cap         = sl.cap;
+    ps.join        = sl.join;
+    ps.size_px     = static_cast<float>(to_pixels(sl.size, mm_per_pixel, pixels_per_paper_mm));
+    ps.interval_px = static_cast<float>(to_pixels(sl.interval, mm_per_pixel, pixels_per_paper_mm));
+    ps.spacing_y_px =
+        static_cast<float>(to_pixels(sl.spacing_y, mm_per_pixel, pixels_per_paper_mm));
+    ps.offset_px  = static_cast<float>(to_pixels(sl.offset, mm_per_pixel, pixels_per_paper_mm));
+    ps.phase_px   = static_cast<float>(to_pixels(sl.phase, mm_per_pixel, pixels_per_paper_mm));
+    ps.angle_udeg = sl.angle_udeg;
+    ps.opacity    = sl.opacity;
+    ps.line_rgba  = sl.look.rgba;
+    ps.fill_rgba  = sl.look.fill_rgba;
+    ps.image      = images.bytes(sl.image);
+    ps.image_key  = images.content_key(sl.image);
+    const std::string_view image_header(reinterpret_cast<const char*>(ps.image.data()),
+                                        std::min<std::size_t>(ps.image.size(), 512));
+    ps.fixed_pitch     = image_header.find("data-fixed-pitch=\"1\"") != std::string_view::npos;
+    ps.picture_rotates = image_header.find("data-rotate=\"0\"") == std::string_view::npos;
+    if (image_header.find("data-placement=\"innerVertex\"") != std::string_view::npos)
+        ps.svg_placement = SvgPlacement::InnerVertex;
+    else if (image_header.find("data-placement=\"segmentCenter\"") != std::string_view::npos)
+        ps.svg_placement = SvgPlacement::SegmentCentre;
+
+    ps.text = sl.text;
+    ps.dash = sl.look.dash;
 
     // Resolved HERE, once per pass, not in the backend: the backend has no
     // document and every backend would otherwise have to find one.
@@ -183,26 +208,44 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         out.passes.push_back(
             pass_of(sl, doc.images(), doc.dashes(), mm_per_pixel, options.pixels_per_paper_mm));
 
-        // A LINE PATTERN IS ANCHORED TO THE GROUND. Its lines are the points
-        // whose distance from the world origin, across them, is the layer's
-        // offset plus a whole number of spacings; the one of them nearest the
-        // view centre is found here, in double, and handed on as a small
-        // offset from that centre.
+        // Ground intervals belong to the world lattice; paper/pixel intervals
+        // belong to the output lattice. Find a line near the view centre in
+        // double, then send only that small pixel offset to either backend.
         if (PassStyle& ps = out.passes.back();
             sl.type == core::SymbolLayerType::LinePatternFill && ps.interval_px > 0.0f) {
-            const double spacing_mm = static_cast<double>(ps.interval_px) * mm_per_pixel;
-            const double phase_mm   = sl.offset.unit == core::Unit::Ground
-                                          ? static_cast<double>(sl.offset.value)
-                                          : static_cast<double>(ps.offset_px) * mm_per_pixel;
-            const core::SinCos t    = core::sin_cos_udeg(sl.angle_udeg);
-            const double nx         = -t.sin;
-            const double ny         = t.cos;
-            const core::Point2 c    = view.centre();
-            const double across     = static_cast<double>(c.x) * nx + static_cast<double>(c.y) * ny;
-            double delta            = std::fmod(phase_mm - across, spacing_mm);
-            if (delta < 0.0) delta += spacing_mm;
-            ps.anchor_x = static_cast<float>(nx * delta / mm_per_pixel);
-            ps.anchor_y = static_cast<float>(ny * delta / mm_per_pixel);
+            // Phase comes from the source measure, never from the float made
+            // for the GPU. Multiplying a rounded pixel interval back to ground
+            // units changes the period slightly at each zoom; millions of
+            // periods away from the world origin that becomes visible jitter.
+            const core::SinCos t = core::sin_cos_udeg(sl.angle_udeg);
+            const double nx      = -t.sin;
+            const double ny      = t.cos;
+            const double offset_px =
+                to_pixels(sl.offset, mm_per_pixel, options.pixels_per_paper_mm);
+            double delta_px = 0.0;
+            if (sl.interval.unit == core::Unit::Ground) {
+                const double spacing_mm = static_cast<double>(sl.interval.value);
+                const double phase_mm   = sl.offset.unit == core::Unit::Ground
+                                              ? static_cast<double>(sl.offset.value)
+                                              : offset_px * mm_per_pixel;
+                const core::Point2 c    = view.centre();
+                const double across = static_cast<double>(c.x) * nx + static_cast<double>(c.y) * ny;
+                double delta        = std::fmod(phase_mm - across, spacing_mm);
+                if (delta < 0.0) delta += spacing_mm;
+                delta_px = delta / mm_per_pixel;
+            } else {
+                // A constant paper spacing must not change its phase when the
+                // corresponding ground spacing changes at zoom. Anchor at the
+                // output origin, like raster/point fills, independent of which
+                // objects survive culling. Reduce to one spacing before float.
+                const double spacing_px =
+                    to_pixels(sl.interval, mm_per_pixel, options.pixels_per_paper_mm);
+                delta_px = std::fmod(offset_px - view.width() * 0.5 * nx + view.height() * 0.5 * ny,
+                                     spacing_px);
+                if (delta_px < 0.0) delta_px += spacing_px;
+            }
+            ps.anchor_x = static_cast<float>(nx * delta_px);
+            ps.anchor_y = static_cast<float>(ny * delta_px);
             ps.anchored = true;
         }
 

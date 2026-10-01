@@ -23,8 +23,8 @@ yaydır; budanan elips aynı elipsin bir **yayıdır**; budanan spline, kalan b�
 tam olarak çizen daha kısa bir **spline**'dır (düğüm eklenerek yeniden kurulur,
 biçimi değişmez). Bir yaya, daireye, elipse ya da spline'a budanan çizgi **eğrinin
 üzerinde** biter, eğrinin ekranda çizildiği kirişlerin üzerinde değil. Çizgi, yay ve
-daire kesişimleri kapalı biçimde; elips ve spline kesişimleri kirişlerden bulunup
-eğrinin kendisi üzerinde Newton yöntemiyle inceltilerek hesaplanır; hepsi milimetreye
+daire kesişimleri kapalı biçimde; elips ve spline kesişimleri
+[OpenCASCADE](../veri/geometri-cekirdegi.md) ile eğrinin gerçek tanımından hesaplanır; hepsi milimetreye
 bir kez yuvarlanır, bu yüzden aynı işlem her bilgisayarda aynı noktayı verir.
 
 `BUDA` açık çizgilerde (`ÇİZGİ`, `ÇOKLUÇİZGİ`), yaylarda, dairelerde, elipslerde ve

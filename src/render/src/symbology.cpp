@@ -42,9 +42,58 @@ void MarkerOutline::clear()
 
 // -----------------------------------------------------------------------------
 
+void offset_polyline(const PolylineBatch& source, double distance, PolylineBatch& output)
+{
+    output.rgba     = source.rgba;
+    output.width_px = source.width_px;
+    output.runs.assign(source.runs.begin(), source.runs.end());
+    output.xs.resize(source.xs.size());
+    output.ys.resize(source.ys.size());
+    std::size_t start = 0;
+    for (std::uint32_t run : source.runs) {
+        const bool closed            = run > 2 && source.xs[start] == source.xs[start + run - 1] &&
+                                       source.ys[start] == source.ys[start + run - 1];
+        const std::uint32_t vertices = closed ? run - 1 : run;
+        const auto normal            = [&](std::uint32_t a, std::uint32_t b) {
+            const double dx     = double(source.xs[start + b]) - double(source.xs[start + a]);
+            const double dy     = double(source.ys[start + b]) - double(source.ys[start + a]);
+            const double length = std::hypot(dx, dy);
+            return length > 0 ? std::pair{-dy / length, dx / length} : std::pair{0.0, 0.0};
+        };
+        for (std::uint32_t v = 0; v < vertices; ++v) {
+            const auto before = v > 0          ? normal(v - 1, v)
+                                : closed       ? normal(vertices - 1, 0)
+                                : vertices > 1 ? normal(0, 1)
+                                               : std::pair{0.0, 0.0};
+            const auto after = v + 1 < vertices ? normal(v, v + 1) : closed ? normal(v, 0) : before;
+            double nx        = (before.first + after.first) * .5;
+            double ny        = (before.second + after.second) * .5;
+            const double divisor = nx * after.first + ny * after.second;
+            if (divisor > .0625) {
+                nx /= divisor;
+                ny /= divisor;
+            } else {
+                nx = after.first;
+                ny = after.second;
+            }
+            // These are already origin-relative screen pixels, never world coordinates.
+            const double pixel_x = double(source.xs[start + v]) + nx * distance;
+            const double pixel_y = double(source.ys[start + v]) + ny * distance;
+            output.xs[start + v] = static_cast<float>(pixel_x);
+            output.ys[start + v] = static_cast<float>(pixel_y);
+        }
+        if (closed) {
+            output.xs[start + run - 1] = output.xs[start];
+            output.ys[start + run - 1] = output.ys[start];
+        }
+        start += run;
+    }
+}
+
 void place_along_run(const float* xs, const float* ys, std::uint32_t count,
                      core::MarkerPlacement placement, double interval, double phase,
-                     const PixelBox& clip, std::vector<Stamp>& out)
+                     const PixelBox& clip, std::vector<Stamp>& out, bool explicit_phase,
+                     SvgPlacement svg_placement)
 {
     if (count < 1 || xs == nullptr || ys == nullptr) return;
 
@@ -98,7 +147,9 @@ void place_along_run(const float* xs, const float* ys, std::uint32_t count,
         // Upright at each vertex, not turned to the corner. A vertex marker says
         // "a point is here"; rotating it to the average of two segments makes it
         // say something about the corner's shape instead.
-        for (std::uint32_t v = 0; v < count; ++v)
+        const std::uint32_t begin = svg_placement == SvgPlacement::InnerVertex ? 1 : 0;
+        const std::uint32_t end   = svg_placement == SvgPlacement::InnerVertex ? count - 1 : count;
+        for (std::uint32_t v = begin; v < end; ++v)
             stamp(at(v), {1.0, 0.0});
         return;
     }
@@ -108,6 +159,15 @@ void place_along_run(const float* xs, const float* ys, std::uint32_t count,
     }
     if (placement == MarkerPlacement::LastVertex) {
         stamp(at(count - 1), direction(count - 2, count - 1));
+        return;
+    }
+    if (placement == MarkerPlacement::Centre && svg_placement == SvgPlacement::SegmentCentre) {
+        for (std::uint32_t v = 1; v < count; ++v) {
+            const auto a = at(v - 1);
+            const auto b = at(v);
+            if (a == b) continue;
+            stamp({(a.first + b.first) * .5, (a.second + b.second) * .5}, direction(v - 1, v));
+        }
         return;
     }
 
@@ -122,7 +182,11 @@ void place_along_run(const float* xs, const float* ys, std::uint32_t count,
     if (!centre && interval <= 0.0) return;
 
     double walked = 0.0;
-    double next   = centre ? total * 0.5 : (phase > 0.0 ? phase : interval * 0.5);
+    double next = centre
+                      ? total * 0.5
+                      : (explicit_phase ? std::fmod(std::fmod(phase, interval) + interval, interval)
+                         : phase > 0.0  ? phase
+                                        : interval * 0.5);
 
     for (std::uint32_t v = 1; v < count; ++v) {
         const auto a     = at(v - 1);

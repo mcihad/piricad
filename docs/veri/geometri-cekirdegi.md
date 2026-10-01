@@ -53,7 +53,7 @@ ona geçiyor:
 | O-3 | [`BİRLEŞTİR`](../komutlar/combine.md) | **Bu sürümde:** yaylı kenarlı alanların birleşimi yayı aynı merkez ve yarıçapla korur; yaylı çizgiler uç uca eklenirken yay yay kalır |
 | O-3 | [`TAMPON`](../komutlar/tampon.md) | **Bu sürümde:** yuvarlak köşe ve uçlu tampon gerçek yaylıdır — noktanın çevresi daire alan, bandın uçları yarım daire; çizginin her parçasının bandı alınıp birleştirilir. 256 köşeden uzun çizgi, köşeli/pahlı köşe, düz/kare uç ve elips/spline kaynak Clipper2 ile |
 | O-4 | [`OFSET`](../komutlar/offset.md) | **Bu sürümde:** yaylı çoklu çizginin ve köşesi yuvarlanmış parselin paraleli yaylı çoklu çizgidir — her yay aynı merkezli, yarıçapı mesafe kadar değişmiş; `kose=YUVARLAK` dış köşeyi gerçek yayla, `kose=PAH` yaylı çizgide köşeyi düz kirişle döner. Düz kenarlı şeklin keskin ve pahlı köşeli paraleli eskisi gibi Clipper2 ile; delikli alanın yuvarlak köşeleri kısa kenarlarla (komut söyler) |
-| O-5 | `BUDA`, `UZAT`, `BÖL`, `KIR`, `YUVARLA` | Gelecek: elips ve spline kesişimleri ve elips ya da spline içeren eğri çiftlerinin yuvarlanması çekirdekten gelecek |
+| O-5 | `BUDA`, `UZAT`, `BÖL`, `KIR`, `YUVARLA` | **Bu sürümde:** elips ve spline kesişimleri OCCT'nin 2D eğri çözücüsünden; kısmi/ters elips, rasyonel spline, teğet ve ortak parça ayrı sonuçlanır. Elips/spline içeren eğri çiftlerinin yuvarlanması gelecek |
 
 Bir aşama gelene dek o işlem bugünkü yoluyla çalışmaya devam eder.
 

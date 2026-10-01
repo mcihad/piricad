@@ -488,7 +488,7 @@ kaydedilmemiş değişikliğiniz varsa önce **Kaydet / Atla / Vazgeç** sorusu 
 | Sol tık, komut nokta beklerken | Çalışan komuta bir nokta verir |
 | Sol tık, komut nesne beklerken | Nesneyi seçime **ekler**; **Ctrl** ile çıkarır |
 | Sol tık, komut yokken | İmlecin yakınındaki nesneyi seçer |
-| Sol tık birden çok nesnenin üstüne | İlkini seçer; imlecin yanındaki rozet kaç aday olduğunu söyler. **Boşluk** ya da **/** sıradakine, **Shift + Boşluk** öncekine geçer; **Enter** tutar, **Esc** geri alır ([SEÇ](../komutlar/select.md#aynı-noktada-birden-çok-nesne-varsa)) |
+| Sol tık birden çok nesnenin üstüne | İlkini seçer; çerçeveli listeden istediğiniz satırı doğrudan seçebilir veya tür/katman/kimlikle arayabilirsiniz. **Boşluk** sıradakine, **Home/End** ilk/son adaya geçer; **Enter** tutar, **Esc** geri alır ([SEÇ](../komutlar/select.md#aynı-noktada-birden-çok-nesne-varsa)) |
 | **Çift tık**, komut yokken | Nesneyi tek başına seçer ve düzenleyicisini açar: yazıda [`YAZIDÜZENLE`](../komutlar/edittext.md), ölçüde [`ÖLÇÜDÜZENLE`](../komutlar/dimension_edit.md) — ikisinde de metin, yazının üstündeki kutuda, şimdiki hâliyle seçili durur; **Enter** yazar, **Esc** vazgeçer —, taramada [`TARAMADÜZENLE`](../komutlar/hatch_edit.md); başka her nesnede **Öznitelikler** paneli öne gelir |
 | Sol tuş basılı sürükle, komut yokken | Seçim kutusu çizer |
 | **Shift** + tık/sürükle | Seçime ekler |

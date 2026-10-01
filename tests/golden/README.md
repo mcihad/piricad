@@ -32,6 +32,12 @@ four axes exact in both rules and all three units, with and without the `g/d/r`
 suffix, so a platform that disagreed in the last bit would show up here as a
 moved vertex rather than as a surveyor's complaint.
 
+`occt-kesisim.txt` fixes the O-5 OpenCASCADE results at large TUREF coordinates:
+an ellipse meets a line at the hand-computed ±8 m, and two opposite quadratic
+splines meet at 1.464 m and 8.536 m after rounding once to millimetres. BUDA keeps
+the exact ellipse and spline definitions; their payloads, vertices and journal
+are compared byte for byte by the same harness on each platform.
+
 `nokta-fonksiyonlari.txt` does the same for the point functions (TODOS-CAD
 P1a), and it is the harder case: `dik`, `kes`, `ara` and `uzanti` divide by a
 square root, so every vertex in it is an answer that a differently-rounded

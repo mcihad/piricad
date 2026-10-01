@@ -2,9 +2,9 @@
 // PiriCAD — core (private): an ellipse or a spline piece as the exact curve
 // it is. See curve_eval.hpp.
 #include "curve_eval.hpp"
+#include "piricad/core/kernel.hpp"
 
-#include "piricad/core/pick.hpp"
-#include "piricad/core/precision.hpp"
+#include "piricad/core/result.hpp"
 #include "piricad/core/trig.hpp"
 #include "piricad/core/units.hpp"
 
@@ -18,18 +18,6 @@ namespace {
 
 /// Radians in one micro-degree.
 constexpr double kUdegToRad = kPi / (180.0 * 1000000.0);
-
-/// Half a millimetre, in metres: nearer than this two curves touch (the
-/// tolerance curve_path.cpp's closed forms use, `kOnCurveMm`).
-constexpr double kTouch = kOnCurveMm / 1000.0;
-
-/// A meet is settled when the two points agree to ten nanometres.
-constexpr double kSettled2 = 1e-16;
-
-/// The most meets two pieces are believed to have. More is a sign the solve
-/// is tracing a stretch the two share that the overlap scan did not see, and
-/// it cannot resolve that into points.
-constexpr std::size_t kMostMeets = 1024;
 
 /// Steps a turn an arc or an ellipse is sampled at, and steps a knot span a
 /// spline is.
@@ -49,11 +37,6 @@ Vec sub(Vec a, Vec b) noexcept
 double dot(Vec a, Vec b) noexcept
 {
     return (a.x * b.x) + (a.y * b.y);
-}
-
-double cross(Vec a, Vec b) noexcept
-{
-    return (a.x * b.y) - (a.y * b.x);
 }
 
 double norm(Vec a) noexcept
@@ -305,154 +288,6 @@ std::pair<std::size_t, std::size_t> to_multiplicity(Homog& h, std::vector<std::i
     while (first + count < knots.size() && knots[first + count] == u)
         ++count;
     return {first, count};
-}
-
-// ---- meeting ---------------------------------------------------------------
-
-/// Where segments a-b and c-d cross, as fractions of each.
-bool chords_cross(Vec a, Vec b, Vec c, Vec d, double& alpha, double& beta) noexcept
-{
-    const Vec r      = sub(b, a);
-    const Vec s      = sub(d, c);
-    const double den = cross(r, s);
-    if (den == 0.0) return false;
-    const Vec ac = sub(c, a);
-    alpha        = cross(ac, s) / den;
-    beta         = cross(ac, r) / den;
-    return alpha >= 0.0 && alpha <= 1.0 && beta >= 0.0 && beta <= 1.0;
-}
-
-/// The fraction of segment a-b nearest `q`.
-double nearest_on(Vec a, Vec b, Vec q) noexcept
-{
-    const Vec d      = sub(b, a);
-    const double len = dot(d, d);
-    if (len <= 0.0) return 0.0;
-    return std::clamp(dot(sub(q, a), d) / len, 0.0, 1.0);
-}
-
-/// How near two segments that do not cross pass: the nearest of the four
-/// end-to-segment distances, and where on each.
-double chords_apart(Vec a, Vec b, Vec c, Vec d, double& alpha, double& beta) noexcept
-{
-    double best         = -1.0;
-    const auto consider = [&best, &alpha, &beta](double dist, double fa, double fb) {
-        if (best < 0.0 || dist < best) {
-            best  = dist;
-            alpha = fa;
-            beta  = fb;
-        }
-    };
-    double f = nearest_on(c, d, a);
-    consider(norm(sub(lerp(c, d, f), a)), 0.0, f);
-    f = nearest_on(c, d, b);
-    consider(norm(sub(lerp(c, d, f), b)), 1.0, f);
-    f = nearest_on(a, b, c);
-    consider(norm(sub(lerp(a, b, f), c)), f, 0.0);
-    f = nearest_on(a, b, d);
-    consider(norm(sub(lerp(a, b, f), d)), f, 1.0);
-    return best;
-}
-
-/// What refining one candidate came to.
-struct Refined
-{
-    double s{0.0};          ///< on the first piece
-    double t{0.0};          ///< on the second
-    double apart{0.0};      ///< how far apart the two points ended, metres
-    bool settled{false};    ///< they met
-    bool stationary{false}; ///< the distance stopped falling: a nearest approach
-};
-
-/// Newton's method on P(s) = Q(t), damped (Levenberg–Marquardt) so a tangent
-/// meet — where the plain step is singular — still settles, and a near miss
-/// ends at the nearest approach instead of wandering.
-Refined refine(const Eval& p, const Eval& q, double s, double t)
-{
-    Vec f       = sub(p.point(s), q.point(t));
-    double f2   = dot(f, f);
-    double damp = 1e-9;
-    for (int it = 0; it < 80; ++it) {
-        if (f2 < kSettled2) return Refined{s, t, std::sqrt(f2), true, false};
-        const Vec ps     = p.tangent(s);
-        const Vec qt     = q.tangent(t);
-        const double a11 = dot(ps, ps);
-        const double a12 = -dot(ps, qt);
-        const double a22 = dot(qt, qt);
-        const double g1  = dot(ps, f);
-        const double g2  = -dot(qt, f);
-        bool moved       = false;
-        while (damp < 1e12) {
-            const double m11 = a11 * (1.0 + damp);
-            const double m22 = a22 * (1.0 + damp);
-            const double det = (m11 * m22) - (a12 * a12);
-            if (det > 0.0) {
-                const double ds = ((-g1 * m22) + (g2 * a12)) / det;
-                const double dt = ((-g2 * m11) + (g1 * a12)) / det;
-                const double ns = std::clamp(s + ds, -0.25, 1.25);
-                const double nt = std::clamp(t + dt, -0.25, 1.25);
-                const Vec nf    = sub(p.point(ns), q.point(nt));
-                const double n2 = dot(nf, nf);
-                if (n2 < f2) {
-                    const bool still = std::abs(ns - s) < 1e-15 && std::abs(nt - t) < 1e-15;
-                    s                = ns;
-                    t                = nt;
-                    f                = nf;
-                    f2               = n2;
-                    damp             = std::max(damp * 0.1, 1e-15);
-                    moved            = !still;
-                    break;
-                }
-            }
-            damp *= 10.0;
-        }
-        if (!moved) return Refined{s, t, std::sqrt(f2), f2 < kSettled2, true};
-    }
-    return Refined{s, t, std::sqrt(f2), f2 < kSettled2, false};
-}
-
-/// Whether the pieces are one ellipse, and if so the stretches they share.
-bool same_ellipse(const PathPiece& p, const PathPiece& q, Meets& out)
-{
-    if (p.kind != PathPiece::Kind::Ellipse || q.kind != PathPiece::Kind::Ellipse) return false;
-    if (p.centre != q.centre || p.major != q.major || p.minor != q.minor) return false;
-    constexpr std::int64_t turn = kUDegFullCircle;
-    // Each as a counter-clockwise interval of the parameter: where it starts
-    // and how far it runs.
-    const auto ccw = [](const PathPiece& e, std::int64_t& from, std::int64_t& span) {
-        span = e.sweep_udeg < 0 ? -e.sweep_udeg : e.sweep_udeg;
-        from = e.sweep_udeg < 0 ? e.start_udeg + e.sweep_udeg : e.start_udeg;
-        from %= turn;
-        if (from < 0) from += turn;
-    };
-    std::int64_t pa = 0;
-    std::int64_t pw = 0;
-    std::int64_t qa = 0;
-    std::int64_t qw = 0;
-    ccw(p, pa, pw);
-    ccw(q, qa, qw);
-    // The parameter, counter-clockwise, as a fraction of `p`'s own walk.
-    const auto t_of = [&p](std::int64_t theta) {
-        std::int64_t d = p.sweep_udeg < 0 ? p.start_udeg - theta : theta - p.start_udeg;
-        d %= turn;
-        if (d < 0) d += turn;
-        const std::int64_t span = p.sweep_udeg < 0 ? -p.sweep_udeg : p.sweep_udeg;
-        return std::min(1.0, static_cast<double>(d) / static_cast<double>(span));
-    };
-    for (const std::int64_t shift : {std::int64_t{0}, turn, -turn}) {
-        const std::int64_t lo = std::max(pa, qa + shift);
-        const std::int64_t hi = std::min(pa + pw, qa + shift + qw);
-        if (hi <= lo) continue;
-        double a = t_of(lo % turn);
-        double b = t_of(hi % turn);
-        if (hi - lo >= pw) {
-            a = 0.0;
-            b = 1.0;
-        }
-        if (a > b) std::swap(a, b);
-        out.overlaps.push_back(Span{a, b});
-    }
-    return true;
 }
 
 } // namespace
@@ -905,187 +740,17 @@ SplineParts reversed_spline(const SplineParts& whole)
 Meets meets(const PathPiece& p, const PathPiece& q)
 {
     Meets out;
-    if (same_ellipse(p, q, out)) return out;
-    if (p.kind == PathPiece::Kind::Spline && q.kind == PathPiece::Kind::Spline &&
-        p.controls == q.controls && p.spline == q.spline) {
-        out.overlaps.push_back(Span{0.0, 1.0});
+    auto solved = kernel_meets(p, q);
+    if (!solved) {
+        out.unresolved = true;
         return out;
     }
-
-    const Point2 origin = p.from;
-    const Eval ep(p, origin);
-    const Eval eq(q, origin);
-    std::vector<double> ps;
-    std::vector<double> qs;
-    std::vector<Vec> pp;
-    std::vector<Vec> qp;
-    samples(p, ep, ps, pp);
-    samples(q, eq, qs, qp);
-
-    // How far a chord strays from its curve: the margin two chords must come
-    // within for their curves to be able to meet.
-    const auto stray = [](const Eval& e, const std::vector<double>& ts,
-                          const std::vector<Vec>& pts) {
-        double most = 0.0;
-        for (std::size_t i = 0; i + 1 < ts.size(); ++i) {
-            const Vec mid = lerp(pts[i], pts[i + 1], 0.5);
-            most          = std::max(most, norm(sub(e.point((ts[i] + ts[i + 1]) / 2.0), mid)));
-        }
-        return most;
-    };
-    const double margin = stray(ep, ps, pp) + stray(eq, qs, qp) + kTouch;
-
-    struct Candidate
-    {
-        double s;
-        double t;
-        bool crossed; ///< the chords themselves cross
-    };
-
-    std::vector<Candidate> found;
-    for (std::size_t i = 0; i + 1 < pp.size(); ++i) {
-        const Vec a      = pp[i];
-        const Vec b      = pp[i + 1];
-        const double ax0 = std::min(a.x, b.x) - margin;
-        const double ax1 = std::max(a.x, b.x) + margin;
-        const double ay0 = std::min(a.y, b.y) - margin;
-        const double ay1 = std::max(a.y, b.y) + margin;
-        for (std::size_t j = 0; j + 1 < qp.size(); ++j) {
-            const Vec c = qp[j];
-            const Vec d = qp[j + 1];
-            if (std::max(c.x, d.x) < ax0 || std::min(c.x, d.x) > ax1 || std::max(c.y, d.y) < ay0 ||
-                std::min(c.y, d.y) > ay1)
-                continue;
-            double alpha = 0.0;
-            double beta  = 0.0;
-            bool crossed = chords_cross(a, b, c, d, alpha, beta);
-            if (!crossed && chords_apart(a, b, c, d, alpha, beta) > margin) continue;
-            found.push_back(Candidate{ps[i] + ((ps[i + 1] - ps[i]) * alpha),
-                                      qs[j] + ((qs[j + 1] - qs[j]) * beta), crossed});
-        }
-    }
-
-    // Whether a refined parameter lies on its piece, ends within half a
-    // millimetre counting as on it; clamped onto it when so.
-    const auto on_piece = [](const Eval& e, double& t) {
-        if (t >= 0.0 && t <= 1.0) return true;
-        const double end = t < 0.0 ? 0.0 : 1.0;
-        if (norm(sub(e.point(t), e.point(end))) > kTouch) return false;
-        t = end;
-        return true;
-    };
-
-    for (const Candidate& c : found) {
-        Refined r = refine(ep, eq, c.s, c.t);
-        if (!r.settled && !r.stationary && r.apart > kTouch) {
-            // Neither met nor at a nearest approach, and not even near: the
-            // iteration ran out. From chords that crossed, that is a question
-            // left open — not an answer that the curves miss.
-            if (c.crossed) out.unresolved = true;
-            continue;
-        }
-        if (!r.settled && r.apart > kTouch) continue; // a near miss
-        if (!on_piece(ep, r.s) || !on_piece(eq, r.t)) continue;
-        Hit hit;
-        hit.s = r.s;
-        hit.t = r.t;
-        // THE MEET, rounded once: the midpoint of the two points, which for a
-        // settled meet are one point to ten nanometres.
-        const Vec a = ep.point(r.s);
-        const Vec b = eq.point(r.t);
-        hit.point =
-            Point2{origin.x + mm_round((a.x + b.x) / 2.0 * static_cast<double>(kMmPerMetre)),
-                   origin.y + mm_round((a.y + b.y) / 2.0 * static_cast<double>(kMmPerMetre))};
-        // TOUCHING: settled with the two directions one, or only near enough.
-        const Vec pt   = ep.tangent(r.s);
-        const Vec qt   = eq.tangent(r.t);
-        const double s = std::abs(cross(pt, qt));
-        const double m = norm(pt) * norm(qt);
-        hit.touching   = !r.settled || (m > 0.0 && s <= 1e-6 * m);
-        out.hits.push_back(hit);
-    }
-
-    // ONE MEET, ONE HIT: candidates from neighbouring chords settle on the
-    // same point; two distinct roots closer than a millimetre are a meet the
-    // two curves only graze, and are one touching point.
-    std::sort(out.hits.begin(), out.hits.end(),
-              [](const Hit& a, const Hit& b) { return a.s < b.s; });
-    std::vector<Hit> unique;
-    for (const Hit& h : out.hits) {
-        if (!unique.empty()) {
-            Hit& last          = unique.back();
-            const double apart = distance_squared(last.point, h.point);
-            if (apart <= kSamePointMm * kSamePointMm) {
-                if (std::abs(h.s - last.s) > 1e-7 && std::abs(h.t - last.t) > 1e-7) {
-                    last.touching = true;
-                    last.s        = (last.s + h.s) / 2.0;
-                    last.t        = (last.t + h.t) / 2.0;
-                }
-                continue;
-            }
-        }
-        unique.push_back(h);
-    }
-    out.hits = std::move(unique);
-
-    // A STRETCH THE TWO SHARE settles into a scatter of touching points, one
-    // per chord. Two or more of those send the first piece's samples to the
-    // second: a run of them lying on it is a shared stretch, reported as one,
-    // and the points inside it are not meets.
-    const auto grazing =
-        std::count_if(out.hits.begin(), out.hits.end(), [](const Hit& h) { return h.touching; });
-    if (grazing >= 2) {
-        const auto lies_on = [&ep, &eq, &q](double s) {
-            const Vec at   = ep.point(s);
-            const double t = nearest_in(q, eq, at);
-            return norm(sub(eq.point(t), at)) <= kTouch;
-        };
-        std::vector<bool> on(ps.size(), false);
-        for (std::size_t i = 0; i < ps.size(); ++i)
-            on[i] = lies_on(ps[i]);
-        // Where a run's edge falls between an off sample and an on one, found
-        // by halving: the stretch ends where the curves part, not at a sample.
-        const auto edge = [&lies_on](double off, double inside) {
-            for (int k = 0; k < 40; ++k) {
-                const double mid = (off + inside) / 2.0;
-                if (lies_on(mid))
-                    inside = mid;
-                else
-                    off = mid;
-            }
-            return inside;
-        };
-        for (std::size_t i = 0; i < ps.size();) {
-            if (!on[i]) {
-                ++i;
-                continue;
-            }
-            std::size_t j = i;
-            while (j + 1 < ps.size() && on[j + 1])
-                ++j;
-            if (j > i) {
-                const double s0 = i == 0 ? ps[0] : edge(ps[i - 1], ps[i]);
-                const double s1 = j + 1 == ps.size() ? ps[j] : edge(ps[j + 1], ps[j]);
-                out.overlaps.push_back(Span{s0, s1});
-            }
-            i = j + 1;
-        }
-        // A point of the stretch, its two ends included, is not a meet.
-        if (!out.overlaps.empty())
-            std::erase_if(out.hits, [&out, &ep](const Hit& h) {
-                return std::any_of(
-                    out.overlaps.begin(), out.overlaps.end(), [&h, &ep](const Span& o) {
-                        if (h.s >= o.s0 && h.s <= o.s1) return true;
-                        const double end = h.s < o.s0 ? o.s0 : o.s1;
-                        return norm(sub(ep.point(h.s), ep.point(end))) <= 2.0 * kTouch;
-                    });
-            });
-    }
-    if (out.hits.size() > kMostMeets) {
-        // A stretch traced point by point: not an answer in points.
-        out.hits.clear();
-        out.unresolved = true;
-    }
+    for (const PathCrossing& hit : solved.value().crossings)
+        out.hits.push_back(
+            Hit{.s = hit.at.t, .t = 0.0, .point = hit.point, .touching = hit.touching});
+    for (const PathOverlap& span : solved.value().overlaps)
+        out.overlaps.push_back(Span{.s0 = span.from.t, .s1 = span.to.t});
+    out.unresolved = solved.value().unresolved;
     return out;
 }
 

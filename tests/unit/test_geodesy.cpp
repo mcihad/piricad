@@ -14,6 +14,8 @@
 #include "piricad/command/registry.hpp"
 
 #include "piricad/command/bus.hpp"
+#include "piricad/command/preview.hpp"
+#include "piricad/command/session.hpp"
 
 #include "piricad/domain/geodesy/commands.hpp"
 #include "piricad/domain/geodesy/crs_service.hpp"
@@ -22,6 +24,7 @@
 #include "piricad/script/json_runner.hpp"
 
 #include "piricad/core/arc.hpp"
+#include "piricad/core/arc_polyline.hpp"
 #include "piricad/core/block_reference.hpp"
 #include "piricad/core/circle.hpp"
 #include "piricad/core/document.hpp"
@@ -940,6 +943,172 @@ TEST_CASE("DÖNÜŞTÜR: aynı sistem istenirse hiçbir şey yapmaz")
     REQUIRE(r.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:5256", Origin::Test).ok());
     CHECK(r.said.find("Yapılacak bir şey yok") != std::string::npos);
     CHECK(r.doc.content_hash() == before);
+}
+
+TEST_CASE("G-01: dönüşüm ve oturtma CRS ayarını, çözümünü ve geri almasını birlikte taşır")
+{
+    if (!Transform::available()) return;
+    GeoRig r;
+    auto catalogue = CrsCatalog::load(PIRICAD_DATA_DIR "/crs");
+    REQUIRE(catalogue.ok());
+    CrsService service(r.bus, std::move(catalogue.value()));
+    using command::Origin;
+    const auto run = [&r](const std::string& line) {
+        const auto done = r.bus.execute_line(line, Origin::Test);
+        if (!done) FAIL_WITH(line, done.error().message);
+    };
+    const auto check_system = [&r](const char* id, int epsg) {
+        CHECK_EQ(r.doc.crs().id(), std::string(id));
+        CHECK_EQ(r.doc.crs().epsg(), epsg);
+        CHECK(r.doc.crs().unit() == core::CrsUnit::Metre);
+        CHECK_EQ(r.bus.setting("core.crs.id").as_text(), std::string(id));
+        CHECK_EQ(r.bus.project_settings().get("core.crs.id").as_text(), std::string(id));
+    };
+    run("AYAR koordinat_sistemi TUREF/TM36");
+    run("ALAN 485300,4310200 485320,4310200 485320,4310210 485300,4310210");
+    const auto before = r.doc.content_hash();
+    run("DÖNÜŞTÜR hedef=EPSG:5254");
+    check_system("EPSG:5254", 5254);
+    const auto after = r.doc.content_hash();
+    run("GERİAL");
+    CHECK_EQ(r.doc.content_hash(), before);
+    check_system("TUREF/TM36", 5256);
+    run("YİNELE");
+    CHECK_EQ(r.doc.content_hash(), after);
+    check_system("EPSG:5254", 5254);
+    run("OTURT noktalar=0,0 1,1 10,0 11,1 sistem=TUREF/TM33");
+    check_system("TUREF/TM33", 5255);
+    run("GERİAL");
+    CHECK_EQ(r.doc.content_hash(), after);
+    check_system("EPSG:5254", 5254);
+    run("YİNELE");
+    check_system("TUREF/TM33", 5255);
+}
+
+TEST_CASE("G-01: yaylı parselin köşeleri ve yay tanımı yeni dilimde birlikte kalır")
+{
+    if (!Transform::available()) return;
+    GeoRig r;
+    using command::Origin;
+    const auto run = [&r](const std::string& line) {
+        const auto done = r.bus.execute_line(line, Origin::Test);
+        if (!done) FAIL_WITH(line, done.error().message);
+    };
+    run("AYAR koordinat_sistemi EPSG:5256");
+    run("ALAN 485300,4310200 485320,4310200 485320,4310210 485300,4310210");
+    run("YUVARLA nesne=1 nokta=485320,4310210 yaricap=2");
+    const auto e = r.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(r.doc.entities().kind[e] == core::kArcPolylineKind);
+    const auto old = core::arc_polyline_of(r.doc.geometry(), r.doc.entities().slot[e]);
+    REQUIRE(old.ok());
+    REQUIRE_EQ(old.value().arcs.size(), 1u);
+    const auto before = r.doc.content_hash();
+    run("DÖNÜŞTÜR hedef=EPSG:5254");
+    const auto moved = core::arc_polyline_of(r.doc.geometry(), r.doc.entities().slot[e]);
+    REQUIRE(moved.ok());
+    REQUIRE_EQ(moved.value().arcs.size(), old.value().arcs.size());
+    const auto& arc = moved.value().arcs.front();
+    CHECK(arc.centre != old.value().arcs.front().centre);
+    CHECK(arc.radius > old.value().arcs.front().radius);
+    CHECK_EQ(arc.ccw, old.value().arcs.front().ccw);
+    const auto span = r.doc.geometry().rings_of(r.doc.entities().slot[e]);
+    const auto xs   = r.doc.geometry().ring_xs(span.first);
+    const auto ys   = r.doc.geometry().ring_ys(span.first);
+    for (const std::size_t v : {std::size_t{arc.segment}, (arc.segment + 1) % xs.size()}) {
+        const double radius = std::hypot(static_cast<double>(xs[v] - arc.centre.x),
+                                         static_cast<double>(ys[v] - arc.centre.y));
+        // Ends and centre round separately to millimetres under the similarity.
+        CHECK(std::abs(radius - static_cast<double>(arc.radius)) <= 2.0);
+    }
+    const auto after = r.doc.content_hash();
+    run("GERİAL");
+    CHECK_EQ(r.doc.content_hash(), before);
+    run("YİNELE");
+    CHECK_EQ(r.doc.content_hash(), after);
+}
+
+TEST_CASE("G-01 KANIT: yaylı parsel dönüşümü arayüz, komut satırı, betik ve günlükte aynı")
+{
+    if (!Transform::available()) return;
+    GeoRig gui;
+    GeoRig cli;
+    GeoRig scr;
+    using command::Origin;
+    for (auto* rig : {&gui, &cli, &scr}) {
+        REQUIRE(rig->bus.execute_line("AYAR koordinat_sistemi EPSG:5256", Origin::Test).ok());
+        REQUIRE(
+            rig->bus
+                .execute_line("ALAN 485300,4310200 485320,4310200 485320,4310210 485300,4310210",
+                              Origin::Test)
+                .ok());
+        REQUIRE(
+            rig->bus.execute_line("YUVARLA nesne=1 nokta=485320,4310210 yaricap=2", Origin::Test)
+                .ok());
+    }
+    auto started = gui.bus.begin_interactive("DÖNÜŞTÜR", Origin::Gui);
+    REQUIRE(started.ok());
+    REQUIRE(started.value()->supply(command::Value::text("EPSG:5254")).ok());
+    REQUIRE(gui.bus.finish(*started.value()).ok());
+    REQUIRE(cli.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:5254", Origin::CommandLine).ok());
+    script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+    REQUIRE(
+        runner.run_text(R"({"komutlar":[{"cmd":"core.reproject","args":{"hedef":"EPSG:5254"}}]})")
+            .ok());
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    const auto comparable = [](const command::Journal& journal) {
+        std::string out;
+        for (auto entry : journal.entries()) {
+            // The client and timestamp legitimately differ; all work, CRS and
+            // layer fields remain in the byte comparison (CLAUDE.md 6.4).
+            entry.origin = Origin::Test;
+            out += entry.to_json(false).dump() + "\n";
+        }
+        return out;
+    };
+    CHECK_EQ(comparable(gui.journal), comparable(cli.journal));
+    CHECK_EQ(comparable(cli.journal), comparable(scr.journal));
+    GeoRig replay;
+    for (const auto& entry : gui.journal.entries())
+        REQUIRE(
+            replay.bus.dispatch(command::Invocation{entry.command_id, entry.args, Origin::Batch})
+                .ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+    CHECK_EQ(replay.bus.setting("core.crs.id"), gui.bus.setting("core.crs.id"));
+}
+
+TEST_CASE("G-01: reddedilen ve önizlenen dönüşüm sistem ayarına iz bırakmaz")
+{
+    if (!Transform::available()) return;
+    GeoRig r;
+    auto catalogue = CrsCatalog::load(PIRICAD_DATA_DIR "/crs");
+    REQUIRE(catalogue.ok());
+    CrsService service(r.bus, std::move(catalogue.value()));
+    using command::Origin;
+    REQUIRE(r.bus.execute_line("AYAR koordinat_sistemi EPSG:5256", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇİZGİ 485300,4310200 485320,4310200", Origin::Test).ok());
+    const auto before   = r.doc.content_hash();
+    const auto settings = r.bus.project_settings().fold(0);
+    const auto journal  = r.journal.canonical();
+    const auto undo     = r.undo.undo_depth();
+    for (const char* target : {"EPSG:4326", "EPSG:2263", "EPSG:BOYLE-BIR-SEY-YOK"}) {
+        CHECK_FALSE(r.bus.execute_line(std::string("DÖNÜŞTÜR hedef=") + target, Origin::Test).ok());
+        CHECK_EQ(r.doc.content_hash(), before);
+        CHECK_EQ(r.bus.project_settings().fold(0), settings);
+        CHECK_EQ(r.journal.canonical(), journal);
+        CHECK_EQ(r.undo.undo_depth(), undo);
+    }
+    command::Args args;
+    args.set("hedef", command::Value::text("EPSG:5254"));
+    const std::vector<command::Invocation> steps{{"core.reproject", args, Origin::Test}};
+    const auto preview = r.bus.preview(steps);
+    REQUIRE(preview.ok());
+    REQUIRE_FALSE(preview.value().failed_at.has_value());
+    CHECK_EQ(preview.value().ran, 1u);
+    CHECK_EQ(r.doc.content_hash(), before);
+    CHECK_EQ(r.bus.project_settings().fold(0), settings);
+    CHECK_EQ(r.journal.canonical(), journal);
+    CHECK_EQ(r.undo.undo_depth(), undo);
 }
 
 // =============================================================================

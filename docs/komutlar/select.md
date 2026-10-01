@@ -95,23 +95,28 @@ içinden geçen yola düşer. Üçü de imlecin altındadır ve üçünün de uz
 küçüğü** — çizgi (alanı yok), sonra parsel, sonra onu içine alan ada. Netcad'in iç içe
 alanları küçükten büyüğe gezmesiyle aynı sıra.
 
-**Arayüzde pencere açılmaz.** Tıklama ilk adayı hemen seçer ve imlecin yanında küçük bir
-rozet kaç aday olduğunu ve seçilenin ne olduğunu söyler:
-
-```text
-1/3 · ÇOKLUÇİZGİ · YOL · 60.000 m — Boşluk: sıradaki
-```
+Tıklama ilk adayı hemen seçer. Yanında **opak zeminli, çerçeveli bir liste**
+nesne türünü, katmanını, kimliğini ve ölçüsünü gösterir; çizimdeki yazılar listeyle
+karışmaz. Liste kaydırılabilir: yirmi adayın sonuncusuna ulaşmak için yirmi kez
+Boşluk'a basmak gerekmez. **İstediğiniz satıra tıklayın** veya arama alanında tür,
+katman ya da kimlik yazıp **Enter** ile seçin. Satırın üzerine gelince aday çizimde
+vurgulanır. Liste ayrı bir onay penceresi açmaz.
 
 | Tuş | Ne yapar |
 |---|---|
-| **Boşluk** ya da **/** | Sıradaki adayı seçer; sonuncudan sonra başa döner |
+| **Boşluk** ya da **/** | Sıradaki görünür adayı seçer; sonuncudan sonra başa döner |
 | **Shift + Boşluk** | Bir öncekini seçer |
-| **Enter** | Seçileni tutar; rozet kalkar. Komut tek nesne soruyorsa ona verir |
+| **↑ / ↓** | Önceki/sonraki görünür adaya geçer |
+| **Home / End** | İlk/son görünür adaya doğrudan geçer |
+| **Enter** | Seçileni tutar; liste kapanır. Komut tek nesne soruyorsa ona verir |
 | **Esc** | Seçimi tıklamadan önceki hâline geri alır |
 
-İmleci tıklanan yerden uzaklaştırmak, başka bir tuşa basmak ya da yeniden tıklamak
-gezinmeyi bitirir; o an seçili olan kalır. Shift ve Ctrl tıklamadaki anlamlarını korur:
-Shift ile gezilen aday seçime eklenir, Ctrl ile çıkarılır.
+Arama kutusunda Boşluk, `/`, Home ve End yazı düzenleme anlamlarını korur. Arama
+sonuç vermiyorsa Enter görünmeyen bir nesneyi seçmez. İmleci listeye götürmek
+listeyi kapatmaz; yeniden sahneye veya başka bir araca tıklamak, yakınlaştırmak
+ya da komut satırında yeni bir komut yazmak gezinmeyi bitirir ve o an seçili olan
+kalır. Shift ve Ctrl tıklamadaki anlamlarını korur: Shift ile gezilen aday seçime
+eklenir, Ctrl ile çıkarılır.
 
 **Komut satırında ve betikte** aynı şeyi `sira` yapar:
 

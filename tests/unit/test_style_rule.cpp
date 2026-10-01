@@ -23,11 +23,16 @@
 #include "piricad/core/json.hpp"
 #include "piricad/core/style_library.hpp"
 #include "piricad/core/style_rule.hpp"
+#include "piricad/io/format.hpp"
+#include "piricad/io/service.hpp"
 #include "piricad/render/scene.hpp"
 #include "piricad/render/view.hpp"
 #include "piricad/script/json_runner.hpp"
 
 #include <array>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -1670,6 +1675,58 @@ TEST_CASE("STİL: her ölçü kendi birimini taşıyabiliyor")
     CHECK(sl.offset.unit == core::Unit::Pixel);
 }
 
+TEST_CASE("STİL JITTER: kâğıt ve piksel taraması zoom ile yeniden dizilmez")
+{
+    // Unlike a ground hatch, this pattern has a fixed output spacing. Giving
+    // it a world-origin phase makes millions of periods change at every zoom.
+    for (const char* unit : {"kagit", "piksel"}) {
+        Rig f;
+        REQUIRE(f.bus.execute_line("KATMAN PARSEL", Origin::Test).ok());
+        REQUIRE(f.bus
+                    .execute_line("ALAN 485300,4310200 485320,4310200 485320,4310210 "
+                                  "485300,4310210",
+                                  Origin::Test)
+                    .ok());
+        REQUIRE(f.bus
+                    .execute_line(std::string{"STİL katman=PARSEL tip=cizgi-desen-dolgu "
+                                              "aci=45000000 aralik="} +
+                                      (std::string_view{unit} == "kagit" ? "3175" : "12") +
+                                      " aralik_birim=" + unit + " kaydirma=3 kaydirma_birim=piksel",
+                                  Origin::Test)
+                    .ok());
+        const auto before = f.doc.content_hash();
+        render::ViewTransform view;
+        render::SceneOptions options;
+        options.pixels_per_paper_mm = 96.0 / 25.4;
+        render::DrawList list;
+        for (const auto size : {std::array{1280, 720}, std::array{1023, 767}}) {
+            view.set_viewport(size[0], size[1]);
+            for (const double scale : {20.0, 20.0001, 20.1, 20.5, 21.0, 35.3, 40.0, 0.1234567}) {
+                for (const core::Mm pan : {0, 100}) {
+                    view.set_centre({485'311'000 + pan, 4'310'204'000 - pan}, scale);
+                    render::build_scene(f.doc, view, options, list);
+                    REQUIRE_EQ(list.passes.size(), std::size_t{1});
+                    const auto& ps = list.passes.front();
+                    REQUIRE(ps.type == core::SymbolLayerType::LinePatternFill);
+                    REQUIRE(ps.anchored);
+                    const double angle =
+                        static_cast<double>(ps.angle_udeg) * 3.14159265358979323846 / 180'000'000.0;
+                    const double nx = -std::sin(angle), ny = std::cos(angle);
+                    const double ax      = size[0] * 0.5 + static_cast<double>(ps.anchor_x);
+                    const double ay      = size[1] * 0.5 - static_cast<double>(ps.anchor_y);
+                    const double spacing = std::string_view{unit} == "kagit"
+                                               ? 3.175 * options.pixels_per_paper_mm
+                                               : 12.0;
+                    const double error   = std::remainder(nx * ax - ny * ay - 3.0, spacing);
+                    // A small float anchor allows <0.0001 px phase error.
+                    CHECK(std::abs(error) < 0.0001);
+                }
+            }
+        }
+        CHECK_EQ(f.doc.content_hash(), before);
+    }
+}
+
 TEST_CASE("STİL: tanınmayan ölçü birimi sessizce başka bir birime dönmüyor")
 {
     // Silently falling back to `birim` would be the same defect wearing a
@@ -1952,4 +2009,212 @@ TEST_CASE("Çıktı yerleşimi: harita çerçevesi yalnız kendi katmanlarını 
     // A mask that names nothing draws nothing: it narrows, it does not widen.
     const std::vector<std::uint8_t> none(rig.doc.layers().size(), 0);
     CHECK_EQ(drawn(none), std::size_t{0});
+}
+
+TEST_CASE("KentOS sembol kataloğu kaynak kimliklerini, gruplarını ve tüm görselleri taşır")
+{
+    const fs::path directory = fs::path{PIRICAD_DATA_DIR} / "styles/assets";
+    const auto read_json     = [](const fs::path& path) {
+        std::ifstream file(path, std::ios::binary);
+        REQUIRE(file.good());
+        std::ostringstream text;
+        text << file.rdbuf();
+        auto parsed = core::Json::parse(text.str());
+        REQUIRE(parsed.ok());
+        return std::move(parsed.value());
+    };
+    const core::Json source = read_json(directory / "system-library.kstil");
+    const core::Json native = read_json(directory / "system-library.json");
+    auto catalog            = core::StyleCatalog::from_json(native);
+    REQUIRE(catalog.ok());
+    Rig rig;
+    REQUIRE(
+        rig.bus
+            .execute_line("SEMBOL paket=\"" + (directory / "system-library.json").string() + "\"",
+                          Origin::Test)
+            .ok());
+    const auto& library = rig.bus.style_library();
+    REQUIRE(source.find("items") != nullptr);
+    REQUIRE(library.size() == source.find("items")->as_array().size());
+    REQUIRE(catalog.value().entries().size() == library.size());
+    std::array<bool, 3> applied{};
+    REQUIRE(rig.bus.execute_line("KATMAN ad=KENTOS", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ALAN 0,0 100,0 100,80 0,80", Origin::Test).ok());
+    const auto layer   = rig.doc.find_layer("KENTOS");
+    std::size_t images = 0;
+    for (const core::Json& item : source.find("items")->as_array()) {
+        const std::string id = item.find("id")->as_string();
+        const auto* entry    = library.find(id);
+        INFO(id);
+        REQUIRE(entry != nullptr);
+        CHECK(entry->label == item.find("name")->as_string());
+        std::vector<std::string> path;
+        if (const auto* parts = item.find("path"))
+            for (const auto& part : parts->as_array())
+                path.push_back(part.as_string());
+        CHECK(entry->group == path);
+        const bool asset           = item.find("kind")->as_string() == "asset";
+        const auto* symbol         = item.find("symbol");
+        const std::string geometry = asset ? "marker" : symbol->find("type")->as_string();
+        const auto expected        = geometry == "fill"   ? core::SymbolKind::Area
+                                     : geometry == "line" ? core::SymbolKind::Line
+                                                          : core::SymbolKind::Point;
+        CHECK(entry->kind == expected);
+        CHECK(entry->symbol.layers.size() ==
+              (asset ? 1 : symbol->find("layers")->as_array().size()));
+        for (const auto& sl : entry->symbol.layers) {
+            if (sl.type != core::SymbolLayerType::RasterFill &&
+                sl.type != core::SymbolLayerType::RasterLine &&
+                sl.type != core::SymbolLayerType::RasterMarker)
+                continue;
+            REQUIRE(sl.image != core::kNoImage);
+            CHECK(!library.images().bytes(sl.image).empty());
+            ++images;
+        }
+        // Each geometry crosses the command boundary, then one undo puts its
+        // previous symbol back. The shelf's image ids belong to another store.
+        if (!applied[static_cast<std::size_t>(expected)] &&
+            std::any_of(entry->symbol.layers.begin(), entry->symbol.layers.end(),
+                        [](const auto& sl) { return sl.image != core::kNoImage; })) {
+            const auto before      = rig.doc.layer(layer)->style;
+            const std::string line = "STİL katman=KENTOS paket=\"" +
+                                     (directory / "system-library.json").string() + "\" kod=\"" +
+                                     id + "\"";
+            REQUIRE(rig.bus.execute_line(line, Origin::Test).ok());
+            const auto& stored = rig.doc.styles().symbol_at(rig.doc.layer(layer)->style);
+            REQUIRE(stored.layers.size() == entry->symbol.layers.size());
+            for (std::size_t i = 0; i < stored.layers.size(); ++i) {
+                CHECK(stored.layers[i].type == entry->symbol.layers[i].type);
+                if (stored.layers[i].image != core::kNoImage)
+                    CHECK(rig.doc.images().content_key(stored.layers[i].image) ==
+                          library.images().content_key(entry->symbol.layers[i].image));
+            }
+            // Saving embeds SVG bytes; reopening needs none of the source paths.
+            io::FileService files(rig.bus);
+            const fs::path saved = fs::temp_directory_path() /
+                                   ("piricad-kentos-symbol-" +
+                                    std::string(core::symbol_kind_name(expected)) + ".pcad");
+            REQUIRE(
+                rig.bus.execute_line("FARKLIKAYDET \"" + saved.string() + "\"", Origin::Test).ok());
+            Rig reopened;
+            io::FileService read_files(reopened.bus);
+            REQUIRE(reopened.bus.execute_line("AÇ \"" + saved.string() + "\"", Origin::Test).ok());
+            CHECK(reopened.doc.styles().fold(0) == rig.doc.styles().fold(0));
+            CHECK(reopened.doc.images().fold(0) == rig.doc.images().fold(0));
+            CHECK(reopened.doc.dashes().fold(0) == rig.doc.dashes().fold(0));
+            CHECK(
+                core::fold_symbol(reopened.doc.styles().symbol_at(reopened.doc.layer(layer)->style),
+                                  0) == core::fold_symbol(stored, 0));
+            CHECK(reopened.doc.content_hash() == rig.doc.content_hash());
+            std::error_code ec;
+            fs::remove(saved, ec);
+            REQUIRE(rig.bus.execute_line("GERİAL", Origin::Test).ok());
+            CHECK(rig.doc.layer(layer)->style == before);
+            applied[static_cast<std::size_t>(expected)] = true;
+        }
+    }
+    CHECK(images > 0);
+    CHECK(applied[0]);
+    CHECK(applied[1]);
+    CHECK(applied[2]);
+}
+
+TEST_CASE("Sembol paketi ayrı birimleri, görünürlüğü, çizgi uçlarını ve özellik bağlarını korur")
+{
+    const std::string text = R"({"schema_version":1,"package_version":"1","id":"test-units",
+      "source":"Sınama","published":"2026-10-01","licence":"test","stiller":[{
+      "id":"mixed","ad":"Karışık","geometri":"alan","etiketler":["a","b"],
+      "katmanlar":[{"tip":"cizgi","birim":"kagit","kalinlik":130,
+      "boyut":{"deger":750,"birim":"zemin"},"aralik":{"deger":24,"birim":"piksel"},
+      "kaydirma":{"deger":-375,"birim":"kagit"},"faz":{"deger":250,"birim":"zemin"},"etkin":false,
+      "opaklik":127,"uc":"kare","birlesim":"pah",
+      "baglar":[{"alan":"sinir_renk","ozellik":"renk","tur":"metin"}]}]}],"kurallar":[]})";
+    auto parsed            = parse_catalog(text);
+    if (!parsed) FAIL_WITH("katalog", parsed.error().message);
+    REQUIRE(parsed.ok());
+    const auto& row = parsed.value().entries().front();
+    CHECK(row.geometry == "alan");
+    CHECK(row.tags == std::vector<std::string>{"a", "b"});
+    core::Symbol sym = core::symbol_of_entry(row, {});
+    REQUIRE(sym.layers.size() == 1);
+    const auto& sl = sym.layers.front();
+    CHECK(sl.size.unit == core::Unit::Ground);
+    CHECK(sl.size.value == 750);
+    CHECK(sl.interval.unit == core::Unit::Pixel);
+    CHECK(sl.interval.value == 24);
+    CHECK(sl.offset.unit == core::Unit::Paper);
+    CHECK(sl.offset.value == -375);
+    CHECK(!sl.enabled);
+    CHECK(sl.opacity == 127);
+    CHECK(sl.cap == core::LineCap::Square);
+    CHECK(sl.join == core::LineJoin::Bevel);
+    REQUIRE(sl.bindings.size() == 1);
+    CHECK(sl.bindings.front().field == "sinir_renk");
+    CHECK(sl.bindings.front().what == core::SymbolProperty::Colour);
+    CHECK(sl.bindings.front().type == core::AttrType::Text);
+    CHECK(render::stroke_width_px(sl, 4) == doctest::Approx(0.52));
+    CHECK(sl.phase.unit == core::Unit::Ground);
+    CHECK(sl.phase.value == 250);
+    const fs::path package = fs::temp_directory_path() / "piricad-mixed-symbol.json";
+    {
+        std::ofstream output(package);
+        output << text;
+    }
+    Rig rig;
+    io::FileService files(rig.bus);
+    rig.draw_fixture_document();
+    REQUIRE(rig.bus
+                .execute_line("STİL katman=PARSEL paket=\"" + package.string() + "\" kod=mixed",
+                              Origin::Test)
+                .ok());
+    const fs::path saved = fs::temp_directory_path() / "piricad-mixed-symbol.pcad";
+    REQUIRE(rig.bus.execute_line("FARKLIKAYDET \"" + saved.string() + "\"", Origin::Test).ok());
+    Rig again;
+    io::FileService read_files(again.bus);
+    REQUIRE(again.bus.execute_line("AÇ \"" + saved.string() + "\"", Origin::Test).ok());
+    CHECK(again.doc.content_hash() == rig.doc.content_hash());
+
+    // Exercise the optional unit column as untrusted input: a unit outside the
+    // enum must refuse the whole file and leave the open drawing untouched.
+    std::ifstream input(saved, std::ios::binary);
+    std::vector<char> bytes(std::istreambuf_iterator<char>{input}, {});
+    io::FileHeader header{};
+    REQUIRE(bytes.size() >= sizeof(header));
+    std::memcpy(&header, bytes.data(), sizeof(header));
+    bool unit_column = false;
+    for (std::uint32_t i = 0; i < header.block_count; ++i) {
+        io::BlockEntry entry{};
+        const auto position = static_cast<std::size_t>(header.directory_offset) + i * sizeof(entry);
+        REQUIRE(position + sizeof(entry) <= bytes.size());
+        std::memcpy(&entry, bytes.data() + position, sizeof(entry));
+        if (entry.id != io::kBlkSymbolLayerPhaseUnit) continue;
+        REQUIRE(entry.bytes > 0);
+        REQUIRE(entry.offset < bytes.size());
+        bytes[static_cast<std::size_t>(entry.offset)] = static_cast<char>(255);
+        unit_column                                   = true;
+    }
+    REQUIRE(unit_column);
+    const fs::path bad = fs::temp_directory_path() / "piricad-mixed-symbol-bad.pcad";
+    {
+        std::ofstream output(bad, std::ios::binary);
+        output.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+    }
+    const auto before = again.doc.content_hash();
+    CHECK_FALSE(again.bus.execute_line("AÇ \"" + bad.string() + "\"", Origin::Test).ok());
+    CHECK(again.doc.content_hash() == before);
+    if (std::getenv("PIRICAD_TOHUM_UPDATE") != nullptr) {
+        const fs::path corpus = fs::path{PIRICAD_FUZZ_DIR} / "tohum/proje";
+        fs::copy_file(saved, corpus / "24-sembol-faz-birimi.pcad",
+                      fs::copy_options::overwrite_existing);
+        fs::copy_file(bad, corpus / "25-sembol-faz-birimi-bozuk.pcad",
+                      fs::copy_options::overwrite_existing);
+    }
+    std::error_code ec;
+    fs::remove(package, ec);
+    fs::remove(saved, ec);
+    fs::remove(bad, ec);
+    sym.layers.front().look.width_um = 260;
+    CHECK(render::stroke_width_px(sym.layers.front(), 4) == doctest::Approx(1.04));
+    sym.layers.front().look.width_um = 0;
+    CHECK(render::stroke_width_px(sym.layers.front(), 4) == 1);
 }

@@ -242,6 +242,10 @@ enum BlockId : std::uint32_t {
     /// file meant (io.md R10).
     kBlkSymbolLayerPhase = 0x0038, ///< i32[], one per symbol layer
 
+    /// Optional independent unit for the phase. Older files use interval.unit
+    /// when they carry a phase, otherwise the default paper unit.
+    kBlkSymbolLayerPhaseUnit = 0x003F, ///< u8[], core::Unit, one per symbol layer
+
     /// The parameters each symbol layer takes from the OBJECT: which column, which
     /// property, and what the column holds.
     ///

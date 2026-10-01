@@ -57,6 +57,8 @@ class QStackedWidget;
 class QFrame;
 class QDockWidget;
 class QLabel;
+class QLineEdit;
+class QListWidget;
 class QMenu;
 class QPlainTextEdit;
 class QToolBar;
@@ -909,11 +911,9 @@ private:
     /// as it is.
     void pickLayerFromObject();
 
-    /// ONE OF THE THINGS UNDER A CLICK, WALKED IN PLACE — the user's choice over a
-    /// modal list: the first is taken at once, a badge beside the click says which
-    /// of how many, Space and `/` take the next (Shift+Space the one before),
-    /// Enter keeps it and Esc puts the selection back as it was. Netcad's Space
-    /// through nested areas, MicroStation's reset, AutoCAD's selection cycling.
+    /// The first candidate is taken at once. A framed, non-modal list beside
+    /// the click lets the hand choose any candidate directly or filter by its
+    /// identity; Space still walks on, Enter keeps, Esc restores the selection.
     struct PickCycle
     {
         std::vector<core::EntityKey> keys;   ///< `core::pick_all`'s order: nearest, then smallest
@@ -926,6 +926,7 @@ private:
 
     void startPickCycle(const std::vector<core::EntityId>& candidates,
                         Qt::KeyboardModifiers modifiers, bool capture);
+    void buildPickChooser();
     /// Takes the current candidate — by the click's modifiers, against the
     /// selection before it — and writes the badge.
     void showPickCycle();
@@ -1260,6 +1261,10 @@ private:
     std::vector<core::Point2> composeTrace_;
     /// The walk through the things under a click, while one is live.
     std::optional<PickCycle> pickCycle_;
+    QFrame* pickChooser_{nullptr};
+    QListWidget* pickList_{nullptr};
+    QLineEdit* pickQuery_{nullptr}; ///< the standard Field's text editor
+    QLabel* pickHeading_{nullptr};
     /// The cursor's last world point (`onCursorMoved`): where a click landed.
     core::Point2 lastCursor_{};
     /// The `Nokta Girişi` tab's snap switches, one per engine bit, to read back.

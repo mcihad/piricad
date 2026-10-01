@@ -66,6 +66,7 @@ std::string known_block_name(std::uint32_t id)
     case kBlkTexts: return "metinler";
     case kBlkLayerStyles: return "katman stilleri";
     case kBlkSymbolLayerPhase: return "sembol katmani evresi";
+    case kBlkSymbolLayerPhaseUnit: return "sembol katmani evre birimi";
     case kBlkSymbolLayerBindCount:
     case kBlkSymbolLayerBindField:
     case kBlkSymbolLayerBindWhat:

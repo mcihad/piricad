@@ -2886,6 +2886,39 @@ int MainWindow::probeRibbonSheet()
             measure(raised);
         save(bar->grab().toImage(), QStringLiteral("baglam-") + QString::fromLatin1(word));
     }
+    // Selected combo rows must remain readable under the ribbon's stylesheet,
+    // in either theme. Photograph the actual popup, including editable lists.
+    const ThemeMode originalTheme = theme_;
+    const auto popupShot          = [&settle, &save](ComboBox* box, const char* name,
+                                                     const QString& themeName) {
+        box->showPopup();
+        settle();
+        save(box->view()->window()->grab().toImage(),
+             QStringLiteral("combo-%1-%2").arg(themeName, QString::fromLatin1(name)));
+        box->hidePopup();
+    };
+    for (const ThemeMode mode : {ThemeMode::Light, ThemeMode::Dark}) {
+        runScriptLine(QStringLiteral("SEÇ mod=NESNE nesneler=6"));
+        endCommand();
+        theme_ = mode;
+        applyTheme();
+        settle();
+        const QString themeName =
+            mode == ThemeMode::Light ? QStringLiteral("acik") : QStringLiteral("koyu");
+        for (const auto& [box, name] : {std::pair{ribbonLive_->dimStyle, "stil"},
+                                        std::pair{ribbonLive_->dimPrecision, "hassasiyet"},
+                                        std::pair{ribbonLive_->dimUnit, "birim"}}) {
+            popupShot(box, name, themeName);
+        }
+        runScriptLine(QStringLiteral("SEÇ mod=NESNE nesneler=5"));
+        endCommand();
+        settle();
+        save(bar->grab().toImage(), QStringLiteral("baglam-tarama-%1").arg(themeName));
+        popupShot(ribbonLive_->hatchAngle, "aci", themeName);
+        popupShot(ribbonLive_->hatchScale, "olcek", themeName);
+    }
+    theme_ = originalTheme;
+    applyTheme();
     controller_->clearSelection();
     settle();
 

@@ -25,7 +25,8 @@
 // spline's control points — has every vertex carried by PROJ: that is the
 // legal geometry, and nothing about it may be approximated. A kind with a
 // shape of its own — a circle's roundness, an arc's sweep, an ellipse's axes,
-// a caption's turn, a block's placement, a dimension's figure — is carried by
+// an arc-polyline's centres and radii, a caption's turn, a block's placement,
+// a dimension's figure — is carried by
 // the SIMILARITY the projection change is at its anchor: the anchor moved
 // exactly by PROJ, the turn and the scale read from PROJ over a kilometre
 // beside it, and the kind's own transform (`transform_entity`, HİZALA's) does
@@ -81,8 +82,7 @@ std::vector<std::string> offered_systems()
 /// kinds whose shape IS their vertices.
 bool vertex_by_vertex(core::KindId kind)
 {
-    return kind == core::kPolylineKind || kind == core::kPointKind ||
-           kind == core::kArcPolylineKind || kind == core::kSplineKind;
+    return kind == core::kPolylineKind || kind == core::kPointKind || kind == core::kSplineKind;
 }
 
 /// How far beside an anchor the local turn and scale are read: far enough that
@@ -170,6 +170,14 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
+    const Bus& bus       = ctx.session().bus();
+    core::Crs target_crs = bus.on_crs_resolve ? bus.on_crs_resolve(target) : core::Crs(target);
+    if (const std::string problem = core::crs_unit_problem(target_crs); !problem.empty()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "Çizim bu sisteme dönüştürülemez. " + problem + " " + core::crs_metric_hint());
+        co_return;
+    }
+
     // ---- move every vertex ----
     const core::Document& doc      = ctx.document();
     const core::RingGeometry& geom = doc.geometry();
@@ -252,7 +260,7 @@ Task<void> run(Context& ctx)
     // THE LABEL FOLLOWS THE COORDINATES. A drawing whose numbers moved and whose
     // CRS still names the old system is worse than one never transformed: every
     // reader downstream would trust the label.
-    if (auto st = ctx.transaction().set_crs(core::Crs(target)); !st) {
+    if (auto st = ctx.transaction().set_crs(std::move(target_crs)); !st) {
         ctx.refuse(st.error());
         co_return;
     }
@@ -268,7 +276,6 @@ Task<void> run(Context& ctx)
     for (const command::ExternalListing& row : command::list_external_references(ctx.document()))
         reread = reread || row.state != command::ExternalListing::State::Unloaded;
     if (reread) {
-        Bus& bus = ctx.session().bus();
         if (bus.on_file_request) {
             FileRequest request;
             request.verb    = FileRequest::Verb::XrefLoad;

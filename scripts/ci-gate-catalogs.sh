@@ -12,6 +12,12 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
 
+# The system symbol library keeps the source tree and a generated native
+# catalogue. Verify every generated motif, not only the catalogue's header.
+if [[ -f "$root/data/styles/assets/system-library.kstil" ]]; then
+    python3 "$root/scripts/adapt-kentos-styles.py" --check || fail=1
+fi
+
 # Bash 3.2 has no `mapfile` (it arrived in 4.0) and macOS ships 3.2 as
 # /bin/bash, which is what `env bash` finds there. Read the list instead.
 catalogues=()

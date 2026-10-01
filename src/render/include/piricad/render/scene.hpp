@@ -23,10 +23,15 @@ namespace piricad::render {
 PassStyle pass_of(const core::SymbolLayer& layer, const core::ImageStore& images,
                   const core::DashStore& dashes, double mm_per_pixel, double pixels_per_paper_mm);
 
+/// Converts a measure to another unit, preserving its size in the given view.
+/// Rounds once to the destination's integer precision; nonzero sizes stay nonzero.
+core::Measure measure_in_unit(core::Measure measure, core::Unit unit, double mm_per_pixel,
+                              double pixels_per_paper_mm);
+
 /// The stroke width one symbol layer draws with, in this frame's pixels.
 ///
-/// Never below one: a line the renderer rounds away is a boundary the user cannot
-/// see, and on a cadastral sheet a boundary is the legal edge.
+/// Zero paper width means a one-pixel hairline; positive widths retain subpixel
+/// precision so distinct paper weights do not collapse to the same hairline.
 float stroke_width_px(const core::SymbolLayer& layer, double pixels_per_paper_mm);
 
 /// Screen pixels one PAPER millimetre covers, when nobody says otherwise.

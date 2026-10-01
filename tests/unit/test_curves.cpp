@@ -15,6 +15,7 @@
 #include "piricad/core/curve_path.hpp"
 #include "piricad/core/document.hpp"
 #include "piricad/core/ellipse.hpp"
+#include "piricad/core/kernel.hpp"
 #include "piricad/core/spline.hpp"
 #include "piricad/core/stroke.hpp"
 #include "piricad/core/trig.hpp"
@@ -99,6 +100,110 @@ bool near(Point2 a, Point2 b, core::Mm within = 1)
 }
 
 } // namespace
+
+TEST_CASE("O-5: OCCT kesişimi TUREF koordinatlarında, ters elips yayı ve farklı eksenlerle")
+{
+    if (!core::kernel_available()) return;
+    const Point2 origin{485'300'000, 4'310'200'000};
+    const auto at = [origin](core::Mm x, core::Mm y) { return Point2{origin.x + x, origin.y + y}; };
+    const PathPiece e = ellipse(origin, at(10'000, 0), at(0, 5'000), 180'000'000, -180'000'000);
+    const PathPiece line{.from = at(-20'000, 3'000), .to = at(20'000, 3'000)};
+    auto two = core::kernel_meets(e, line);
+    REQUIRE(two.ok());
+    REQUIRE_EQ(two.value().crossings.size(), 2u);
+    CHECK_EQ(two.value().crossings[0].point, at(-8'000, 3'000));
+    CHECK_EQ(two.value().crossings[1].point, at(8'000, 3'000));
+    CHECK_FALSE(two.value().unresolved);
+    for (const auto& hit : two.value().crossings)
+        CHECK(near(core::point_at(path(e), hit.at), hit.point));
+    const auto miss =
+        core::kernel_meets(e, PathPiece{.from = at(-20'000, -3'000), .to = at(20'000, -3'000)});
+    REQUIRE(miss.ok());
+    CHECK(miss.value().crossings.empty()); // below this upper half-ellipse
+    const PathPiece swapped = ellipse(origin, at(0, 5'000), at(-10'000, 0));
+    auto other              = core::kernel_meets(swapped, line);
+    REQUIRE(other.ok());
+    REQUIRE_EQ(other.value().crossings.size(), 2u);
+    for (const auto& hit : other.value().crossings)
+        CHECK(near(core::point_at(path(swapped), hit.at), hit.point));
+    // Stored axis ends may be conjugate rather than exactly perpendicular
+    // (affine transforms and integer rounding). Do not silently square them.
+    const PathPiece conjugate = ellipse(origin, at(10'000, 0), at(3'000, 5'000));
+    const auto affine         = core::kernel_meets(conjugate, line);
+    REQUIRE(affine.ok());
+    REQUIRE_EQ(affine.value().crossings.size(), 2u);
+    CHECK_EQ(affine.value().crossings[0].point, at(9'800, 3'000));
+    CHECK_EQ(affine.value().crossings[1].point, at(-6'200, 3'000));
+    for (const auto& hit : affine.value().crossings)
+        CHECK(near(core::point_at(path(conjugate), hit.at), hit.point));
+    const auto full      = ellipse(origin, at(10'000, 0), at(0, 5'000));
+    const auto identical = core::kernel_meets(full, full);
+    REQUIRE(identical.ok());
+    CHECK(identical.value().crossings.empty());
+    REQUIRE_EQ(identical.value().overlaps.size(), 1u);
+    CHECK_EQ(identical.value().overlaps[0].from.t, 0.0);
+    CHECK_EQ(identical.value().overlaps[0].to.t, 1.0);
+    // The same input returns the same whole millimetres and parameter order.
+    for (int i = 0; i < 3; ++i) {
+        auto again = core::kernel_meets(e, line);
+        REQUIRE(again.ok());
+        REQUIRE_EQ(again.value().crossings.size(), two.value().crossings.size());
+        for (std::size_t j = 0; j < two.value().crossings.size(); ++j)
+            CHECK_EQ(again.value().crossings[j].point, two.value().crossings[j].point);
+    }
+}
+
+TEST_CASE("O-5: OCCT spline-spline, düğüm aralıkları ve ortak parça")
+{
+    if (!core::kernel_available()) return;
+    const auto first  = parabola();
+    const auto second = spline({{0, 5'000}, {5'000, -5'000}, {10'000, 5'000}}, 2);
+    auto two          = core::kernel_meets(first, second);
+    REQUIRE(two.ok());
+    REQUIRE_EQ(two.value().crossings.size(), 2u);
+    CHECK_EQ(two.value().crossings[0].point, (Point2{1'464, 2'500}));
+    CHECK_EQ(two.value().crossings[1].point, (Point2{8'536, 2'500}));
+    CHECK_FALSE(two.value().unresolved);
+    auto piecewise = spline({{0, 0}, {5'000, 5'000}, {10'000, 0}}, 1);
+    // A large knot origin with a small domain: only their differences matter.
+    for (auto& knot : piecewise.spline.knots_nano)
+        knot += 4'000'000'000'000'000'000;
+    auto corners =
+        core::kernel_meets(piecewise, PathPiece{.from = {-1'000, 3'000}, .to = {11'000, 3'000}});
+    REQUIRE(corners.ok());
+    REQUIRE_EQ(corners.value().crossings.size(), 2u);
+    CHECK_EQ(corners.value().crossings[0].point, (Point2{3'000, 3'000}));
+    CHECK_EQ(corners.value().crossings[1].point, (Point2{7'000, 3'000}));
+    const auto identical = core::kernel_meets(first, first);
+    REQUIRE(identical.ok());
+    CHECK(identical.value().crossings.empty());
+    REQUIRE_EQ(identical.value().overlaps.size(), 1u);
+    CHECK_EQ(identical.value().overlaps[0].from.t, 0.0);
+    CHECK_EQ(identical.value().overlaps[0].to.t, 1.0);
+}
+
+TEST_CASE("O-5: çekirdek geçersiz eğriyi boş başarı diye bildirmez")
+{
+    const PathPiece line{.from = {-1'000, 0}, .to = {11'000, 0}};
+    if (!core::kernel_available()) {
+        CHECK_FALSE(core::kernel_meets(parabola(), line).ok());
+        return;
+    }
+    auto invalid          = parabola();
+    invalid.spline.degree = 0;
+    CHECK_FALSE(core::kernel_meets(invalid, line).ok());
+    invalid                     = parabola();
+    invalid.spline.weights_nano = {core::kNano};
+    CHECK_FALSE(core::kernel_meets(invalid, line).ok());
+    invalid                      = parabola();
+    invalid.spline.knots_nano[3] = -1;
+    CHECK_FALSE(core::kernel_meets(invalid, line).ok());
+    invalid                     = parabola();
+    invalid.spline.weights_nano = {core::kNano, 0, core::kNano};
+    CHECK_FALSE(core::kernel_meets(invalid, line).ok());
+    CHECK_FALSE(core::kernel_meets(parabola(), PathPiece{}).ok());
+    CHECK_FALSE(core::kernel_meets(ellipse({0, 0}, {10'000, 0}, {5'000, 0}), line).ok());
+}
 
 TEST_CASE("C-01: elips ile doğru — iki kesişim, teğet dokunuş ve ıska ayrı sonuçlanır")
 {

@@ -1,0 +1,44 @@
+crs EPSG:5256
+katman-sayisi 1
+nesne-sayisi 5
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=5
+nesne 0 katman=0 stil=0 halka=1 tur=5 yuk=0100000000000000f6fd8708000000000a97320200000000
+  halka rol=0 parca=0 tepe=3
+    485300000 4310200000
+    485310000 4310200000
+    485300000 4310205000
+  alan_mm2 0  cevre_mm 31732
+nesne 1 katman=0 stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485280000 4310203000
+    485320000 4310203000
+  alan_mm2 0  cevre_mm 40000
+nesne 2 katman=0 stil=0 halka=1 tur=7 yuk=010010000000000002060000000000000000000000000000000000000000000000000000001199ba08000000001199ba08000000001199ba080000000000000000
+  halka rol=0 parca=0 tepe=3
+    485330000 4310200000
+    485330732 4310201464
+    485331464 4310202500
+  alan_mm2 0  cevre_mm 2900
+nesne 3 katman=0 stil=0 halka=1 tur=7 yuk=0100100000000000020600000000000000000000000000000000000000000000000000000000ca9a3b0000000000ca9a3b0000000000ca9a3b0000000000000000
+  halka rol=0 parca=0 tepe=3
+    485330000 4310205000
+    485335000 4310195000
+    485340000 4310205000
+  alan_mm2 0  cevre_mm 14789
+nesne 4 katman=0 stil=0 halka=1 tur=7 yuk=01001000000000000206000000ef30e03200000000ef30e03200000000ef30e0320000000000ca9a3b0000000000ca9a3b0000000000ca9a3b0000000000000000
+  halka rol=0 parca=0 tepe=3
+    485338536 4310202500
+    485339268 4310201464
+    485340000 4310200000
+  alan_mm2 0  cevre_mm 2900
+  koken core.trim 3
+kapsam 485280000 4310195001 485340000 4310205000
+icerik-ozeti a9e61cc35cf128a5
+gunluk
+  {"seq":1,"cmd":"core.setting","args":{"ad":"core.crs.id","deger":"EPSG:5256"},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":2,"cmd":"core.ellipse_draw","args":{"merkez":[485300000,4310200000],"birinci":[485310000,4310200000],"ikinci":[485300000,4310205000]},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":3,"cmd":"core.line","args":{"noktalar":[[485280000,4310203000],[485320000,4310203000]]},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":4,"cmd":"core.trim","args":{"nesne":[1],"sinir":[2],"nokta":[[485300000,4310205000]]},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":5,"cmd":"core.spline","args":{"noktalar":[[485330000,4310200000],[485335000,4310210000],[485340000,4310200000]],"derece":2},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":6,"cmd":"core.spline","args":{"noktalar":[[485330000,4310205000],[485335000,4310195000],[485340000,4310205000]],"derece":2},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":7,"cmd":"core.trim","args":{"nesne":[3],"sinir":[4],"nokta":[[485335000,4310205000]]},"origin":"test","crs":"EPSG:5256","katman":"0"}

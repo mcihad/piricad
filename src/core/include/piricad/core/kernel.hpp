@@ -45,6 +45,12 @@ bool kernel_available() noexcept;
 /// `OpenCASCADE 7.9.3`, or the sentence that says the build has none.
 std::string kernel_version();
 
+/// Crossings and shared stretches of two exact curve pieces, through OCCT's
+/// 2D intersector. Parameters are fractions of the first piece's walk, including
+/// a reversed ellipse or spline. Points return in whole millimetres, ordered
+/// along that walk; a failed solve is an error, never an empty success.
+Result<PathMeets> kernel_meets(const PathPiece& a, const PathPiece& b);
+
 /// A face as the kernel takes and gives it: a boundary and its holes, each a
 /// closed path whose arcs are arcs. Handed back with the boundary
 /// counter-clockwise, the holes clockwise, each starting at its lowest, then

@@ -3,6 +3,9 @@
 
 #include "piricad/core/arc.hpp"
 #include "piricad/core/pick.hpp"
+#include "piricad/core/precision.hpp"
+#include "piricad/core/spline.hpp"
+#include "piricad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -29,12 +32,25 @@
 #include <BRepTools_WireExplorer.hxx>
 #include <BRep_Tool.hxx>
 #include <GC_MakeArcOfCircle.hxx>
+#include <Geom2dAPI_InterCurveCurve.hxx>
+#include <Geom2dInt_GInter.hxx>
+#include <Geom2d_BSplineCurve.hxx>
+#include <Geom2d_Circle.hxx>
+#include <Geom2d_Curve.hxx>
+#include <Geom2d_Ellipse.hxx>
+#include <Geom2d_Line.hxx>
+#include <Geom2d_TrimmedCurve.hxx>
 #include <GeomAbs_CurveType.hxx>
 #include <GeomAbs_JoinType.hxx>
 #include <Geom_TrimmedCurve.hxx>
+#include <IntRes2d_IntersectionPoint.hxx>
+#include <IntRes2d_IntersectionSegment.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_Version.hxx>
+#include <TColStd_Array1OfInteger.hxx>
+#include <TColStd_Array1OfReal.hxx>
+#include <TColgp_Array1OfPnt2d.hxx>
 #include <TopAbs_Orientation.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
@@ -47,8 +63,13 @@
 #include <TopoDS_Wire.hxx>
 #include <gp.hxx>
 #include <gp_Ax2.hxx>
+#include <gp_Ax22d.hxx>
+#include <gp_Ax2d.hxx>
 #include <gp_Circ.hxx>
+#include <gp_Dir2d.hxx>
 #include <gp_Pnt.hxx>
+#include <gp_Pnt2d.hxx>
+#include <gp_Vec2d.hxx>
 #endif
 
 namespace piricad::core {
@@ -128,6 +149,11 @@ Result<std::vector<CurvePath>> kernel_offset(const CurvePath&, Mm, OffsetCorner,
     return err(ErrorCode::Unsupported, kernel_version());
 }
 
+Result<PathMeets> kernel_meets(const PathPiece&, const PathPiece&)
+{
+    return err(ErrorCode::Unsupported, kernel_version());
+}
+
 #else
 
 namespace {
@@ -152,6 +178,127 @@ struct Frame
         return Point2{origin.x + mm_round(p.X()), origin.y + mm_round(p.Y())};
     }
 };
+
+/// A bounded OCCT curve and the parameters of the document's walk. The
+/// intersector walks increasing parameters; the document may walk backwards.
+struct Curve2d
+{
+    Handle(Geom2d_Curve) curve;
+    double start{0.0};
+    double end{1.0};
+
+    [[nodiscard]] double fraction(double u) const
+    {
+        return std::clamp((u - start) / (end - start), 0.0, 1.0);
+    }
+};
+
+Result<Curve2d> curve2d(const PathPiece& p, const Frame& frame)
+{
+    const auto point = [&frame](Point2 at) {
+        return gp_Pnt2d(static_cast<double>(at.x - frame.origin.x),
+                        static_cast<double>(at.y - frame.origin.y));
+    };
+    constexpr double rad = std::numbers::pi / (180.0 * 1'000'000.0);
+    Curve2d out;
+    switch (p.kind) {
+    case PathPiece::Kind::Segment: {
+        const gp_Vec2d direction(point(p.from), point(p.to));
+        out.end = direction.Magnitude();
+        if (out.end == 0.0)
+            return err(ErrorCode::InvalidArgument,
+                       "Sıfır uzunluklu kenarın kesişimi hesaplanamaz.");
+        out.curve = new Geom2d_Line(point(p.from), gp_Dir2d(direction));
+        break;
+    }
+    case PathPiece::Kind::Arc:
+        out.curve = new Geom2d_Circle(gp_Ax2d(point(p.centre), gp_Dir2d(1.0, 0.0)),
+                                      static_cast<double>(p.radius));
+        out.start =
+            static_cast<double>(atan2_udeg(p.from.y - p.centre.y, p.from.x - p.centre.x)) * rad;
+        out.end = out.start + (static_cast<double>(p.sweep_udeg) * rad);
+        break;
+    case PathPiece::Kind::Ellipse: {
+        const gp_Vec2d u(point(p.centre), point(p.major));
+        const gp_Vec2d v(point(p.centre), point(p.minor));
+        if (u.Magnitude() == 0.0 || v.Magnitude() == 0.0)
+            return err(ErrorCode::InvalidArgument, "Elipsin eksenleri sıfır uzunluklu olamaz.");
+        if (u.Crossed(v) == 0.0)
+            return err(ErrorCode::InvalidArgument, "Elipsin eksenleri aynı doğru üzerinde olamaz.");
+        // The stored axes can be conjugate (and integer rounding alone can
+        // make them non-perpendicular). Rotate the parameter frame to the
+        // principal axes before giving it to OCCT: P(t) is unchanged, while
+        // its new parameter is t − phase. gp_Ax22d would otherwise silently
+        // square the second axis and change the document's actual ellipse.
+        const double phase =
+            0.5 * atan2_rad(2.0 * u.Dot(v), u.SquareMagnitude() - v.SquareMagnitude());
+        const SinCos turn    = sin_cos_rad(phase);
+        const gp_Vec2d major = (u * turn.cos) + (v * turn.sin);
+        const gp_Vec2d minor = (v * turn.cos) - (u * turn.sin);
+        out.curve = new Geom2d_Ellipse(gp_Ax22d(point(p.centre), gp_Dir2d(major), gp_Dir2d(minor)),
+                                       major.Magnitude(), minor.Magnitude());
+        out.start = (static_cast<double>(p.start_udeg) * rad) - phase;
+        out.end   = out.start + (static_cast<double>(p.sweep_udeg) * rad);
+        break;
+    }
+    case PathPiece::Kind::Spline: {
+        const auto degree = static_cast<std::size_t>(p.spline.degree);
+        const auto knots  = p.spline.knots_nano.empty()
+                                ? uniform_clamped_knots(p.controls.size(), p.spline.degree)
+                                : p.spline.knots_nano;
+        if (degree == 0 || p.controls.size() < degree + 1 ||
+            knots.size() != p.controls.size() + degree + 1 ||
+            (!p.spline.weights_nano.empty() && p.spline.weights_nano.size() != p.controls.size()))
+            return err(ErrorCode::InvalidArgument,
+                       "Spline kontrol noktaları, derece ve düğümler uyuşmuyor.");
+        std::vector<std::int64_t> distinct;
+        std::vector<int> counts;
+        for (const auto knot : knots) {
+            if (!distinct.empty() && knot < distinct.back())
+                return err(ErrorCode::InvalidArgument, "Spline düğümleri artan sırada olmalıdır.");
+            if (!distinct.empty() && knot == distinct.back()) {
+                ++counts.back();
+            } else {
+                distinct.push_back(knot);
+                counts.push_back(1);
+            }
+        }
+        TColgp_Array1OfPnt2d poles(1, static_cast<int>(p.controls.size()));
+        TColStd_Array1OfReal weights(1, poles.Length());
+        for (int i = 1; i <= poles.Length(); ++i) {
+            const auto j = static_cast<std::size_t>(i - 1);
+            poles.SetValue(i, point(p.controls[j]));
+            weights.SetValue(i, p.spline.weights_nano.empty()
+                                    ? 1.0
+                                    : static_cast<double>(p.spline.weights_nano[j]) /
+                                          static_cast<double>(kNano));
+        }
+        TColStd_Array1OfReal values(1, static_cast<int>(distinct.size()));
+        TColStd_Array1OfInteger mults(1, values.Length());
+        // Subtract the knot origin before converting: large nano-fixed-point
+        // values must not hide a small domain in the double's mantissa.
+        const auto parameter = [&knots](std::int64_t k) {
+            return static_cast<double>(static_cast<Int128>(k) - knots.front()) /
+                   static_cast<double>(kNano);
+        };
+        for (int i = 1; i <= values.Length(); ++i) {
+            values.SetValue(i, parameter(distinct[static_cast<std::size_t>(i - 1)]));
+            mults.SetValue(i, counts[static_cast<std::size_t>(i - 1)]);
+        }
+        // `periodic` is import provenance; the model evaluates the written knot
+        // vector as a non-periodic B-spline, so the adapter must do the same.
+        out.curve = new Geom2d_BSplineCurve(poles, weights, values, mults, p.spline.degree, false);
+        out.start = parameter(knots[degree]);
+        out.end   = parameter(knots[p.controls.size()]);
+        break;
+    }
+    }
+    if (!(std::abs(out.end - out.start) > 0.0))
+        return err(ErrorCode::InvalidArgument, "Eğrinin parametre aralığı boş olamaz.");
+    out.curve = new Geom2d_TrimmedCurve(out.curve, std::min(out.start, out.end),
+                                        std::max(out.start, out.end), true, false);
+    return out;
+}
 
 /// Two straight pieces in a row that lie on one line, made one — EXACTLY: the
 /// cross product of their directions zero in integers, the turn between them
@@ -409,6 +556,89 @@ bool kernel_available() noexcept
 std::string kernel_version()
 {
     return std::string("OpenCASCADE ") + OCC_VERSION_COMPLETE;
+}
+
+Result<PathMeets> kernel_meets(const PathPiece& a, const PathPiece& b)
+{
+    try {
+        const Frame frame{a.from};
+        auto first = curve2d(a, frame);
+        if (!first) return first.error();
+        auto second = curve2d(b, frame);
+        if (!second) return second.error();
+        // OCCT works in local millimetres. A tight computational tolerance
+        // keeps a tangency from becoming a long shared stretch; storage still
+        // rounds exactly once to whole millimetres below.
+        const Geom2dAPI_InterCurveCurve solve(first.value().curve, second.value().curve, 1e-7);
+        const auto& inter = solve.Intersector();
+        if (!inter.IsDone())
+            return err(ErrorCode::ValidationFailed, "OpenCASCADE eğri kesişimini çözemedi.");
+        PathMeets out;
+        const auto append = [&](const IntRes2d_IntersectionPoint& hit, bool touching) {
+            gp_Pnt2d p;
+            gp_Pnt2d q;
+            gp_Vec2d dp;
+            gp_Vec2d dq;
+            first.value().curve->D1(hit.ParamOnFirst(), p, dp);
+            second.value().curve->D1(hit.ParamOnSecond(), q, dq);
+            const double product = dp.Magnitude() * dq.Magnitude();
+            touching = touching || (product > 0.0 && std::abs(dp.Crossed(dq)) <= 1e-6 * product);
+            out.crossings.push_back(PathCrossing{
+                .at = {.piece = 0, .t = first.value().fraction(hit.ParamOnFirst())},
+                .point =
+                    {
+                        .x = frame.origin.x + mm_round(hit.Value().X()),
+                        .y = frame.origin.y + mm_round(hit.Value().Y()),
+                    },
+                .touching = touching,
+            });
+        };
+        for (int i = 1; i <= inter.NbPoints(); ++i)
+            append(inter.Point(i), false);
+        for (int i = 1; i <= inter.NbSegments(); ++i) {
+            const auto& shared = inter.Segment(i);
+            if (!shared.HasFirstPoint() || !shared.HasLastPoint()) {
+                out.unresolved = true;
+                continue;
+            }
+            const auto& from = shared.FirstPoint();
+            const auto& to   = shared.LastPoint();
+            // The solver also represents a tangent by a tiny segment. A
+            // stretch smaller than the storage resolution is one touch.
+            const gp_Pnt2d middle =
+                first.value().curve->Value((from.ParamOnFirst() + to.ParamOnFirst()) / 2.0);
+            if (from.Value().Distance(to.Value()) <= kSamePointMm &&
+                from.Value().Distance(middle) <= kSamePointMm) {
+                append(from, true);
+                continue;
+            }
+            const double lo = first.value().fraction(from.ParamOnFirst());
+            const double hi = first.value().fraction(to.ParamOnFirst());
+            out.overlaps.push_back(PathOverlap{.from = {.piece = 0, .t = std::min(lo, hi)},
+                                               .to   = {.piece = 0, .t = std::max(lo, hi)}});
+        }
+        std::ranges::sort(out.crossings, [](const PathCrossing& p, const PathCrossing& q) {
+            return p.at.t < q.at.t;
+        });
+        std::vector<PathCrossing> unique;
+        for (const auto& hit : out.crossings) {
+            if (!unique.empty() &&
+                distance_squared(unique.back().point, hit.point) <= kSamePointMm * kSamePointMm) {
+                unique.back().touching = unique.back().touching || hit.touching;
+            } else {
+                unique.push_back(hit);
+            }
+        }
+        out.crossings = std::move(unique);
+        std::ranges::sort(out.overlaps, [](const PathOverlap& p, const PathOverlap& q) {
+            return p.from.t < q.from.t;
+        });
+        return out;
+    } catch (const Standard_Failure& failure) {
+        return err(ErrorCode::ValidationFailed,
+                   std::string("OpenCASCADE eğri kesişimi başarısız: ") +
+                       failure.GetMessageString());
+    }
 }
 
 Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace> a,

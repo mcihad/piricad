@@ -13,6 +13,7 @@
 #include "piricad/app/data_root.hpp"
 #include "piricad/app/database_dialog.hpp"
 #include "piricad/app/export_dialog.hpp"
+#include "piricad/app/fields.hpp"
 #include "piricad/app/find_replace_dialog.hpp"
 #include "piricad/app/icons.hpp"
 #include "piricad/app/import_wizard.hpp"
@@ -98,6 +99,7 @@
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -114,6 +116,7 @@
 #include <QShortcut>
 #include <QSignalBlocker>
 #include <QStackedWidget>
+#include <QStandardPaths>
 #include <QStatusBar>
 #include <QSysInfo>
 #include <QTableView>
@@ -2218,17 +2221,25 @@ void MainWindow::loadSymbolLibrary()
     // 1.2). The shell gets no private road to the shelf: what it does here, a
     // script or the AI can do with the same line.
     //
-    // TWO PACKAGES, IN THIS ORDER, and the order is the whole point. The annex's
-    // own package carries every published row as the picture the regulation
-    // printed; the vector package is loaded OVER it and replaces the rows that
-    // have been redrawn — the shelf keeps one entry per id and a later package
-    // restating a row updates it in place. A row nobody has redrawn yet keeps its
-    // picture rather than going missing.
+    // The shipped system catalogue comes first. Additional packages and saved
+    // user symbols can replace an existing identity without duplicating it.
     const core::Settings& app = controller_->bus().app_settings();
-    const QStringList declared{
-        QString::fromStdString(std::string(app.get("core.stil.kutuphane").as_text())),
-        QString::fromStdString(std::string(app.get("core.stil.vektor").as_text())),
-    };
+    QString mainPackage =
+        QString::fromStdString(std::string(app.get("core.stil.kutuphane").as_text()));
+    QString extraPackage =
+        QString::fromStdString(std::string(app.get("core.stil.vektor").as_text()));
+    // Replace the previous shipped defaults; explicitly chosen user packages keep their paths.
+    if (mainPackage == QStringLiteral("data/catalogs/mpyy/plan-gosterim.json")) // catalog-key
+        mainPackage = QStringLiteral("data/styles/assets/system-library.json");
+    if (extraPackage ==
+        QStringLiteral("data/catalogs/mpyy-vektor/plan-gosterim.json")) // catalog-key
+        extraPackage.clear();
+    QStringList declared{mainPackage, extraPackage};
+    const QDir userStyles(QDir(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation))
+                              .filePath(QStringLiteral("stiller")));
+    for (const QString& file :
+         userStyles.entryList({QStringLiteral("*.json")}, QDir::Files, QDir::Name))
+        declared << userStyles.filePath(file);
 
     for (const QString& one : declared) {
         if (one.trimmed().isEmpty()) continue;
@@ -2744,8 +2755,8 @@ void MainWindow::activateEntity(core::EntityKey key)
 void MainWindow::choosePick(const std::vector<core::EntityId>& candidates,
                             Qt::KeyboardModifiers modifiers)
 {
-    // IN PLACE, NOT IN A WINDOW: the first is taken as a lone candidate would
-    // be, and the others are a Space away (`PickCycle`).
+    // The first is taken as a lone candidate would be; the framed canvas list
+    // offers direct choice, filtering and the existing Space walk (`PickCycle`).
     startPickCycle(candidates, modifiers, false);
 }
 
@@ -2769,6 +2780,75 @@ void MainWindow::sendSelection(const std::vector<core::EntityKey>& keys)
         command::Invocation{"core.select", std::move(args), command::Origin::Gui});
 }
 
+void MainWindow::buildPickChooser()
+{
+    if (pickChooser_ != nullptr) return;
+    pickChooser_ = new QFrame(canvas_);
+    pickChooser_->setObjectName(QStringLiteral("pickChooser"));
+    pickChooser_->setAttribute(Qt::WA_StyledBackground, true);
+    pickChooser_->setAccessibleName(tr("Bu noktadaki nesneler"));
+    pickChooser_->setAccessibleDescription(
+        tr("Listeden bir nesne seçin; Esc önceki seçimi geri getirir."));
+    auto* layout  = new QVBoxLayout(pickChooser_);
+    const int pad = fontMetrics().height() / 2;
+    layout->setContentsMargins(pad, pad, pad, pad);
+    layout->setSpacing(pad);
+    pickHeading_ = new QLabel(pickChooser_);
+    pickHeading_->setTextFormat(Qt::PlainText);
+    pickHeading_->setWordWrap(true);
+    layout->addWidget(pickHeading_);
+    FieldSpec filter;
+    filter.placeholder = tr("Tür, katman veya kimlik ara");
+    auto* field        = new Field(filter, pickChooser_);
+    field->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    field->setAccessibleName(filter.placeholder);
+    field->setAccessibleDescription(tr("Yazarak nesne listesini süzün."));
+    pickQuery_ = field->findChild<QLineEdit*>();
+    pickQuery_->setAccessibleName(filter.placeholder);
+    pickQuery_->setAccessibleDescription(field->accessibleDescription());
+    layout->addWidget(field);
+    pickList_ = new QListWidget(pickChooser_);
+    pickList_->setObjectName(QStringLiteral("pickList"));
+    pickList_->setAccessibleName(tr("Bu noktadaki nesneler"));
+    pickList_->setAccessibleDescription(tr("Satıra tıklayarak veya Enter ile nesneyi seçin."));
+    pickList_->setMouseTracking(true);
+    pickList_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    pickList_->setTextElideMode(Qt::ElideRight);
+    layout->addWidget(pickList_, 1);
+    auto* help = new QLabel(tr("Boşluk: sıradaki · Enter: seç · Esc: vazgeç"), pickChooser_);
+    help->setTextFormat(Qt::PlainText);
+    help->setWordWrap(true);
+    layout->addWidget(help);
+    connect(pickList_, &QListWidget::currentRowChanged, this, [this](int row) {
+        if (!pickCycle_ || row < 0) return;
+        pickCycle_->at = static_cast<std::size_t>(row);
+        showPickCycle();
+    });
+    connect(pickList_, &QListWidget::itemEntered, this,
+            [this](QListWidgetItem* item) { pickList_->setCurrentItem(item); });
+    connect(pickList_, &QListWidget::itemClicked, this, [this] { endPickCycle(true, true); });
+    connect(pickList_, &QListWidget::itemActivated, this, [this] { endPickCycle(true, true); });
+    connect(pickQuery_, &QLineEdit::textChanged, this, [this](const QString& query) {
+        if (!pickCycle_) return;
+        const QLocale locale(QLocale::Turkish);
+        const QString needle = locale.toLower(query.trimmed());
+        int first            = -1;
+        for (int row = 0; row < pickList_->count(); ++row) {
+            auto* item       = pickList_->item(row);
+            const bool match = locale.toLower(item->text()).contains(needle);
+            item->setHidden(!match);
+            if (match && first < 0) first = row;
+        }
+        if (first < 0) {
+            pickList_->setCurrentRow(-1);
+            pickHeading_->setText(tr("Eşleşen nesne yok"));
+        } else if (pickList_->currentRow() < 0 || pickList_->currentItem()->isHidden()) {
+            pickList_->setCurrentRow(first);
+        }
+    });
+    pickChooser_->hide();
+}
+
 void MainWindow::startPickCycle(const std::vector<core::EntityId>& candidates,
                                 Qt::KeyboardModifiers modifiers, bool capture)
 {
@@ -2789,9 +2869,49 @@ void MainWindow::startPickCycle(const std::vector<core::EntityId>& candidates,
     cycle.where     = canvas_->lastPickPoint();
     cycle.capture   = capture;
     pickCycle_      = std::move(cycle);
-    canvas_->installEventFilter(this);
-    commandLine_->installEventFilter(this);
+    buildPickChooser();
+    {
+        const QSignalBlocker quietList(pickList_);
+        const QSignalBlocker quietQuery(pickQuery_);
+        pickQuery_->clear();
+        pickList_->clear();
+        const core::Document& doc = controller_->document();
+        for (const auto key : pickCycle_->keys) {
+            const core::EntityId e = doc.slot_of(key);
+            const QString layer =
+                QString::fromStdString(doc.layers()[doc.entities().layer[e]].name);
+            const QString text =
+                tr("%1 · %2 · #%3 · %4")
+                    .arg(measure::shapeName(doc, doc.entities().kind[e], doc.entities().slot[e]),
+                         layer)
+                    .arg(static_cast<qulonglong>(core::raw(key)))
+                    .arg(measure::spacedThousands(measure::sizeSummary(doc, e)));
+            auto* item = new QListWidgetItem(text, pickList_);
+            item->setToolTip(text);
+            item->setSizeHint(QSize(0, fontMetrics().height() * 2));
+        }
+    }
+    qApp->installEventFilter(this);
     showPickCycle();
+    const int pad  = fontMetrics().height() / 2;
+    const int rows = static_cast<int>(std::min<std::size_t>(pickCycle_->keys.size(), 8));
+    const int wide =
+        std::min(fontMetrics().horizontalAdvance(u'M') * 52, canvas_->width() - pad * 2);
+    const int high =
+        std::min(pickChooser_->layout()->sizeHint().height() - pickList_->sizeHint().height() +
+                     rows * fontMetrics().height() * 2 + pad * 2,
+                 canvas_->height() - pad * 2);
+    pickChooser_->resize(wide, high);
+    const auto at = canvas_->view().to_screen(pickCycle_->where);
+    int x         = static_cast<int>(std::lround(at.x)) + pad * 2;
+    int y         = static_cast<int>(std::lround(at.y)) + pad * 2;
+    if (x + wide > canvas_->width() - pad) x = static_cast<int>(std::lround(at.x)) - wide - pad * 2;
+    if (y + high > canvas_->height() - pad)
+        y = static_cast<int>(std::lround(at.y)) - high - pad * 2;
+    pickChooser_->move(std::clamp(x, pad, canvas_->width() - wide - pad),
+                       std::clamp(y, pad, canvas_->height() - high - pad));
+    pickChooser_->show();
+    pickChooser_->raise();
 }
 
 void MainWindow::showPickCycle()
@@ -2839,6 +2959,10 @@ void MainWindow::showPickCycle()
             .arg(measure::shapeName(doc, doc.entities().kind[e], doc.entities().slot[e]), layer,
                  measure::spacedThousands(measure::sizeSummary(doc, e)));
     canvas_->setPickBadge(c.where, badge.toStdString());
+    pickHeading_->setText(tr("%1 nesne · %2/%1").arg(c.keys.size()).arg(c.at + 1));
+    const QSignalBlocker quiet(pickList_);
+    pickList_->setCurrentRow(static_cast<int>(c.at));
+    pickList_->scrollToItem(pickList_->currentItem());
 }
 
 void MainWindow::stepPickCycle(int by)
@@ -2847,8 +2971,13 @@ void MainWindow::stepPickCycle(int by)
     PickCycle& c   = *pickCycle_;
     const auto n   = static_cast<std::ptrdiff_t>(c.keys.size());
     const auto now = static_cast<std::ptrdiff_t>(c.at);
-    c.at           = static_cast<std::size_t>(((now + by) % n + n) % n);
-    showPickCycle();
+    for (std::ptrdiff_t step = 1; step <= n; ++step) {
+        const auto next = static_cast<std::size_t>(((now + by * step) % n + n) % n);
+        if (pickList_->item(static_cast<int>(next))->isHidden()) continue;
+        c.at = next;
+        showPickCycle();
+        return;
+    }
 }
 
 void MainWindow::endPickCycle(bool keep, bool handOver)
@@ -2856,8 +2985,8 @@ void MainWindow::endPickCycle(bool keep, bool handOver)
     if (!pickCycle_) return;
     const PickCycle c = std::move(*pickCycle_);
     pickCycle_.reset();
-    canvas_->removeEventFilter(this);
-    commandLine_->removeEventFilter(this);
+    qApp->removeEventFilter(this);
+    pickChooser_->hide();
     canvas_->setPickBadge({}, {});
 
     // A FIELD'S PICK IS NOT A SELECTION: the selection goes back as it was, and
@@ -2881,16 +3010,40 @@ void MainWindow::endPickCycle(bool keep, bool handOver)
 
 bool MainWindow::eventFilter(QObject* watched, QEvent* event)
 {
-    if (pickCycle_ && (watched == canvas_ || watched == commandLine_)) {
+    if (pickCycle_) {
+        const bool choosing = watched == canvas_ || watched == commandLine_ ||
+                              watched == pickList_ || watched == pickQuery_;
+        if (event->type() == QEvent::MouseButtonPress) {
+            const auto* widget = qobject_cast<QWidget*>(watched);
+            if (widget != nullptr && widget != canvas_ && widget != commandLine_ &&
+                widget != pickChooser_ && !pickChooser_->isAncestorOf(widget))
+                endPickCycle(true);
+        }
+        if (!pickCycle_) return QMainWindow::eventFilter(watched, event);
+        if (!choosing && watched != canvas_) return QMainWindow::eventFilter(watched, event);
         if (event->type() == QEvent::KeyPress) {
             const auto* key = static_cast<QKeyEvent*>(event);
             switch (key->key()) {
             case Qt::Key_Space:
+                if (watched == pickQuery_) break;
                 stepPickCycle(key->modifiers().testFlag(Qt::ShiftModifier) ? -1 : 1);
                 return true;
-            case Qt::Key_Slash: stepPickCycle(1); return true;
+            case Qt::Key_Slash:
+                if (watched == pickQuery_) break;
+                stepPickCycle(1);
+                return true;
+            case Qt::Key_Down: stepPickCycle(1); return true;
+            case Qt::Key_Up: stepPickCycle(-1); return true;
+            case Qt::Key_Home:
+            case Qt::Key_End:
+                if (watched == pickQuery_) break;
+                pickCycle_->at = key->key() == Qt::Key_Home ? pickCycle_->keys.size() - 1 : 0;
+                stepPickCycle(key->key() == Qt::Key_Home ? 1 : -1);
+                return true;
             case Qt::Key_Return:
-            case Qt::Key_Enter: endPickCycle(true, true); return true;
+            case Qt::Key_Enter:
+                if (pickList_->currentRow() >= 0) endPickCycle(true, true);
+                return true;
             case Qt::Key_Escape: endPickCycle(false); return true;
             case Qt::Key_Shift:
             case Qt::Key_Control:
@@ -2899,22 +3052,15 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
             default:
                 // ANY OTHER KEY IS THE HAND MOVING ON: the one taken stays, and
                 // the key does what it does.
-                endPickCycle(true);
+                if (watched == canvas_ || watched == commandLine_) endPickCycle(true);
                 break;
             }
+        } else if (event->type() == QEvent::Wheel && watched == canvas_) {
+            endPickCycle(true);
         } else if (event->type() == QEvent::MouseButtonPress && watched == canvas_) {
             // A NEW CLICK is a new question: the walk ends where it stood —
             // and a field's pick, still armed, takes the new click.
-            if (pickCycle_->capture) {
-                const PickCycle c = *pickCycle_;
-                pickCycle_.reset();
-                canvas_->removeEventFilter(this);
-                commandLine_->removeEventFilter(this);
-                canvas_->setPickBadge({}, {});
-                sendSelection(c.before);
-            } else {
-                endPickCycle(true);
-            }
+            endPickCycle(true);
         }
     }
     return QMainWindow::eventFilter(watched, event);
@@ -2985,6 +3131,58 @@ void MainWindow::probePickList()
     key(Qt::Key_Escape);
     say(QStringLiteral("esc: %1 | rozet %2")
             .arg(chosen(), badge().isEmpty() ? QStringLiteral("yok") : badge()));
+
+    // Twenty overlapping objects: End and the list's search reach the last
+    // directly; a real row click commits it without nineteen Space presses.
+    QStringList fixture;
+    for (int i = 1; i <= 17; ++i) {
+        fixture << QStringLiteral("KATMAN ad=ADAY%1").arg(i)
+                << QStringLiteral("ALAN -%1,-%1 %1,-%1 %1,%1 -%1,%1").arg(30 + i);
+    }
+    controller_->runLines(fixture, QStringLiteral("Seçim probu: 20 aday"));
+    click();
+    say(QStringLiteral("liste: %1 | görünür %2 | çerçeve %3 | tuval içinde %4")
+            .arg(pickList_->count())
+            .arg(pickChooser_->isVisible())
+            .arg(pickChooser_->testAttribute(Qt::WA_StyledBackground))
+            .arg(canvas_->rect().contains(pickChooser_->geometry())));
+    if (!pickCycle_) return;
+    const QString screenshot = qEnvironmentVariable("PIRICAD_PICK_PROBE");
+    if (screenshot.endsWith(QStringLiteral(".png"))) {
+        QCoreApplication::processEvents();
+        (void)grab().save(screenshot);
+    }
+    key(Qt::Key_End);
+    say(QStringLiteral("son: %1 | %2").arg(pickCycle_->at + 1).arg(chosen()));
+    key(Qt::Key_Home);
+    say(QStringLiteral("ilk: %1 | %2").arg(pickCycle_->at + 1).arg(chosen()));
+    pickQuery_->setText(QStringLiteral("aday17"));
+    int visible = 0;
+    for (int row = 0; row < pickList_->count(); ++row)
+        visible += !pickList_->item(row)->isHidden();
+    say(QStringLiteral("arama: %1 satır | %2").arg(visible).arg(chosen()));
+    const QRect row = pickList_->visualItemRect(pickList_->currentItem());
+    const QPointF at(row.center());
+    auto* viewport = pickList_->viewport();
+    QMouseEvent press(QEvent::MouseButtonPress, at, viewport->mapToGlobal(at), Qt::LeftButton,
+                      Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent release(QEvent::MouseButtonRelease, at, viewport->mapToGlobal(at), Qt::LeftButton,
+                        Qt::NoButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(viewport, &press);
+    QCoreApplication::sendEvent(viewport, &release);
+    say(QStringLiteral("satır: %1 | liste %2")
+            .arg(chosen())
+            .arg(pickChooser_->isVisible() ? QStringLiteral("açık") : QStringLiteral("kapalı")));
+    click();
+    pickQuery_->setText(QStringLiteral("EŞLEŞMEYEN"));
+    key(Qt::Key_Return);
+    say(QStringLiteral("boş arama: %1 | seçim bekliyor %2")
+            .arg(pickList_->currentRow())
+            .arg(pickCycle_.has_value()));
+    key(Qt::Key_Escape);
+    say(QStringLiteral("arama esc: %1 | liste %2")
+            .arg(chosen())
+            .arg(pickChooser_->isVisible() ? QStringLiteral("açık") : QStringLiteral("kapalı")));
 }
 
 void MainWindow::probeSurfaceNormal()
@@ -3526,6 +3724,39 @@ void MainWindow::probeWidgets()
     for (const QString& line : componentSheetInventory(sheet))
         say(line);
 
+    for (auto* spin : sheet->findChildren<QSpinBox*>(QStringLiteral("componentMeasure"))) {
+        auto* measure = static_cast<MeasureSpinBox*>(spin);
+        auto* editor  = measure->findChild<QLineEdit*>();
+        editor->setText(QStringLiteral("-0,375 mm"));
+        measure->interpretText();
+        const bool millimetres = measure->value() == -375;
+        measure->setDivisor(1);
+        measure->setSuffix(QStringLiteral(" px"));
+        editor->setText(QStringLiteral("24 px"));
+        measure->interpretText();
+        const bool pixels = measure->value() == 24;
+        measure->setRange(-360000000, 360000000);
+        measure->setDivisor(1000000);
+        measure->setSuffix(QStringLiteral("°"));
+        editor->setText(QStringLiteral("45,123456°"));
+        measure->interpretText();
+        const bool angle =
+            measure->value() == 45123456 && measure->text().contains(QStringLiteral("45,123456"));
+        measure->setRange(0, 255);
+        measure->setDivisor(2.55);
+        measure->setSuffix(QStringLiteral(" %"));
+        editor->setText(QStringLiteral("100 %"));
+        measure->interpretText();
+        const bool opacity = measure->value() == 255;
+        say(millimetres && pixels && angle && opacity
+                ? QStringLiteral("ölçü dönüşümü · mm / px / açı / yüzde · tamam")
+                : QStringLiteral("ölçü dönüşümü · BAŞARISIZ"));
+        measure->setRange(-1000000, 1000000);
+        measure->setDivisor(1000);
+        measure->setSuffix(QStringLiteral(" mm"));
+        measure->setValue(250);
+    }
+
     // Photographed when the variable carries a path, the same bargain every probe
     // here makes: an inventory proves the components exist at their heights, and
     // says nothing about whether a person would call them one set.
@@ -3578,6 +3809,28 @@ void MainWindow::probeDesigner()
     designer.resize(1280, 756);
     designer.show();
     QCoreApplication::processEvents();
+
+    const QByteArray destination = qgetenv("PIRICAD_DESIGNER_PROBE");
+    const auto capture           = [&designer, &say, &destination](const QString& file) {
+        if (destination.isEmpty() || destination == "1") return;
+        const QString directory = QString::fromLocal8Bit(destination);
+        QDir().mkpath(directory);
+        QCoreApplication::processEvents();
+        if (designer.grab().save(directory + QLatin1Char('/') + file))
+            say(QStringLiteral("kare: %1").arg(file));
+    };
+    capture(QStringLiteral("tasarimci-koyu.png"));
+    theme_ = ThemeMode::Light;
+    applyTheme();
+    designer.applyTheme(theme_);
+    capture(QStringLiteral("tasarimci-acik.png"));
+    designer.resize(1040, 680);
+    capture(QStringLiteral("tasarimci-dar.png"));
+    designer.resize(1280, 756);
+    theme_ = ThemeMode::Dark;
+    applyTheme();
+    designer.applyTheme(theme_);
+    capture(QStringLiteral("tasarimci-koyu-yeniden.png"));
 
     for (const QString& line : designer.probeRenderer(QStringLiteral("nitelik")))
         say(line);
@@ -11207,15 +11460,6 @@ void MainWindow::onUndoStateChanged(bool canUndo, bool canRedo)
 void MainWindow::onCursorMoved(core::Point2 world)
 {
     lastCursor_ = world;
-    // THE HAND LEFT THE SPOT: a walk through the things under a click ends
-    // where it stands once the cursor is well away from where it was.
-    if (pickCycle_) {
-        const auto here  = canvas_->view().to_screen(world);
-        const auto there = canvas_->view().to_screen(pickCycle_->where);
-        const double dx  = here.x - there.x;
-        const double dy  = here.y - there.y;
-        if ((dx * dx) + (dy * dy) > 24.0 * 24.0) endPickCycle(true);
-    }
     // Turkish surveying convention, which EPSG:5254 itself declares: Y is the
     // easting (`sağa değer`) and X is the northing (`yukarı değer`). Storage is
     // unaffected — Point2::x holds the easting either way (.claude/model.md R37a).

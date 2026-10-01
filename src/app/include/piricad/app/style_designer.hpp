@@ -1,30 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // PiriCAD — app: the style designer.
 //
-// WHAT WAS LOOKED AT. QGIS 4.2's `QgsSymbolSelectorDialog` and
-// `QgsStyleManagerDialog` were opened and read, not remembered. What they get
-// right and what an earlier version of this file missed:
+// The KentOS designer's continuous workspace: layer stack, large preview and
+// selected layer properties. The library is a separate searchable window with
+// the source category tree. Controls and spacing follow data/design/design.md.
+// Only properties used by the selected layer type appear in the form.
 //
-//   * a GALLERY of ready-made symbols, searchable, inside the editing dialog —
-//     not a separate window you have to know exists;
-//   * classification BY GEOMETRY first (Marker / Line / Fill tabs), because
-//     somebody looking for a boundary should not scroll past four hundred areas;
-//   * a preview drawn on the geometry the symbol is for;
-//   * a UNIT beside each size, not one unit for the whole layer;
-//   * the symbol layers as a list with an ON/OFF box per layer.
-//
-// WHAT IS DELIBERATELY NOT COPIED. QGIS splits this across two dialogs and shows
-// every property of every layer type at once, greyed. Here it is one window, and
-// the property side shows only what the selected layer type actually reads —
-// a `dolgu` layer has no marker placement and should not display one.
-//
-// The machinery is ours for reasons measured rather than preferred: linking
-// `libqgis_gui` pulls 254 shared objects and 75 MB, `QgsApplication::initQgis()`
-// loads a provider registry and an SRS database into a program budgeted at a
-// two-second cold start (Article 7), and the round trip is lossy exactly where
-// this project differs on purpose — `QgsRasterFillSymbolLayer` names a FILE while
-// a PiriCAD raster fill carries the bytes and their provenance inside the
-// document. Licence is not the objection: QGIS is GPL-2.0-or-later.
+// Resources belong to the editable draft until applied. They are then embedded
+// into the document through one STİL package command, with one undo step.
 //
 // EVERY EDIT LEAVES AS A COMMAND. The dialog builds a `core::Symbol` and, on
 // apply, emits the `STİL` invocations that produce it. There is no path from this
@@ -190,12 +173,20 @@ private:
     void loadGlobal();
 
     /// Writes one whole-symbol property across every layer that accepts it.
-    void applyGlobal();
+    void applyGlobal(core::SymbolProperty property);
+
+    /// Converts all symbol measures at the current preview scale.
+    void applyGlobalUnit(core::Unit unit);
+
+    /// Converts one layer measure without changing its size at the preview scale.
+    void changeMeasureUnit(core::Measure core::SymbolLayer::* measure, core::Unit unit);
 
     /// Re-reads the tree rows' check boxes and lock buttons into the symbol.
     void syncTreeState();
 
     void addLayer();
+    /// Adds a usable layer of the chosen type, with fills below existing outlines.
+    void addLayerOfType(core::SymbolLayerType type);
     void duplicateLayer();
     void removeLayer();
     void moveLayer(int delta);
@@ -252,16 +243,15 @@ private:
     void bindProperty(core::SymbolProperty what, QToolButton* button);
     void refreshBindingMarks();
 
-    /// Redraws the big preview at the width the label currently has.
-    /// Sizes the symbol layer stack to the rows it actually holds.
-    ///
-    /// Bounded on purpose: unbounded, the stack takes the column's height and the
-    /// property form under it takes none — which is what the fixed height it
-    /// replaces was guarding against, at the cost of an empty box under every
-    /// two-layer symbol.
+    /// Lets the stack use its column's height and scroll when it exceeds it.
     void fitStackHeight();
 
     void updatePreview();
+    /// Changes the map scale; paper and pixel sizes remain fixed.
+    void setPreviewScale(double denominator);
+    QSpinBox* previewScale_{nullptr}; ///< map scale with a fixed output resolution
+    ComboBox* sample_{nullptr};
+    DialogFrame* libraryDialog_{nullptr};
 
     /// Re-renders the preview when its label is resized; see `updatePreview()`.
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -272,6 +262,12 @@ private:
     Controller& controller_;
     QString layerName_;
     core::Symbol symbol_{};
+    core::ImageStore draftImages_{};
+    core::DashStore draftDashes_{};
+    QString layerJson(const core::SymbolLayer& layer) const;
+    QString imagesJson() const;
+    QString symbolPackageJson(const QString& name, const QString& id) const;
+    bool writeDraftImages(const QString& directory, QString* error) const;
 
     /// What the layer drew when the dialog opened, for `Sıfırla`.
     core::Symbol original_{};
@@ -318,7 +314,7 @@ private:
     /// What the header says about the geometry the tabs have chosen.
     QLabel* headerNote_{nullptr};
 
-    ComboBox* groups_{nullptr};
+    QTreeWidget* groups_{nullptr};
     QLineEdit* search_{nullptr};
     QListWidget* gallery_{nullptr};
     QLabel* galleryNote_{nullptr};
@@ -345,14 +341,13 @@ private:
 
     /// design.md 8's left column and the pages it switches. The renderer page
     /// holds everything this window used to be; the rest name their phase.
-    SectionList* sections_{nullptr};
+    Segment* sections_{nullptr};
     QComboBox* renderKind_{nullptr};
     QComboBox* renderValue_{nullptr};
 
     /// The symbol's unit as ONE segmented control — millimetre, map unit, pixel
     /// — where three loose buttons used to stand. The component keeps them to one
     /// answer, and to none when the layers disagree (`Segment::setCurrent(-1)`).
-    Segment* units_{nullptr};
 
     /// The cell that holds `renderValue_`, so it can be hidden whole.
     ///

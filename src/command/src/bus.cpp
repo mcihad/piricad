@@ -935,6 +935,12 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         say_settled(session.transaction().settle_results());
     }
 
+    if (const auto st = sync_crs_setting(); !st) {
+        session.transaction().rollback_to(mark);
+        cut_back(session.tail_at_start(), session.active_layer_at_start());
+        return st.error();
+    }
+
     // WHAT THIS COMMAND CHANGED, from its own edits — the followers the settles
     // above moved included — read before the record is handed to the undo stack.
     result.changes = summarize_changes(doc_, session.transaction().ops_since(mark));
@@ -999,6 +1005,21 @@ void Bus::cut_back(const core::Document::Tail& tail, LayerId active)
     for (const core::EntityKey key : std::vector<core::EntityKey>(selection_.keys()))
         if (doc_.slot_of(key) == core::kNoEntity) pruned |= selection_.remove(key);
     if (pruned && on_selection_changed) on_selection_changed();
+    if (const auto st = sync_crs_setting(); !st) log_warn(st.error().message);
+}
+
+core::Status Bus::sync_crs_setting()
+{
+    if (project_settings_.get("core.crs.id").as_text() == doc_.crs().id()) return core::ok();
+    auto value = core::SettingValue::text(doc_.crs().id());
+    if (!value) return value.error();
+    const auto changed = project_settings_.set("core.crs.id", value.value());
+    if (!changed) return changed.error();
+    if (!previewing_) {
+        if (on_settings_changed) on_settings_changed(core::SettingScope::Project);
+        if (on_setting_changed) on_setting_changed("core.crs.id", core::SettingScope::Project);
+    }
+    return core::ok();
 }
 
 void Bus::journal_entry(const Session& session)

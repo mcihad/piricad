@@ -186,9 +186,9 @@ public:
     /// two points a palette's `dik(` stands on. Empty puts the trace away.
     void setComposeTrace(std::vector<core::Point2> points);
 
-    /// THE BADGE BESIDE A CLICK THAT LANDED ON SEVERAL THINGS: which of how many
-    /// is taken and what it is — `2/3 · Alan · PARSEL · 1 200,00 m²` — written
-    /// where the click was. Empty text takes it away (`MainWindow::PickCycle`).
+    /// The current choice readout for probes. MainWindow's framed chooser
+    /// presents the candidates; the canvas no longer draws bare text over the
+    /// scene. Empty text clears the readout (`MainWindow::PickCycle`).
     void setPickBadge(core::Point2 at, std::string text);
 
     /// Where the last click that landed on several things was, in document

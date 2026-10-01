@@ -2,6 +2,7 @@
 #include "piricad/app/symbol_preview.hpp"
 
 #include "piricad/app/backend_factory.hpp"
+#include "piricad/core/trig.hpp"
 #include "piricad/render/scene.hpp"
 
 #include <QBuffer>
@@ -150,7 +151,8 @@ PreviewScale fit_to_swatch(const core::Symbol& symbol, const core::ImageStore& i
 /// here — but through the SAME `pass_of` the scene builder uses, so every unit
 /// conversion and every type decision is the one the canvas makes.
 render::DrawList build(const core::Symbol& symbol, const core::ImageStore& images,
-                       const core::DashStore& dashes, QSize size, PreviewShape shape)
+                       const core::DashStore& dashes, QSize size, PreviewShape shape,
+                       PreviewOptions options = {})
 {
     render::DrawList list;
     if (symbol.layers.empty()) return list;
@@ -178,7 +180,7 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
     // fill against. A list icon keeps the old tight inset: at 44 px there is no
     // room to give any of it away.
     const bool roomy  = size.width() >= 120;
-    const float inset = roomy ? 0.68f : 1.0f;
+    const float inset = options.paper_pixels > 0 ? 0.92f : roomy ? 0.68f : 1.0f;
     const float w     = static_cast<float>(size.width()) * 0.5f * inset - 3.0f;
     const float h     = static_cast<float>(size.height()) * 0.5f * inset - 3.0f;
 
@@ -190,17 +192,35 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
     // type, and the icon comes out empty. Below that width the swatch shows the
     // pattern instead of the corner, because a pattern nobody can see says less
     // about a corner than nothing at all.
-    const bool corner = size.width() >= 120;
+    const bool corner = size.width() >= 120 && !options.straight;
 
-    const PreviewScale scale  = fit_to_swatch(symbol, images, corner ? shape : PreviewShape::Point,
-                                              size, static_cast<double>(w), static_cast<double>(h));
+    PreviewScale scale = fit_to_swatch(symbol, images, corner ? shape : PreviewShape::Point, size,
+                                       static_cast<double>(w), static_cast<double>(h));
+    if (options.paper_pixels > 0.0) {
+        scale.pixels_per_paper_mm = options.paper_pixels;
+        scale.mm_per_pixel        = std::max(1.0, options.scale_denominator) / options.paper_pixels;
+    }
     const double mm_per_pixel = scale.mm_per_pixel;
+    const bool filled         = std::any_of(drawn.begin(), drawn.end(), [](const auto* layer) {
+        return layer->type == core::SymbolLayerType::SimpleFill &&
+               (layer->look.fill_rgba >> 24) != 0;
+    });
 
     for (std::size_t i = 0; i < count; ++i) {
-        const core::SymbolLayer& sl = *drawn[i];
+        core::SymbolLayer sl = *drawn[i];
+        if (!filled && options.screen_ink != 0 && (sl.look.rgba & 0x00FFFFFFu) == 0)
+            sl.look.rgba = (sl.look.rgba & 0xFF000000u) | (options.screen_ink & 0x00FFFFFFu);
 
         list.passes[i] =
             render::pass_of(sl, images, dashes, mm_per_pixel, scale.pixels_per_paper_mm);
+        if (sl.type == core::SymbolLayerType::LinePatternFill) {
+            const auto direction = core::sin_cos_udeg(sl.angle_udeg);
+            auto& pass           = list.passes[i];
+            pass.anchored        = true;
+            pass.anchor_x =
+                static_cast<float>(-direction.sin * static_cast<double>(pass.offset_px));
+            pass.anchor_y = static_cast<float>(direction.cos * static_cast<double>(pass.offset_px));
+        }
         list.order[i] = static_cast<std::uint32_t>(i);
 
         render::PolylineBatch& stroke = list.polylines[i];
@@ -247,11 +267,29 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
             // A closed rectangle. The last vertex repeats the first because a draw
             // list holds an already-closed ring, exactly as the scene builder emits
             // one.
-            if (list.passes[i].wants_stroke)
+            if (list.passes[i].wants_stroke) {
                 push(stroke, {{-w, -h}, {w, -h}, {w, h}, {-w, h}, {-w, -h}}, true);
+                if (options.hole)
+                    push(stroke,
+                         {{-w * .35f, -h * .35f},
+                          {-w * .35f, h * .35f},
+                          {w * .35f, h * .35f},
+                          {w * .35f, -h * .35f},
+                          {-w * .35f, -h * .35f}},
+                         true);
+            }
             if (list.passes[i].wants_fill) {
                 push(fill, {{-w, -h}, {w, -h}, {w, h}, {-w, h}}, true);
                 fill.is_hole.push_back(0);
+                if (options.hole) {
+                    push(fill,
+                         {{-w * .35f, -h * .35f},
+                          {-w * .35f, h * .35f},
+                          {w * .35f, h * .35f},
+                          {w * .35f, -h * .35f}},
+                         true);
+                    fill.is_hole.push_back(1);
+                }
             }
         } else if (shape == PreviewShape::Line) {
             // A zig-zag: a straight line hides what a corner does to a pattern,
@@ -341,7 +379,7 @@ void paint_checker(QImage& canvas, std::uint32_t background, qreal dpr)
 
 QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images,
                       const core::DashStore& dashes, QSize size, std::uint32_t background,
-                      PreviewShape shape, PreviewGround ground, qreal dpr)
+                      PreviewShape shape, PreviewGround ground, qreal dpr, PreviewOptions options)
 {
     if (symbol.layers.empty() || size.isEmpty()) return {};
 
@@ -351,7 +389,7 @@ QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images
 
     if (ground == PreviewGround::Checker) paint_checker(canvas, background, dpr);
 
-    render::DrawList list = build(symbol, images, dashes, size, shape);
+    render::DrawList list = build(symbol, images, dashes, size, shape, options);
 
     render::Overlay overlay;
 

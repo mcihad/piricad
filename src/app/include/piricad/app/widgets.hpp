@@ -41,6 +41,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -55,6 +56,28 @@ class QTimer;
 class QVBoxLayout;
 
 namespace piricad::app {
+
+/// Integer storage with a human measure in the editor (µm → mm, alpha → %).
+/// Conversion only happens at the presentation boundary; stored values stay exact.
+class MeasureSpinBox : public QSpinBox
+{
+public:
+    /// Creates a regular 30 px measure editor, storing whole integers.
+    explicit MeasureSpinBox(QWidget* parent = nullptr);
+    /// Divides stored integers by this factor for display and reverses it on input.
+    void setDivisor(double divisor);
+
+protected:
+    /// Formats the scaled value with the editor's locale and trimmed zeroes.
+    QString textFromValue(int value) const override;
+    /// Parses a displayed measure and rounds once to the stored integer range.
+    int valueFromText(const QString& text) const override;
+    /// Allows incomplete numeric input while rejecting non-finite measures.
+    QValidator::State validate(QString& text, int& position) const override;
+
+private:
+    double divisor_{1000.0};
+};
 
 // =============================================================================
 // Sizes and tones — the two vocabularies every component shares

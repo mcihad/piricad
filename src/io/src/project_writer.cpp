@@ -433,6 +433,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     std::vector<std::uint8_t> symbol_layer_flags;
     std::vector<std::uint32_t> symbol_layer_text;
     std::vector<std::int32_t> symbol_layer_phase;
+    std::vector<std::uint8_t> symbol_layer_phase_unit;
+    bool separate_phase_unit = false;
     std::vector<std::uint16_t> bind_count;
     std::vector<std::uint32_t> bind_field;
     std::vector<std::uint8_t> bind_what;
@@ -470,6 +472,9 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             sl.opacity         = l.opacity;
             sl.image           = l.image;
             symbol_layers.push_back(sl);
+            symbol_layer_phase.push_back(l.phase.value);
+            symbol_layer_phase_unit.push_back(static_cast<std::uint8_t>(l.phase.unit));
+            separate_phase_unit = separate_phase_unit || l.phase.unit != l.interval.unit;
             // Bit 0 drawn, bit 1 colour locked. Additive: a file written before
             // the lock existed has the bit clear, which reads back unlocked — and
             // unlocked is what that file meant.
@@ -982,6 +987,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     if (std::any_of(symbol_layer_phase.begin(), symbol_layer_phase.end(),
                     [](std::int32_t v) { return v != 0; }))
         blocks.push_back(column(kBlkSymbolLayerPhase, symbol_layer_phase));
+    if (separate_phase_unit)
+        blocks.push_back(column(kBlkSymbolLayerPhaseUnit, symbol_layer_phase_unit));
 
     // AND THE SAME BARGAIN FOR THE PARAMETERS. A drawing whose symbols declare
     // none writes no block at all, so its file is byte for byte the one it was
