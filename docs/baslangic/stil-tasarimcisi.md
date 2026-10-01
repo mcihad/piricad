@@ -287,7 +287,7 @@ satırıyla çıkar ve türüne uygun düzenleyiciyle açılır — tarihe takvi
 kelimelik segment.
 
 **Buradan tanımlanan sütun yalnız bu katmana aittir.** Çizimin tamamına ait bir alan
-— `ada`, `parsel` gibi — **PiriCAD CAD ▸ Proje Ayarları… ▸ Öznitelikler** sayfasında
+— `ada`, `parsel` gibi — **PiriCAD ▸ Proje Ayarları… ▸ Öznitelikler** sayfasında
 tanımlanır.
 
 Sayfa proje sütunlarını da listeler, `proje sütunu` diye işaretli ve düzenlenemez

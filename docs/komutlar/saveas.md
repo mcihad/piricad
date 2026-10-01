@@ -65,7 +65,7 @@ Farklı kaydedildi: ada12-parselasyon.pcad  (14 nesne, 1688 bayt)
 
 ### Arayüz
 
-**PiriCAD CAD ▸ Farklı Kaydet…**, şeritteki **Çıktı ▸ Dosya ▸ Farklı Kaydet…** veya
+**PiriCAD ▸ Farklı Kaydet…**, şeritteki **Çıktı ▸ Dosya ▸ Farklı Kaydet…** veya
 **Ctrl+Shift+S** bir dosya adı penceresi açar. Pencere yalnızca
 argümanı toplar; iptal ederseniz hiçbir şey olmaz ve hata da verilmez.
 

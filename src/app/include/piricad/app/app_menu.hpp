@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — app: the application menu, what the `PiriCAD CAD` button opens.
+// PiriCAD — app: the application menu, what the `PiriCAD` button opens.
 //
 // AUTOCAD'S APPLICATION MENU, not a list (`design.md` §7, `.claude/ui.md` R50).
 // Three regions under a search chip:

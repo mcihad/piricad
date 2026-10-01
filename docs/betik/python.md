@@ -402,7 +402,7 @@ ve **İptal** düğmesini ekleyen çalışma Faz 2'dedir; motor tarafı hazırd�
 | Yol | Nasıl |
 |---|---|
 | Komut satırından | `BETİK olcum.py` |
-| Arayüzden | **PiriCAD CAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
+| Arayüzden | **PiriCAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
 | Açılışta | `piricad --betik olcum.py` |
 | Make ile | `make run-script SCRIPT=olcum.py` |
 

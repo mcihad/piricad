@@ -69,7 +69,7 @@ KAYDET <yedek/ada12-2024-05>.pcad
 
 ### Arayüz
 
-**PiriCAD CAD ▸ Kaydet**, hızlı erişim satırındaki **Kaydet** simgesi, şeritteki **Çıktı ▸
+**PiriCAD ▸ Kaydet**, hızlı erişim satırındaki **Kaydet** simgesi, şeritteki **Çıktı ▸
 Dosya ▸ Kaydet** veya **Ctrl+S**. Çizim henüz bir dosyaya bağlı değilse arayüz **Farklı Kaydet**
 penceresini açar; komut ise hatayı söyler. İkisi de aynı komuta gider.
 

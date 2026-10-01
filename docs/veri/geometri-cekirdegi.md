@@ -1,13 +1,13 @@
 # Geometri çekirdeği: OpenCASCADE
 
 Bir parselin köşesi yuvarlatıldığında, bir yolun kenarı kavis yaptığında ya da bir
-tampon bölge çizildiğinde çizimde **yay** vardır. Bu sayfa, PiriCAD CAD'in bu tür
+tampon bölge çizildiğinde çizimde **yay** vardır. Bu sayfa, PiriCAD'in bu tür
 geometriyi hangi çekirdekle hesapladığını, sonuçların neden her bilgisayarda aynı
 milimetreyi verdiğini ve bunun hangi işlemlere hangi aşamada geldiğini anlatır.
 
 ## OpenCASCADE nedir, neden kullanılır
 
-PiriCAD CAD'in geometri çekirdeği **OpenCASCADE Technology**'dir (OCCT). OCCT, CAD
+PiriCAD'in geometri çekirdeği **OpenCASCADE Technology**'dir (OCCT). OCCT, CAD
 yazılımlarında kullanılan olgun ve açık kaynaklı bir geometri çekirdeğidir.
 Doğrularla olduğu kadar **yaylarla, elipslerle ve spline'larla** da tam hesap
 yapar.

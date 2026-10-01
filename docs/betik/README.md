@@ -162,8 +162,8 @@ Geri almayla 1 nesne silindi.
 | Yol | Nasıl |
 |---|---|
 | Komut satırından | `BETİK tests/journal/ornek-parsel.json` |
-| Arayüzden | **PiriCAD CAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
-| Çalıştırmadan önizleyerek | `BETİK tests/journal/ornek-parsel.json onizle=evet` ya da **PiriCAD CAD ▸ Betiği Önizle…** ([ÖNİZLE](../komutlar/preview.md)) |
+| Arayüzden | **PiriCAD ▸ Betik Çalıştır…** veya **Ctrl+R** |
+| Çalıştırmadan önizleyerek | `BETİK tests/journal/ornek-parsel.json onizle=evet` ya da **PiriCAD ▸ Betiği Önizle…** ([ÖNİZLE](../komutlar/preview.md)) |
 | Açılışta | `piricad --betik <dosya>` |
 | Make ile | `make run-script SCRIPT=<dosya>` |
 

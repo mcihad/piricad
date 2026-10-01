@@ -142,7 +142,7 @@ kurar ve değeri yerine koyar.
 
 ### Arayüz
 
-**PiriCAD CAD ▸ Dışa Aktar…**, şeritteki **Dışa Aktar…** (**Harita ▸ Veri**, **Çıktı ▸
+**PiriCAD ▸ Dışa Aktar…**, şeritteki **Dışa Aktar…** (**Harita ▸ Veri**, **Çıktı ▸
 Dosya**) ve öznitelik tablosunun araç satırındaki **Dışa aktar** işareti aynı
 [Dışa Aktar](../baslangic/disa-aktarma.md) penceresini açar: solda yazılabilen
 biçimler, sağda dosya, altta pencerenin çalıştıracağı `DIŞAAKTAR` satırı. Pencere

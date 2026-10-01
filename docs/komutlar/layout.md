@@ -252,7 +252,7 @@ Kuruma özel bir kâğıt:
 #### Yerleşimler listesinden
 
 **Çıktı ▸ Yazdır ▸ Yerleşimler** yerleşimlerin ana kapısıdır; aynı liste hızlı
-erişimdeki yazıcının okunda ve **PiriCAD CAD ▸ Çıktı Yerleşimleri**'nde de açılır:
+erişimdeki yazıcının okunda ve **PiriCAD ▸ Çıktı Yerleşimleri**'nde de açılır:
 
 | Giriş | Ne yapar |
 |---|---|

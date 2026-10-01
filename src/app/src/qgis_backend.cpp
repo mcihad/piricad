@@ -448,10 +448,28 @@ void QgisBackend::render(const render::DrawList& list, const render::Overlay& ov
         return;
     }
 
-    auto* device = static_cast<QPaintDevice*>(ctx.target);
-    if (device == nullptr) return;
+    // EITHER A SURFACE OR SOMEBODY ELSE'S PAINTER, the contract
+    // `FrameContext::target_is_painter` spells: a layout's map frame goes onto
+    // the page through the SHEET'S OWN painter, clipped and translated by the
+    // caller, since the frame stopped being rasterised into a photograph
+    // (layout_render.cpp). This backend read every target as a QPaintDevice
+    // and opened its own painter over it; on the sheet's painter that
+    // constructs a QPainter ON a QPainter, and the first virtual call through
+    // the wrong vtable jumps to garbage. That was the crash `Çizimin tamamı`
+    // and `Ana pencereden al` carried: aiming a window is what first gives a
+    // map frame something to draw.
+    QPainter owned;
+    if (!ctx.target_is_painter) {
+        auto* device = static_cast<QPaintDevice*>(ctx.target);
+        if (device == nullptr) return;
+        owned.begin(device);
+    }
+    QPainter& painter = ctx.target_is_painter ? *static_cast<QPainter*>(ctx.target) : owned;
+    if (!painter.isActive()) return;
 
-    QPainter painter(device);
+    const bool borrowed = ctx.target_is_painter;
+    if (borrowed) painter.save();
+
     painter.setRenderHint(QPainter::Antialiasing, true);
     // Transparent means "leave what is there" — see the painter backend.
     if ((overlay.background_rgba >> 24) != 0)
@@ -474,15 +492,18 @@ void QgisBackend::render(const render::DrawList& list, const render::Overlay& ov
         if (index < list.passes.size()) drawPass(rc, list, index, cx, cy);
 
     // THE AIDS, and forgetting them is what this line is here to stop happening
-    // again. A backend draws the document; the grid, the ruler, the scale bar,
-    // the north arrow, the snap marker, the crosshair, the selection box and the
-    // drawing's own captions are the program's furniture and every backend owes
+    // again. A backend draws a document; the grid, the ruler, the scale bar,
+    // the north arrow, the snap marker, the crosshair, the selection box and
+    // the drawing's own captions are the program's furniture and every backend owes
     // the user all of them. Leaving them out took the whole overlay off the
     // canvas the moment QGIS became the default engine — the drawing was still
     // there and everything around it was gone.
     paint_frame_aids(painter, list, overlay, cx, cy);
 
-    painter.end();
+    // GIVEN BACK AS IT WAS FOUND, and not ended: a borrowed painter belongs to
+    // the page, which is not finished with it.
+    if (borrowed) painter.restore();
+    else painter.end();
 }
 
 std::unique_ptr<render::Backend> make_qgis_backend()

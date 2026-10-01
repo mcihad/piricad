@@ -171,7 +171,7 @@ tıpkı [AÇ](open.md) gibi. Kaydedilmemiş işiniz varsa önce kaydedin.
 
 ### Arayüz
 
-**PiriCAD CAD ▸ Veritabanı…** ya da şeritteki **Harita ▸ Veri ▸ Veritabanı…**
+**PiriCAD ▸ Veritabanı…** ya da şeritteki **Harita ▸ Veri ▸ Veritabanı…**
 (`Ctrl+Shift+D`) modsuz bir pencere açar: üstte bağlantı
 alanları ve bağlantı durumu, altta solda sunucudaki mekansal tablolar, sağda
 kayıtlı PiriCAD projeleri bulunur. Bağlantı kurulduktan sonra **Yenile** düğmesi

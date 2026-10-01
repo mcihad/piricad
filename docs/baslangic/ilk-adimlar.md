@@ -181,7 +181,7 @@ komutlar, sağda seçili komutun parametreleri. Tek bir komutun ayrıntısı iç
 YARDIM komut=ÇİZGİ
 ```
 
-Sayfa o komutun üzerinde açılır. Aynı sayfaya **PiriCAD CAD ▸ Komut Listesi** (`F1`) ve
+Sayfa o komutun üzerinde açılır. Aynı sayfaya **PiriCAD ▸ Komut Listesi** (`F1`) ve
 `Ctrl+K` ile de ulaşılır; üçü de aynı komutu çalıştırır. Liste komut kaydından üretilir;
 elle tutulan ikinci bir liste yoktur.
 

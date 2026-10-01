@@ -288,7 +288,7 @@ ApplicationMenu::ApplicationMenu(QWidget* parent) : QWidget(parent, Qt::Popup)
 {
     setObjectName(QStringLiteral("applicationMenu"));
     setAttribute(Qt::WA_TranslucentBackground, true);
-    setAccessibleName(tr("PiriCAD CAD ana menüsü"));
+    setAccessibleName(tr("PiriCAD ana menüsü"));
     setFixedWidth(kMenuWidth);
 
     auto* outer = new QVBoxLayout(this);

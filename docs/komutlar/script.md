@@ -78,8 +78,8 @@ BETİK tests/journal/ornek-parsel.json onizle=evet
 
 ### Arayüz
 
-**PiriCAD CAD ▸ Betik Çalıştır…** ya da **Ctrl+R** bir dosya seçme penceresi açar. Seçtiğiniz betik çalışır ve sonuç
-kendiliğinden görünüme sığdırılır. **PiriCAD CAD ▸ Betiği Önizle…** aynı pencereyi açar ama
+**PiriCAD ▸ Betik Çalıştır…** ya da **Ctrl+R** bir dosya seçme penceresi açar. Seçtiğiniz betik çalışır ve sonuç
+kendiliğinden görünüme sığdırılır. **PiriCAD ▸ Betiği Önizle…** aynı pencereyi açar ama
 betiği çalıştırmaz; ne değiştireceğini komut satırına yazar.
 
 ### Betik

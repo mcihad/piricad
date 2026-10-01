@@ -76,7 +76,7 @@ reddedilir: dosyayı diske indirip öyle açın.
 
 ### Arayüz
 
-**PiriCAD CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** İçe Aktar
+**PiriCAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** İçe Aktar
 penceresini açar. **Gözat…** penceresinin süzgecinde **Netcad çizimi** satırı vardır;
 **Desteklenen tüm dosyalar** satırı da `.ncz` dosyalarını gösterir; dosyayı pencereye
 sürükleyip bırakmak da olur. Pencere öteki biçimlerdekiyle aynıdır

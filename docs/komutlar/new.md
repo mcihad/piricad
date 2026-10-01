@@ -35,7 +35,7 @@ Yer değiştirmeyle birlikte **sıfırlananlar**:
 - **Oturum modları** (`MOD`): yakalama, dik mod, kutupsal izleme.
 
 **`YENİ` komutun kendisi sormaz.** Kaydedilmemiş çalışmanız varsa soruyu
-*pencere* sorar: **PiriCAD CAD ▸ Yeni**, **Ctrl+N** ya da hızlı erişimdeki **Yeni**
+*pencere* sorar: **PiriCAD ▸ Yeni**, **Ctrl+N** ya da hızlı erişimdeki **Yeni**
 simgesi, komutu göndermeden önce **Kaydet / Atla / Vazgeç** seçeneklerini
 gösterir. Komut satırına doğrudan `YENİ` yazarsanız ya da bir betikten
 çağırırsanız soru sorulmaz — `AÇ` da aynı şekilde davranır. Sebebi mimaridir:
@@ -93,7 +93,7 @@ KATMAN ad=PARSEL
 
 | Yol | Nerede |
 |---|---|
-| **PiriCAD CAD ▸ Yeni** | Şeridin solundaki uygulama menüsü |
+| **PiriCAD ▸ Yeni** | Şeridin solundaki uygulama menüsü |
 | **Yeni** simgesi | Sekme satırının sağındaki hızlı erişim düğmeleri |
 | **Ctrl+N** | Klavye; fare gerekmez |
 

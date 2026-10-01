@@ -10170,12 +10170,12 @@ int MainWindow::probeMenus()
         QCoreApplication::processEvents();
     };
 
-    // ---- the application button: PiriCAD CAD, and quit at its foot ------------
+    // ---- the application button: PiriCAD, and quit at its foot ------------
     if (auto* app = qobject_cast<QToolButton*>(bar->applicationButton());
         app != nullptr && appMenu_ != nullptr) {
         ++index;
         const QString title = app->text();
-        if (title != QStringLiteral("PiriCAD CAD")) {
+        if (title != QStringLiteral("PiriCAD")) {
             (void)std::fprintf(stderr, "[menü] BAŞARISIZ: ana menü düğmesi \"%s\" diyor\n",
                                title.toUtf8().constData());
             ++failures;

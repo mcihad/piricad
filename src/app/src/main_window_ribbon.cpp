@@ -191,7 +191,7 @@ void MainWindow::buildRibbon()
     bar->setObjectName(QStringLiteral("shellRibbon"));
     bar->setRibbonStyle(SARibbonBar::RibbonStyleCompactThreeRow);
     // The window's icon belongs to the system's caption, which already shows
-    // it; a second one in the tab row pushed `PiriCAD CAD` off the left edge.
+    // it; a second one in the tab row pushed `PiriCAD` off the left edge.
     bar->setTitleIconVisible(false);
     // Office's own sizes: a 32 px picture on a large button, 16 px on a small one.
     constexpr int kLargeIcon = 32;
@@ -300,15 +300,15 @@ void MainWindow::buildRibbon()
 
     // ---- the application button and its menu ------------------------------
     //
-    // `PiriCAD CAD`, where Office writes `Dosya`: what is in it is what a drawing
+    // `PiriCAD`, where Office writes `Dosya`: what is in it is what a drawing
     // is done to as a FILE — new, open, save, import, export, print, the
     // project's settings, the program's — and the one way out. AutoCAD's
     // application menu (`app_menu.hpp`) and not a backstage page over the whole
     // window: a CAD user opens this to save and goes straight back to a drawing
     // that should never have been covered to do it.
-    auto* appButton = new RibbonAppButton(tr("PiriCAD CAD"), bar);
+    auto* appButton = new RibbonAppButton(tr("PiriCAD"), bar);
     appButton->setObjectName(QStringLiteral("ribbonApplicationButton"));
-    appButton->setAccessibleName(tr("PiriCAD CAD ana menüsü"));
+    appButton->setAccessibleName(tr("PiriCAD ana menüsü"));
     appButton->setAccessibleDescription(
         tr("Yeni, aç, kaydet, içe ve dışa aktar, yazdır, ayarlar ve çıkış"));
     appButton->setToolTip(tr("Ana menü — dosya, yazdırma, son belgeler, ayarlar ve çıkış"));
@@ -345,7 +345,7 @@ void MainWindow::buildRibbon()
     auto* appRest = new QMenu(tr("Diğer Komutlar"), this);
     appRest->setObjectName(QStringLiteral("applicationMenuRest"));
     appRest->menuAction()->setData(static_cast<int>(Glyph::More));
-    actQuit_->setToolTip(tr("PiriCAD CAD'i kapatır; kaydedilmemiş değişiklik varsa sorar"));
+    actQuit_->setToolTip(tr("PiriCAD'i kapatır; kaydedilmemiş değişiklik varsa sorar"));
     appMenu_->setFooter(reference, about, actSettings_, actQuit_);
 
     // ---- quick access and the corner ---------------------------------------

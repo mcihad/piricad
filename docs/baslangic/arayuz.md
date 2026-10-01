@@ -9,7 +9,7 @@ nasıl yapılacağını bileceksiniz.
 ```text
 ┌ sistem başlık çubuğu (işletim sistemi çizer) ─────────────────────────── ─ □ ✕ ┐
 ├ şerit · sekme satırı 40 px ─────────────────────────────────────────────────────┤
-│ [PiriCAD CAD] Giriş  Çizim  Değiştir … Çıktı  Yazı   📄📂💾🖨▾ ↶↷ ⌃ [🔍 Komut ara…] │
+│ [PiriCAD] Giriş  Çizim  Değiştir … Çıktı  Yazı   📄📂💾🖨▾ ↶↷ ⌃ [🔍 Komut ara…] │
 ├ şerit · paneller 91 px ─────────────────────────────────────────────────────────┤
 │  ➤  │ ╱  ⌇  ◯▾  ◠▾ ▭▾ ⬠▾ │ ✥ Taşı  ↻ Döndür▾ ✂ Buda▾ ⌫ │ … │ [👁 ▪ 0      ▾] │ … │
 │ Seç │         Çizim     ↘ │           Değiştir          │   │  Katmanlar     ↘ │   │
@@ -339,9 +339,9 @@ aracı "işaretli" diye söyler ve bölünmüş düğmede iki eylem sunar: **Bas
 çalıştırır, **Menüyü göster** listeyi açar. Erişilebilirlik katmanından basmak — VoiceOver'da
 **Ctrl+Option+Boşluk** — aracı gerçekten **çalıştırır**.
 
-## PiriCAD CAD menüsü
+## PiriCAD menüsü
 
-Sekme satırının en solundaki **PiriCAD CAD** düğmesi uygulama menüsünü açar. Solda dosyayla
+Sekme satırının en solundaki **PiriCAD** düğmesi uygulama menüsünü açar. Solda dosyayla
 yapılan işler büyük satırlar halinde, her birinin altında ne yaptığı yazar: **Yeni**
 (**Ctrl+N**), **Aç…** (**Ctrl+O**), **Kaydet** (**Ctrl+S**), **Farklı Kaydet…**
 (**Ctrl+Shift+S**), **İçe Aktar…**, **Dışa Aktar…**, **Yazdır** (**Ctrl+P**), **Çıktı
@@ -377,7 +377,7 @@ bir mühendisin çizmeye başlamadan önce baktığı okuma budur.
 
 ### Komut listesi — `Ctrl+K`
 
-Sekme satırının sağındaki **Komut ara…** kutucuğuna tıklayın, **Ctrl+K**'ya basın, **PiriCAD CAD** menüsünün altındaki **Komut Listesi**'ni (`F1`) seçin
+Sekme satırının sağındaki **Komut ara…** kutucuğuna tıklayın, **Ctrl+K**'ya basın, **PiriCAD** menüsünün altındaki **Komut Listesi**'ni (`F1`) seçin
 ya da komut satırına `YARDIM` yazın: dördü de aynı sayfayı açar. Üstte süzgeç, solda
 kategori başlıkları altında bütün komutlar, sağda imlecin üzerinde olduğu komutun
 aldığı parametreler.

@@ -239,7 +239,7 @@ Nesne eşlemesi, akıllı nesneler, pafta çerçeveleri, koordinat sistemi ve ra
 
 ### Arayüz
 
-**PiriCAD CAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** **İçe Aktar
+**PiriCAD ▸ İçe Aktar…** ya da şeritteki **Harita ▸ Veri ▸ İçe Aktar…** **İçe Aktar
 penceresini** açar. Pencere tek sayfadır: üstte dosya, ortada dosyanın çizimi, sağda katmanlar
 ve alanlar, altta pencerenin çalıştıracağı komut satırı.
 

@@ -79,9 +79,9 @@ Açıldı: yeni-surumden.pcad  (14 nesne, 5 katman, 63 nokta, biçim 1)
 
 ### Arayüz
 
-**PiriCAD CAD ▸ Aç…**, hızlı erişim satırındaki **Aç** simgesi veya **Ctrl+O** bir dosya
+**PiriCAD ▸ Aç…**, hızlı erişim satırındaki **Aç** simgesi veya **Ctrl+O** bir dosya
 seçme penceresi açar. Pencere yalnızca argümanı toplar; komutun kendisi aynı komuttur ve
-klavyeden de, betikten de çalışır. **PiriCAD CAD** menüsünün sağındaki **son kullanılan
+klavyeden de, betikten de çalışır. **PiriCAD** menüsünün sağındaki **son kullanılan
 belgeler** listesinden birine tıklamak pencereyi atlar ve o dosyayı doğrudan `AÇ` ile açar.
 
 ### Betik

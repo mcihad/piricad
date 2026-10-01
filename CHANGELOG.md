@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — Çıktı yerleşiminde çerçeve hedefleyince çökme
+
+- **`Çizimin tamamı` ve `Ana pencereden al` programı çökertiyordu.** Harita
+  çerçevesi L-12'den beri sayfaya **vektör** olarak, sayfanın kendi boyacısı
+  üzerinden çiziliyor (`FrameContext::target_is_painter` sözleşmesi); QGIS
+  simgeleme arka ucu sözleşmenin bu yarısını okumuyor, her hedefi bir
+  `QPaintDevice` sanıp üzerine kendi `QPainter`'ını açıyordu. Sayfanın boyacısı
+  üzerinde boyacı kurmak, ilk sanal çağrıda yanlış vtable'dan çöpe sıçramak
+  demekti — ve bir çerçeveye ilk kez `pencere=` verilmesi (iki düğmenin yaptığı
+  şey) haritaya çizecek bir şey verdiği an tam olarak buydu. Arka uç artık
+  ödünç alınan boyacıyı olduğu gibi kullanıyor, bulduğu gibi geri veriyor;
+  kurduğu boyacıyı yalnız kendi açtığı yüzeyde sonlandırıyor. Bu, simge
+  tasarımcısının önizlemesinin de çökme yoludu.
+
+### Değişti — şeridin ana düğmesi yalnız "PiriCAD" diyor
+
+- Düğme, erişilebilir adı, ipuçları ve belgeler "PiriCAD CAD" diyordu; programın
+  adı PiriCAD olduğundan ve düğmenin kendisi zaten bir CAD menüsü açtığından
+  ikinci "CAD" gereksizdi. Koddaki her yer (düğme, menü ayağı, menü denetimi)
+  ve 27 belge sayfası tek seferde "PiriCAD"e döndü.
+
 ### Düzeltildi — DWG'de çok yüzlü ağ yarısı kayıp, yarısı okunmuş sayılıyordu
 
 - **`POLYLINE_PFACE` okunmuyordu.** Çok yüzlü ağ "desteklenmeyen tür" olarak

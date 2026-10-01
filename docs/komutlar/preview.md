@@ -105,7 +105,7 @@ altında vurgu renginde **"Uygulanırsa: …"** satırı durur, tuvalde de sonu�
 satır kırmızıdır ve hangi adımda neden duracağını söyler. Önerinin hiçbir çizgisi çizimde
 değildir; **Uygula** ya da **Reddet**'e basınca taslaklar kalkar.
 
-**PiriCAD CAD ▸ Betiği Önizle…** bir JSON betiği seçtirir ve çalıştırmadan ne
+**PiriCAD ▸ Betiği Önizle…** bir JSON betiği seçtirir ve çalıştırmadan ne
 değiştireceğini komut satırına yazar (`BETİK … onizle=evet`).
 
 Herhangi bir komutu önizlemek için komut satırına `ÖNİZLE` yazın.

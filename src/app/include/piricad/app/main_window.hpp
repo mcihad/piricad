@@ -956,7 +956,7 @@ private:
     /// what it does, how it is typed, and a family's other members.
     QString ribbonTip(const QAction* action) const;
 
-    /// Opens the application menu under the `PiriCAD CAD` button, with the
+    /// Opens the application menu under the `PiriCAD` button, with the
     /// documents opened last in its pane.
     void openApplicationMenu();
 
@@ -1015,7 +1015,7 @@ private:
 
     /// The right end of the tab row: the command search and the user chip.
     ShellCorner* corner_{nullptr};
-    /// `PiriCAD CAD`, the application button; its floor is set after every sheet.
+    /// `PiriCAD`, the application button; its floor is set after every sheet.
     QToolButton* appButton_{nullptr};
     /// Everything on the ribbon that reads the document (`ribbon.hpp`).
     std::unique_ptr<RibbonLive> ribbonLive_ = std::make_unique<RibbonLive>();
@@ -1023,7 +1023,7 @@ private:
     QList<QAction*> layerActions_;
     /// Puts the select tool's panel first on a tab (`buildRibbon`).
     std::function<void(SARibbonCategory*)> selectFirst_;
-    /// What the `PiriCAD CAD` button opens.
+    /// What the `PiriCAD` button opens.
     ApplicationMenu* appMenu_{nullptr};
     /// The document last put on the recent list, so a refresh does not write
     /// the list again for the same file.
