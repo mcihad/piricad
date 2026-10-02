@@ -204,7 +204,7 @@ Betikten çağrıldığında `nesne`, `nokta` ve `mesafe` verilmelidir; iki çiz
 | `PAH iki düz kenarın buluştuğu köşeyi keser; bu köşenin bir kenarı yay. Köşeyi YUVARLA ile yuvarlatın.` | Yaylı kenarlı bir nesnenin yay kenarına bitişik köşesi | Köşeyi [`YUVARLA`](fillet.md) ile yuvarlatın |
 | `Mesafe sıfırdan büyük olmalı.` | Sıfır ya da eksi mesafe | Artı bir mesafe verin |
 | `Kesim komşu kenardan uzun: kenarlar 12,000 m ve 20,000 m, gereken 21,000 m. ...` | Değer kenarlardan büyük | Daha küçük bir değer verin ya da daha yakına tıklayın |
-| `Pah iki düz kenar arasında kırılır; yay ile köşe için YUVARLA kullanın.` | İki çizgiden biri yay ya da daire | [`YUVARLA`](fillet.md) kullanın |
+| `Pah iki düz kenar arasında kırılır; yay, elips ya da eğri ile köşe için YUVARLA kullanın.` | İki nesneden biri yay, daire, elips ya da spline | [`YUVARLA`](fillet.md) kullanın |
 | `İki çizgi paralel; aralarında köşe yok.` | İki çizgi aynı doğrultuda | Kesişen iki çizgi seçin |
 | `Pah mesafesi sıfırdan büyük olmalı.` | İki çizgide sıfır ya da eksi mesafe | Artı bir mesafe verin |
 | `Köşe sığmıyor: seçtiğiniz parçanın tamamını götürüyor. Daha küçük bir değer verin.` | Mesafe tıklanan parçadan uzun | Daha küçük bir mesafe verin |

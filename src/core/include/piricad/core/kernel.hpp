@@ -52,6 +52,31 @@ std::string kernel_version();
 /// along that walk; a failed solve is an error, never an empty success.
 Result<PathMeets> kernel_meets(const PathPiece& a, const PathPiece& b);
 
+/// One circle of a given radius tangent to two curve pieces, as OCCT's 2D
+/// fillet (`ChFi2d_FilletAPI`) finds it.
+struct KernelFillet
+{
+    Point2 centre{}; ///< the circle's centre, whole millimetres
+    Point2 on_a{};   ///< where it touches the first piece
+    Point2 on_b{};   ///< where it touches the second
+    double t_a{0.0}; ///< `on_a` as a fraction of the first piece's walk, in [0, 1]
+    double t_b{0.0}; ///< `on_b` as a fraction of the second piece's walk
+
+    friend bool operator==(const KernelFillet&, const KernelFillet&) = default;
+};
+
+/// EVERY circle of `radius` tangent to both pieces, on either side of each,
+/// that OCCT's fillet finds — any of segment, arc, ellipse and rational
+/// B-spline, with or without a common point. The tangent points lie on the
+/// pieces as given (a caller that wants a line carried on passes it longer).
+/// Choosing which one the user meant is the caller's: the kernel only says
+/// what exists. `near` is the corner the fillet is sought at — where the two
+/// cross, or between the picks. Sorted by centre, then tangent points, so the
+/// same input gives the same list; empty when no such circle exists, an error
+/// when the kernel fails.
+Result<std::vector<KernelFillet>> kernel_fillets(const PathPiece& a, const PathPiece& b, Mm radius,
+                                                 Point2 near);
+
 /// A face as the kernel takes and gives it: a boundary and its holes, each a
 /// closed path whose arcs are arcs. Handed back with the boundary
 /// counter-clockwise, the holes clockwise, each starting at its lowest, then

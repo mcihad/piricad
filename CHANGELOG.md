@@ -6,6 +6,18 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — O-5 elips ve spline ile köşe yuvarlama
+
+- İki nesne arasındaki `YUVARLA` artık elips ve spline içeren köşede de çalışır;
+  teğet yayı OpenCASCADE'in 2B yuvarlaması (`ChFi2d`) bulur. Elips elips, spline
+  spline kalır ve teğet noktasında kesilir; karşıdaki çizgi gerekirse uzatılır.
+  Sıfır yarıçap iki nesneyi OCCT'nin kesişim noktasında buluşturur.
+- Ekransız bir istemci (betik, ajan, MCP) elipsin ya da spline'ın tam üstüne
+  tıklayınca o nesneyi bulur; ölçü artık çizilen kirişlere değil eğrinin kendisine.
+- Önceden bu köşe "kullanılamıyor" diye reddediliyordu. `PAH` elips ve spline ile
+  köşeyi yine sebebini söyleyerek reddeder; çekirdek işlevi de elips ya da spline
+  parçasını artık hiçbir yolda iki ucu arasındaki düz çizgi gibi işlemez.
+
 ### Eklendi — şeritte dört alan işlemi
 
 - Birleşim, Kesişim, Fark ve Simetrik Fark; Değiştir, Alan ve Eğri sekmelerinde

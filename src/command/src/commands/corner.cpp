@@ -144,12 +144,13 @@ std::optional<core::CurvePath> pair_path(const Context& ctx, std::int64_t id, co
                    "Nesne bulunamadı veya silinmiş: " + std::to_string(id));
         return std::nullopt;
     }
-    auto path = core::path_of(doc, slot);
+    // An ellipse and a spline too: the kernel rounds against them (O-5).
+    auto path = core::path_of(doc, slot, core::PathScope::Curves);
     if (!path)
         ctx.refuse(core::ErrorCode::Unsupported,
                    "Nesne " + std::to_string(id) +
-                       " iki nesne arasındaki köşede kullanılamıyor; çizgi, yay, daire ya da "
-                       "yaylı çoklu çizgi seçin.");
+                       " iki nesne arasındaki köşede kullanılamıyor; çizgi, yay, daire, elips, "
+                       "spline ya da yaylı çoklu çizgi seçin.");
     return path;
 }
 

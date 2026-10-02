@@ -1,0 +1,19 @@
+# O-5: elips ve spline ile köşe yuvarlaması OCCT'nin 2B yuvarlamasından
+# (ChFi2d), büyük TUREF koordinatlarında ve ortak komut yolundan.
+# Yarım elips (10 m × 5 m) y = 3 m doğrusunu x = 8 m'de keser; 1 m yarıçaplı yay
+# doğrunun sağ parçası ile elipsin kesişim altındaki parçası arasına girer:
+# merkezi doğrunun 1 m altında (y = 2 m), elips elips kalarak teğet noktasına budanır.
+# Parabol y = x(1 − x/20) ile ucu kısa kalan y = 3 m doğrusu arasındaki 0,5 m'lik
+# yay doğruyu teğet noktasına uzatır; merkezi doğrunun 0,5 m altında.
+# Sıfır yarıçap ikinci yarım elipsi ve doğruyu tam (8, 3) m'de buluşturur.
+# Merkez, teğet noktaları, kesilen eğri tanımları ve günlük üç platformda bit-birebir.
+AYAR koordinat_sistemi EPSG:5256
+ELİPS merkez=485300,4310200 birinci=485310,4310200 ikinci=485300,4310205 baslangic=0 bitis=180
+ÇİZGİ 485285,4310203 485315,4310203
+YUVARLA nesne=1 2 nokta=485309.6,4310201.4 ikinci_nokta=485312,4310203 yaricap=1
+SPLINE noktalar=485330,4310200 485340,4310210 485350,4310200 derece=2
+ÇİZGİ 485320,4310203 485332,4310203
+YUVARLA nesne=5 4 nokta=485325,4310203 ikinci_nokta=485331,4310200.95 yaricap=0.5
+ELİPS merkez=485300,4310220 birinci=485310,4310220 ikinci=485300,4310225 baslangic=0 bitis=180
+ÇİZGİ 485285,4310223 485315,4310223
+YUVARLA nesne=7 8 nokta=485309.6,4310221.4 ikinci_nokta=485312,4310223 yaricap=0

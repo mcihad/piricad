@@ -1,0 +1,66 @@
+crs EPSG:5256
+katman-sayisi 1
+nesne-sayisi 8
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=8
+nesne 0 katman=0 stil=0 halka=1 tur=5 yuk=0100000000000000000000000000000065bf050100000000
+  halka rol=0 parca=0 tepe=3
+    485300000 4310200000
+    485310000 4310200000
+    485300000 4310205000
+  alan_mm2 0  cevre_mm 1560
+nesne 1 katman=0 stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485310406 4310203000
+    485315000 4310203000
+  alan_mm2 0  cevre_mm 4594
+nesne 2 katman=0 stil=0 halka=1 tur=3
+  halka rol=0 parca=0 tepe=4
+    485310406 4310202000
+    485311406 4310202000
+    485310406 4310203000
+    485309555 4310201475
+  alan_mm2 0  cevre_mm 2124
+  koken core.fillet 1 2
+nesne 3 katman=0 stil=0 halka=1 tur=7 yuk=010010000000000002060000000000000000000000000000000000000000000000000000001c311d07000000001c311d07000000001c311d070000000000000000
+  halka rol=0 parca=0 tepe=3
+    485330000 4310200000
+    485331194 4310201194
+    485332387 4310202102
+  alan_mm2 0  cevre_mm 3183
+nesne 4 katman=0 stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485320000 4310203000
+    485332084 4310203000
+  alan_mm2 0  cevre_mm 12084
+nesne 5 katman=0 stil=0 halka=1 tur=3
+  halka rol=0 parca=0 tepe=4
+    485332084 4310202500
+    485332584 4310202500
+    485332387 4310202102
+    485332084 4310203000
+  alan_mm2 0  cevre_mm 1245
+  koken core.fillet 4 5
+nesne 6 katman=0 stil=0 halka=1 tur=5 yuk=010000000000000000000000000000000a97320200000000
+  halka rol=0 parca=0 tepe=3
+    485300000 4310220000
+    485310000 4310220000
+    485300000 4310225000
+  alan_mm2 0  cevre_mm 3755
+nesne 7 katman=0 stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485308000 4310223000
+    485315000 4310223000
+  alan_mm2 0  cevre_mm 7000
+kapsam 485308000 4310200000 485332584 4310223000
+icerik-ozeti 755764a6d13ea51b
+gunluk
+  {"seq":1,"cmd":"core.setting","args":{"ad":"core.crs.id","deger":"EPSG:5256"},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":2,"cmd":"core.ellipse_draw","args":{"merkez":[485300000,4310200000],"birinci":[485310000,4310200000],"ikinci":[485300000,4310205000],"baslangic":0.0,"bitis":180.0},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":3,"cmd":"core.line","args":{"noktalar":[[485285000,4310203000],[485315000,4310203000]]},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":4,"cmd":"core.fillet","args":{"nesne":[1,2],"nokta":[485309600,4310201400],"yaricap":1.0,"ikinci_nokta":[485312000,4310203000]},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":5,"cmd":"core.spline","args":{"noktalar":[[485330000,4310200000],[485340000,4310210000],[485350000,4310200000]],"derece":2},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":6,"cmd":"core.line","args":{"noktalar":[[485320000,4310203000],[485332000,4310203000]]},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":7,"cmd":"core.fillet","args":{"nesne":[5,4],"nokta":[485325000,4310203000],"yaricap":0.5,"ikinci_nokta":[485331000,4310200950]},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":8,"cmd":"core.ellipse_draw","args":{"merkez":[485300000,4310220000],"birinci":[485310000,4310220000],"ikinci":[485300000,4310225000],"baslangic":0.0,"bitis":180.0},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":9,"cmd":"core.line","args":{"noktalar":[[485285000,4310223000],[485315000,4310223000]]},"origin":"test","crs":"EPSG:5256","katman":"0"}
+  {"seq":10,"cmd":"core.fillet","args":{"nesne":[7,8],"nokta":[485309600,4310221400],"yaricap":0.0,"ikinci_nokta":[485312000,4310223000]},"origin":"test","crs":"EPSG:5256","katman":"0"}

@@ -208,9 +208,11 @@ double min_distance_squared(const Document& doc, EntityId e, Point2 p, bool face
     // exactly ON the circle — what a client with no screen gives, at a pick
     // radius of zero — was millimetres off everything and hit nothing. The
     // nearer of the two stands, so no pick that found a curve before stops.
+    // An ellipse and a spline the same way: their outline is chords too.
     if (const KindId kind = doc.entities().kind[e];
-        best > 0.0 && (kind == kArcKind || kind == kCircleKind || kind == kArcPolylineKind)) {
-        if (const auto path = path_of(doc, e); path && !path->pieces.empty())
+        best > 0.0 && (kind == kArcKind || kind == kCircleKind || kind == kArcPolylineKind ||
+                       kind == kEllipseKind || kind == kSplineKind)) {
+        if (const auto path = path_of(doc, e, PathScope::Curves); path && !path->pieces.empty())
             best = std::min(best, distance_squared(point_at(*path, place_of(*path, p)), p));
     }
 

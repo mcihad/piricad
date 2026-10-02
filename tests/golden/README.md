@@ -50,6 +50,14 @@ splines meet at 1.464 m and 8.536 m after rounding once to millimetres. BUDA kee
 the exact ellipse and spline definitions; their payloads, vertices and journal
 are compared byte for byte by the same harness on each platform.
 
+`occt-yuvarlama.txt` fixes YUVARLA between two objects when one is an ellipse
+or a spline, through OCCT's 2D fillet (`ChFi2d`): a half ellipse and the line
+y = 3 m that crosses it at the hand-computed (8, 3) m, rounded at 1 m — the
+centre 1 m under the line, the ellipse cut at its touch and still an ellipse;
+a parabola and a line that stops short, rounded at 0.5 m with the line carried
+on to its touch; and the same ellipse and line met at radius zero exactly at
+(8, 3) m. The tangent points were checked by hand against the curves' equations.
+
 `nokta-fonksiyonlari.txt` does the same for the point functions (TODOS-CAD
 P1a), and it is the harder case: `dik`, `kes`, `ara` and `uzanti` divide by a
 square root, so every vertex in it is an answer that a differently-rounded

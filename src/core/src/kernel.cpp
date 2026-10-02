@@ -41,10 +41,12 @@
 #include <BRep_Builder.hxx>
 #include <BRep_Tool.hxx>
 #include <Bnd_Box.hxx>
+#include <ChFi2d_FilletAPI.hxx>
 #include <GCPnts_QuasiUniformDeflection.hxx>
 #include <GC_MakeArcOfCircle.hxx>
 #include <GProp_GProps.hxx>
 #include <Geom2dAPI_InterCurveCurve.hxx>
+#include <Geom2dAPI_ProjectPointOnCurve.hxx>
 #include <Geom2dInt_GInter.hxx>
 #include <Geom2d_BSplineCurve.hxx>
 #include <Geom2d_Circle.hxx>
@@ -80,6 +82,7 @@
 #include <gp_Ax2.hxx>
 #include <gp_Ax22d.hxx>
 #include <gp_Ax2d.hxx>
+#include <gp_Ax3.hxx>
 #include <gp_Circ.hxx>
 #include <gp_Dir2d.hxx>
 #include <gp_Pln.hxx>
@@ -166,6 +169,11 @@ Result<std::vector<CurvePath>> kernel_offset(const CurvePath&, Mm, OffsetCorner,
 }
 
 Result<PathMeets> kernel_meets(const PathPiece&, const PathPiece&)
+{
+    return err(ErrorCode::Unsupported, kernel_version());
+}
+
+Result<std::vector<KernelFillet>> kernel_fillets(const PathPiece&, const PathPiece&, Mm, Point2)
 {
     return err(ErrorCode::Unsupported, kernel_version());
 }
@@ -1025,6 +1033,89 @@ Result<PathMeets> kernel_meets(const PathPiece& a, const PathPiece& b)
     } catch (const Standard_Failure& failure) {
         return err(ErrorCode::ValidationFailed,
                    std::string("OpenCASCADE eğri kesişimi başarısız: ") +
+                       failure.GetMessageString());
+    }
+}
+
+Result<std::vector<KernelFillet>> kernel_fillets(const PathPiece& a, const PathPiece& b, Mm radius,
+                                                 Point2 near)
+{
+#if defined(TRACY_ENABLE)
+    ZoneScopedN("kernel_fillets");
+#endif
+    if (radius <= 0)
+        return err(ErrorCode::InvalidArgument, "Yuvarlatma yarıçapı sıfırdan büyük olmalı.");
+    try {
+        const Frame frame{near};
+        auto first = curve2d(a, frame);
+        if (!first) return first.error();
+        auto second = curve2d(b, frame);
+        if (!second) return second.error();
+        const gp_Pln flat(gp::XOY());
+        const TopoDS_Edge edge_a =
+            BRepBuilderAPI_MakeEdge(GeomAPI::To3d(first.value().curve, flat));
+        const TopoDS_Edge edge_b =
+            BRepBuilderAPI_MakeEdge(GeomAPI::To3d(second.value().curve, flat));
+        const gp_Pnt at(0.0, 0.0, 0.0); // `near`, in the local frame
+        const auto r = static_cast<double>(radius);
+
+        // WHERE A TANGENT POINT LIES ON A PIECE, by the kernel's own
+        // projection: the parameter, as a fraction of the document's walk, and
+        // how far off the curve the point is.
+        const auto project = [](const Curve2d& c, const gp_Pnt& p) -> std::pair<double, double> {
+            Geom2dAPI_ProjectPointOnCurve onto(gp_Pnt2d(p.X(), p.Y()), c.curve);
+            if (onto.NbPoints() == 0) return {0.0, -1.0};
+            return {c.fraction(onto.LowerDistanceParameter()), onto.LowerDistance()};
+        };
+
+        std::vector<KernelFillet> out;
+        // BOTH SIDES OF THE PLANE. The fillet algorithm finds the circles on
+        // one hand of the edges for each orientation of the plane it is given;
+        // what the user meant may be on either.
+        for (const double up : {1.0, -1.0}) {
+            const gp_Pln plane(gp_Ax3(gp::Origin(), gp_Dir(0.0, 0.0, up), gp::DX()));
+            ChFi2d_FilletAPI fillet(edge_a, edge_b, plane);
+            if (!fillet.Perform(r)) continue;
+            const int count = fillet.NbResults(at);
+            for (int i = 0; i < count; ++i) {
+                TopoDS_Edge kept_a;
+                TopoDS_Edge kept_b;
+                const TopoDS_Edge arc = fillet.Result(at, kept_a, kept_b, i);
+                if (arc.IsNull()) continue;
+                const BRepAdaptor_Curve curve(arc);
+                if (curve.GetType() != GeomAbs_Circle ||
+                    std::abs(curve.Circle().Radius() - r) > kSamePointMm)
+                    continue;
+                gp_Pnt p      = curve.Value(curve.FirstParameter());
+                gp_Pnt q      = curve.Value(curve.LastParameter());
+                auto [tp, dp] = project(first.value(), p);
+                if (dp < 0.0 || dp > kSamePointMm) {
+                    std::swap(p, q);
+                    std::tie(tp, dp) = project(first.value(), p);
+                }
+                const auto [tq, dq] = project(second.value(), q);
+                if (dp < 0.0 || dp > kSamePointMm || dq < 0.0 || dq > kSamePointMm) continue;
+                const KernelFillet found{
+                    .centre = frame.back(curve.Circle().Location()),
+                    .on_a   = frame.back(p),
+                    .on_b   = frame.back(q),
+                    .t_a    = tp,
+                    .t_b    = tq,
+                };
+                const bool seen = std::ranges::any_of(out, [&found](const KernelFillet& f) {
+                    return f.centre == found.centre && f.on_a == found.on_a && f.on_b == found.on_b;
+                });
+                if (!seen) out.push_back(found);
+            }
+        }
+        std::ranges::sort(out, [](const KernelFillet& p, const KernelFillet& q) {
+            return std::tie(p.centre.x, p.centre.y, p.on_a.x, p.on_a.y, p.on_b.x, p.on_b.y) <
+                   std::tie(q.centre.x, q.centre.y, q.on_a.x, q.on_a.y, q.on_b.x, q.on_b.y);
+        });
+        return out;
+    } catch (const Standard_Failure& failure) {
+        return err(ErrorCode::ValidationFailed,
+                   std::string("OpenCASCADE köşe yuvarlaması başarısız: ") +
                        failure.GetMessageString());
     }
 }

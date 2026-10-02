@@ -11,6 +11,7 @@
 #include "piricad/core/corner.hpp"
 #include "piricad/core/curve_path.hpp"
 #include "piricad/core/fillet.hpp"
+#include "piricad/core/kernel.hpp"
 #include "piricad/core/pick.hpp"
 
 #include <algorithm>
@@ -316,7 +317,7 @@ std::vector<std::pair<KindId, CurvePath>> live(const Document& doc)
     std::vector<std::pair<KindId, CurvePath>> out;
     for (EntityId e = 0; e < doc.entities().size(); ++e) {
         if (!doc.alive(e)) continue;
-        auto p = path_of(doc, e);
+        auto p = path_of(doc, e, PathScope::Curves);
         out.emplace_back(doc.entities().kind[e], p ? *p : CurvePath{});
     }
     return out;
@@ -500,6 +501,12 @@ TEST_CASE("C-06: YUVARLA ve PAH sayfalarının örnekleri yazıldığı gibi ça
     CHECK(said({"ÇİZGİ 0,0 8,0", "ÇİZGİ 10,2 10,10",
                 "YUVARLA nesne=1 2 nokta=4,0 ikinci_nokta=10,6 yaricap=0"})
               .find("İki nesne keskin köşede buluştu.") != std::string::npos);
+    if (kernel_available())
+        CHECK(said({"ELİPS merkez=0,0 birinci=10,0 ikinci=0,5 baslangic=0 bitis=180",
+                    "ÇİZGİ -15,3 15,3",
+                    "YUVARLA nesne=1 2 nokta=9.6,1.4 ikinci_nokta=12,3 yaricap=1"})
+                  .find("İki nesne arasında köşe yuvarlatıldı (yarıçap 1,000 m).") !=
+              std::string::npos);
     CHECK(said({"ÇOKLUÇİZGİ 0,0 10,0 10,10 20,10", "YUVARLA nesne=1 hepsi=evet yaricap=2"})
               .find("2 köşe yuvarlatıldı; çizgi tek bir yaylı çoklu çizgi oldu.") !=
           std::string::npos);
@@ -754,6 +761,15 @@ TEST_CASE("C-06: ekransız bir istemcinin yayın tam üstüne tıklaması yayı 
     CHECK(pick_nearest(r.doc, {9'600, 2'800}, 0) == r.doc.slot_of(EntityKey{1}));
     CHECK(pick_nearest(r.doc, {39'600, 2'800}, 0) == r.doc.slot_of(EntityKey{2}));
     CHECK(pick_nearest(r.doc, {9'600, 2'900}, 0) == kNoEntity); ///< 1 cm off it is off it
+
+    // An ellipse and a spline too (O-5): (69,6; 1,4) is on the ellipse about
+    // (60, 0) with axes 10 and 5 m — 9,6² + 4·1,4² = 10² — and the quadratic
+    // curve through (90,0) (95,10) (100,0) at its middle, (95, 5).
+    r.run("ELİPS merkez=60,0 birinci=70,0 ikinci=60,5");
+    r.run("SPLINE noktalar=90,0 95,10 100,0 derece=2");
+    CHECK(pick_nearest(r.doc, {69'600, 1'400}, 0) == r.doc.slot_of(EntityKey{3}));
+    CHECK(pick_nearest(r.doc, {95'000, 5'000}, 0) == r.doc.slot_of(EntityKey{4}));
+    CHECK(pick_nearest(r.doc, {69'600, 1'410}, 0) == kNoEntity);
 }
 
 // =============================================================================
@@ -881,4 +897,251 @@ TEST_CASE("O-2: yuvarlanan parselin kimliği ve özniteliği kalıyor, tek geri 
     }
     CHECK(kept);
     CHECK_EQ(r.undo.undo_depth(), steps + 1); // ONE step for the rounding
+}
+
+// =============================================================================
+// O-5: an ellipse or a spline on one side of the corner — the kernel's fillet
+// =============================================================================
+
+#include "piricad/core/spline.hpp"
+#include "piricad/script/json_runner.hpp"
+
+namespace {
+
+/// The upper half of the ellipse x²/10² + y²/5² = 1 (metres), walked from
+/// (10, 0) to (−10, 0).
+CurvePath upper_ellipse()
+{
+    PathPiece p;
+    p.kind       = PathPiece::Kind::Ellipse;
+    p.centre     = {0, 0};
+    p.major      = {10'000, 0};
+    p.minor      = {0, 5'000};
+    p.start_udeg = 0;
+    p.sweep_udeg = 180'000'000;
+    p.from       = {10'000, 0};
+    p.to         = {-10'000, 0};
+    CurvePath out;
+    out.pieces.push_back(p);
+    return out;
+}
+
+/// The quadratic Bézier (0,0) (10,10) (20,0) m: the parabola y = x·(1 − x/20).
+CurvePath parabola()
+{
+    PathPiece p;
+    p.kind              = PathPiece::Kind::Spline;
+    p.controls          = {{0, 0}, {10'000, 10'000}, {20'000, 0}};
+    p.spline.degree     = 2;
+    p.spline.knots_nano = uniform_clamped_knots(3, 2);
+    p.from              = {0, 0};
+    p.to                = {20'000, 0};
+    CurvePath out;
+    out.pieces.push_back(p);
+    return out;
+}
+
+/// How far `p` is off the ellipse, as the residual of its equation.
+double off_ellipse(Point2 p)
+{
+    const double x = static_cast<double>(p.x) / 10'000.0;
+    const double y = static_cast<double>(p.y) / 5'000.0;
+    return std::abs(x * x + y * y - 1.0);
+}
+
+} // namespace
+
+TEST_CASE("O-5: elips ile çizgi arasındaki yuvarlama ikisine teğet, elips elips kalır")
+{
+    if (!kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    // y = 3 m crosses the ellipse at x = ±8 m exactly (64/100 + 9/25 = 1). The
+    // line's right part and the ellipse below the crossing name the corner
+    // outside the ellipse and under the line.
+    const CurvePath road = line({-15'000, 3'000}, {15'000, 3'000});
+    auto f = fillet_pair(road, {12'000, 3'000}, upper_ellipse(), {9'539, 1'500}, 1'000);
+    REQUIRE_MESSAGE(f.ok(), (f.ok() ? std::string() : f.error().message));
+    const PairCorner& c = f.value();
+    // Under the line by the radius, outside the ellipse, right of the crossing.
+    CHECK_EQ(c.centre.y, 2'000);
+    CHECK(c.centre.x > 8'000);
+    CHECK(off_ellipse(c.centre) > 0.0);
+    // Tangent: both touches at the radius, the ellipse's ON the ellipse, and
+    // the radius there along the ellipse's normal (x/a², y/b²).
+    CHECK(std::abs(gap(c.centre, c.on_a) - 1'000.0) <= 1.5);
+    CHECK(std::abs(gap(c.centre, c.on_b) - 1'000.0) <= 1.5);
+    CHECK(c.on_a == (Point2{c.centre.x, 3'000}));
+    CHECK(off_ellipse(c.on_b) <= 2e-4);
+    const double nx    = static_cast<double>(c.on_b.x) / 1e8;
+    const double ny    = static_cast<double>(c.on_b.y) / 25e6;
+    const double rx    = static_cast<double>(c.centre.x - c.on_b.x);
+    const double ry    = static_cast<double>(c.centre.y - c.on_b.y);
+    const double cross = (nx * ry - ny * rx) / std::sqrt(nx * nx + ny * ny) / 1'000.0;
+    CHECK(std::abs(cross) <= 2e-3); ///< the radius is the normal, to a couple of millimetres
+    // The line keeps its picked right part from the touch; the ellipse its
+    // part below the crossing, cut at its touch and still an ellipse.
+    CHECK(path_vertices(c.a) == std::vector<Point2>{c.on_a, {15'000, 3'000}});
+    REQUIRE_EQ(c.b.pieces.size(), 1u);
+    CHECK(c.b.pieces[0].kind == PathPiece::Kind::Ellipse);
+    CHECK(c.b.pieces[0].from == (Point2{10'000, 0}));
+    CHECK(c.b.pieces[0].to == c.on_b);
+    REQUIRE(c.has_link);
+    CHECK_EQ(c.link.radius, Mm{1'000});
+    CHECK(c.link.from == c.on_a);
+    CHECK(c.link.to == c.on_b);
+
+    // The same corner asked again is the same millimetres (§7.3).
+    auto again = fillet_pair(road, {12'000, 3'000}, upper_ellipse(), {9'539, 1'500}, 1'000);
+    REQUIRE(again.ok());
+    CHECK(again.value().centre == c.centre);
+    CHECK(again.value().b == c.b);
+}
+
+TEST_CASE("O-5: elipsin öbür köşesi seçilince yay oraya gider; sıfır yarıçap tam kesişim")
+{
+    if (!kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    const CurvePath road = line({-15'000, 3'000}, {15'000, 3'000});
+    // The line's LEFT part and the ellipse above the crossing on the right:
+    // the corner inside the ellipse, over the line.
+    auto inside = fillet_pair(road, {4'000, 3'000}, upper_ellipse(), {6'000, 4'000}, 1'000);
+    REQUIRE_MESSAGE(inside.ok(), (inside.ok() ? std::string() : inside.error().message));
+    CHECK_EQ(inside.value().centre.y, 4'000);
+    CHECK(inside.value().centre.x < 8'000);
+    CHECK(path_vertices(inside.value().a) ==
+          std::vector<Point2>{{-15'000, 3'000}, inside.value().on_a});
+    CHECK(inside.value().b.pieces[0].from == inside.value().on_b);
+    CHECK(inside.value().b.pieces[0].to == (Point2{-10'000, 0}));
+
+    // Zero: the sharp corner at (8, 3) m, the ellipse cut there.
+    auto sharp = fillet_pair(road, {12'000, 3'000}, upper_ellipse(), {9'539, 1'500}, 0);
+    REQUIRE_MESSAGE(sharp.ok(), (sharp.ok() ? std::string() : sharp.error().message));
+    CHECK(sharp.value().on_a == (Point2{8'000, 3'000}));
+    CHECK(sharp.value().on_b == (Point2{8'000, 3'000}));
+    CHECK_FALSE(sharp.value().has_link);
+    CHECK(path_vertices(sharp.value().a) == std::vector<Point2>{{8'000, 3'000}, {15'000, 3'000}});
+    CHECK(sharp.value().b.pieces[0].to == (Point2{8'000, 3'000}));
+}
+
+TEST_CASE("O-5: spline ile çizgi arasında yuvarlama; kısa çizgi köşeye uzar")
+{
+    if (!kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    // y = 3 m meets the parabola at x = 10 − √40 m (≈ 3,675). The line stops
+    // short at x = 2 m, and is carried on to its touch.
+    const CurvePath road = line({-10'000, 3'000}, {2'000, 3'000});
+    auto f               = fillet_pair(road, {-5'000, 3'000}, parabola(), {1'000, 950}, 500);
+    REQUIRE_MESSAGE(f.ok(), (f.ok() ? std::string() : f.error().message));
+    const PairCorner& c = f.value();
+    CHECK_EQ(c.centre.y, 2'500); ///< under the line by the radius
+    CHECK(c.on_a == (Point2{c.centre.x, 3'000}));
+    CHECK(c.on_a.x > 2'000); ///< carried past its end
+    CHECK(path_vertices(c.a) == std::vector<Point2>{{-10'000, 3'000}, c.on_a});
+    // The spline's touch lies on y = x(1 − x/20), at the radius, along its normal.
+    const double x = static_cast<double>(c.on_b.x);
+    CHECK(std::abs(static_cast<double>(c.on_b.y) - x * (1.0 - x / 20'000.0)) <= 1.5);
+    CHECK(std::abs(gap(c.centre, c.on_b) - 500.0) <= 1.5);
+    const double tx  = 1.0;
+    const double ty  = 1.0 - x / 10'000.0; ///< dy/dx
+    const double dot = (tx * static_cast<double>(c.centre.x - c.on_b.x) +
+                        ty * static_cast<double>(c.centre.y - c.on_b.y)) /
+                       std::sqrt(tx * tx + ty * ty);
+    CHECK(std::abs(dot) <= 1.5);
+    // The spline keeps its start, cut at the touch, and is still a spline.
+    REQUIRE_EQ(c.b.pieces.size(), 1u);
+    CHECK(c.b.pieces[0].kind == PathPiece::Kind::Spline);
+    CHECK(c.b.pieces[0].from == (Point2{0, 0}));
+    CHECK(c.b.pieces[0].to == c.on_b);
+}
+
+TEST_CASE("O-5: PAH elipsle köşede sebebini söyleyerek reddediyor")
+{
+    const CurvePath road = line({-15'000, 3'000}, {15'000, 3'000});
+    auto f = chamfer_pair(road, {12'000, 3'000}, upper_ellipse(), {9'539, 1'500}, 1'000, 1'000);
+    REQUIRE_FALSE(f.ok());
+    CHECK(f.error().message.find("elips") != std::string::npos);
+}
+
+TEST_CASE("O-5: YUVARLA elips ile çizgi arasında — komut satırı, günlük tekrarı ve geri alma")
+{
+    if (!kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    Rig r;
+    r.run("ELİPS merkez=0,0 birinci=10,0 ikinci=0,5 baslangic=0 bitis=180");
+    r.run("ÇOKLUÇİZGİ -15,3 15,3");
+    const std::uint64_t before = r.doc.content_hash();
+    r.run("YUVARLA nesne=1 2 nokta=9.539,1.5 ikinci_nokta=12,3 yaricap=1");
+    const auto all = live(r.doc);
+    REQUIRE_EQ(all.size(), 3u);
+    CHECK(all[0].first == kEllipseKind); ///< cut back, still an ellipse
+    REQUIRE_EQ(all[0].second.pieces.size(), 1u);
+    CHECK(all[0].second.pieces[0].from == (Point2{10'000, 0}));
+    CHECK(off_ellipse(all[0].second.pieces[0].to) <= 2e-4);
+    CHECK(all[2].first == kArcKind);
+    const PathPiece& fillet = all[2].second.pieces[0];
+    CHECK_EQ(fillet.radius, Mm{1'000});
+    CHECK_EQ(fillet.centre.y, 2'000);
+    // The fillet meets both cut objects exactly.
+    const auto ends     = [](const PathPiece& p) { return std::vector<Point2>{p.from, p.to}; };
+    const auto arc_ends = ends(fillet);
+    CHECK(std::ranges::find(arc_ends, all[0].second.pieces[0].to) != arc_ends.end());
+    CHECK(std::ranges::find(arc_ends, all[1].second.pieces[0].from) != arc_ends.end());
+
+    // The journal replays to the same document.
+    Rig replay;
+    for (const auto& e : r.journal.entries()) {
+        auto again = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
+        REQUIRE(again.ok());
+    }
+    CHECK_EQ(replay.doc.content_hash(), r.doc.content_hash());
+
+    // One undo step brings the two objects back whole.
+    r.run("GERİAL");
+    CHECK_EQ(r.doc.content_hash(), before);
+}
+
+TEST_CASE("O-5: YUVARLA elips ile çizgi — tıklayarak, yazarak ve betikten aynı çizim, aynı günlük")
+{
+    if (!kernel_available()) PENDING("PIRICAD_WITH_OCCT=OFF; geometri çekirdeği yok.");
+    const auto drawn = [](Rig& r) {
+        r.run("ELİPS merkez=0,0 birinci=10,0 ikinci=0,5 baslangic=0 bitis=180");
+        r.run("ÇOKLUÇİZGİ -15,3 15,3");
+    };
+
+    Rig gui;
+    drawn(gui);
+    auto started = gui.bus.begin_interactive("YUVARLA", Origin::Gui);
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::point({9'600, 1'400})).ok()); ///< ON the ellipse (9,6² + 4·1,4² = 10²)
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().param == "ikinci_nokta");
+    REQUIRE(s.supply(Value::point({12'000, 3'000})).ok());
+    REQUIRE(s.waiting());
+    CHECK(s.prompt().rubber_shape == RubberShape::PairCorner);
+    CHECK(s.prompt().rubber_origin == (Point2{8'000, 3'000})); ///< where the two meet, exactly
+    REQUIRE(s.supply(Value::number(1.0)).ok());
+    auto done = gui.bus.finish(s);
+    REQUIRE_MESSAGE(done.ok(), (done.ok() ? std::string() : done.error().message));
+
+    Rig cli;
+    drawn(cli);
+    cli.run("YUVARLA nesne=1 2 nokta=9.6,1.4 ikinci_nokta=12,3 yaricap=1");
+
+    Rig scr;
+    drawn(scr);
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto ran = runner.run_text(R"({
+            "ad": "Elipsle yuvarlama kanıtı",
+            "komutlar": [
+                {"cmd": "core.fillet",
+                 "args": {"nesne": [1, 2], "nokta": [9600, 1400], "ikinci_nokta": [12000, 3000],
+                          "yaricap": 1}}
+            ]
+        })");
+        REQUIRE_MESSAGE(ran.ok(), (ran.ok() ? std::string() : ran.error().message));
+    }
+
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    const auto last = [](const Journal& j) { return j.entries().back(); };
+    CHECK(last(gui.journal).args == last(cli.journal).args);
+    CHECK(last(cli.journal).args == last(scr.journal).args);
 }

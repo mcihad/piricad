@@ -3286,7 +3286,7 @@ void MapCanvas::buildOverlay()
                     const core::EntityId e =
                         doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(key)));
                     if (e == core::kNoEntity || !doc.alive(e)) return std::nullopt;
-                    return core::path_of(doc, e);
+                    return core::path_of(doc, e, core::PathScope::Curves);
                 };
                 const auto pa = path_of_key(guide.value().key_a);
                 const auto pb = path_of_key(guide.value().key_b);

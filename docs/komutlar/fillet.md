@@ -12,7 +12,7 @@ kenara da **teğettir**: kenarlar yaya kırılmadan bağlanır. Üç biçimde ç
 | Biçim | Ne yuvarlanır |
 |---|---|
 | **Bir köşe** | Bir çizginin ya da alanın kendi köşesi |
-| **İki nesne arasında** | Ayrı iki nesnenin buluştuğu köşe: çizgi-çizgi, çizgi-yay, yay-yay |
+| **İki nesne arasında** | Ayrı iki nesnenin buluştuğu köşe: çizgi, yay, daire, elips ve spline her ikili birleşimde |
 | **Bütün köşeler** (`hepsi=evet`) | Bir ya da birçok çizginin ve alanın bütün köşeleri, aynı yarıçapla |
 
 Köşe noktası, teğet noktalarıyla değiştirilir. Teğet noktalarının köşeye uzaklığı
@@ -60,8 +60,8 @@ tuvalde vurgulu çizilir ve imlecin yanında `yarıçap 5 m` yazar.
 
 ### İki nesne arasında
 
-Ayrı iki nesnenin — iki çizginin, bir çizgi ile bir yayın, iki yayın — buluştuğu ya
-da buluşacağı köşe yuvarlanır. Nesneleri **kalacak parçalarından** tıklarsınız ve
+Ayrı iki nesnenin — iki çizginin, bir çizgi ile bir yayın, iki yayın, bir elips ya
+da spline ile bir başka nesnenin — buluştuğu ya da buluşacağı köşe yuvarlanır. Nesneleri **kalacak parçalarından** tıklarsınız ve
 tıkladığınız yerler hangi köşenin kastedildiğini söyler: kesişen iki çizginin dört
 köşesinden, tıkladığınız iki parçanın arasındaki köşe yuvarlanır, karşısındaki asla.
 
@@ -79,6 +79,11 @@ köşesinden, tıkladığınız iki parçanın arasındaki köşe yuvarlanır, k
 - Aynı çoklu çizginin **bitişik iki kenarına** tıklamak, o iki kenarın köşesini
   yuvarlar.
 - Yay birinci nesnenin katmanında ve stilindedir.
+- **Elips ve spline** de bu köşelere girer. Teğet yayı OpenCASCADE geometri
+  çekirdeği bulur ([Geometri çekirdeği](../veri/geometri-cekirdegi.md)): elips elips,
+  spline spline kalır ve teğet noktasında kesilir. Elips ve spline uzatılamaz; teğet
+  noktası eğrinin üstünde olmalıdır. Karşısındaki çizgi gerekirse teğet noktasına
+  uzatılır.
 
 ### Bütün köşeler
 
@@ -171,6 +176,21 @@ YUVARLA nesne=1 2 nokta=4,0 ikinci_nokta=10,6 yaricap=0
 
 ```text
 İki nesne keskin köşede buluştu.
+```
+
+Yeni bir çizimde, yarım elips ile onu kesen bir yol çizgisi arasındaki köşe. Elips
+y = 3 m'de x = 8 m'de kesilir; elipse kesişimin altından, çizgiye sağ parçasından
+tıklanır. Yay çizginin 1 m altında, elipsin dışında durur; elips teğet noktasına
+kadar kısalır ve elips olarak kalır:
+
+```text
+ELİPS merkez=0,0 birinci=10,0 ikinci=0,5 baslangic=0 bitis=180
+ÇİZGİ -15,3 15,3
+YUVARLA nesne=1 2 nokta=9.6,1.4 ikinci_nokta=12,3 yaricap=1
+```
+
+```text
+İki nesne arasında köşe yuvarlatıldı (yarıçap 1,000 m).
 ```
 
 Yeni bir çizimde, bir çizginin bütün köşeleri — sonuç tek bir yaylı çoklu çizgi:
@@ -284,7 +304,9 @@ nesnelerin kimliklerini (`duzenlenen`) ve eklenen yayın kimliğini (`eklenen`) 
 | `İki nesne hiçbir yerde kesişmiyor; keskin köşe kurulamaz. ...` | `yaricap=0` ile paralel ya da ayrık nesneler | Bir yarıçap verin |
 | `İkinci tıklamanın altında bir nesne yok.` | İkinci tıklama boşluğa | İkinci nesnenin üstüne tıklayın |
 | `İki tıklama aynı nesnenin bitişik olmayan yerlerinde; köşesini işlemek için köşeye tıklayın.` | Aynı çizginin bitişik olmayan kenarları | Köşeye tıklayın |
-| `Nesne N iki nesne arasındaki köşede kullanılamıyor; çizgi, yay, daire ya da yaylı çoklu çizgi seçin.` | Elips, spline, nokta ya da yazı | Uygun bir nesne seçin |
+| `Nesne N iki nesne arasındaki köşede kullanılamıyor; çizgi, yay, daire, elips, spline ya da yaylı çoklu çizgi seçin.` | Nokta, yazı ya da birden çok halkalı (delikli) nesne | Uygun bir nesne seçin |
+| `OpenCASCADE köşe yuvarlaması başarısız: …` | Geometri çekirdeği elips ya da spline ile yayı kuramadı | Yarıçapı değiştirin ya da nesneleri köşeye yakın yerlerinden seçin |
+| `Bu yapıda geometri çekirdeği (OpenCASCADE) yok; PIRICAD_WITH_OCCT=ON ile derleyin.` | Elips ya da spline ile köşe, çekirdeksiz bir yapıda | Sürüm paketini kullanın; resmî yapılarda çekirdek her zaman vardır |
 | `Bu değer hiçbir köşeye sığmıyor; daha küçük bir değer verin.` | `hepsi=evet` ile hiçbir köşe yarıçapı almıyor | Daha küçük bir yarıçap verin |
 | `Bu çizginin köşesi yok.` | `hepsi=evet` iki köşeli bir çizgiye | Köşesi olan bir çizgi seçin |
 | `Seçilen nesnelerin hiçbirinde işlenecek köşe yok; köşeli bir çizgi ya da alan seçin.` | `hepsi=evet` ile verilen nesnelerin hiçbiri köşeli çizgi ya da alan değil | Köşeli bir çizgi ya da alan seçin |

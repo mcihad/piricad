@@ -4,6 +4,7 @@
 #include "piricad/core/precision.hpp"
 
 #include "piricad/core/arc.hpp"
+#include "piricad/core/kernel.hpp"
 #include "piricad/core/pick.hpp"
 #include "piricad/core/trig.hpp"
 #include "piricad/core/units.hpp"
@@ -267,6 +268,7 @@ struct Picked
 {
     std::size_t piece{0};
     double at{0.0}; ///< metres from the path's start
+    double t{0.0};  ///< how far along its piece, 0 at the piece's start and 1 at its end
 };
 
 Picked picked(const CurvePath& path, Point2 pick)
@@ -274,6 +276,7 @@ Picked picked(const CurvePath& path, Point2 pick)
     const PathPlace place = place_of(path, pick);
     Picked out;
     out.piece     = place.piece;
+    out.t         = place.t;
     double before = 0.0;
     for (std::size_t k = 0; k < place.piece; ++k)
         before += piece_metres(path.pieces[k]);
@@ -309,6 +312,228 @@ Result<CurvePath> keep_picked(const CurvePath& path, std::size_t i, Point2 targe
     return trim_toward(path, i, target, pick_at < along(path, i, from));
 }
 
+/// An ellipse or a spline: a piece whose corner the kernel works out, never
+/// this file's line-and-circle constructions.
+bool is_curve(const PathPiece& p) noexcept
+{
+    return p.kind == PathPiece::Kind::Ellipse || p.kind == PathPiece::Kind::Spline;
+}
+
+/// A straight piece carried on `reach` millimetres past both of its ends, so
+/// the kernel finds a corner a line has to be extended to; anything else as it
+/// is — an ellipse or a spline has no "on" past its end, and an arc stays the
+/// arc it is.
+PathPiece carried(const PathPiece& p, double reach)
+{
+    if (p.kind != PathPiece::Kind::Segment) return p;
+    const double dx  = mm_to_metres(p.to.x - p.from.x);
+    const double dy  = mm_to_metres(p.to.y - p.from.y);
+    const double len = std::sqrt(dx * dx + dy * dy);
+    if (len <= 0.0) return p;
+    const double k = reach / len / static_cast<double>(kMmPerMetre);
+    const Point2 more{mm_round(dx * k * static_cast<double>(kMmPerMetre)),
+                      mm_round(dy * k * static_cast<double>(kMmPerMetre))};
+    PathPiece out = p;
+    out.from      = p.from - more;
+    out.to        = p.to + more;
+    return out;
+}
+
+/// Where `q` — a point the kernel found on piece `p` — lies along it: the
+/// kernel's own fraction for an ellipse or a spline, this file's for a line or
+/// an arc (which may be past the piece's ends, a line carried on).
+double fraction_on(const PathPiece& p, Point2 q, double kernel_t)
+{
+    return is_curve(p) ? kernel_t : fraction(p, q);
+}
+
+/// The part of `path` kept when curve piece `i` is cut at fraction `t`: the
+/// start side up to it, or the end side from it — `split_path`'s cut, the one
+/// BÖL makes.
+Result<CurvePath> trim_curve_at(const CurvePath& path, std::size_t i, double t, bool keep_start)
+{
+    const bool first = i == 0;
+    const bool last  = i + 1 == path.pieces.size();
+    if ((keep_start && t <= kEnd && first) || (!keep_start && t >= 1.0 - kEnd && last))
+        return err(ErrorCode::InvalidArgument,
+                   "Köşe sığmıyor: seçtiğiniz parçanın tamamını götürüyor. Daha küçük bir değer "
+                   "verin.");
+    if ((keep_start && t >= 1.0 - kEnd) || (!keep_start && t <= kEnd)) {
+        // At the piece's own end: the piece is whole, only what is past it goes.
+        CurvePath out;
+        if (keep_start)
+            out.pieces.assign(path.pieces.begin(),
+                              path.pieces.begin() + static_cast<std::ptrdiff_t>(i) + 1);
+        else
+            out.pieces.assign(path.pieces.begin() + static_cast<std::ptrdiff_t>(i),
+                              path.pieces.end());
+        return out;
+    }
+    auto parts = split_path(path, {PathPlace{i, t}});
+    if (parts.size() != 2)
+        return err(ErrorCode::InvalidArgument,
+                   "Köşe sığmıyor: seçtiğiniz parçanın tamamını götürüyor. Daha küçük bir değer "
+                   "verin.");
+    return std::move(keep_start ? parts.front() : parts.back());
+}
+
+/// `path` cut or carried to the corner on piece `i`: at fraction `t` for a
+/// curve, at the point `target` for a line or an arc. A closed path stays
+/// whole, as `keep_picked` leaves one.
+Result<CurvePath> trim_piece(const CurvePath& path, std::size_t i, Point2 target, double t,
+                             bool keep_start)
+{
+    if (path.closed) return path;
+    if (is_curve(path.pieces[i])) return trim_curve_at(path, i, t, keep_start);
+    return trim_toward(path, i, target, keep_start);
+}
+
+/// Where the kept part of `path` now meets the corner: its end, or its start.
+Point2 corner_end(const CurvePath& kept, bool keep_start, Point2 otherwise)
+{
+    if (kept.closed || kept.pieces.empty()) return otherwise;
+    return keep_start ? kept.pieces.back().to : kept.pieces.front().from;
+}
+
+/// THE CORNER WHEN AN ELLIPSE OR A SPLINE IS ONE SIDE OF IT, worked out by
+/// the kernel (CLAUDE.md 2.11): the crossing by OCCT's intersector, every
+/// tangent circle by OCCT's 2D fillet. What stays this file's is what the
+/// picks mean — the same reading as for lines and arcs: the fillet lies in the
+/// corner the two picked parts make, each tangent point on its pick's side of
+/// the crossing, the nearest such circle to the picks taken.
+Result<PairCorner> fillet_curves(const CurvePath& a, const Picked& pa, Point2 pick_a,
+                                 const CurvePath& b, const Picked& pb, Point2 pick_b, Mm radius)
+{
+    const PathPiece& u = a.pieces[pa.piece];
+    const PathPiece& v = b.pieces[pb.piece];
+    // A line is carried on far enough to reach anything near the two.
+    const Box2 box_a = path_bounds(a);
+    const Box2 box_b = path_bounds(b);
+    const double span =
+        gap_mm(Point2{std::min(box_a.min_x, box_b.min_x), std::min(box_a.min_y, box_b.min_y)},
+               Point2{std::max(box_a.max_x, box_b.max_x), std::max(box_a.max_y, box_b.max_y)});
+    const double reach    = span + 4.0 * static_cast<double>(radius);
+    const PathPiece far_u = carried(u, reach);
+    const PathPiece far_v = carried(v, reach);
+
+    // WHERE THE TWO CROSS, nearest the picks — on both, by the kernel.
+    struct Cross
+    {
+        Point2 point{};
+        double t_u{0.0};
+        double t_v{0.0};
+    };
+
+    std::optional<Cross> cross;
+    {
+        auto on_u = kernel_meets(far_u, far_v);
+        if (!on_u) return on_u.error();
+        auto on_v = kernel_meets(far_v, far_u);
+        if (!on_v) return on_v.error();
+        const Point2 mid{(pick_a.x + pick_b.x) / 2, (pick_a.y + pick_b.y) / 2};
+        double best = 0.0;
+        for (const PathCrossing& x : on_u.value().crossings) {
+            const double d = distance_squared(x.point, mid);
+            if (cross && d >= best) continue;
+            // The same point as the second piece walks it.
+            const PathCrossing* twin = nullptr;
+            for (const PathCrossing& y : on_v.value().crossings)
+                if (!twin ||
+                    distance_squared(y.point, x.point) < distance_squared(twin->point, x.point))
+                    twin = &y;
+            if (twin == nullptr) continue;
+            best  = d;
+            cross = Cross{.point = x.point,
+                          .t_u   = fraction_on(u, x.point, x.at.t),
+                          .t_v   = fraction_on(v, x.point, twin->at.t)};
+        }
+    }
+    const auto at_corner = [](const CurvePath& p, const Picked& at, double t_cross) {
+        return !p.closed && std::abs(at.t - t_cross) <= kEnd * 1000.0;
+    };
+    if (cross && (at_corner(a, pa, cross->t_u) || at_corner(b, pb, cross->t_v)))
+        return err(ErrorCode::InvalidArgument,
+                   "Nesneleri köşenin kendisinden değil, kalacak parçalarından seçin.");
+
+    PairCorner out;
+    out.radius   = radius;
+    double t_a   = 0.0;
+    double t_b   = 0.0;
+    double ref_a = pa.t; ///< the picked side is judged from here: the crossing, else the touch
+    double ref_b = pb.t;
+    if (radius == 0) {
+        if (!cross)
+            return err(ErrorCode::InvalidArgument,
+                       "İki nesne hiçbir yerde kesişmiyor; keskin köşe kurulamaz. Bir yarıçap "
+                       "verin ya da nesneleri kesişecek biçimde çizin.");
+        out.on_a = cross->point;
+        out.on_b = cross->point;
+        t_a      = cross->t_u;
+        t_b      = cross->t_v;
+        ref_a    = cross->t_u;
+        ref_b    = cross->t_v;
+    } else {
+        auto circles = kernel_fillets(far_u, far_v, radius, cross ? cross->point : pick_a);
+        if (!circles) return circles.error();
+        // A pick on one side of the crossing, and the touch on the same side.
+        const auto same_side = [](const CurvePath& p, double pick, double touch, double x) {
+            return p.closed || ((pick - x) * (touch - x) > 0.0);
+        };
+        std::optional<KernelFillet> best;
+        double best_t_a = 0.0;
+        double best_t_b = 0.0;
+        double best_d   = 0.0;
+        for (const KernelFillet& c : circles.value()) {
+            const double ta = fraction_on(u, c.on_a, c.t_a);
+            const double tb = fraction_on(v, c.on_b, c.t_b);
+            if (cross &&
+                (!same_side(a, pa.t, ta, cross->t_u) || !same_side(b, pb.t, tb, cross->t_v)))
+                continue;
+            const double d = distance_squared(c.on_a, pick_a) + distance_squared(c.on_b, pick_b);
+            if (!best || d < best_d) {
+                best     = c;
+                best_t_a = ta;
+                best_t_b = tb;
+                best_d   = d;
+            }
+        }
+        if (!best)
+            return err(ErrorCode::InvalidArgument,
+                       "Bu yarıçapta, seçtiğiniz taraflarda iki nesneye de teğet bir yay yok. "
+                       "Yarıçapı değiştirin ya da nesneleri köşeye yakın yerlerinden seçin.");
+        out.centre = best->centre;
+        out.on_a   = best->on_a;
+        out.on_b   = best->on_b;
+        t_a        = best_t_a;
+        t_b        = best_t_b;
+        ref_a      = cross ? cross->t_u : best_t_a;
+        ref_b      = cross ? cross->t_v : best_t_b;
+    }
+
+    const bool start_a = pa.t < ref_a;
+    const bool start_b = pb.t < ref_b;
+    auto kept_a        = trim_piece(a, pa.piece, out.on_a, t_a, start_a);
+    if (!kept_a) return kept_a.error();
+    auto kept_b = trim_piece(b, pb.piece, out.on_b, t_b, start_b);
+    if (!kept_b) return kept_b.error();
+    // THE CUT'S OWN ENDS are where the fillet joins: a curve cut at the
+    // kernel's fraction lands on the millimetre the cut rounds to.
+    out.on_a = corner_end(kept_a.value(), start_a, out.on_a);
+    out.on_b = corner_end(kept_b.value(), start_b, out.on_b);
+    out.a    = std::move(kept_a.value());
+    out.b    = std::move(kept_b.value());
+    if (radius != 0) {
+        const double ax = mm_to_metres(out.on_a.x - out.centre.x);
+        const double ay = mm_to_metres(out.on_a.y - out.centre.y);
+        const double bx = mm_to_metres(out.on_b.x - out.centre.x);
+        const double by = mm_to_metres(out.on_b.y - out.centre.y);
+        const bool ccw  = ax * by - ay * bx > 0.0;
+        out.link        = arc_piece(out.centre, radius, out.on_a, out.on_b, ccw);
+        out.has_link    = out.on_a != out.on_b && out.link.sweep_udeg != 0;
+    }
+    return out;
+}
+
 } // namespace
 
 Result<PairCorner> fillet_pair(const CurvePath& a, Point2 pick_a, const CurvePath& b, Point2 pick_b,
@@ -322,6 +547,7 @@ Result<PairCorner> fillet_pair(const CurvePath& a, Point2 pick_a, const CurvePat
     const Picked pb    = picked(b, pick_b);
     const PathPiece& u = a.pieces[pa.piece];
     const PathPiece& v = b.pieces[pb.piece];
+    if (is_curve(u) || is_curve(v)) return fillet_curves(a, pa, pick_a, b, pb, pick_b, radius);
 
     PairCorner out;
     out.radius = radius;
@@ -431,9 +657,10 @@ Result<PairCorner> chamfer_pair(const CurvePath& a, Point2 pick_a, const CurvePa
     const Picked pb    = picked(b, pick_b);
     const PathPiece& u = a.pieces[pa.piece];
     const PathPiece& v = b.pieces[pb.piece];
-    if (is_arc(u) || is_arc(v))
+    if (u.kind != PathPiece::Kind::Segment || v.kind != PathPiece::Kind::Segment)
         return err(ErrorCode::Unsupported,
-                   "Pah iki düz kenar arasında kırılır; yay ile köşe için YUVARLA kullanın.");
+                   "Pah iki düz kenar arasında kırılır; yay, elips ya da eğri ile köşe için "
+                   "YUVARLA kullanın.");
 
     Point2 x{};
     double t = 0.0;
