@@ -6,6 +6,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeldi — bir DXF'in tek bir çokgeni bütün dosyayı reddettiriyordu (İLBANK içmesuyu)
+
+- Gerçek bir altyapı çizimi (İLBANK içmesuyu projesi, 1,2 MB, 396 LWPOLYLINE) hiç içe
+  aktarılamıyordu: `LWPOLYLINE okunamadı: Yay kenar 1 yok: çizginin 1 kenarı var.`
+  Sebep, dosyadaki **tek** bir çokgendi — kapalı, iki köşeli, iki kenarında şişkinlik `1`:
+  iki yarım daire, yani çok sayıda programın daireyi çizdiği biçim. Okuyucu iki kenarın
+  yayını kuruyor, halkayı ise tek kenarlı "açık" saklıyordu; doğrulama ikinci yayı
+  kenarsız bulup işlemin tamamını geri alıyordu.
+- Artık böyle çokgen **daire** olur (merkez ve yarıçap kesin); sabit kalınlığı varsa kalınlık
+  kaybolmasın diye yaylı çoklu çizgi olarak kalır; bir kenarı ya da iki kenarı şişkin olanı
+  (daire kesiği, mercek) yayları aynen koruyan kapalı yaylı alan olur. Dosya şimdi 3387
+  nesne ve 56 katmanla geliyor; her ham varlık türü sayıca eksiksiz (LINE, TEXT, LWPOLYLINE,
+  INSERT, MTEXT, ARC, CIRCLE, POLYLINE).
+- Genel ilke de değişti: modelin geometrisini geçersiz bulduğu **tek bir öğe** artık dosyanın
+  tamamını düşürmez; atlanır, sayılır ve nedeni ilk örneğiyle `atlandı:` satırında yazılır.
+  Durdurma, okuma hatası ve program içi hatalar hâlâ bütün içe aktarmayı geri alır.
+  İmarss, kontrol ve deneme_suşehri gerçek dosyalarında sonuç öncekiyle birebir aynı.
+
 ### Değişti — şerit yeniden düzenlendi: iki boy, tek sıra, her panel bir iş
 
 - Şeritte "bazıları büyük bazıları küçük" olan karışıklık bir kurala bağlandı: panelin

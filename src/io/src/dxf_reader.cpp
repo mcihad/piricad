@@ -1109,11 +1109,33 @@ private:
         });
     }
 
-    void skip(const char* type, const char* why)
+    void skip(const char* type, const char* why) { skip(type, std::string(why)); }
+
+    void skip(const char* type, const std::string& why)
     {
         report_.diagnostics.tally(type, 0, 1, 0);
         ++skipped_;
         if (first_skip_reason_.empty()) first_skip_reason_ = std::string(type) + ": " + why;
+    }
+
+    /// The document refused ONE entity the file holds.
+    ///
+    /// `ValidationFailed` and `InvalidArgument` are the model's verdict on that
+    /// entity's geometry, not on the file, and one odd entity must not take a whole
+    /// drawing down with it: it is skipped, counted, and the first reason is told
+    /// in the report (`atlandı: …`), exactly like a line of zero length. A real
+    /// cadastral or utility drawing carries a few hundred thousand entities written
+    /// by a dozen programs; an infrastructure DXF of 1.2 MB used to be refused whole
+    /// because one of its 396 polylines was a circle drawn as two bulged edges.
+    /// Anything else — a cancellation, an I/O failure, an internal error — is the
+    /// run's, and still ends it.
+    void refused(const char* type, const core::Error& error)
+    {
+        if (error.code == ErrorCode::ValidationFailed || error.code == ErrorCode::InvalidArgument) {
+            skip(type, "model geometriyi reddetti: " + error.message);
+            return;
+        }
+        fail(err(error.code, std::string(type) + " okunamadı: " + error.message));
     }
 
     /// After a successful add: the census, the style, the handle, the Z, the XDATA.
@@ -1122,7 +1144,7 @@ private:
                 std::initializer_list<double> zs, bool degraded = false)
     {
         if (!made) {
-            fail(err(made.error().code, std::string(type) + " okunamadı: " + made.error().message));
+            refused(type, made.error());
             return;
         }
         finish_entity(e, type, made.value(), std::vector<double>(zs), degraded);
@@ -1526,12 +1548,69 @@ private:
             return;
         }
 
+        // A CLOSED POLYLINE OF TWO VERTICES has two edges between the same two points,
+        // and a bulge on either makes a shape: with `1` on both (or `-1` on both) two
+        // half circles, which is how a great many programs draw a circle as a polyline;
+        // with anything else a lens or a half disc. A ring of two points is open in this
+        // model — one edge — so the second edge's arc had nowhere to live, the
+        // validation said "Yay kenar 1 yok" and the whole file was refused for it.
+        //
+        // The circle is a CIRCLE (centre, radius: what it is, and what a snap and an
+        // area read) — unless it has a width, which a CIRCLE cannot carry and an arc
+        // polyline can: a ring drawn 0.4 wide is a polyline and stays one. Anything else
+        // gets a third vertex at the middle of an edge that bends, which keeps both arcs
+        // exactly and makes the ring a closed one.
+        std::optional<std::pair<Point2, Mm>> whole_circle;
+        if (closed && pts.size() == 2 && (edge_bulge[0] != 0.0 || edge_bulge[1] != 0.0)) {
+            const auto is_half_turn = [](double b) { return std::abs(std::abs(b) - 1.0) < 1e-9; };
+            if (is_half_turn(edge_bulge[0]) && is_half_turn(edge_bulge[1]) &&
+                (edge_bulge[0] > 0.0) == (edge_bulge[1] > 0.0) && !varying_width &&
+                width_of(e) == 0.0) {
+                const double ax = static_cast<double>(pts[0].x), ay = static_cast<double>(pts[0].y);
+                const double bx = static_cast<double>(pts[1].x), by = static_cast<double>(pts[1].y);
+                const Mm radius =
+                    core::mm_round(std::sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) / 2.0);
+                if (radius > 0)
+                    whole_circle = std::pair{
+                        Point2{core::mm_round((ax + bx) / 2.0), core::mm_round((ay + by) / 2.0)},
+                        radius};
+            }
+            if (!whole_circle) {
+                // Split the first edge that bends at its arc's midpoint. The geometric
+                // bulge is the file's, turned over by a mirroring INSERT (as the loop
+                // below does); each half keeps the file's orientation and sweeps half the
+                // angle: tan(t/8) = b / (1 + sqrt(1 + b^2)) for b = tan(t/4).
+                const std::size_t bent  = edge_bulge[0] != 0.0 ? 0 : 1;
+                const Point2 from       = pts[bent];
+                const Point2 to         = pts[(bent + 1) % 2];
+                const double file_bulge = edge_bulge[bent];
+                const double bulge      = x.mirrored() ? -file_bulge : file_bulge;
+                const double dx         = static_cast<double>(to.x - from.x);
+                const double dy         = static_cast<double>(to.y - from.y);
+                const double length     = std::sqrt(dx * dx + dy * dy);
+                // To the right of from->to for a positive bulge, by the sagitta.
+                const double sagitta = bulge * length / 2.0;
+                const Point2 middle{core::mm_round(static_cast<double>(from.x + to.x) / 2.0 +
+                                                   dy / length * sagitta),
+                                    core::mm_round(static_cast<double>(from.y + to.y) / 2.0 -
+                                                   dx / length * sagitta)};
+                const double half = file_bulge / (1.0 + std::sqrt(1.0 + file_bulge * file_bulge));
+                if (bent == 0) {
+                    pts        = {from, middle, to};
+                    edge_bulge = {half, half, edge_bulge[1]};
+                } else {
+                    pts        = {to, from, middle};
+                    edge_bulge = {edge_bulge[0], half, half};
+                }
+            }
+        }
+
         // AN EDGE THAT BENDS MAKES THE WHOLE THING AN ARC POLYLINE: every bulge
         // becomes an arc's centre, radius and direction (core/arc_polyline.hpp),
         // kept exactly, drawn by the arc routine. Nothing is stroked.
         core::ArcPolyline ap;
         const std::size_t kept = pts.size();
-        const std::size_t segs = closed ? kept : kept - 1;
+        const std::size_t segs = whole_circle ? 0 : (closed ? kept : kept - 1);
         for (std::size_t i = 0; i < segs; ++i) {
             double bulge = edge_bulge[i];
             if (bulge == 0.0) continue;
@@ -1552,7 +1631,9 @@ private:
             ++widths_dropped_;
             degraded = true;
         }
-        if (!ap.arcs.empty()) {
+        if (whole_circle) {
+            made = place_circle(layer, whole_circle->first, whole_circle->second);
+        } else if (!ap.arcs.empty()) {
             if (const double w = width_of(e); w > 0.0) ap.constant_width = to_mm_len(w);
             const core::RingRole role =
                 closed && pts.size() >= 3 ? core::RingRole::Exterior : core::RingRole::Open;
@@ -1567,7 +1648,7 @@ private:
             made = place_polyline(layer, pts);
         }
         if (!made) {
-            fail(err(made.error().code, std::string(type) + " okunamadı: " + made.error().message));
+            refused(type, made.error());
             return;
         }
         finish_entity(e, type, made.value(), zs, degraded);
@@ -1740,7 +1821,7 @@ private:
         auto made = tx_.add_kind(layer_for(e, Inherit{}), core::kDimensionKind, rings,
                                  core::encode_dimension(def), in_block_);
         if (!made) {
-            fail(err(made.error().code, "DIMENSION okunamadı: " + made.error().message));
+            refused("DIMENSION", made.error());
             return;
         }
         if (auto st = tx_.set_text(made.value(), text, height, core::TextAnchor::MiddleCentre);
@@ -1757,7 +1838,7 @@ private:
                               const std::vector<double>& zs, bool degraded)
     {
         if (!made) {
-            fail(err(made.error().code, std::string(type) + " okunamadı: " + made.error().message));
+            refused(type, made.error());
             return;
         }
         finish_entity(e, type, made.value(), zs, degraded);
@@ -1942,7 +2023,7 @@ private:
         const Point2 baseline[2]{where, end};
         auto made = place_polyline(layer_for(e, in), std::span<const Point2>(baseline, 2));
         if (!made) {
-            fail(err(made.error().code, std::string(type) + " okunamadı: " + made.error().message));
+            refused(type, made.error());
             return;
         }
         if (auto st = tx_.set_text(made.value(), std::move(words), height, anchor, lines); !st) {
@@ -2093,7 +2174,7 @@ private:
         auto made = tx_.add_kind(layer_for(e, in), core::kHatchKind, rings, core::encode_hatch(def),
                                  in_block_);
         if (!made) {
-            fail(err(made.error().code, std::string("HATCH okunamadı: ") + made.error().message));
+            refused("HATCH", made.error());
             return;
         }
         const command::EntityId id = made.value();

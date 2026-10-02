@@ -3495,6 +3495,77 @@ int first_of_kind(const core::Document& doc, core::KindId kind)
 
 } // namespace
 
+TEST_CASE("DXF: kapalı ve iki köşeli çokgen daire ya da yaylı şekil olur, dosyayı düşürmez")
+{
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+
+    // A REAL INFRASTRUCTURE DRAWING (an İLBANK water-supply project, 1.2 MB, 396
+    // LWPOLYLINEs) was REFUSED WHOLE with the error "Yay kenar 1 yok" (arc edge 1
+    // does not exist) because ONE of them was closed, had two vertices and a bulge
+    // of 1 on each: two half circles, the way a great many programs draw a circle. The reader built an arc for each of its two edges and stored the ring
+    // as open — one edge — so the validation found the second arc without an edge.
+    //
+    // Seed 30 holds the shapes that can be written that way, in the order below:
+    //   0  two half circles                      -> a CIRCLE, radius 2200 mm
+    //   1  the same, with a constant width 0,4   -> an arc polyline that KEEPS the width
+    //   2  two clockwise half circles            -> a CIRCLE, radius 2000 mm
+    //   3  one edge bends (bulge 0,5, chord 6 m) -> a closed arc polyline, a circular segment
+    //   4  the second edge bends                 -> the same shape, the other way round
+    //   5  both edges bend                       -> a lens, twice the segment
+    //   6  closed, two vertices, no bulge        -> a line, as it always was
+    Rig rig;
+    const std::string said = import_seed(rig, "30-kapali-iki-koseli-cokgen.dxf");
+    CHECK(said.find("okunamadı") == std::string::npos);
+    CHECK(said.find("atlandı") == std::string::npos);
+
+    std::vector<core::EntityId> drawn;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e)
+        if (rig.doc.alive(e) && (rig.doc.entities().flags[e] & core::FlagInBlock) == 0)
+            drawn.push_back(e);
+    REQUIRE_EQ(drawn.size(), 7u);
+
+    // 0 and 2: circles, centre and radius exact.
+    for (const auto& [at, centre_x, radius] : {std::tuple{0u, core::Mm{0}, core::Mm{2200}},
+                                               std::tuple{2u, core::Mm{20000}, core::Mm{2000}}}) {
+        INFO("entity " << at);
+        REQUIRE(rig.doc.entities().kind[drawn[at]] == core::kCircleKind);
+        const auto ring = first_ring(rig.doc, drawn[at]);
+        REQUIRE_EQ(ring.size(), 2u);
+        CHECK_EQ(ring[0].x, centre_x);
+        CHECK_EQ(ring[1].x - ring[0].x, radius);
+    }
+
+    // 1, 3, 4, 5: closed arc polylines — three vertices, the bending edge split at
+    // its arc's midpoint so both arcs are kept exactly.
+    const auto arcs_of = [&](unsigned at) {
+        REQUIRE(rig.doc.entities().kind[drawn[at]] == core::kArcPolylineKind);
+        auto def = core::arc_polyline_of(rig.doc.geometry(), rig.doc.entities().slot[drawn[at]]);
+        REQUIRE(def.ok());
+        return def.value();
+    };
+    CHECK_EQ(first_ring(rig.doc, drawn[1]).size(), 3u);
+    CHECK_EQ(arcs_of(1).arcs.size(), 3u);
+    CHECK_EQ(arcs_of(1).constant_width, core::Mm{400});
+
+    // A circular segment: bulge 0,5 over a 6 m chord is a 3,75 m radius and
+    // R^2/2 (t - sin t) = 6,2901 m^2, to the millimetre the arc's midpoint is rounded to.
+    constexpr double kSegment = 6.2901e6; // mm^2
+    for (const unsigned at : {3u, 4u}) {
+        INFO("entity " << at);
+        CHECK_EQ(first_ring(rig.doc, drawn[at]).size(), 3u);
+        CHECK_EQ(arcs_of(at).arcs.size(), 2u);
+        CHECK(std::abs(static_cast<double>(rig.doc.entity_area(drawn[at])) - kSegment) <
+              kSegment * 0.001);
+    }
+    CHECK_EQ(arcs_of(5).arcs.size(), 3u);
+    CHECK(std::abs(static_cast<double>(rig.doc.entity_area(drawn[5])) - 2.0 * kSegment) <
+          2.0 * kSegment * 0.001);
+
+    // 6: no bulge, nothing to keep but the line.
+    CHECK(rig.doc.entities().kind[drawn[6]] != core::kCircleKind);
+    CHECK(rig.doc.entities().kind[drawn[6]] != core::kArcPolylineKind);
+}
+
 TEST_CASE("DXF: milimetrenin altındaki ayrıntı sayılır ve söylenir — örnek veriyle karar (F-03)")
 {
     if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");

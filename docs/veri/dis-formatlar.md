@@ -250,6 +250,15 @@ olmaz, alanı ölçülemez ve [`İFRAZ`](../komutlar/split_parcel.md) ile
 [`TEVHİT`](../komutlar/merge.md) üzerinde çalışamaz. `SOLID`, `TRACE` ve `3DFACE`
 de alan olur.
 
+**İki köşeli kapalı çizgi.** Çok sayıda program daireyi, iki köşesi karşılıklı ve her
+kenarında şişkinlik `1` olan kapalı bir `LWPOLYLINE` olarak çizer (iki yarım daire).
+PiriCAD bunu gerçek bir **daire** olarak alır; merkezi ve yarıçapı kesindir, yakalama
+ve ölçü onu daire olarak görür. Çizginin sabit kalınlığı varsa kalınlık daireye
+yazılamayacağı için çizgi bir [yaylı çoklu çizgi](../nesneler/yaylicizgi.md) olarak,
+kalınlığıyla birlikte kalır. Yalnız bir kenarı ya da iki kenarı da şişkin olan iki
+köşeli kapalı çizgi (daire kesiği, mercek) de yaylı alan olarak gelir; yaylar aynen
+korunur. Şişkinliği olmayan iki köşeli kapalı çizgi eskisi gibi düz çizgidir.
+
 ### DXF nasıl okunur
 
 PiriCAD bir DXF'i **libdxfrw** ile grup kodu düzeyinde okur. Her varlık kendi

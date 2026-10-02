@@ -91,6 +91,7 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `dxf/24-tarama-desen-bozuk.dxf` | five hatches whose definition lines lie: a count past any pattern, a base point before its line, a dash count past the bound, an angle that is not a number, a dash past its count |
 | `dxf/25-cok-satirli-yazi.dxf` | a bottom-right MTEXT of three paragraphs with an underline switched on and off, spaced twice; an ALIGNED TEXT whose two points are both its ends |
 | `dxf/29-milimetre-alti.dxf` | a detail drawn in millimetres (`$INSUNITS 4`) finer than the store: a 12,345 mm line, a 0,3 mm gap, a circle of 0,4 mm radius, a 2,5 mm text — what the millimetre rounds away, counted and said (TODOS F-03) |
+| `dxf/30-kapali-iki-koseli-cokgen.dxf` | seven closed LWPOLYLINEs of two vertices: two half circles (a CIRCLE, either direction), the same with a constant width (an arc polyline that keeps it), one and both edges bent (a circular segment, a lens), and one with no bulge (a line). A real 1.2 MB utility drawing was refused whole for the first of them ("Yay kenar 1 yok") |
 | `dxf/28-dis-referans-blogu.dxf` | a BLOCK flagged as an external reference (group 70 bit 4, path in group 1) with an INSERT of it: the reader names it and brings it as an empty block (TODOS C-14) |
 | `komut/01-mutlak.txt` | two absolute metre coordinates |
 | `komut/02-goreli.txt` | relative coordinates, negative and fractional |

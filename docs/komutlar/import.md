@@ -197,6 +197,12 @@ penceresi, raster resim, ağ, anonim bloklar. Bir örnek:
   not: Okunan türler: LINE 22444, ARC 3423, CIRCLE 2223, POINT 5, TEXT 3; atlanan: LINE 56, ARC 7
 ```
 
+**Tek bir öğe dosyayı düşürmez.** Modelin geometrisini geçersiz bulduğu bir öğe
+(`atlandı: 1 öğe geometrisi kullanılamadığı için atlandı. İlki: LWPOLYLINE: model
+geometriyi reddetti: …`) atlanır, sayılır ve nedeni ilk örneğiyle yazılır; dosyanın
+geri kalanı gelir. Yalnız durdurma, okuma hatası ve program içi hatalar içe aktarmanın
+tamamını geri alır.
+
 ### Öznitelik alanları
 
 Bir Shapefile ya da GeoPackage geometrinin yanında bir tablo taşır: `ada`, `parsel`,
