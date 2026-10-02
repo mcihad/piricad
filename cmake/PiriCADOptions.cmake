@@ -191,15 +191,21 @@ endif()
 option(PIRICAD_WITH_TEXT "Enable the msdfgen SDF text atlas" ${PIRICAD_TEXT_AVAILABLE})
 # DWG, read only, through LibreDWG (`.claude/io.md` R13).
 #
-# OFF BY DEFAULT. The cost of building it was measured on the reference machine —
-# 41 s wall, 147 s CPU, once, plus a 262 MB clone — and that is not the reason.
-# The reason is that LibreDWG compiles with a page of its own warnings on every
-# configuration this project builds, and a build that is clean by rule (CLAUDE.md
-# 5.14) cannot carry a dependency that is not; and the DWG reader is not part of
-# the working set today (six entity types, `io.md` R14's coverage corpus not yet
-# assembled). `-DPIRICAD_WITH_DWG=ON` turns it on for the machine that wants it,
-# and asking for ON without the source (an offline build,
-# `PIRICAD_FETCH_DEPENDENCIES=OFF`) is a hard error naming the fix, per Article 8.2.
+# OFF FOR AN AD-HOC CONFIGURE, ON IN EVERY SANCTIONED PRESET (`dev`, `debug`,
+# `release`, `asan` — the `canvas` preset in CMakePresets.json). This option was
+# OFF everywhere until the maintainer asked for DWG to be on (2 October 2026),
+# for two reasons that no longer decide it: LibreDWG compiles with a page of its
+# own warnings on every configuration this project builds (a build that is clean
+# by rule, CLAUDE.md 5.14, was thought unable to carry it — they are upstream's
+# warnings in upstream's files, which `DISABLE_WERROR` keeps from failing OUR
+# build), and the reader was not part of the working set. The maintainer's
+# decision supersedes both.
+#
+# The cost is paid once, on the first configure: 41 s wall and 147 s CPU on the
+# reference machine, plus a 262 MB clone. `headless` stays OFF — it builds no
+# application and exists to prove the Qt-free targets stand alone. Asking for ON
+# without the source (an offline build, `PIRICAD_FETCH_DEPENDENCIES=OFF`) is a
+# hard error naming the fix, per Article 8.2.
 #
 # The ODA Drawings SDK is banned outright (io.md P1) and GDAL's own CAD driver is
 # libopencad, a DIFFERENT implementation than the rulebook chose — the allow-list

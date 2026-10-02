@@ -74,7 +74,7 @@ YERELKOPYA nesneler=3 katman=TASLAK pencere=485300,4310200 485400,4310300
 
 ### Arayüz
 
-Dış referansı seçin ve **Harita ▸ Veri ▸ Dış Referans** grubundan **Yerel Kopya**'ya
+Dış referansı seçin ve **Harita ▸ Dış Referans** panelinden **Yerel Kopya**'ya
 basın; ya da bağlı dosyanın bir nesnesini düzenlemeye kalktığınızda tuvalin üstünde
 çıkan şeritteki **Yerel Kopya** düğmesine basın. Şerit reddin sebebini de yazar.
 

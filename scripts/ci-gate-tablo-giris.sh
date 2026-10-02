@@ -111,8 +111,12 @@ bekle "[tablo] takvim günü: 2026-09-08"
 # was `wash`, the selection accent at twelve per cent — translucent, so the
 # stored value showed through and the user saw their own typing beside the old
 # number, at two different alignments, in one box. An editor is not a highlight.
+# THE TOKEN IS NOT THE CLAIM: the shell's input ground was `input` and became `panel`
+# when every input moved to one ground, and this check went on grepping for the old
+# name. What it guards is that the ground is SOLID — never `wash` (twelve per cent)
+# and never `transparent` — so any of the shell's opaque grounds passes.
 if ! grep -A 2 'QWidget#field\[frame="cell"\]' "$kok/src/app/src/theme.cpp" |
-        grep -q 'background: %(input)s'; then
+        grep -qE 'background: %\((panel|input|raised|window)\)s'; then
     echo "oznitelik-tablosu: hücre düzenleyicisinin zemini saydam olmamalı" >&2
     echo "tablo-giris:   -> src/app/src/theme.cpp:1  (altındaki hücre metni içinden geçer)" >&2
     fail=1

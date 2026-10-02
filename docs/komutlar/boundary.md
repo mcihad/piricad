@@ -128,8 +128,7 @@ oturur.
 
 ### Arayüz
 
-Şeritte **Çizim ▸ Tarama ▸ Sınır Bul**'a basın ya da **Giriş ▸ Çizim** panelindeki
-**Tarama** düğmesinin okundan **Sınır Bul**'u seçin (bir tarama seçiliyken beliren
+Şeritte **Çizim ▸ Tarama ▸ Sınır Bul**'a basın (bir tarama seçiliyken beliren
 **Tarama** sekmesinde de vardır).
 
 1. İmleci bir bölgenin içine götürün. İmlecin bulunduğu bölge vurgulanır, adaları

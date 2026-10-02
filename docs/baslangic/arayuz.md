@@ -50,20 +50,27 @@ AutoCAD kullanıcısı `Çizgi`'yi, `Buda`'yı ve katman listesini aradığı ye
 | Sekme | Paneller |
 |---|---|
 | **Giriş** | Seçim · Çizim · Değiştir · Açıklama · Katmanlar · Özellikler · Pano — her gün yapılan iş |
-| **Çizim** | Seçim · Çizgi · Şekil · Nokta ve Alım · Tarama · Blok |
-| **Değiştir** | Seçim · Dönüştür · Dizi ve Ofset · Kes ve Uzat · Köşe · Birleştir · Sil ve Temizle |
+| **Çizim** | Seçim · Çizgi ve Eğri · Kapalı Şekil · Nokta ve Alım · Tarama · Blok |
+| **Değiştir** | Seçim · Dönüştür · Çoğalt · Kes ve Uzat · Köşe ve Kenar · Birleştir ve Ayır · Alan İşlemleri · Sil ve Temizle |
 | **Açıklama** | Seçim · Yazı · Ölçü · Etiket |
-| **Kadastro** | Seçim · Parsel (İfraz, Alana Göre İfraz, Tevhit) · Yazım · Denetim |
-| **Harita** | Seçim · Sorgu · Ölçüm · Jeodezi · Arazi · Veri |
+| **Kadastro** | Seçim · Parsel (İfraz, Alana Göre İfraz, Tevhit, Alanı Düzenle…, Alan Üret) · Yazım (Köşe Numarala, Uzunluk Yaz, Etiket) · Denetim (Topoloji Denetimi, Alan Ölç) |
+| **Harita** | Seçim · Sorgu · Ölçüm · Jeodezi · Arazi · Veri · Dış Referans |
 | **Analiz** | Seçim · Tablo · İşlem araçları · Denetim · Yapay zekâ |
 | **Görünüm** | Seçim · Gezinme · Yardımcılar · Katmanlar · Pencereler · Tema |
 | **Çıktı** | Seçim · Yazdır · Dosya |
 
+**Bir panel bir iştir.** Çizim sekmesinde çizgiyle eğri bir panelde, kapalı şekiller
+başka bir panelde, noktalar ve arazi alımı bir üçüncüsündedir; Değiştir sekmesinde nesnenin yerini
+değiştirenler, çoğaltanlar, uçlarını kesip uzatanlar, köşelerini işleyenler, birleştirip
+ayıranlar ve alanlarla işlem yapanlar ayrı panellerdedir. Bir aracı aradığınızda önce
+hangi **işi** yaptığını düşünün; hangi sekmenin hangi paneline gireceği oradan çıkar.
+
 **Giriş** sekmesi öteki sekmelerin kısa biçimidir: çizimin tamamı **Çizim**'de,
 düzenlemenin tamamı **Değiştir**'dedir; Giriş en çok kullanılanları bir arada tutar.
-Spline ve tarama bu yüzden **Çizim** sekmesindedir; **Stil Kopyala** Giriş'te öteki
-düzenleme fiillerinin yanında, **Değiştir** panelindedir. Her sekme — nesne seçince beliren
-düzenleyici sekmeleri de — 1440 piksel genişliğinde bir pencereye kaydırmadan sığar.
+Spline ve tarama bu yüzden **Çizim** sekmesindedir; **Stil Kopyala** Giriş'te
+**Özellikler** panelinde, çizgi ve dolgu renk kutularının altındadır. Her sekme — nesne
+seçince beliren düzenleyici sekmeleri de — 1440 piksel genişliğinde bir pencereye
+kaydırmadan sığar.
 
 **Her sekmenin ilk öğesi Seç aracıdır.** Hangi sekmede olursanız olun elinizdeki aracı
 oradan bırakırsınız; okundaki listede **Alan Seç**, **Tümünü Seç** (**Ctrl+A**) ve
@@ -78,13 +85,17 @@ belirir; hiçbir düğme gizlenmez.
 
 ### Düğmeler
 
-Şeritte üç boy düğme vardır ve boy bir anlam taşır:
+Şeritte **iki boy** düğme vardır ve boy bir anlam taşır; üçüncü bir boy yoktur:
 
 | Boy | Ne için |
 |---|---|
-| **Büyük** — resim üstte, ad altta | En sık yapılan iş: Çizgi, Çoklu Çizgi, Daire, Yay, Alan, Dikdörtgen, Metin, Katmanlar, Yapıştır |
-| **Satır** — küçük resim ve ad | İkinci sıradakiler: Taşı, Kopyala, Döndür, Kılavuz |
-| **Simge** — yalnız resim | Herkesin resminden tanıdığı araçlar: Elips, Nokta, Sil, Patlat, Ofset, Stil Kopyala |
+| **Büyük** — resim üstte, ad altta, panelin solunda | Panelin adını aldığı iş: Çizim panelinde Çizgi, Çoklu Çizgi, Alan, Daire, Yay; Dönüştür panelinde Taşı; Kes ve Uzat panelinde Buda ve Böl; Köşe ve Kenar panelinde Yuvarla |
+| **Satır** — küçük resim ve ad, üçerli sütunlar | Panelin geri kalanı: Dikdörtgen, Elips, Nokta; Döndür, Ölçekle, Aynala; Kır, Uzunluk, Bölümle |
+
+Her panelde büyük düğmeler solda, satırlar onların sağında ve soldan sağa, sütun sütun
+okunur. Yalnız resimli, adsız düğme yoktur: her aracın adı yazar. İki yer bunun dışındadır
+ve ikisi de bilinen bir kalıptır: **Katmanlar** panelinde katman kutusunun altındaki altı
+simge (AutoCAD'deki katman şeridi gibi) ve sekme satırının sağındaki hızlı erişim simgeleri.
 
 Simgeler renklidir ve renk her simgede aynı şeyi söyler: mavi komutun çizdiği ya da
 değiştirdiği şekil, kırmızı kestiği ya da sildiği, turuncu yazdığı, sarı veri ve katman,
@@ -117,18 +128,27 @@ daire vardır; **Buda**'nın okunda çitle budama, tıklananı tutma, sınırı 
 |---|---|
 | Daire | `DAİRE` · çapın iki ucu · üç nokta · iki doğruya teğet |
 | Yay | `YAY` · üç nokta · başlangıç-merkez-açı · başlangıç-bitiş-yarıçap · teğet devam |
-| Dikdörtgen | `DİKDÖRTGEN` · döndürülmüş · `ÇOKGEN` · dıştan · kenardan |
-| Alan | `ALAN` · `HALKA` · `DİLİM` |
-| Nokta | `NOKTA` · `DİKAYAK` · `ALIM` · `KESİŞİMNOKTA` · `ARANOKTA` |
+| Dikdörtgen | `DİKDÖRTGEN` · döndürülmüş |
+| Çokgen | `ÇOKGEN` · dıştan · kenardan |
+| Elips | `ELİPS` · eksenin iki ucu |
 | Kesişim, Ara Nokta | `KESİŞİMNOKTA` · iki mesafeden · iki doğrudan / `ARANOKTA` · mesafeyle |
+| Tarama | `TARAMA` · içine tıklayarak · seçilenler dışarıda |
 | Kılavuz | yatay (`KILAVUZ yon=yatay`) · düşey (`yon=düşey`) · açılı (`yon=45g`) · kılavuzları listele (`KILAVUZ`) |
 | Döndür, Aynala, Ölçekle | komut ve referansla / kopyalayarak biçimi |
-| Buda | `BUDA` · çitle · tıklanan kalsın · sınırı uzatarak · `UZAT` · çitle · uzatarak |
+| Hizala | `HİZALA` · ölçekleyerek |
+| Dizi | `DİZİ` · kutupsal · yol boyunca |
+| Buda | `BUDA` · çitle · tıklanan kalsın · sınırları uzatarak · `UZAT` · çitle · uzatarak |
 | Böl | `BÖL` (kesme çizgisiyle) · noktalardan · kesişimlerden · eşit parçaya · baştan uzaklıkla |
 | Yuvarla | `YUVARLA` · bütün köşeler · `PAH` · bütün köşeler |
-| Dizi | `DİZİ` · kutupsal · yol boyunca |
-| Metin | `METİN` · `YAZIDÜZENLE` |
+| Ölç, Alan Ölç | `ÖLÇ` · ilk nokta sabit · `PRİZMA` / `ALANÖLÇ` · köşelerden · içine tıklayarak |
 | Ölçü | Hizalı · Doğrusal · Açı · Yay Uzunluğu · Yarıçap · Çap · Koordinat — yedi `ÖLÇÜ tur=` |
+| Temizle | `TEMİZLE` (bulur) · `TEMİZLE islem=onar` |
+| Panoya Kopyala | `PANOYAKOPYALA` · taban noktasıyla |
+| Kırp | `BLOKKIRP` · çokgenle · nesneyle |
+
+Bir ailede **yalnız aynı işi yapanlar** durur: Daire'nin dört yolu, Buda ile Uzat gibi her
+CAD'in tek araç saydığı çift, Yuvarla ile Pah. Halka bir alan çizmenin yolu değildir, ayrı
+bir komuttur; bu yüzden kendi düğmesi vardır.
 
 Listedeki bir inşa yöntemi — üç noktadan daire, teğet devam eden yay — komut satırında
 `yontem=` ile yazılır, ama yazmak zorunda değilsiniz: ailede kendi satırı vardır ve
@@ -196,16 +216,24 @@ sekme de kaybolur.
 
 | Sekme | Ne seçilince | İçinde |
 |---|---|---|
-| **Yazı** | yazı | Yazıyı Düzenle, Bul ve Değiştir, Stil Kopyala · **Yükseklik** ve **Aralık** kutuları · dokuz hizalama (3 × 3) · Bağla, Bağı Çöz |
-| **Ölçü** | ölçü | Ölçüyü Düzenle, Stile Döndür, Pafta Ölçeğine Uyarla · **Stil**, **Ondalık**, **Birim** kutuları · Zincir Ölçü, Baz Ölçü |
-| **Tarama** | tarama | desen galerisi · **Açı**, **Ölçek**, Çapraz · adalar: Normal, Yalnız dış, Adasız · Sınır Bul, Taramayı Düzenle |
-| **Alan** | kapalı alan (parsel), kenarı yaylı olsa da | **Ölç ve Yaz**: Alan Ölç, Nesne Bilgisi, Koordinat Oku, Köşe Numarala, Uzunluk Yaz · İfraz, Alana Göre İfraz, Tevhit, Topoloji · **Kes ve Köşe**: Böl, Yuvarla, Pah, Köşe Taşı, Köşe Ekle, Köşe Sil, Kenar Türü · **Düzenle**: Tarama, Ofset, Tampon…, Alanı Düzenle…, Patlat · **Nesne** |
-| **Çizgi** | açık çizgi ya da çoklu çizgi | **Kes ve Uzat**: Buda, Uzat, Kır, Uzunluk, Böl · **Köşe**: Yuvarla, Pah, Köşe Taşı, Köşe Ekle, Köşe Sil · **Dönüştür**: Alana Çevir, Uç Uca Ekle, Çizgi Düzenle, Kenar Türü, Patlat, Bölümle · Ofset, Uzunluk Yaz, Tampon…, Nesne Bilgisi · **Nesne** |
-| **Eğri** | daire, yay, elips ya da spline | Alan Ölç, Nesne Bilgisi, Koordinat Oku · **Kes ve Uzat**: Buda, Uzat, Kır, Uzunluk, Böl · Ofset, Tarama, Bölümle, Tampon… · **Nesne** |
-| **Blok** | blok | Bloğu Düzenle, Taban Noktası, Patlat, Blok Ekle, Blok, Nesne Bilgisi, Dış Referansları Yenile · **Kırpma**: Kırp, Çokgenle Kırp, Nesneyle Kırp, Kırpma Sınırını Çiz, Kırpmayı Kaldır ([BLOKKIRP](../komutlar/block_clip.md)) |
+| **Yazı** | yazı | **Düzenle**: Yazıyı Düzenle, Stil Kopyala · **Biçim**: Yükseklik ve Aralık kutuları · **Hizalama**: dokuz hizalama (3 × 3) · **Bağ**: Bağla, Bağı Çöz |
+| **Ölçü** | ölçü | **Düzenle**: Ölçüyü Düzenle, Stile Döndür, Pafta Ölçeğine Uyarla · **Stil ve Değer**: Stil, Ondalık, Birim kutuları · **Devam**: Zincir Ölçü, Baz Ölçü |
+| **Tarama** | tarama | **Desen**: desen galerisi · **Özellikler**: Açı, Ölçek, Çapraz · **Adalar**: Normal, Yalnız dış, Adasız · **Düzenle**: Taramayı Düzenle, Alan Ölç, Nesne Bilgisi |
+| **Alan** | kapalı alan (parsel), kenarı yaylı olsa da | **Köşe ve Kenar**: Yuvarla (Pah ile), Köşe Taşı, Köşe Ekle, Köşe Sil, Kenar Türü, Çizgi Düzenle · **Parsel**: İfraz, Böl, Alana Göre İfraz, Tevhit, Alanı Düzenle… · **Alan İşlemleri**: Birleşim, Kesişim, Fark, Simetrik Fark · **Dönüştür**: Ofset, Tampon…, Tarama, Patlat · **Ölç ve Yaz**: Alan Ölç, Nesne Bilgisi, Topoloji Denetimi, Köşe Numarala, Uzunluk Yaz |
+| **Çizgi** | açık çizgi ya da çoklu çizgi | **Kes ve Uzat**: Buda (Uzat ile), Böl, Kır, Uzunluk, Bölümle · **Köşe ve Kenar**: Yuvarla (Pah ile), Köşe Taşı, Köşe Ekle, Köşe Sil, Kenar Türü, Çizgi Düzenle · **Dönüştür**: Ofset, Alana Çevir, Uç Uca Ekle, Tampon…, Patlat · **Ölç ve Yaz**: Nesne Bilgisi, Uzunluk Yaz, Köşe Numarala |
+| **Eğri** | daire, yay, elips ya da spline | **Kes ve Uzat**: Buda (Uzat ile), Böl, Kır, Uzunluk, Bölümle · **Köşe ve Birleştir**: Yuvarla (Pah ile), Uç Uca Ekle · **Alan İşlemleri**: Birleşim, Kesişim, Fark, Simetrik Fark · **Dönüştür**: Ofset, Tampon…, Tarama · **Ölç**: Alan Ölç, Nesne Bilgisi |
+| **Blok** | blok | **Blok**: Bloğu Düzenle, Taban Noktası, Patlat, Nesne Bilgisi · **Kırpma**: Kırp (çokgenle, nesneyle), Kırpma Sınırını Çiz, Kırpmayı Kaldır ([BLOKKIRP](../komutlar/block_clip.md)) |
 
-**Nesne** paneli her nesne sekmesinde aynıdır: Taşı, Kopyala, Döndür, Ölçekle, Aynala ve
-Sil. Sekme öne geldiğinde seçtiğiniz nesneyi taşımak için Giriş'e dönmeniz gerekmez.
+**Her düzenleyici sekme aynı iskelettedir:** Seç · **Nesne** · seçilen türe özgü paneller ·
+Kapat. **Nesne** paneli — Taşı, Kopyala, Döndür, Ölçekle, Aynala ve Sil — her sekmede aynı
+yerde, ikincidir: bir parsel, bir yazı ya da bir blok biçimlendirilmekten çok taşınır ve
+silinir; sekme öne geldiğinde bunun için Giriş'e dönmeniz gerekmez.
+
+**Bir sekmede yalnız seçilen türün işlediği araçlar bulunur.** Her komut hangi nesnelerde
+çalıştığını bildirir ([Soluk araçlar](#soluk-araçlar)); sekme o komutlardan kurulur ve
+seçimle ilgisi olmayanı taşımaz. **Koordinat Oku** ve **Bul ve Değiştir…** nesne seçmeden
+çalışır, bu yüzden Harita ve Açıklama sekmelerindedir; **Sınır Bul** tıklanan bir bölgeyi
+arar, **Blok Ekle** başka bir blok yerleştirir — ikisi de Çizim sekmesindedir.
 
 Bu sekmedeki her şey **seçili nesnelerde** çalışır: Yazı sekmesinde yüksekliği 3,50 m
 seçmek seçili yazılarda `YAZIDÜZENLE yukseklik=3500` çalıştırır. Kutular seçilen ilk
@@ -755,7 +783,7 @@ Tuvalin altında, 28 piksellik bir şerit. Solunda değişmeyen bir **`Komut:`**
 vardır; sağında ne yazdığınız ve çalışan komutun ne beklediği görünür.
 
 Her zaman açıktır — bir CAD kullanıcısının eli oraya kendiliğinden gider.
-**Görünüm ▸ Pencereler ▸ Komut Satırı** ya da **Ctrl+9** ile gizlenebilir.
+**Görünüm ▸ Pencereler ▸ Paneller ▸ Komut Satırı** ya da **Ctrl+9** ile gizlenebilir.
 
 - **Yukarı / Aşağı** — geçmiş
 - **Tab** — tamamlama; adlar `Registry`'den gelir
@@ -960,7 +988,7 @@ hiçbir şey değişmez ve sebebi durum çubuğunda yazar.
 ### Geçmiş
 
 Oturumda ne olduğunun metin dökümü. Komut günlüğünün kendisi için
-**Görünüm ▸ Pencereler ▸ Komut Günlüğü**'nü açın; bkz. [Komut günlüğü](../mimari/gunluk.md).
+**Görünüm ▸ Pencereler ▸ Paneller ▸ Komut Günlüğü**'nü açın; bkz. [Komut günlüğü](../mimari/gunluk.md).
 
 ## Katmanlar paneli
 

@@ -96,7 +96,7 @@ sürükleyip bırakmak da olur. Pencere öteki biçimlerdekiyle aynıdır
 Pencere yalnızca argüman toplar: kurduğu `İÇEAKTAR` satırı, aynı işi bir betikte yazacağınız
 satırın aynısıdır. İçe aktarma bitince görünüm çizimin kapsamına yakınlaşır.
 
-Bağlamak için **Harita ▸ Veri ▸ Dış Referans** bir dosya penceresi açar; süzgeci `.ncz`
+Bağlamak için **Harita ▸ Dış Referans ▸ Dış Referans** bir dosya penceresi açar; süzgeci `.ncz`
 dosyalarını da kabul eder ([DIŞREFERANS sayfasındaki anlatım](../komutlar/xref.md#arayüz)).
 
 CBS okuyucusu (GDAL) olmayan bir yapıda İçe Aktar penceresi açılmaz; orada NCZ yine komut

@@ -116,7 +116,7 @@ KILAVUZ yon=yatay deger=4310220500 sil=evet
 
 Vazgeçmek için cetvele **geri bırakın** — kılavuz konmaz.
 
-Şeritteki **Çizim ▸ Çizgi ▸ Kılavuz** düğmesinin okunda dört satır vardır:
+Şeritteki **Görünüm ▸ Yardımcılar ▸ Kılavuz** düğmesinin okunda dört satır vardır:
 
 | Satır | Çalıştırdığı | Ne yapar |
 |---|---|---|

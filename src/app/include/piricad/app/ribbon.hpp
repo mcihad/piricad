@@ -181,6 +181,20 @@ private:
     QString fixedLabel_;
 };
 
+/// THE SPLIT BUTTONS THE RIBBON SHOWS ON MORE THAN ONE TAB, made once by
+/// `MainWindow::buildRibbon` and placed on every tab that shows them — editor
+/// tabs included — so a family is the same button, with the same members and
+/// the same face, wherever the hand meets it (`.claude/ui.md` R46).
+struct RibbonFamilies
+{
+    RibbonFamily* rotate{nullptr}; ///< DÖNDÜR and by a reference
+    RibbonFamily* scale{nullptr};  ///< ÖLÇEKLE and by a reference
+    RibbonFamily* mirror{nullptr}; ///< AYNALA and keeping the source
+    RibbonFamily* trim{nullptr};   ///< BUDA's ways and UZAT's: Netcad's Uzat-Kes
+    RibbonFamily* fillet{nullptr}; ///< YUVARLA's ways and PAH's
+    RibbonFamily* split{nullptr};  ///< BÖL's ways
+};
+
 /// One row of the layer list: what the layer box shows for a layer.
 struct RibbonLayerRow
 {

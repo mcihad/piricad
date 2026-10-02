@@ -320,6 +320,16 @@ QString ribbonSheet(const Tokens& t)
         SARibbonToolButton:pressed,
         SARibbonToolButton:checked       { color: %1; border: 1px solid %2; background-color: %4; }
         SARibbonToolButton:checked:hover { color: %1; border: 1px solid %2; background-color: %4; }
+        /* THE ARROW HALF OF A SPLIT BUTTON IN A BUTTON GROUP — the quick access
+           printer's — at rest. Upstream styles it only under the pointer, and
+           with no rule of its own Qt hands it to Fusion, which shades a button
+           from the transparent ground the group gives it and paints a black
+           slab beside the printer (Linux; macOS drew it flat). Transparent at
+           rest and nothing else: the arrow is still the style's, in the text
+           colour, and the hover and press rules below still tint it. */
+        SARibbonButtonGroupWidget > QToolButton[popupMode="1"]::menu-button
+                                         { border: none; background: transparent;
+                                           border-radius: 4px; width: 12px; }
         SARibbonButtonGroupWidget > QToolButton:hover   { border: 1px solid %2; background-color: %3; }
         SARibbonButtonGroupWidget > QToolButton:checked,
         SARibbonButtonGroupWidget > QToolButton:pressed { border: 1px solid %2; background-color: %4; }
@@ -366,7 +376,18 @@ QString themeStyleSheet(ThemeMode mode)
     // this is the only sheet there is (`ci-gate-theme.sh` keeps it that way).
     return QStringLiteral(R"(
         /* ---- ground ------------------------------------------------------- */
+        /*
+         * THE FAMILY IS DECLARED HERE, not only the size. Qt hands a widget class
+         * the font its PLATFORM THEME names for it before any sheet is read, and
+         * Plasma names Noto Sans 10 pt for QToolButton, QMenu and QLabel — so the
+         * ribbon's buttons came out in Noto Sans, wider than the design's IBM Plex
+         * (the `Giriş` tab needed 1507 px of the 1440 it is laid out for), while a
+         * Mac, which names none, drew the face the design is drawn in. A font
+         * declared by the sheet survives a later change of the desktop's fonts;
+         * a one-time `QApplication::setFont` does not.
+         */
         QWidget                          { background: %(window)s; color: %(text)s;
+                                           font-family: "IBM Plex Sans", sans-serif;
                                            font-size: 12px; }
         QMainWindow::separator           { background: %(lineHard)s; width: 1px; height: 1px; }
         QToolTip                         { background: %(raised)s; color: %(text)s;
@@ -786,8 +807,9 @@ QString themeStyleSheet(ThemeMode mode)
          * typed were both legible at once, at different alignments, in the same
          * box. An editor is not a highlight: it covers what it replaces.
          *
-         * `input` rather than a blend of the row's own ground, because a cell that
-         * is open IS an input, and the shell already has one ground for those.
+         * `panel` rather than a blend of the row's own ground, because a cell that
+         * is open IS an input, and the shell has one ground for those (`panel`,
+         * which every other input above takes too).
          * The accent border is what says "open"; the ground only has to be solid. */
         QWidget#field[frame="cell"]      { background: %(panel)s;
                                            border: 1px solid %(accent)s; border-radius: 0px; }

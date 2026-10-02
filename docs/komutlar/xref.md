@@ -186,10 +186,9 @@ DIŞREFERANS islem=bagla ad=altlik
 
 ### Arayüz
 
-**Harita ▸ Veri ▸ Dış Referans** (ya da **Çizim ▸ Blok ▸ Dış Referans**) bir dosya
-penceresi açar; seçtiğiniz dosya kendi koordinatlarında bağlanır. **Harita ▸ Veri ▸ Dış
-Referansları Yenile** — bir blok seçiliyken **Blok Araçları** sekmesinde de — yüklü bütün
-dış referansları dosyalarından yeniden okur. Dış referansın içindeki bir nesneye tıklamak
+**Harita ▸ Dış Referans ▸ Dış Referans** bir dosya
+penceresi açar; seçtiğiniz dosya kendi koordinatlarında bağlanır. **Harita ▸ Dış Referans ▸
+Dış Referansları Yenile** yüklü bütün dış referansları dosyalarından yeniden okur. Dış referansın içindeki bir nesneye tıklamak
 referansı seçer; taşıyabilir, silebilirsiniz. Çift tıklamak onu düzenlemeye açmaz,
 neden açmadığını söyler.
 

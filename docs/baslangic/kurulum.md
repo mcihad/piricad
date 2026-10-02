@@ -209,15 +209,18 @@ Varsayılanları üç türlüdür:
 
 * **Bulununca açık.** `GDAL`, `PROJ`, `RHI`, `TEXT`: makinede varsa açık gelir.
   Makinesinde GDAL olan biri, DXF açamayan bir PiriCAD derlememelidir.
-* **Ön ayarın talep ettiği.** `RHI` ve `TEXT` ayrıca `dev`, `debug`, `release` ve
-  `asan` ön ayarlarında **açıkça ON** yazılıdır, yani bulunamazsa yapılandırma
-  durur. `headless` bunu istemez: uygulama derlemez, Qt'siz hedeflerin kendi
-  başına ayakta durduğunu kanıtlamak için vardır.
+* **Ön ayarın talep ettiği.** `RHI`, `TEXT`, `PYTHON` ve `DWG` ayrıca `dev`, `debug`,
+  `release` ve `asan` ön ayarlarında **açıkça ON** yazılıdır. `RHI`, `TEXT` ve `PYTHON`
+  için gereği makinede yoksa yapılandırma durur; `DWG`'nin kaynağı sabitlenmiş
+  commit'ten iner, indirilemiyorsa (ağsız yapı) yapılandırma durur ve neyi kapatmanız
+  gerektiğini söyler. `headless` bunların hiçbirini istemez: uygulama derlemez, Qt'siz
+  hedeflerin kendi başına ayakta durduğunu kanıtlamak için vardır.
 * **Kapalı.** Kalanlar.
 
 | Seçenek | Ne açar | Makinede gereken |
 |---|---|---|
-| `PIRICAD_WITH_PYTHON` | Gömülü Python betik motoru | CPython 3.14 ve geliştirme başlıkları. pybind11 sabitlenmiş commit'ten iner |
+| `PIRICAD_WITH_PYTHON` | Gömülü Python betik motoru | CPython 3.14 ve geliştirme başlıkları. pybind11 sabitlenmiş commit'ten iner. Ön ayarlar talep eder |
+| `PIRICAD_WITH_DWG` | DWG okuma (LibreDWG; yalnız okur) | Makinede bir şey kurmak gerekmez: kaynak sabitlenmiş commit'ten iner (ilk yapılandırmada yaklaşık 262 MB). Ön ayarlar talep eder; ağsız yapıda `-DPIRICAD_WITH_DWG=OFF` verin |
 | `PIRICAD_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları. Ön ayarlar talep eder |
 | `PIRICAD_WITH_TEXT` | GPU tuvalinde metin (SDF atlası) | `libfreetype-dev`, `libharfbuzz-dev`. msdfgen ve stb sabitlenmiş commit'ten iner. Ön ayarlar talep eder |
 | `PIRICAD_WITH_GDAL` | DXF / GeoPackage | `libgdal-dev` |

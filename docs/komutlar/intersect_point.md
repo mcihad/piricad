@@ -75,8 +75,7 @@ Kesişim noktası yerleştirildi.
 
 ### Arayüz
 
-Şeritte **Çizim ▸ Nokta ve Alım ▸ Kesişim**'e basın ya da **Giriş ▸ Çizim** panelindeki
-**Nokta** düğmesinin okundan **Kesişim Noktası**'nı seçin. Yöntem `yontem=` ile verilir;
+Şeritte **Çizim ▸ Nokta ve Alım ▸ Kesişim**'e basın. Yöntem `yontem=` ile verilir;
 verilmezse `dogrultu`dur; **Kesişim** düğmesinin okunda **Kesişim — iki mesafeden** ve
 **Kesişim — iki doğrudan** hazır durur. Komut ne istediğini sırayla sorar ve yazı isteyen her istemde odak
 komut satırına geçer.

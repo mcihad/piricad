@@ -40,7 +40,7 @@ PYTHON kod="<python kaynağı>"
 
 Kod verilmezse komut sorar. Kaynak tırnak içine alınır; içinde tırnak varsa ters bölü ile
 kaçırılır. Çok satırlı kod için komut satırı yerine **Python konsolunu** kullanın:
-**Görünüm ▸ Pencereler ▸ Python Konsolu**.
+**Görünüm ▸ Pencereler ▸ Paneller ▸ Python Konsolu**.
 
 ## Parametreler
 
@@ -62,7 +62,7 @@ PYTHON kod="print(cad.doc.entity_count())"
 
 ### Arayüz
 
-**Görünüm ▸ Pencereler ▸ Python Konsolu** panelini açar. İstemde kod yazıp **Enter**'a basarsınız;
+**Görünüm ▸ Pencereler ▸ Paneller ▸ Python Konsolu** panelini açar. İstemde kod yazıp **Enter**'a basarsınız;
 **Shift+Enter** satır ekler, **Yukarı** ve **Aşağı** gönderilenleri geri getirir. Panel
 yazdığınızı `>>>` ile, programın söylediklerini altına yazar.
 

@@ -16,7 +16,7 @@ bağlam ölçerinin ne ölçtüğünü bileceksiniz.
 | Yol | Nerede |
 |---|---|
 | **Analiz ▸ Yapay zekâ ▸ Yapay Zeka** | Şerit; paneli açar ve sohbete geçer |
-| **Görünüm ▸ Pencereler ▸ Yapay Zeka** | Şerit; yuvayı açıp kapatır |
+| **Görünüm ▸ Pencereler ▸ Paneller ▸ Yapay Zeka** | Şerit; yuvayı açıp kapatır |
 | **Ctrl+Shift+K** | Klavye — komut paletinin **Ctrl+K**'sinin yanında |
 
 Panelin en üstünde **model seçici** vardır ve tanımlı sağlayıcı profillerini listeler;

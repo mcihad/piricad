@@ -6,6 +6,69 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — şerit yeniden düzenlendi: iki boy, tek sıra, her panel bir iş
+
+- Şeritte "bazıları büyük bazıları küçük" olan karışıklık bir kurala bağlandı: panelin
+  adını aldığı bir ila beş araç **büyük** düğme, gerisi **etiketli satır**; yalnız resimli
+  ya da iki satır boyunda düğme kalmadı (katman kutusunun altındaki altı simge ve hızlı
+  erişim satırı dışında). Paneller işe göre dizildi: Çizim ▸ Çizgi ve Eğri · Kapalı Şekil ·
+  Nokta ve Alım · Tarama · Blok; Değiştir ▸ Dönüştür · Çoğalt · Kes ve Uzat · Köşe ve
+  Kenar · Birleştir ve Ayır · Alan İşlemleri · Sil ve Temizle; Harita'da Dış Referans ayrı
+  panel; Görünüm ▸ Pencereler tek **Paneller** menüsü.
+- Giriş'te en çok çizilen beş şekil büyük: Çizgi, Çoklu Çizgi, Alan, Daire, Dikdörtgen;
+  Yay, Elips ve Nokta birer satır. Stil Kopyala Özellikler panelinde.
+- Aileler (bölünmüş düğmeler) yalnız bir komutun yollarını ya da her CAD'in tek araç
+  saydığı çifti taşıyor: **Buda ile Uzat**, **Yuvarla ile Pah**. Halka ve Nokta ailesi
+  dağıldı; her aile bir kez kurulup gösterildiği her sekmede aynı düğme oluyor.
+- **Nesne seçince açılan sekmeler** tek iskelete bağlandı — Seç · Nesne · seçilen türe özgü
+  paneller · Kapat — ve yalnız o türü işleyen komutları taşıyor: Koordinat Oku, Sınır Bul,
+  Blok Ekle, Bul ve Değiştir, Dış Referansları Yenile sekmelerden çıktı. Blok sekmesinde
+  kırpmanın her sınır yolu kendi düğmesi. Yazı, Ölçü, Tarama, Alan, Çizgi, Eğri ve Blok
+  sekmelerinin içeriği [Arayüz](docs/baslangic/arayuz.md) sayfasında.
+- Kılavuzdaki `Sekme ▸ Panel ▸ Düğme` yolları (137 sayfada 253 yol) şeridin gerçek haritasına
+  karşı denetlendi, yanlış çıkanlar düzeltildi; `alan-islemleri-serit.png` yeni düzenden
+  yeniden alındı. Şerit sondası (`PIRICAD_RIBBON_SHEET`) artık düzeni ölçüyor,
+  `scripts/ci-gate-serit.sh` onu tutuyor; `scripts/ci-gate-serit-belge.py` de kılavuzdaki
+  her yolun şeritte gerçekten var olduğunu her koşuda yeniden doğruluyor.
+
+### Düzeldi — Linux'ta (KDE Plasma) açık/koyu tema geçişi 5 saniye sürüyordu
+
+- Sebep masaüstünün stiliydi: Qt, `QApplication` kurulurken Plasma'nın Breeze stilini
+  yaratıyor, program kendi Fusion stilini sonradan takınca eski stilin kancaları olay
+  yolunda kalıyor ve bir stil sayfası yenilenirken her widget olayı için çağrılıyordu —
+  süre %65 `breeze6.so` içinde geçiyordu. Mac'te, Windows'ta ve ekransız çalıştırmada
+  yüklenecek böyle bir stil olmadığı için yalnız Linux masaüstü görüyordu.
+- `QT_STYLE_OVERRIDE=Fusion` uygulama nesnesinden önce ayarlanıyor ve tema bir geçişte
+  **bir kez** uygulanıyor (komutun ayar geri çağrısı uyguluyor, düğme bir daha uygulamıyordu).
+  Geçiş 4,4 s'den **0,4 s**'ye indi. Platform teması bilerek bırakıldı: yerel dosya
+  penceresi ve simgeleri korunuyor.
+- `PIRICAD_THEME_PROBE` geçişi tıklamanın yoluyla ölçüyor; `scripts/ci-gate-tema-gecisi.sh`
+  gerçek ekranda 1,5 saniyelik bütçeyi tutuyor.
+
+### Düzeldi — Linux'ta şerit düğmeleri tasarımın yazı tipiyle çizilmiyordu
+
+- Plasma, QToolButton, QMenu ve QLabel için Noto Sans 10 pt'yi stil sayfası okunmadan
+  veriyordu; şerit tasarımdaki IBM Plex'ten %5 geniş çıkıyor, Giriş sekmesi 1440 pikselin
+  üstüne (1507) taşıp kaydırma okları istiyordu. Yazı ailesi artık ortak stil sayfasında
+  bildiriliyor (masaüstü yazı tipini sonradan değiştirse de kalıyor); bütün sekmeler 1440
+  piksele sığıyor.
+
+### Düzeldi — yazdır ikonunun yanındaki açılır menü oku siyahtı
+
+- Fusion, bir düğme grubundaki bölünmüş düğmenin ok yarısını şeffaf `Button` renginden
+  çiziyor ve Qt şeffaf rengi opak siyaha çeviriyordu; Mac'te görünmeyen kusur Linux'ta
+  siyah bir blok bırakıyordu. Stil sayfasına o alt öğe için kural eklendi; şerit sondası
+  oku açık temada piksel olarak denetliyor (kuralsız %63 koyu, kuralla %0).
+
+### Eklendi — DWG okuma hazır ön ayarlarda açık
+
+- `PIRICAD_WITH_DWG` `dev`, `debug`, `release` ve `asan` ön ayarlarında açık geliyor
+  (`headless` kapalı kalıyor). LibreDWG kaynağı ilk yapılandırmada sabitlenmiş commit'ten
+  iniyor; yazıcı kodu yok, kütüphane yalnız okuyor. Gerçek çizimlerle denendi: İLBANK
+  İÇMESUYU (DWG r2018) 3315 nesne / 57 katman, KANALİZASYON (r2004) 3178 / 18, YAĞMURSUYU
+  (r2004) 7869 / 37; okunabilir geometrisi olmayan dosya anlaşılır bir mesajla reddediliyor.
+  Bekleyen üç DWG sınaması artık koşuyor ve geçiyor.
+
 ### Eklendi — O-5 elips ve spline ile köşe yuvarlama
 
 - İki nesne arasındaki `YUVARLA` artık elips ve spline içeren köşede de çalışır;

@@ -10,20 +10,21 @@ Python bunun için vardır.
 
 ## Bu sürümde durumu
 
-Python motoru **seçimlik** derlenir ve varsayılan yapıda **kapalıdır**. Açmak için:
+Python motoru **seçimli** derlenir (`PIRICAD_WITH_PYTHON`) ve `dev`, `debug`, `release`
+ve `asan` ön ayarlarında **açık gelir**:
 
 ```bash
-cmake --preset dev -DPIRICAD_WITH_PYTHON=ON
+cmake --preset dev
 cmake --build --preset dev
 ```
 
 Makinenizde CPython 3.14 ve geliştirme başlıkları kurulu olmalıdır (`brew install
 python@3.14`, `apt install python3.14-dev`). Yapılandırma bulamazsa hangi paketin
-gerektiğini yazarak durur — sessizce kapanmaz. Ayrıntı:
-[Kurulum](../baslangic/kurulum.md).
+gerektiğini yazarak durur — sessizce kapanmaz. Python istemiyorsanız
+`-DPIRICAD_WITH_PYTHON=OFF` verin. Ayrıntı: [Kurulum](../baslangic/kurulum.md).
 
-Kapalı yapıda `.py` dosyası çalıştırmayı denerseniz `BETİK` komutu JSON beklediğini
-söyleyerek hata döndürür; çizim değişmez.
+Python'sız bir yapıda `.py` dosyası çalıştırmayı denerseniz `BETİK` komutu JSON
+beklediğini söyleyerek hata döndürür; çizim değişmez.
 
 ## İlk betik
 
@@ -185,7 +186,7 @@ de aynı kaynağı okur.
 
 ## Editör
 
-**Görünüm ▸ Pencereler ▸ Python Konsolu** panelindeki istem bir kod editörüdür:
+**Görünüm ▸ Pencereler ▸ Paneller ▸ Python Konsolu** panelindeki istem bir kod editörüdür:
 
 | Tuş | Ne yapar |
 |---|---|

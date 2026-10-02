@@ -49,7 +49,7 @@ Biçim verilmezse uzantıdan bulunur. İçinde boşluk olan yol tırnak içine a
 | Parametre | Ne işe yarar |
 |---|---|
 | `dosya` | İçe aktarılacak dosyanın yolu. Zorunlu |
-| `bicim` | Sürücü adı: `DXF`, `GPKG` ya da `NCZ`. Verilmezse uzantıdan bulunur |
+| `bicim` | Sürücü adı: `DXF`, `DWG`, `GPKG` ya da `NCZ`. Verilmezse uzantıdan bulunur |
 | `katmanlar` | Yalnızca bu katmanlar okunur, virgülle ayrılır. Verilmezse dosyadaki bütün katmanlar okunur |
 | `alanlar` | Sütun olarak okunacak öznitelik alanları, virgülle; `*` hepsini okur. Verilmezse hiçbir alan okunmaz, yalnız geometri gelir |
 

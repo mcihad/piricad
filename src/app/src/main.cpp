@@ -216,6 +216,24 @@ int main(int argc, char** argv)
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
+    // THE STYLE IS FUSION FROM THE FIRST MOMENT, not from `installShellStyle` on.
+    //
+    // That function has to run after `QApplication` exists (it builds a
+    // `QProxyStyle`), and by then Qt has already made the DESKTOP'S style: on a
+    // Plasma session the platform theme names Breeze, and a Breeze that was
+    // replaced still sat in the event path — one light/dark switch took 4.4 s on
+    // a KDE machine against 0.4 s with Fusion from the start, 65% of it inside
+    // `breeze6.so` called from application-wide event filters. Measured with
+    // `PIRICAD_THEME_PROBE`; a Mac, a Windows machine and a bare X session never
+    // had a style to load, which is why only the Linux desktop saw it.
+    //
+    // `QT_STYLE_OVERRIDE` is Qt's own switch for this and is read when
+    // `QApplication` is built. It leaves the platform THEME alone on purpose:
+    // `QGuiApplication::setDesktopSettingsAware(false)` would also have fixed it
+    // and cost the Linux file dialog its native helper (Qt's own dialog, no
+    // folder icons).
+    qputenv("QT_STYLE_OVERRIDE", "Fusion");
+
     // High DPI: pass the scale factor through rather than rounding it, so a 1.25
     // or 1.5 display gets the layout at its own scale instead of the nearest
     // integer one. `design.md` §12 asks for this by name, and the icons are SVG
@@ -361,6 +379,7 @@ int main(int argc, char** argv)
              "PIRICAD_PYTHON_PROBE",    "PIRICAD_FIT_PROBE",     "PIRICAD_RIBBON_SHEET",
              "PIRICAD_TOOL_DRIVE",      "PIRICAD_REPEAT_PROBE",  "PIRICAD_VIEW_PROBE",
              "PIRICAD_OFFER_PROBE",     "PIRICAD_PROMPT_PROBE",  "PIRICAD_WINDOW_SHOT",
+             "PIRICAD_THEME_PROBE",
          })
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
@@ -3277,6 +3296,12 @@ int main(int argc, char** argv)
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             QApplication::exit(window.probeRibbonSheet() == 0 ? 0 : 1);
         });
+    }
+
+    // THE THEME SWITCH, TIMED: how long the window is busy after the toggle.
+    if (qEnvironmentVariableIsSet("PIRICAD_THEME_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeThemeSwitch()); });
     }
 
     // THE WINDOW ON A LAPTOP SCREEN: every part of it, and every tool, on show.

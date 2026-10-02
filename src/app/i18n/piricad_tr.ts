@@ -80,6 +80,50 @@
         <source>SİMETRİKFARK — iki kapalı alanın ortak bölgesini çıkarır, yalnız birine ait bölgeleri bırakır</source>
         <translation>SİMETRİKFARK — iki kapalı alanın ortak bölgesini çıkarır, yalnız birine ait bölgeleri bırakır</translation>
     </message>
+    <message>
+        <source>Çizgi ve Eğri</source>
+        <translation>Çizgi ve Eğri</translation>
+    </message>
+    <message>
+        <source>Kapalı Şekil</source>
+        <translation>Kapalı Şekil</translation>
+    </message>
+    <message>
+        <source>Çoğalt</source>
+        <translation>Çoğalt</translation>
+    </message>
+    <message>
+        <source>Köşe ve Kenar</source>
+        <translation>Köşe ve Kenar</translation>
+    </message>
+    <message>
+        <source>Köşe ve Birleştir</source>
+        <translation>Köşe ve Birleştir</translation>
+    </message>
+    <message>
+        <source>Birleştir ve Ayır</source>
+        <translation>Birleştir ve Ayır</translation>
+    </message>
+    <message>
+        <source>Dış Referans</source>
+        <translation>Dış Referans</translation>
+    </message>
+    <message>
+        <source>Temizle</source>
+        <translation>Temizle</translation>
+    </message>
+    <message>
+        <source>Panoya Kopyala</source>
+        <translation>Panoya Kopyala</translation>
+    </message>
+    <message>
+        <source>Paneller</source>
+        <translation>Paneller</translation>
+    </message>
+    <message>
+        <source>Panelleri açar ya da kapatır: Katmanlar, Öznitelikler, Yapay Zeka, Komut Günlüğü, Python Konsolu, Komut Satırı; Yerleşimi Sıfırla başlangıç düzenine döner</source>
+        <translation>Panelleri açar ya da kapatır: Katmanlar, Öznitelikler, Yapay Zeka, Komut Günlüğü, Python Konsolu, Komut Satırı; Yerleşimi Sıfırla başlangıç düzenine döner</translation>
+    </message>
 </context>
 
 <context>

@@ -85,7 +85,7 @@ KTL
 ### Arayüz
 
 **Katmanlar** paneli aynı listeyi sürekli gösterir: her satırda katmanın adı, göz
-simgesiyle görünürlüğü, kilidi ve grubu vardır. Panel kapalıysa **Görünüm ▸ Pencereler ▸
+simgesiyle görünürlüğü, kilidi ve grubu vardır. Panel kapalıysa **Görünüm ▸ Pencereler ▸ Paneller ▸
 Katmanlar** ile açılır.
 
 Komutun kendisini arayüzden çalıştırmak için şeritte **Harita** sekmesinin sonundaki

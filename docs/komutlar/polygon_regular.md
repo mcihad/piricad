@@ -115,8 +115,7 @@ Ağzı 50 metre olan bir kare (dıştan) köşelerine 70,711 metre uzanır:
 
 ### Arayüz
 
-Şeritte **Çizim ▸ Şekil ▸ Çokgen**'e basın ya da **Giriş ▸ Çizim** panelindeki
-**Dikdörtgen** düğmesinin okundan **Düzgün Çokgen**'i seçin. Aynı listede **Çokgen —
+Şeritte **Çizim ▸ Kapalı Şekil ▸ Çokgen**'e basın. Düğmenin okunda **Çokgen —
 dıştan** ve **Çokgen — kenardan** da vardır; ikisi aynı komutu `yontem=dis` ve `yontem=kenar` ile başlatır.
 
 Sıra şöyledir:

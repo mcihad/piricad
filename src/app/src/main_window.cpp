@@ -213,7 +213,7 @@ bool probe_run()
              "PIRICAD_BUDGET_PROBE",   "PIRICAD_PROBE_LINE",      "PIRICAD_FRAME_DUMP",
              "PIRICAD_MCP_PROBE",      "PIRICAD_EDIT_PROBE",      "PIRICAD_MENU_PROBE",
              "PIRICAD_FIT_PROBE",      "PIRICAD_REALMOUSE_PROBE", "PIRICAD_RIBBON_SHEET",
-             "PIRICAD_TOOL_DRIVE",
+             "PIRICAD_TOOL_DRIVE",     "PIRICAD_THEME_PROBE",
          })
         if (qEnvironmentVariableIsSet(probe)) return true;
     return false;
@@ -363,7 +363,7 @@ MainWindow::MainWindow(QWidget* parent)
     // hand already reaches for it.
     commandLine_->setVisible(true);
     commandLineRule_->setVisible(false);
-    // ITS SWITCH SAYS SO. `Görünüm ▸ Pencereler ▸ Komut Satırı` and Ctrl+9 read
+    // ITS SWITCH SAYS SO. `Görünüm ▸ Pencereler ▸ Paneller ▸ Komut Satırı` and Ctrl+9 read
     // off while the line was showing, so the first press did nothing a user
     // could see and only the second one hid it.
     {
@@ -2665,8 +2665,15 @@ void MainWindow::toggleTheme(bool dark)
                                                    command::Origin::Gui);
     if (!written) onEcho(QString::fromStdString(written.error().message));
 
-    theme_ = themeFromPreferences();
-    applyTheme();
+    // THE SETTING MOVES THE SHELL, ONCE. The write above reaches `onSettingChanged`
+    // synchronously, which applies the theme (`applyTheme`); applying it again here
+    // re-polished every widget in the program a second time for the same result —
+    // half of a switch that took seconds. Only a write that did not reach it (a
+    // refused command) leaves the shell behind the store.
+    if (const ThemeMode wanted = themeFromPreferences(); wanted != theme_) {
+        theme_ = wanted;
+        applyTheme();
+    }
 }
 
 void MainWindow::showCommandLine(bool visible)
@@ -4699,6 +4706,61 @@ int MainWindow::probeFit()
     if (pythonDock_ != nullptr) pythonDock_->hide();
     (void)std::fprintf(stdout, "[sığ] %d kusur\n", defects);
     return defects;
+}
+
+int MainWindow::probeThemeSwitch()
+{
+    bool numeric = false;
+    int rounds   = QString::fromLocal8Bit(qgetenv("PIRICAD_THEME_PROBE")).toInt(&numeric);
+    if (!numeric || rounds < 1) rounds = 4;
+
+    // BUSY TIME AFTER A CALL RETURNS: the main thread is frozen for as long as
+    // it is inside an event, so what a hand feels is the sum of the events that
+    // took longer than a frame's worth of nothing. Idle is declared after forty
+    // quiet turns in a row, which is also long enough for a compositor's frame
+    // callback to arrive.
+    const auto busy_after = [] {
+        qint64 busy = 0;
+        for (int quiet = 0; quiet < 40;) {
+            QElapsedTimer turn;
+            turn.start();
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            const qint64 took = turn.elapsed();
+            if (took > 2) {
+                busy += took;
+                quiet = 0;
+            } else {
+                ++quiet;
+                QThread::msleep(4);
+            }
+        }
+        return busy;
+    };
+
+    (void)busy_after(); // whatever start-up left to paint is not the switch's
+    qint64 worst = 0;
+    for (int i = 0; i < rounds; ++i) {
+        const bool dark = !actTheme_->isChecked();
+        QElapsedTimer clock;
+        clock.start();
+        actTheme_->setChecked(dark); // `toggled` -> `toggleTheme`: the click's own road
+        const qint64 called = clock.elapsed();
+        const qint64 after  = busy_after();
+        worst               = std::max(worst, called + after);
+        (void)std::fprintf(stdout, "[tema] %s: çağrı %lld ms, sonra %lld ms, toplam %lld ms\n",
+                           dark ? "koyu" : "açık", static_cast<long long>(called),
+                           static_cast<long long>(after), static_cast<long long>(called + after));
+    }
+    // THE BUDGET: a toggle measured 0.4 s on a 20-core development machine and
+    // 4.4 s while the desktop's own style (Plasma's Breeze) stayed in the event
+    // path — the defect this probe was written for. A second and a half keeps a
+    // slower machine green and still fails that one.
+    constexpr qint64 kBudgetMs = 1500;
+    const bool within          = worst <= kBudgetMs;
+    (void)std::fprintf(within ? stdout : stderr, "[tema] en yavaş geçiş: %lld ms — %s\n",
+                       static_cast<long long>(worst),
+                       within ? "bütçede" : "BÜTÇEYİ AŞIYOR (1500 ms)");
+    return within ? 0 : 1;
 }
 
 int MainWindow::probeStatusStrip()
@@ -10334,7 +10396,12 @@ int MainWindow::probeAnswerable()
           std::pair{"Yapıştır", "YAPIŞTIR"}}) {
         QAction* row = nullptr;
         for (QAction* candidate : findChildren<QAction*>())
-            if (candidate->text() == QString::fromUtf8(named)) row = candidate;
+            // A FAMILY'S SPLIT BUTTON IS A PROXY with the word of the member on
+            // its face (`Panoya Kopyala`) and no command of its own (`ribbon.hpp`):
+            // the row that has to RUN the command is the member.
+            if (candidate->text() == QString::fromUtf8(named) &&
+                candidate->objectName() != QStringLiteral("ribbonFamily"))
+                row = candidate;
         check(row != nullptr && row->isEnabled(),
               QStringLiteral("%1 satırı canlı").arg(QString::fromUtf8(named)));
         if (row == nullptr) continue;
@@ -10637,7 +10704,7 @@ int MainWindow::probeMenus()
     }
 
     // ---- a switch says what it switches ------------------------------------------
-    // `Görünüm ▸ Pencereler ▸ Komut Satırı` and Ctrl+9 read off while the line was
+    // `Görünüm ▸ Pencereler ▸ Paneller ▸ Komut Satırı` and Ctrl+9 read off while the line was
     // showing, so the first press did nothing a user could see.
     if (actCommandLine_->isChecked() != commandLine_->isVisible()) {
         (void)std::fprintf(stderr, "[pencere] BAŞARISIZ: Komut Satırı düğmesi %s, satır %s\n",

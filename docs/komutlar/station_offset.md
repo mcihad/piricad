@@ -90,7 +90,7 @@ PRİZMA 0,0 100,0 n(1284)
 
 ### Arayüz
 
-**Harita ▸ Ölçüm ▸ Prizma**'ya basın. Önce tabanın iki ucunu (A ve B), sonra noktaları
+**Harita ▸ Ölçüm** panelindeki **Ölç** düğmesinin okundan **Prizma**'yı seçin. Önce tabanın iki ucunu (A ve B), sonra noktaları
 gösterin; her tıklama bir satır ve tuvalde bir dikme bırakır. Taban nokta seçerken
 ekranda kalır. **Enter** ya da sağ tık bitirir. Nesne yakalama açıkken tıklama köşeye ve
 noktaya oturur; yazılan koordinat yazıldığı yere düşer.

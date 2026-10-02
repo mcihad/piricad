@@ -68,7 +68,7 @@ yayların uçlarını atmak olurdu.
 
 ### Arayüz
 
-Şeritte **Değiştir ▸ Köşe ▸ Çizgi Düzenle**. Çizgileri
+Şeritte **Değiştir ▸ Köşe ve Kenar ▸ Çizgi Düzenle**. Çizgileri
 seçip Enter'a basın, sonra işlemi yazın (`kapat`, `ac`, `ters`, `sadelestir`);
 `sadelestir` toleransı da ister ve odak kendiliğinden komut satırına geçer.
 Tanınmayan bir işlem yazılırsa komut hiçbir çizgiye dokunmadan söyler.

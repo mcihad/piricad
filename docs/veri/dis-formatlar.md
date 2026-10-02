@@ -18,12 +18,13 @@ Kendi proje dosyanız için: [PiriCAD proje dosyası](proje-dosyasi.md).
 | OGC GeoPackage | `.gpkg` | evet | evet |
 | Netcad NCZ | `.ncz` | evet | **hayır** — aşağıya bakın |
 
-¹ DWG okuma bir yapı seçeneğidir ve **kapalı gelir**: LibreDWG'nin okuyucusu bu
-sürümde altı nesne türünü tanır ve derlemesi kendi uyarılarını taşır. Açmak için
-`-DPIRICAD_WITH_DWG=ON` ile yeniden yapılandırın; ağa çıkamayan bir yapıda
-(`PIRICAD_FETCH_DEPENDENCIES=OFF`) kaynak indirilemediği için açılamaz. Kapalıyken
-bir `.dwg` açmaya çalışmak ne yapmanız gerektiğini yazan bir hata verir; içe
-aktarma penceresi de DWG yerine DXF kaydedip getirmenizi söyler.
+¹ DWG okuma bir yapı seçeneğidir (`PIRICAD_WITH_DWG`) ve `dev`, `debug`, `release` ve
+`asan` ön ayarlarında **açık gelir**. LibreDWG'nin kaynağı ilk yapılandırmada
+sabitlenmiş commit'ten iner (yaklaşık 262 MB); ağa çıkamayan bir yapıda
+(`PIRICAD_FETCH_DEPENDENCIES=OFF`) indirilemediği için `-DPIRICAD_WITH_DWG=OFF` ile
+kapatmanız gerekir. Kapalı bir yapıda `.dwg` açmaya çalışmak ne yapmanız gerektiğini
+yazan bir hata verir; içe aktarma penceresi de DWG yerine DXF kaydedip getirmenizi
+söyler.
 
 ² DXF **libdxfrw** ile okunur ve yazılır (`PIRICAD_WITH_DXFRW`, kaynak indirilebilen
 her yapıda açık gelir). libdxfrw dosyayı grup kodu düzeyinde okur: daire daire, yay yay,

@@ -114,8 +114,7 @@ DİZİ nesneler=2 mod=yol yol=1 sayi=4
 ### Arayüz
 
 Nesneleri seçin, `DİZİ` yazın, sorulan değerleri girin. **Dizi — kutupsal** ve
-**Dizi — yol boyunca** şeritteki **Dizi** düğmesinin (**Giriş ▸ Değiştir**, **Değiştir ▸ Dizi
-ve Ofset**) okundadır:
+**Dizi — yol boyunca** şeritteki **Dizi** düğmesinin (**Değiştir ▸ Çoğalt**) okundadır:
 yol boyunca dizide nesneleri seçtikten sonra yola tıklayın ve sayıyı yazın.
 
 ### Betik

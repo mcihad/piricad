@@ -68,7 +68,7 @@ STİLKOPYALA kaynak=1
 
 ### Arayüz
 
-Şeritteki **Giriş ▸ Değiştir ▸ Stil Kopyala** simgesi (bir nesne seçiliyken beliren
+Şeritteki **Giriş ▸ Özellikler ▸ Stil Kopyala** düğmesi (bir nesne seçiliyken beliren
 **Yazı**, **Alan** ve **Çizgi** sekmelerinde de vardır) Netcad'in Biçim Boya'sı gibi
 çalışır — önce kaynak, sonra hedefler:
 

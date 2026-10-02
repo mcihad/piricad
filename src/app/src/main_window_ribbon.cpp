@@ -73,6 +73,7 @@
 #include <cmath>
 #include <optional>
 #include <utility>
+#include <variant>
 
 namespace piricad::app {
 
@@ -82,6 +83,14 @@ constexpr const char* kToolCommand = kToolCommandProperty;
 
 /// The catalogue pattern an action stands for, on the hatch galleries.
 constexpr const char* kPatternProperty = "piricad.ribbon.pattern";
+
+/// A hatch gallery's cell, the swatch and its name under it.
+constexpr int kPatternCell = 58;
+/// How many patterns the drawing tab's gallery shows before its arrow.
+constexpr int kShownPatterns = 2;
+/// The gallery's scroll buttons, the arrow that opens it and the gaps between
+/// its cells: with only the buttons' 20 px counted, two cells' width showed one.
+constexpr int kGalleryScroll = 44;
 
 /// The mark a generated menu entry wears: its category's, because a generated
 /// entry has no drawing of its own and a wrong picture is worse than a generic
@@ -157,6 +166,29 @@ QString keyText(core::EntityKey key)
     return QString::number(static_cast<qulonglong>(static_cast<std::uint64_t>(key)));
 }
 
+/// What a ribbon panel shows: a tool, or a family's split button.
+using RibbonItem = std::variant<QAction*, RibbonFamily*>;
+
+/// THE RIBBON'S GRAMMAR (`.claude/ui.md` R46): two sizes and one order. A
+/// panel's LEADS — the one to three tools it is named for, the ones the hand
+/// reaches for most in it — are large buttons, the picture over the word, at
+/// the panel's left; everything else in it is a labelled ROW, three to a
+/// column. There is no third size: a bare picture made a tool a guessing game,
+/// and a button two rows tall was a size no rule explained.
+void place_item(SARibbonPanel* panel, const RibbonItem& item, bool lead)
+{
+    const auto* family = std::get_if<RibbonFamily*>(&item);
+    QAction* action    = family != nullptr ? (*family)->head() : std::get<QAction*>(item);
+    if (action == nullptr) return;
+    // A FAMILY OPENS FROM ITS ARROW, a tool runs where it is pressed.
+    const QToolButton::ToolButtonPopupMode mode =
+        family != nullptr ? QToolButton::MenuButtonPopup : QToolButton::DelayedPopup;
+    if (lead)
+        panel->addLargeAction(action, mode);
+    else
+        panel->addSmallAction(action, mode);
+}
+
 /// A caption and a box on one ribbon row, the caption set to `captionWidth` so
 /// the rows of a panel line up.
 QWidget* captioned(QWidget* parent, const QString& caption, QWidget* box, int captionWidth)
@@ -223,51 +255,43 @@ void MainWindow::buildRibbon()
     const auto remember = [this](QAction* action) {
         if (action != nullptr && !ribbonTools_.contains(action)) ribbonTools_ << action;
     };
-    // THREE SIZES, the ribbon's whole grammar: a large button for what a hand
-    // does all day, a labelled row for the rest, and a bare picture for a tool
-    // everybody knows by its mark — the tip still says its name.
-    enum class Size : std::uint8_t { Large, Small, Icon };
-    const auto place = [&](SARibbonPanel* panel, QAction* action, Size size,
-                           QToolButton::ToolButtonPopupMode mode) {
-        if (size == Size::Large)
-            panel->addLargeAction(action, mode);
-        else
-            panel->addSmallAction(action, mode);
-        if (size == Size::Icon)
-            if (SARibbonToolButton* b = panel->lastAddActionButton(); b != nullptr)
-                b->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    // TWO SIZES AND ONE ORDER (`place_item`): a panel's leads large at its
+    // left, the rest as labelled rows three to a column.
+    const auto put = [&](SARibbonPanel* panel, std::initializer_list<RibbonItem> items, bool lead) {
+        for (const RibbonItem& item : items) {
+            place_item(panel, item, lead);
+            if (std::holds_alternative<QAction*>(item)) {
+                remember(std::get<QAction*>(item));
+                continue;
+            }
+            for (QAction* m : std::get<RibbonFamily*>(item)->members())
+                remember(m);
+        }
     };
-    const auto large = [&](SARibbonPanel* panel, QAction* action) {
-        place(panel, action, Size::Large, QToolButton::DelayedPopup);
-        remember(action);
+    const auto leads = [&](SARibbonPanel* panel, std::initializer_list<RibbonItem> items) {
+        put(panel, items, true);
     };
-    const auto small = [&](SARibbonPanel* panel, QAction* action) {
-        place(panel, action, Size::Small, QToolButton::DelayedPopup);
-        remember(action);
+    const auto rows = [&](SARibbonPanel* panel, std::initializer_list<RibbonItem> items) {
+        put(panel, items, false);
     };
-    const auto icon = [&](SARibbonPanel* panel, QAction* action) {
-        place(panel, action, Size::Icon, QToolButton::DelayedPopup);
-        remember(action);
-    };
-    // A FAMILY IS ONE SPLIT BUTTON (`ribbon.hpp`): the face runs the member used
-    // last and the arrow lists them all. `word`, when given, is the button's
-    // label whichever member is on its face — `Daire`, never "Daire — üç nokta".
-    const auto family = [&](SARibbonPanel* panel, const QList<QAction*>& members, Size size,
-                            const QString& word = QString()) {
+    // ONE FAMILY, ONE BUTTON (`ribbon.hpp`): the face runs the member used last
+    // and the arrow lists them all. Made ONCE and placed on every tab that shows
+    // it, so the button is the same one, with the same face, wherever the hand
+    // meets it. A family is the ways of ONE command — the four ways to a circle of
+    // `DAİRE` — and two pairs every CAD shows as one tool: Buda with Uzat
+    // (Netcad's Uzat-Kes, AutoCAD's Trim/Extend) and Yuvarla with Pah. Two other
+    // commands are two buttons: a ring is not a way to draw an area. `word` is
+    // the button's label whichever member is on its face — `Daire`, never
+    // "Daire — üç nokta" — unless the member carries a short word of its own.
+    const auto makeFamily = [&](const QList<QAction*>& members, const QString& word) {
         auto* f = new RibbonFamily(members, this);
-        if (!word.isEmpty()) f->setFixedLabel(word);
+        f->setFixedLabel(word);
         families_ << f;
-        place(panel, f->head(), size, QToolButton::MenuButtonPopup);
-        for (QAction* m : members)
-            remember(m);
         return f;
     };
-    const auto menuButton = [&](SARibbonPanel* panel, QMenu* menu, Glyph glyph, bool big) {
+    const auto menuButton = [&](SARibbonPanel* panel, QMenu* menu, Glyph glyph) {
         menu->menuAction()->setData(static_cast<int>(glyph));
-        if (big)
-            panel->addLargeMenu(menu);
-        else
-            panel->addSmallMenu(menu);
+        panel->addLargeMenu(menu);
     };
     // THE ↘ IN A PANEL'S CAPTION opens the whole window for what the panel
     // shows the everyday part of, the way every ribbon's dialog launcher does.
@@ -532,9 +556,9 @@ void MainWindow::buildRibbon()
     for (QAction* a : {actChamfer_, actChamferAll_})
         a->setProperty(kRibbonShortLabel, tr("Pah"));
 
-    // THE PROCESSING TOOLS a tab shows by name open in the Araçlar panel, where
-    // their parameters are — a button that ran one bare would run it with every
-    // default and no chance to say otherwise.
+    // THE PROCESSING TOOLS a tab shows by name: each runs when pressed, on the
+    // selection with its defaults, unless it needs a figure first and opens
+    // where the figure is typed (`processingAction`).
     const auto tool = [this](const char* id, const QString& word) {
         return processingAction(QString::fromLatin1(id), word);
     };
@@ -548,159 +572,6 @@ void MainWindow::buildRibbon()
 
     loadRibbonCatalogues();
 
-    // =================================================================== `Giriş`
-    //
-    // WHAT A DRAFTER DOES ALL DAY, on the tab that opens first — AutoCAD's Home:
-    // draw, change, annotate, the layer and the colours in hand, the clipboard.
-    SARibbonCategory* home = bar->addCategoryPage(tr("Giriş"));
-    home->setObjectName(QStringLiteral("ribbonHome"));
-    selectFirst(home);
-
-    SARibbonPanel* sketch = home->addPanel(tr("Çizim"));
-    large(sketch, actLine_);
-    large(sketch, actPolyline_);
-    family(sketch, {actCircle_, circleTwo, circleThree, circleTangent}, Size::Large, tr("Daire"));
-    family(sketch, {actArc_, arcThree, arcAngle, arcRadius, arcOn}, Size::Large, tr("Yay"));
-    // THE SHAPES A HAND DRAWS ALL DAY ARE LARGE, the area among them: a parcel
-    // is drawn as often as a line, and a picture the size of the ellipse's
-    // said otherwise.
-    family(sketch, {actPolygon_, actAnnulus_, actSector_}, Size::Large, tr("Alan"));
-    family(sketch, {actRectangle_, rectangleRotated, actRegular_, regularOutside, regularSide},
-           Size::Large, tr("Dikdörtgen"));
-    family(sketch, {actEllipse_, ellipseAxis}, Size::Icon);
-    family(sketch, {actPoint_, actPerpOffset_, actSurvey_, actIntersect_, actAlong_}, Size::Icon);
-    // THE SPLINE AND THE HATCH are on the drawing tab, where drawing has its
-    // room: here they cost the home tab the width it needs to fit a 1440 px
-    // window.
-    launcher(sketch, tr("Çizim ve yakalama ayarları"),
-             [this] { openSettingsSection(QStringLiteral("Çizim ve Yakalama")); });
-
-    // THE EDIT VERBS IN AUTOCAD'S GRID: three labelled columns and a fourth of
-    // bare pictures, read down each column.
-    SARibbonPanel* change = home->addPanel(tr("Değiştir"));
-    small(change, actMove_);
-    small(change, actCopy_);
-    small(change, actStretch_);
-    family(change, {actRotate_, actRotateRef_}, Size::Small, tr("Döndür"));
-    family(change, {actMirror_, actMirrorCopy_}, Size::Small, tr("Aynala"));
-    family(change, {actScale_, actScaleRef_}, Size::Small, tr("Ölçekle"));
-    family(change,
-           {actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_, actExtend_, actExtendFence_,
-            actExtendCarry_},
-           Size::Small, tr("Buda"));
-    family(change, {actFillet_, actFilletAll_, actChamfer_, actChamferAll_}, Size::Small,
-           tr("Yuvarla"));
-    family(change, {actArray_, actArrayPolar_, actArrayPath_}, Size::Small, tr("Dizi"));
-    icon(change, actErase_);
-    icon(change, actExplode_);
-    icon(change, actOffset_);
-    // STİL KOPYALA IS AN EDIT, where Netcad keeps its Biçim Boya: beside the
-    // other verbs, not a large button beside the colour boxes.
-    icon(change, actStyleCopy_);
-
-    SARibbonPanel* note = home->addPanel(tr("Açıklama"));
-    family(note, {actText_, actTextEdit_}, Size::Large, tr("Metin"));
-    family(note, dimensionTypes, Size::Large, tr("Ölçü"));
-    small(note, actLeader_);
-    small(note, actLabel_);
-    small(note, actFindReplace_);
-    launcher(note, tr("Ölçü stili, pafta ölçeği ve yazdırma ayarları"),
-             [this] { openSettingsSection(QStringLiteral("Plot ve Çıktı")); });
-
-    // THE LAYER THE HAND IS ON, and the six things done to a layer from where
-    // the drawing is: make the selection's layer the active one, move the
-    // selection onto the active one, hide it, isolate it, show them all, lock it.
-    SARibbonPanel* layers = home->addPanel(tr("Katmanlar"));
-    auto* layersPanel     = new QAction(tr("Katmanlar"), this);
-    layersPanel->setObjectName(QStringLiteral("ribbonLayersPanel"));
-    layersPanel->setData(static_cast<int>(Glyph::LayerManager));
-    layersPanel->setToolTip(tr("Katmanlar panelini açar: her katmanın görünürlüğü, kilidi, "
-                               "rengi ve stili"));
-    connect(layersPanel, &QAction::triggered, this, &MainWindow::showLayerPanel);
-    large(layers, layersPanel);
-    ribbonLive_->layer = new RibbonLayerBox(layers);
-    ribbonLive_->layer->setFixedWidth(160);
-    ribbonLive_->layer->setToolTip(
-        tr("Seçim yokken: yeni nesnelerin çizileceği etkin katman (KATMAN ad=…).\n"
-           "Seçim varken: seçilen nesnelerin katmanı; başka bir katman seçmek onları oraya "
-           "taşır (KATMANAT)."));
-    connect(ribbonLive_->layer, &RibbonLayerBox::layerPicked, this, &MainWindow::pickRibbonLayer);
-    layers->addMediumWidget(ribbonLive_->layer);
-    auto* layerStrip = new SARibbonButtonGroupWidget(layers);
-    layerStrip->setObjectName(QStringLiteral("ribbonLayerStrip"));
-    // The six done most, as pictures — make active, move to active, hide,
-    // isolate, show all, lock; Görünüm has all eight with their names.
-    const QList<QAction*> layerVerbs = layerActions();
-    for (const int i : {0, 1, 2, 3, 4, 6})
-        layerStrip->addAction(layerVerbs.at(i));
-    layers->addMediumWidget(layerStrip);
-    launcher(layers, tr("Katmanlar paneli"), [this] { showLayerPanel(); });
-
-    // THE COLOURS IN HAND AND HOW TO BORROW A LOOK: the stroke and the fill of
-    // the selection (or of the active layer), each opening RENK's swatches.
-    SARibbonPanel* looks = home->addPanel(tr("Özellikler"));
-    ribbonLive_->stroke  = new RibbonColourBox(looks);
-    ribbonLive_->stroke->setObjectName(QStringLiteral("ribbonStrokeBox"));
-    ribbonLive_->stroke->setAccessibleName(tr("Çizgi rengi"));
-    ribbonLive_->stroke->setFixedWidth(118);
-    connect(ribbonLive_->stroke, &RibbonColourBox::menuRequested, this,
-            [this] { openColourMenu(0); });
-    looks->addMediumWidget(captioned(looks, tr("Çizgi"), ribbonLive_->stroke, 34));
-    ribbonLive_->fill = new RibbonColourBox(looks);
-    ribbonLive_->fill->setObjectName(QStringLiteral("ribbonFillBox"));
-    ribbonLive_->fill->setAccessibleName(tr("Dolgu rengi"));
-    ribbonLive_->fill->setFixedWidth(118);
-    connect(ribbonLive_->fill, &RibbonColourBox::menuRequested, this,
-            [this] { openColourMenu(1); });
-    looks->addMediumWidget(captioned(looks, tr("Dolgu"), ribbonLive_->fill, 34));
-    launcher(looks, tr("Stil Tasarımcısı — etkin katmanın bütün stili"),
-             [this] { openStyleDesigner(QString()); });
-
-    SARibbonPanel* clip = home->addPanel(tr("Pano"));
-    large(clip, actPaste_);
-    icon(clip, actCut_);
-    icon(clip, actCopyClip_);
-    icon(clip, actCopyBase_);
-
-    // =================================================================== `Çizim`
-    //
-    // THE WHOLE OF DRAWING, one panel per kind of thing drawn — sized so the tab
-    // fits a 1440 px window without scrolling, which is why the guides share a
-    // button and the methods live under their shapes' arrows.
-    SARibbonCategory* drawTab = bar->addCategoryPage(tr("Çizim"));
-    drawTab->setObjectName(QStringLiteral("ribbonDraw"));
-    selectFirst(drawTab);
-
-    SARibbonPanel* lines = drawTab->addPanel(tr("Çizgi"));
-    large(lines, actLine_);
-    large(lines, actPolyline_);
-    small(lines, actSpline_);
-    family(lines, {guideAcross, guideDown, actAngledGuide_, guideList}, Size::Small, tr("Kılavuz"));
-
-    SARibbonPanel* shapes = drawTab->addPanel(tr("Şekil"));
-    family(shapes, {actCircle_, circleTwo, circleThree, circleTangent}, Size::Large, tr("Daire"));
-    family(shapes, {actArc_, arcThree, arcAngle, arcRadius, arcOn}, Size::Large, tr("Yay"));
-    large(shapes, actPolygon_);
-    family(shapes, {actRectangle_, rectangleRotated}, Size::Small, tr("Dikdörtgen"));
-    family(shapes, {actRegular_, regularOutside, regularSide}, Size::Small, tr("Çokgen"));
-    family(shapes, {actEllipse_, ellipseAxis}, Size::Small, tr("Elips"));
-    small(shapes, actSector_);
-    small(shapes, actAnnulus_);
-
-    // THE SURVEY ENTRIES, where a drawing actually starts for a crew with a
-    // tape: this is the first tool a Turkish surveyor reaches for, not an
-    // occasional one (TODOS-CAD P1b). POLİGON is Harita's, with the geodesy.
-    SARibbonPanel* points = drawTab->addPanel(tr("Nokta ve Alım"));
-    large(points, actPoint_);
-    large(points, actSurvey_);
-    small(points, actPerpOffset_);
-    family(points, {actIntersect_, crossDistances, crossLines}, Size::Small, tr("Kesişim"));
-    family(points, {actAlong_, alongDistance}, Size::Small, tr("Ara Nokta"));
-
-    // THE PATTERNS AS THEY LOOK, from the catalogue: a click starts TARAMA with
-    // that pattern and asks for the boundary; the Tarama button itself uses the
-    // last one given.
-    SARibbonPanel* fills = drawTab->addPanel(tr("Tarama"));
     // NETCAD'S AREA HATCHES through its area tool (wiki 217385786): the region
     // round a click, hatched, found in loose linework the way SINIR finds it.
     auto* hatchInside = methodTool(Glyph::HatchInside, tr("Tarama — içine tıklayarak"),
@@ -743,7 +614,169 @@ void MainWindow::buildRibbon()
         controller_->beginOneShot(QStringLiteral("TARAMA yontem=ic ") +
                                   keys.join(QLatin1Char(' ')));
     });
-    family(fills, {actHatch_, hatchInside, hatchExclude}, Size::Large, tr("Tarama"));
+
+    // The two ways of `TEMİZLE`: find and mark, or repair.
+    QAction* cleanFind =
+        commandAction(Glyph::Cleanup, tr("Temizle — bul"), QStringLiteral("TEMİZLE"),
+                      tr("TEMİZLE — yinelenen, boş ve tekrarlanan köşeli nesneleri bulur, seçer "
+                         "ve işaretler; hiçbir şeyi değiştirmez  ·  kısaltma: TMZ"));
+    QAction* cleanRepair =
+        commandAction(Glyph::Cleanup, tr("Temizle — onar"), QStringLiteral("TEMİZLE islem=onar"),
+                      tr("TEMİZLE islem=onar — yinelenenleri ve boş nesneleri siler, tekrarlanan "
+                         "köşeleri çıkarır; değişen alanları önce/sonra söyler, tek adımda geri "
+                         "alınır"));
+
+    // ---- the families, made once ------------------------------------------
+    RibbonFamily* circles =
+        makeFamily({actCircle_, circleTwo, circleThree, circleTangent}, tr("Daire"));
+    RibbonFamily* arcs = makeFamily({actArc_, arcThree, arcAngle, arcRadius, arcOn}, tr("Yay"));
+    RibbonFamily* rectangles = makeFamily({actRectangle_, rectangleRotated}, tr("Dikdörtgen"));
+    RibbonFamily* regulars   = makeFamily({actRegular_, regularOutside, regularSide}, tr("Çokgen"));
+    RibbonFamily* ellipses   = makeFamily({actEllipse_, ellipseAxis}, tr("Elips"));
+    RibbonFamily* crossings =
+        makeFamily({actIntersect_, crossDistances, crossLines}, tr("Kesişim"));
+    RibbonFamily* alongs  = makeFamily({actAlong_, alongDistance}, tr("Ara Nokta"));
+    RibbonFamily* hatches = makeFamily({actHatch_, hatchInside, hatchExclude}, tr("Tarama"));
+    RibbonFamily* guides =
+        makeFamily({guideAcross, guideDown, actAngledGuide_, guideList}, tr("Kılavuz"));
+    RibbonFamily* aligns   = makeFamily({actAlign_, actAlignScaled_}, tr("Hizala"));
+    RibbonFamily* arrays   = makeFamily({actArray_, actArrayPolar_, actArrayPath_}, tr("Dizi"));
+    RibbonFamily* measures = makeFamily({actMeasure_, measureFixed, actStationOffset_}, tr("Ölç"));
+    RibbonFamily* areaMeasures =
+        makeFamily({actMeasureArea_, areaByCorners, areaInside}, tr("Alan Ölç"));
+    RibbonFamily* dimensions = makeFamily(dimensionTypes, tr("Ölçü"));
+    RibbonFamily* cleanups   = makeFamily({cleanFind, cleanRepair}, tr("Temizle"));
+    RibbonFamily* clipboards = makeFamily({actCopyClip_, actCopyBase_}, tr("Panoya Kopyala"));
+    RibbonFamilies shared;
+    shared.rotate = makeFamily({actRotate_, actRotateRef_}, tr("Döndür"));
+    shared.scale  = makeFamily({actScale_, actScaleRef_}, tr("Ölçekle"));
+    shared.mirror = makeFamily({actMirror_, actMirrorCopy_}, tr("Aynala"));
+    shared.trim   = makeFamily({actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_, actExtend_,
+                                actExtendFence_, actExtendCarry_},
+                               tr("Buda"));
+    shared.fillet =
+        makeFamily({actFillet_, actFilletAll_, actChamfer_, actChamferAll_}, tr("Yuvarla"));
+    shared.split = makeFamily(
+        {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_}, tr("Böl"));
+    RibbonFamily* clips =
+        makeFamily({actBlockClip_, actBlockClipPolygon_, actBlockClipObject_}, tr("Kırp"));
+
+    // =================================================================== `Giriş`
+    //
+    // WHAT A DRAFTER DOES ALL DAY, on the tab that opens first — AutoCAD's Home:
+    // draw, change, annotate, the layer and the colours in hand, the clipboard.
+    // Every tool here has its home on a tab of its own as well; this is the
+    // short form, so the edit verbs are a grid of rows rather than leads.
+    SARibbonCategory* home = bar->addCategoryPage(tr("Giriş"));
+    home->setObjectName(QStringLiteral("ribbonHome"));
+    selectFirst(home);
+
+    // THE SHAPES A HAND DRAWS ALL DAY ARE LARGE, the area among them: a parcel
+    // is drawn as often as a line, and a building as often as a parcel. Five,
+    // which leaves this tab the margin a different machine's font metrics need;
+    // the arc, the ellipse and the point are one row each.
+    SARibbonPanel* sketch = home->addPanel(tr("Çizim"));
+    leads(sketch, {actLine_, actPolyline_, actPolygon_, circles, rectangles});
+    rows(sketch, {arcs, ellipses, actPoint_});
+    launcher(sketch, tr("Çizim ve yakalama ayarları"),
+             [this] { openSettingsSection(QStringLiteral("Çizim ve Yakalama")); });
+
+    // THE EDIT VERBS AS A GRID OF ROWS, read down each column: move and copy,
+    // turn and size, cut and round.
+    SARibbonPanel* change = home->addPanel(tr("Değiştir"));
+    rows(change, {actMove_, actCopy_, shared.rotate, shared.scale, shared.mirror, actOffset_,
+                  shared.trim, shared.fillet, actErase_});
+
+    SARibbonPanel* note = home->addPanel(tr("Açıklama"));
+    leads(note, {actText_, dimensions});
+    rows(note, {actLabel_, actLeader_});
+    launcher(note, tr("Ölçü stili, pafta ölçeği ve yazdırma ayarları"),
+             [this] { openSettingsSection(QStringLiteral("Plot ve Çıktı")); });
+
+    // THE LAYER THE HAND IS ON, and the six things done to a layer from where
+    // the drawing is: make the selection's layer the active one, move the
+    // selection onto the active one, hide it, isolate it, show them all, lock it.
+    SARibbonPanel* layers = home->addPanel(tr("Katmanlar"));
+    auto* layersPanel     = new QAction(tr("Katmanlar"), this);
+    layersPanel->setObjectName(QStringLiteral("ribbonLayersPanel"));
+    layersPanel->setData(static_cast<int>(Glyph::LayerManager));
+    layersPanel->setToolTip(tr("Katmanlar panelini açar: her katmanın görünürlüğü, kilidi, "
+                               "rengi ve stili"));
+    connect(layersPanel, &QAction::triggered, this, &MainWindow::showLayerPanel);
+    leads(layers, {layersPanel});
+    ribbonLive_->layer = new RibbonLayerBox(layers);
+    ribbonLive_->layer->setFixedWidth(150);
+    ribbonLive_->layer->setToolTip(
+        tr("Seçim yokken: yeni nesnelerin çizileceği etkin katman (KATMAN ad=…).\n"
+           "Seçim varken: seçilen nesnelerin katmanı; başka bir katman seçmek onları oraya "
+           "taşır (KATMANAT)."));
+    connect(ribbonLive_->layer, &RibbonLayerBox::layerPicked, this, &MainWindow::pickRibbonLayer);
+    layers->addMediumWidget(ribbonLive_->layer);
+    // THE LIST'S OWN STRIP, as AutoCAD's layer panel has it: six pictures that
+    // belong to the box above them — make active, move to active, hide,
+    // isolate, show all, lock. `Görünüm ▸ Katmanlar` has them with their names.
+    auto* layerStrip = new SARibbonButtonGroupWidget(layers);
+    layerStrip->setObjectName(QStringLiteral("ribbonLayerStrip"));
+    const QList<QAction*> layerVerbs = layerActions();
+    for (const int i : {0, 1, 2, 3, 4, 6})
+        layerStrip->addAction(layerVerbs.at(i));
+    layers->addMediumWidget(layerStrip);
+    launcher(layers, tr("Katmanlar paneli"), [this] { showLayerPanel(); });
+
+    // THE COLOURS IN HAND AND HOW TO BORROW A LOOK: the stroke and the fill of
+    // the selection (or of the active layer), each opening RENK's swatches, and
+    // under them STİL KOPYALA, which copies all of a look from one object to
+    // others — AutoCAD's Match Properties, under its Properties.
+    SARibbonPanel* looks = home->addPanel(tr("Özellikler"));
+    ribbonLive_->stroke  = new RibbonColourBox(looks);
+    ribbonLive_->stroke->setObjectName(QStringLiteral("ribbonStrokeBox"));
+    ribbonLive_->stroke->setAccessibleName(tr("Çizgi rengi"));
+    ribbonLive_->stroke->setFixedWidth(118);
+    connect(ribbonLive_->stroke, &RibbonColourBox::menuRequested, this,
+            [this] { openColourMenu(0); });
+    looks->addSmallWidget(captioned(looks, tr("Çizgi"), ribbonLive_->stroke, 34));
+    ribbonLive_->fill = new RibbonColourBox(looks);
+    ribbonLive_->fill->setObjectName(QStringLiteral("ribbonFillBox"));
+    ribbonLive_->fill->setAccessibleName(tr("Dolgu rengi"));
+    ribbonLive_->fill->setFixedWidth(118);
+    connect(ribbonLive_->fill, &RibbonColourBox::menuRequested, this,
+            [this] { openColourMenu(1); });
+    looks->addSmallWidget(captioned(looks, tr("Dolgu"), ribbonLive_->fill, 34));
+    rows(looks, {actStyleCopy_});
+    launcher(looks, tr("Stil Tasarımcısı — etkin katmanın bütün stili"),
+             [this] { openStyleDesigner(QString()); });
+
+    SARibbonPanel* clip = home->addPanel(tr("Pano"));
+    rows(clip, {actPaste_, actCut_, clipboards});
+
+    // =================================================================== `Çizim`
+    //
+    // THE WHOLE OF DRAWING, one panel per kind of thing drawn: what a line runs
+    // along, what closes, what a crew measures, what fills, what is placed.
+    SARibbonCategory* drawTab = bar->addCategoryPage(tr("Çizim"));
+    drawTab->setObjectName(QStringLiteral("ribbonDraw"));
+    selectFirst(drawTab);
+
+    SARibbonPanel* lines = drawTab->addPanel(tr("Çizgi ve Eğri"));
+    leads(lines, {actLine_, actPolyline_, arcs});
+    rows(lines, {actSpline_, ellipses});
+
+    SARibbonPanel* shapes = drawTab->addPanel(tr("Kapalı Şekil"));
+    leads(shapes, {actPolygon_, rectangles, circles});
+    rows(shapes, {regulars, actSector_, actAnnulus_});
+
+    // THE SURVEY ENTRIES, where a drawing actually starts for a crew with a
+    // tape: this is the first tool a Turkish surveyor reaches for, not an
+    // occasional one (TODOS-CAD P1b). POLİGON is Harita's, with the geodesy.
+    SARibbonPanel* points = drawTab->addPanel(tr("Nokta ve Alım"));
+    leads(points, {actSurvey_});
+    rows(points, {actPoint_, actPerpOffset_, crossings, alongs});
+
+    // THE PATTERNS AS THEY LOOK, from the catalogue: a click starts TARAMA with
+    // that pattern and asks for the boundary; the Tarama button itself uses the
+    // last one given.
+    SARibbonPanel* fills = drawTab->addPanel(tr("Tarama"));
+    leads(fills, {hatches});
     if (!ribbonLive_->patterns.empty()) {
         SARibbonGallery* gallery = fills->addGallery(false);
         gallery->setObjectName(QStringLiteral("ribbonHatchGallery"));
@@ -761,87 +794,62 @@ void MainWindow::buildRibbon()
             gallery->addCategoryActions(tr("Desenler"), ribbonLive_->drawPatterns);
         group->setGalleryGroupStyle(SARibbonGalleryGroup::IconWithText);
         group->setDisplayRow(SARibbonGalleryGroup::DisplayOneRow);
-        group->setGridMinimumWidth(58);
-        group->setGridMaximumWidth(58);
+        group->setGridMinimumWidth(kPatternCell);
+        group->setGridMaximumWidth(kPatternCell);
         gallery->setCurrentViewGroup(group);
-        // Two patterns show; the arrow under the scroll buttons opens them all.
-        gallery->setFixedWidth((2 * 58) + 20);
+        // TWO PATTERNS SHOW, so the row reads as a choice and the room goes to the
+        // two tools beside it; the arrow under the scroll buttons opens them all.
+        gallery->setFixedWidth((kShownPatterns * kPatternCell) + kGalleryScroll);
     }
-    small(fills, actHatchEdit_);
-    small(fills, actBoundary_);
+    // THE TWO THINGS DONE WITH A HATCH'S EDGE: edit one that is drawn (a click
+    // asks which — it is also the Tarama editor tab's, which comes forward with a
+    // picked hatch) and find the boundary a hatch needs.
+    rows(fills, {actHatchEdit_, actBoundary_});
 
-    // EXPLODE is the modify tab's and the external reference the map tab's;
-    // here each cost the tab a column it did not have room for.
+    // EXPLODE is the modify tab's and the external reference the map tab's.
     SARibbonPanel* blocks = drawTab->addPanel(tr("Blok"));
-    large(blocks, actInsert_);
-    small(blocks, actBlockLibrary_);
-    small(blocks, actBlock_);
-    // THE THREE WAYS TO CLIP, one split button: the face runs the one used last.
-    family(blocks, {actBlockClip_, actBlockClipPolygon_, actBlockClipObject_}, Size::Small,
-           tr("Kırp"));
+    leads(blocks, {actInsert_});
+    rows(blocks, {actBlockLibrary_, actBlock_, clips});
 
     // ================================================================ `Değiştir`
+    //
+    // THE WHOLE OF CHANGING, by what is changed: where an object is, how many
+    // there are, where it ends, its corners, what it is made of, what it covers.
     SARibbonCategory* modifyTab = bar->addCategoryPage(tr("Değiştir"));
     modifyTab->setObjectName(QStringLiteral("ribbonModify"));
     selectFirst(modifyTab);
 
     SARibbonPanel* moves = modifyTab->addPanel(tr("Dönüştür"));
-    large(moves, actMove_);
-    large(moves, actCopy_);
-    family(moves, {actRotate_, actRotateRef_}, Size::Small, tr("Döndür"));
-    family(moves, {actScale_, actScaleRef_}, Size::Small, tr("Ölçekle"));
-    family(moves, {actMirror_, actMirrorCopy_}, Size::Small, tr("Aynala"));
-    family(moves, {actAlign_, actAlignScaled_}, Size::Small, tr("Hizala"));
-    small(moves, actStretch_);
+    leads(moves, {actMove_});
+    rows(moves, {shared.rotate, shared.scale, shared.mirror, aligns, actStretch_});
 
-    SARibbonPanel* arrays = modifyTab->addPanel(tr("Dizi ve Ofset"));
-    family(arrays, {actArray_, actArrayPolar_, actArrayPath_}, Size::Large, tr("Dizi"));
-    large(arrays, actOffset_);
-
-    // All four operations remain visible; the selection order for FARK is
-    // explained by its action tooltip and by the shared command prompt.
-    SARibbonPanel* areaBoolean = modifyTab->addPanel(tr("Alan İşlemleri"));
-    areaBoolean->setObjectName(QStringLiteral("ribbonModifyAreaBoolean"));
-    for (QAction* action :
-         {actAreaUnion_, actAreaIntersection_, actAreaDifference_, actAreaSymdifference_}) {
-        areaBoolean->addMediumAction(action);
-        remember(action);
-    }
+    // WHAT MAKES MORE OF IT: a copy, a parallel, a pattern of copies.
+    SARibbonPanel* copies = modifyTab->addPanel(tr("Çoğalt"));
+    leads(copies, {actCopy_, actOffset_, arrays});
 
     SARibbonPanel* cuts = modifyTab->addPanel(tr("Kes ve Uzat"));
-    family(cuts, {actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_}, Size::Small, tr("Buda"));
-    family(cuts, {actExtend_, actExtendFence_, actExtendCarry_}, Size::Small, tr("Uzat"));
-    small(cuts, actBreak_);
-    small(cuts, actLengthen_);
-    family(cuts, {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_},
-           Size::Small, tr("Böl"));
-    small(cuts, actDivide_);
+    leads(cuts, {shared.trim, shared.split});
+    rows(cuts, {actBreak_, actLengthen_, actDivide_});
 
-    SARibbonPanel* corners = modifyTab->addPanel(tr("Köşe"));
-    family(corners, {actFillet_, actFilletAll_}, Size::Large, tr("Yuvarla"));
-    family(corners, {actChamfer_, actChamferAll_}, Size::Large, tr("Pah"));
-    family(corners, {actVertexMove_, actVertexAdd_, actVertexDelete_, actEdgeKind_}, Size::Small,
-           tr("Köşe"));
-    small(corners, actPolylineEdit_);
-    small(corners, editArea);
+    SARibbonPanel* corners = modifyTab->addPanel(tr("Köşe ve Kenar"));
+    leads(corners, {shared.fillet});
+    rows(corners,
+         {actVertexMove_, actVertexAdd_, actVertexDelete_, actEdgeKind_, actPolylineEdit_});
 
-    SARibbonPanel* joins = modifyTab->addPanel(tr("Birleştir"));
-    large(joins, actCombine_);
-    small(joins, actJoin_);
-    small(joins, actToArea_);
-    small(joins, actExplode_);
+    SARibbonPanel* joins = modifyTab->addPanel(tr("Birleştir ve Ayır"));
+    leads(joins, {actCombine_});
+    rows(joins, {actJoin_, actToArea_, actExplode_});
+
+    // THE FOUR AREA OPERATIONS, each its own button: FARK's order is said by
+    // its tip and by the prompt the four share.
+    SARibbonPanel* areaBoolean = modifyTab->addPanel(tr("Alan İşlemleri"));
+    areaBoolean->setObjectName(QStringLiteral("ribbonModifyAreaBoolean"));
+    leads(areaBoolean, {actAreaUnion_});
+    rows(areaBoolean, {actAreaIntersection_, actAreaDifference_, actAreaSymdifference_});
 
     SARibbonPanel* tidy = modifyTab->addPanel(tr("Sil ve Temizle"));
-    large(tidy, actErase_);
-    small(tidy, commandAction(Glyph::Cleanup, tr("Temizle — bul"), QStringLiteral("TEMİZLE"),
-                              tr("TEMİZLE — yinelenen, boş ve tekrarlanan köşeli nesneleri "
-                                 "bulur, seçer ve işaretler; hiçbir şeyi değiştirmez  ·  "
-                                 "kısaltma: TMZ")));
-    small(tidy,
-          commandAction(Glyph::Cleanup, tr("Temizle — onar"), QStringLiteral("TEMİZLE islem=onar"),
-                        tr("TEMİZLE islem=onar — yinelenenleri ve boş nesneleri siler, "
-                           "tekrarlanan köşeleri çıkarır; değişen alanları önce/sonra "
-                           "söyler, tek adımda geri alınır")));
+    leads(tidy, {actErase_});
+    rows(tidy, {cleanups});
 
     // =============================================================== `Açıklama`
     SARibbonCategory* annotateTab = bar->addCategoryPage(tr("Açıklama"));
@@ -852,9 +860,8 @@ void MainWindow::buildRibbon()
     // AutoCAD keeps its text and dimension styles: the height a new METİN gets
     // and the style a new ÖLÇÜ is drawn in. Each is a project setting (AYAR).
     SARibbonPanel* words = annotateTab->addPanel(tr("Yazı"));
-    large(words, actText_);
-    small(words, actTextEdit_);
-    small(words, actFindReplace_);
+    leads(words, {actText_});
+    rows(words, {actTextEdit_, actFindReplace_});
     ribbonLive_->textHeightDefault = new ComboBox(words);
     ribbonLive_->textHeightDefault->setObjectName(QStringLiteral("ribbonTextHeightDefault"));
     ribbonLive_->textHeightDefault->setControlSize(ControlSize::Compact);
@@ -873,12 +880,10 @@ void MainWindow::buildRibbon()
     });
     words->addSmallWidget(captioned(words, tr("Yükseklik"), ribbonLive_->textHeightDefault, 58));
 
-    SARibbonPanel* measures = annotateTab->addPanel(tr("Ölçü"));
-    family(measures, dimensionTypes, Size::Large, tr("Ölçü"));
-    small(measures, actDimChain_);
-    small(measures, actDimBaseline_);
-    small(measures, actDimensionEdit_);
-    ribbonLive_->dimStyleDefault = new ComboBox(measures);
+    SARibbonPanel* measuresPanel = annotateTab->addPanel(tr("Ölçü"));
+    leads(measuresPanel, {dimensions});
+    rows(measuresPanel, {actDimChain_, actDimBaseline_, actDimensionEdit_});
+    ribbonLive_->dimStyleDefault = new ComboBox(measuresPanel);
     ribbonLive_->dimStyleDefault->setObjectName(QStringLiteral("ribbonDimStyleDefault"));
     ribbonLive_->dimStyleDefault->setControlSize(ControlSize::Compact);
     ribbonLive_->dimStyleDefault->setFixedWidth(128);
@@ -897,48 +902,42 @@ void MainWindow::buildRibbon()
                                  .arg(ribbonLive_->dimStyleDefault->itemText(index)),
                              command::Origin::Gui);
     });
-    measures->addSmallWidget(captioned(measures, tr("Stil"), ribbonLive_->dimStyleDefault, 28));
-    small(measures, commandAction(Glyph::DimStyle, tr("Ölçü Stilleri"), QStringLiteral("ÖLÇÜSTİLİ"),
-                                  tr("ÖLÇÜSTİLİ — ölçü stillerini kâğıttaki ve bu paftadaki "
-                                     "boylarıyla listeler; varsayılanı AYAR ölçü_stili "
-                                     "değiştirir  ·  kısaltma: ÖST")));
-    small(measures, commandAction(Glyph::DimRefresh, tr("Pafta Ölçeğine Uyarla"),
-                                  QStringLiteral("ÖLÇÜYENİLE"),
-                                  tr("ÖLÇÜYENİLE — çizimin bütün ölçülerini plan ölçeğine "
-                                     "uyarlar: oklar, uzatma çizgileri ve yazılar kâğıtta "
-                                     "stilin boyunda kalır; yazılar çizimin birimiyle yeniden "
-                                     "yazılır  ·  kısaltma: ÖYN")));
-    launcher(measures, tr("Ölçü stili ve pafta ölçeği ayarları"),
+    measuresPanel->addSmallWidget(
+        captioned(measuresPanel, tr("Stil"), ribbonLive_->dimStyleDefault, 28));
+    rows(
+        measuresPanel,
+        {commandAction(Glyph::DimStyle, tr("Ölçü Stilleri"), QStringLiteral("ÖLÇÜSTİLİ"),
+                       tr("ÖLÇÜSTİLİ — ölçü stillerini kâğıttaki ve bu paftadaki boylarıyla "
+                          "listeler; varsayılanı AYAR ölçü_stili değiştirir  ·  kısaltma: ÖST")),
+         commandAction(Glyph::DimRefresh, tr("Pafta Ölçeğine Uyarla"), QStringLiteral("ÖLÇÜYENİLE"),
+                       tr("ÖLÇÜYENİLE — çizimin bütün ölçülerini plan ölçeğine uyarlar: oklar, "
+                          "uzatma çizgileri ve yazılar kâğıtta stilin boyunda kalır; yazılar "
+                          "çizimin birimiyle yeniden yazılır  ·  kısaltma: ÖYN"))});
+    launcher(measuresPanel, tr("Ölçü stili ve pafta ölçeği ayarları"),
              [this] { openSettingsSection(QStringLiteral("Plot ve Çıktı")); });
 
     SARibbonPanel* tags = annotateTab->addPanel(tr("Etiket"));
-    large(tags, actLabel_);
-    large(tags, actLeader_);
-    small(tags, bindText);
-    small(tags, unbindText);
-    small(tags, writeLengths);
+    leads(tags, {actLabel_, actLeader_});
+    rows(tags, {bindText, unbindText, writeLengths});
 
     // ================================================================ `Kadastro`
+    //
+    // WHAT A PARCEL GOES THROUGH: cut and merged and brought to its deed area,
+    // its corners numbered and its edges written, its sheet checked.
     SARibbonCategory* cadastreTab = bar->addCategoryPage(tr("Kadastro"));
     cadastreTab->setObjectName(QStringLiteral("ribbonCadastre"));
     selectFirst(cadastreTab);
 
     SARibbonPanel* parcels = cadastreTab->addPanel(tr("Parsel"));
-    large(parcels, actParcelSplit_);
-    large(parcels, actAreaSplit_);
-    large(parcels, actUnion_);
+    leads(parcels, {actParcelSplit_, actAreaSplit_, actUnion_});
+    rows(parcels, {editArea, makeAreas});
 
     SARibbonPanel* marks = cadastreTab->addPanel(tr("Yazım"));
-    large(marks, actLabel_);
-    small(marks, numberCorners);
-    small(marks, writeLengths);
-    small(marks, makeAreas);
+    leads(marks, {numberCorners, writeLengths, actLabel_});
 
     SARibbonPanel* checks = cadastreTab->addPanel(tr("Denetim"));
-    large(checks, actTopology_);
-    small(checks, actMeasureArea_);
-    small(checks, bufferZone);
-    small(checks, actDependency_);
+    leads(checks, {actTopology_});
+    rows(checks, {areaMeasures, bufferZone});
 
     // ================================================================== `Harita`
     SARibbonCategory* mapTab = bar->addCategoryPage(tr("Harita"));
@@ -946,45 +945,42 @@ void MainWindow::buildRibbon()
     selectFirst(mapTab);
 
     SARibbonPanel* ask = mapTab->addPanel(tr("Sorgu"));
-    large(ask, actIdentify_);
-    small(ask, actEntityInfo_);
-    small(ask, actCoordinate_);
+    leads(ask, {actIdentify_});
+    rows(ask, {actEntityInfo_, actCoordinate_});
 
     // ÖLÇ'S FAMILY, as the plan names it: the run, the star from a held first
     // point, and PRİZMA — three ways of reading distances off points.
     SARibbonPanel* tape = mapTab->addPanel(tr("Ölçüm"));
-    family(tape, {actMeasure_, measureFixed, actStationOffset_}, Size::Large, tr("Ölç"));
-    family(tape, {actMeasureArea_, areaByCorners, areaInside}, Size::Small, tr("Alan Ölç"));
-    small(tape, actMeasureAngle_);
+    leads(tape, {measures});
+    rows(tape, {areaMeasures, actMeasureAngle_});
 
     SARibbonPanel* geodesy = mapTab->addPanel(tr("Jeodezi"));
-    large(geodesy, actTraverse_);
-    small(geodesy, actStakeout_);
-    small(geodesy, commandAction(Glyph::Helmert, tr("Oturt (Helmert)"), QStringLiteral("OTURT"),
+    leads(geodesy, {actTraverse_});
+    rows(geodesy, {actStakeout_,
+                   commandAction(Glyph::Helmert, tr("Oturt (Helmert)"), QStringLiteral("OTURT"),
                                  tr("OTURT — ortak noktalardan Helmert dönüşümüyle çizimi "
-                                    "oturtur  ·  kısaltma: OTR")));
-    small(geodesy, commandAction(Glyph::Globe, tr("Dönüştür"), QStringLiteral("DÖNÜŞTÜR"),
+                                    "oturtur  ·  kısaltma: OTR")),
+                   commandAction(Glyph::Globe, tr("Dönüştür"), QStringLiteral("DÖNÜŞTÜR"),
                                  tr("DÖNÜŞTÜR — çizimi başka bir koordinat sistemine "
-                                    "dönüştürür  ·  kısaltma: DNS")));
+                                    "dönüştürür  ·  kısaltma: DNS"))});
     launcher(geodesy, tr("Koordinat sistemi ayarları"),
              [this] { openSettingsSection(QStringLiteral("Koordinat Sistemleri")); });
 
     SARibbonPanel* ground = mapTab->addPanel(tr("Arazi"));
-    large(ground, commandAction(Glyph::Contour, tr("Eşyükselti"), QStringLiteral("EŞYÜKSELTİ"),
-                                tr("EŞYÜKSELTİ — kotlu noktalardan eş yükselti eğrileri çizer  ·  "
-                                   "kısaltma: EŞY")));
-    large(ground, commandAction(Glyph::Volume, tr("Hacim"), QStringLiteral("HACİM"),
-                                tr("HACİM — iki yüzey arasındaki kazı ve dolgu hacmi  ·  "
-                                   "kısaltma: HCM")));
+    leads(ground, {commandAction(Glyph::Contour, tr("Eşyükselti"), QStringLiteral("EŞYÜKSELTİ"),
+                                 tr("EŞYÜKSELTİ — kotlu noktalardan eş yükselti eğrileri çizer  ·  "
+                                    "kısaltma: EŞY")),
+                   commandAction(Glyph::Volume, tr("Hacim"), QStringLiteral("HACİM"),
+                                 tr("HACİM — iki yüzey arasındaki kazı ve dolgu hacmi  ·  "
+                                    "kısaltma: HCM"))});
 
     SARibbonPanel* sources = mapTab->addPanel(tr("Veri"));
-    large(sources, actDatabase_);
-    small(sources, actImport_);
-    small(sources, actExport_);
-    large(sources, actXref_);
-    small(sources, actXrefReload_);
-    small(sources, actLocalCopy_);
-    small(sources, actBlockClip_);
+    leads(sources, {actDatabase_});
+    rows(sources, {actImport_, actExport_});
+
+    SARibbonPanel* references = mapTab->addPanel(tr("Dış Referans"));
+    leads(references, {actXref_});
+    rows(references, {actXrefReload_, actLocalCopy_, clips});
 
     // ================================================================== `Analiz`
     SARibbonCategory* analyseTab = bar->addCategoryPage(tr("Analiz"));
@@ -992,7 +988,7 @@ void MainWindow::buildRibbon()
     selectFirst(analyseTab);
 
     SARibbonPanel* tables = analyseTab->addPanel(tr("Tablo"));
-    large(tables, actTable_);
+    leads(tables, {actTable_});
 
     // THE PROCESSING TOOLS, one row each from the processing registry — the
     // list `src/processing/src/registry.cpp` declares, never a second one.
@@ -1003,24 +999,22 @@ void MainWindow::buildRibbon()
         const auto& spec = each->spec();
         tools->addAction(processingAction(QString::fromStdString(spec.id), QString()));
     }
-    menuButton(process, tools, Glyph::Toolbox, true);
+    menuButton(process, tools, Glyph::Toolbox);
     auto* showTools = new QAction(tr("Araçlar Paneli"), this);
     showTools->setData(static_cast<int>(Glyph::Tune));
     showTools->setStatusTip(tr("Sağ paneldeki Araçlar sekmesini açar"));
     connect(showTools, &QAction::triggered, this, [this] { showToolsPanel(QString()); });
-    process->addSmallAction(showTools);
-    small(process, bufferZone);
-    small(process, makeAreas);
+    rows(process, {showTools, bufferZone, makeAreas});
 
-    // WHAT THE TOOLS MADE, asked whether it still holds (TODOS F-04).
+    // WHAT THE DRAWING AND THE TOOLS MADE, asked whether it still holds: the
+    // topology of the faces, the outputs that went stale (TODOS F-04), the
+    // objects far from all the rest.
     SARibbonPanel* audit = analyseTab->addPanel(tr("Denetim"));
-    large(audit, actDependency_);
-    small(audit, actDependencyRefresh_);
-    small(audit, actTopology_);
-    small(audit, actExtentCheck_);
+    leads(audit, {actTopology_, actDependency_});
+    rows(audit, {actDependencyRefresh_, actExtentCheck_});
 
     SARibbonPanel* agents = analyseTab->addPanel(tr("Yapay zekâ"));
-    large(agents, actAi_);
+    leads(agents, {actAi_});
     actMcp_ = new QAction(tr("MCP Sunucusunu Başlat"), this);
     actMcp_->setData(static_cast<int>(Glyph::Server));
     actMcp_->setStatusTip(tr("Yapay zeka ajanlarının bağlanacağı yerel sunucuyu açar"));
@@ -1036,14 +1030,13 @@ void MainWindow::buildRibbon()
         onEcho(tr("Bu yapıda MCP sunucusu yok (PIRICAD_WITH_MCP kapalı)."));
 #endif
     });
-    small(agents, actMcp_);
     auto* mcpToken = new QAction(tr("MCP Belirteci Üret"), this);
     mcpToken->setData(static_cast<int>(Glyph::Lock));
     mcpToken->setStatusTip(tr("Yeni bir erişim belirteci üretir; eskisi geçersiz olur"));
     connect(mcpToken, &QAction::triggered, this, [this] {
         controller_->runLine(QStringLiteral("MCPSUNUCU islem=belirtec"), command::Origin::Gui);
     });
-    agents->addSmallAction(mcpToken);
+    rows(agents, {actMcp_, mcpToken});
     launcher(agents, tr("Yapay zeka modelleri"),
              [this] { openSettingsSection(QStringLiteral("Yapay Zeka Modelleri")); });
 
@@ -1054,26 +1047,19 @@ void MainWindow::buildRibbon()
 
     // THE PANEL'S OWN WORDS ON ITS BUTTONS — Pencere, Seçime, Önceki, Sonraki —
     // the plan's names for them; a menu row and a tooltip still say the whole
-    // "Önceki Görünüm" (`QAction::iconText`). The tab fits 1440 px only if they
-    // do: with the full words this panel alone took 429 px. `Yakınlaştır` and
-    // `Uzaklaştır` are pictures here, the magnifier every program draws, because
-    // the canvas carries its own + and − beside the view.
+    // "Önceki Görünüm" (`QAction::iconText`).
     SARibbonPanel* navigate = viewTab->addPanel(tr("Gezinme"));
-    large(navigate, actZoomExtents_);
     actViewWindow_->setIconText(tr("Pencere"));
     actZoomSelection_->setIconText(tr("Seçime"));
     actViewPrevious_->setIconText(tr("Önceki"));
     actViewNext_->setIconText(tr("Sonraki"));
-    small(navigate, actViewWindow_);
-    small(navigate, actZoomSelection_);
-    small(navigate, actPan_);
-    small(navigate, actViewPrevious_);
-    small(navigate, actViewNext_);
-    icon(navigate, actZoomIn_);
-    icon(navigate, actZoomOut_);
+    leads(navigate, {actZoomExtents_});
+    rows(navigate, {actViewWindow_, actZoomSelection_, actPan_, actViewPrevious_, actViewNext_,
+                    actZoomIn_, actZoomOut_});
 
+    // THE DRAFTING AIDS: what the cursor catches, how it is held, and the
+    // guides a hand places to draw against.
     SARibbonPanel* aids = viewTab->addPanel(tr("Yardımcılar"));
-    large(aids, actSnap_);
     // The keyboard road to the same list the OSNAP chip's right click opens.
     // ui.md P7: nothing ships reachable only by mouse.
     auto* snapModes = new QAction(tr("Yakalama Modları…"), this);
@@ -1082,22 +1068,23 @@ void MainWindow::buildRibbon()
     snapModes->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3));
     connect(snapModes, &QAction::triggered, this, &MainWindow::openSnapModes);
     addAction(snapModes); // so the shortcut works with focus anywhere in the shell
-    aids->addSmallAction(snapModes);
-    small(aids, actOrtho_);
-    small(aids, actNormal_);
-    small(aids, actGridSnap_);
+    leads(aids, {actSnap_});
+    rows(aids, {snapModes, actOrtho_, actNormal_, actGridSnap_, guides});
     launcher(aids, tr("Yakalama modları"), [this] { openSnapModes(); });
 
     // WHAT IS SEEN, not what is edited: the verbs that change which layers
     // show. Making one active, moving objects onto it and locking it are
     // `Giriş`'s, beside the layer list.
     SARibbonPanel* layerView = viewTab->addPanel(tr("Katmanlar"));
-    large(layerView, layersPanel);
-    for (const int i : {2, 3, 4, 5})
-        small(layerView, layerVerbs.at(i));
-    small(layerView, actStyle_);
+    leads(layerView, {layersPanel});
+    rows(layerView,
+         {layerVerbs.at(2), layerVerbs.at(3), layerVerbs.at(4), layerVerbs.at(5), actStyle_});
 
-    SARibbonPanel* windows                       = viewTab->addPanel(tr("Pencereler"));
+    // THE PANELS, as one list: each a switch, ticked while it is open, and the
+    // way back to the layout the program starts with.
+    SARibbonPanel* windows = viewTab->addPanel(tr("Pencereler"));
+    auto* panelsMenu       = new QMenu(tr("Paneller"), this);
+    panelsMenu->setObjectName(QStringLiteral("ribbonPanelsMenu"));
     const std::pair<QDockWidget*, Glyph> docks[] = {{layerDock_, Glyph::Layer},
                                                     {propertyDock_, Glyph::Table},
                                                     {chatDock_, Glyph::Chat},
@@ -1106,20 +1093,22 @@ void MainWindow::buildRibbon()
     for (const auto& [dock, glyph] : docks)
         if (dock != nullptr) {
             dock->toggleViewAction()->setData(static_cast<int>(glyph));
-            windows->addSmallAction(dock->toggleViewAction());
+            panelsMenu->addAction(dock->toggleViewAction());
         }
-    windows->addSmallAction(actCommandLine_);
+    panelsMenu->addAction(actCommandLine_);
+    panelsMenu->addSeparator();
     auto* reset = new QAction(tr("Yerleşimi Sıfırla"), this);
     reset->setData(static_cast<int>(Glyph::Refresh));
     connect(reset, &QAction::triggered, this, &MainWindow::resetLayout);
-    windows->addSmallAction(reset);
+    panelsMenu->addAction(reset);
+    panelsMenu->menuAction()->setToolTip(
+        tr("Panelleri açar ya da kapatır: Katmanlar, Öznitelikler, Yapay Zeka, Komut Günlüğü, "
+           "Python Konsolu, Komut Satırı; Yerleşimi Sıfırla başlangıç düzenine döner"));
+    menuButton(windows, panelsMenu, Glyph::SplitView);
 
     SARibbonPanel* look = viewTab->addPanel(tr("Tema"));
-    large(look, actTheme_);
-    // A PICTURE, NOT A LABEL: the developer's panel is F12 for the one who
-    // wants it, and its words cost this tab the width the navigation buttons
-    // need to fit 1440 px (netcad_plan.md N-01). The tooltip still names it.
-    icon(look, actHud_);
+    leads(look, {actTheme_});
+    rows(look, {actHud_});
     launcher(look, tr("Görünüm ve tema ayarları"),
              [this] { openSettingsSection(QStringLiteral("Görünüm ve Tema")); });
 
@@ -1194,11 +1183,10 @@ void MainWindow::buildRibbon()
              [this] { openSettingsSection(QStringLiteral("Plot ve Çıktı")); });
 
     SARibbonPanel* files = outputTab->addPanel(tr("Dosya"));
-    large(files, actExport_);
-    small(files, actSave_);
-    small(files, actSaveAs_);
+    leads(files, {actExport_});
+    rows(files, {actSave_, actSaveAs_});
 
-    buildContextTabs(bar);
+    buildContextTabs(bar, shared);
 
     // ---- AND EVERYTHING ELSE THE REGISTRY KNOWS ----------------------------
     //
@@ -1211,7 +1199,7 @@ void MainWindow::buildRibbon()
         menu->setObjectName(QStringLiteral("ribbonLeftovers.") + tab->objectName());
         menu->addActions(leftovers);
         SARibbonPanel* panel = tab->addPanel(tr("Diğer komutlar"));
-        menuButton(panel, menu, Glyph::ChevronDown, true);
+        menuButton(panel, menu, Glyph::ChevronDown);
     };
     rest(cadastreTab, ribbonLeftovers({}, {"cadastre.", "planning."}));
     rest(mapTab, ribbonLeftovers({}, {"geodesy.", "surface."}));
@@ -1369,7 +1357,7 @@ std::optional<RibbonContext> ribbon_context_of(const core::Document& doc, core::
     return std::nullopt;
 }
 
-void MainWindow::buildContextTabs(SARibbonBar* bar)
+void MainWindow::buildContextTabs(SARibbonBar* bar, const RibbonFamilies& families)
 {
     const Tokens& t = tokensFor(theme_);
     // Whatever these run, they run on THE SELECTION — the commands' own default
@@ -1384,6 +1372,52 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
         connect(action, &QAction::triggered, this, open);
         panel->setOptionAction(action);
     };
+    // THE SAME GRAMMAR AS EVERY OTHER TAB (`place_item`): leads large, the rest
+    // as labelled rows three to a column.
+    const auto leads = [](SARibbonPanel* panel, std::initializer_list<RibbonItem> items) {
+        for (const RibbonItem& item : items)
+            place_item(panel, item, true);
+    };
+    const auto rows = [](SARibbonPanel* panel, std::initializer_list<RibbonItem> items) {
+        for (const RibbonItem& item : items)
+            place_item(panel, item, false);
+    };
+    // Straight to the tool, on the selection with its defaults (`processingAction`).
+    const auto tool = [this](const char* id, const QString& word) {
+        return processingAction(QString::fromLatin1(id), word);
+    };
+
+    // EVERY EDITOR TAB HAS ONE SKELETON, so the hand finds the same thing in the
+    // same place whichever kind it picked:
+    //
+    //   Seç | Nesne | what is done to THIS kind | Kapat
+    //
+    // NESNE COMES SECOND, ON EVERY TAB: move, copy, rotate, scale, mirror and
+    // erase are what any selection is also made for, so a tab coming forward
+    // takes nothing from the hand — and a caption, a dimension, a hatch and a
+    // block are moved far more often than they are restyled.
+    //
+    // WHAT FOLLOWS ACTS ON THE SELECTED KIND, and nothing else does. A tab holds
+    // only commands that declare the kind among their targets (`CommandSpec::
+    // targets`, the class `command::target_of` gives the object), and a command
+    // whose press does not read the selection has no place on one: `Koordinat Oku`
+    // reads a clicked point, `Sınır Bul` a clicked region, `Blok Ekle` places
+    // another block, `Bul ve Değiştir` searches the whole drawing. They were here,
+    // and the user's word for a tab that offered them was "alakasız".
+    const auto context = [&](RibbonContext which, const QString& group, const QString& title,
+                             const QColor& colour) {
+        SARibbonContextCategory* ctx =
+            bar->addContextCategory(group, colour, static_cast<int>(which));
+        ribbonLive_->contexts[static_cast<std::size_t>(which)] = ctx;
+        SARibbonCategory* page                                 = ctx->addCategoryPage(title);
+        page->setObjectName(QStringLiteral("ribbonContext.%1").arg(static_cast<int>(which)));
+        if (selectFirst_) selectFirst_(page);
+        SARibbonPanel* verbs = page->addPanel(tr("Nesne"));
+        verbs->setObjectName(QStringLiteral("ribbonObjectVerbs"));
+        rows(verbs,
+             {actMove_, actCopy_, families.rotate, families.scale, families.mirror, actErase_});
+        return page;
+    };
     const auto closer = [this](SARibbonCategory* page) {
         SARibbonPanel* panel = page->addPanel(tr("Kapat"));
         auto* close          = new QAction(tr("Seçimi Bırak"), this);
@@ -1394,49 +1428,14 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
         connect(close, &QAction::triggered, actSelectNone_, &QAction::trigger);
         panel->addLargeAction(close);
     };
-    // A FAMILY ON AN EDITOR TAB is the split button it is everywhere else, with
-    // its own face: the tab remembers what the hand did last on it.
-    const auto family = [this](SARibbonPanel* panel, const QList<QAction*>& members, bool large,
-                               const QString& word) {
-        auto* f = new RibbonFamily(members, this);
-        if (!word.isEmpty()) f->setFixedLabel(word);
-        families_ << f;
-        if (large)
-            panel->addLargeAction(f->head(), QToolButton::MenuButtonPopup);
-        else
-            panel->addSmallAction(f->head(), QToolButton::MenuButtonPopup);
-    };
-    // WHAT IS DONE TO ANY OBJECT, on every tab an object brings up: the tab
-    // comes forward when a line or a parcel is picked, and the hand must not
-    // have to go back to `Giriş` to move what it picked.
-    const auto objectVerbs = [this, &family](SARibbonCategory* page) {
-        SARibbonPanel* panel = page->addPanel(tr("Nesne"));
-        panel->addSmallAction(actMove_);
-        panel->addSmallAction(actCopy_);
-        family(panel, {actRotate_, actRotateRef_}, false, tr("Döndür"));
-        family(panel, {actScale_, actScaleRef_}, false, tr("Ölçekle"));
-        family(panel, {actMirror_, actMirrorCopy_}, false, tr("Aynala"));
-        panel->addSmallAction(actErase_);
-    };
-    const auto context = [&](RibbonContext which, const QString& group, const QString& title,
-                             const QColor& colour) {
-        SARibbonContextCategory* ctx =
-            bar->addContextCategory(group, colour, static_cast<int>(which));
-        ribbonLive_->contexts[static_cast<std::size_t>(which)] = ctx;
-        SARibbonCategory* page                                 = ctx->addCategoryPage(title);
-        page->setObjectName(QStringLiteral("ribbonContext.%1").arg(static_cast<int>(which)));
-        if (selectFirst_) selectFirst_(page);
-        return page;
-    };
 
     // ---------------------------------------------------------------- `Yazı`
     SARibbonCategory* text =
         context(RibbonContext::Text, tr("Yazı Araçları"), tr("Yazı"), t.accent);
     SARibbonPanel* textEdit = text->addPanel(tr("Düzenle"));
-    textEdit->addLargeAction(actTextEdit_);
+    leads(textEdit, {actTextEdit_});
+    rows(textEdit, {actStyleCopy_});
     ribbonLive_->editors[static_cast<std::size_t>(RibbonContext::Text)] = actTextEdit_;
-    textEdit->addSmallAction(actFindReplace_);
-    textEdit->addSmallAction(actStyleCopy_);
 
     SARibbonPanel* textLook = text->addPanel(tr("Biçim"));
     ribbonLive_->textHeight = new ComboBox(textLook);
@@ -1509,16 +1508,17 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
         textAnchor->addSmallWidget(strip);
     }
 
+    // WHAT THE CAPTION IS TIED TO: an edge or a parcel it names, so it follows
+    // when that one moves.
     SARibbonPanel* textBind = text->addPanel(tr("Bağ"));
-    textBind->addSmallAction(processingAction(QStringLiteral("islem.bagla"), tr("Bağla")));
-    textBind->addSmallAction(processingAction(QStringLiteral("islem.bag_coz"), tr("Bağı Çöz")));
+    rows(textBind, {tool("islem.bagla", tr("Bağla")), tool("islem.bag_coz", tr("Bağı Çöz"))});
     closer(text);
 
     // ---------------------------------------------------------------- `Ölçü`
     SARibbonCategory* dim =
         context(RibbonContext::Dimension, tr("Ölçü Araçları"), tr("Ölçü"), t.accent);
     SARibbonPanel* dimEdit = dim->addPanel(tr("Düzenle"));
-    dimEdit->addLargeAction(actDimensionEdit_);
+    leads(dimEdit, {actDimensionEdit_});
     ribbonLive_->editors[static_cast<std::size_t>(RibbonContext::Dimension)] = actDimensionEdit_;
     auto* dimReset = new QAction(tr("Stile Döndür"), this);
     dimReset->setObjectName(QStringLiteral("ribbonDimReset"));
@@ -1528,7 +1528,6 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     dimReset->setProperty(kToolCommandProperty, QStringLiteral("ÖLÇÜDÜZENLE"));
     connect(dimReset, &QAction::triggered, this,
             [onSelection] { onSelection(QStringLiteral("ÖLÇÜDÜZENLE sifirla=hepsi")); });
-    dimEdit->addSmallAction(dimReset);
     auto* dimRefresh = new QAction(tr("Pafta Ölçeğine Uyarla"), this);
     dimRefresh->setObjectName(QStringLiteral("ribbonDimRefresh"));
     dimRefresh->setData(static_cast<int>(Glyph::DimRefresh));
@@ -1537,7 +1536,7 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     connect(dimRefresh, &QAction::triggered, this, [this, onSelection] {
         onSelection(QStringLiteral("ÖLÇÜYENİLE") + selectionArgs(core::kDimensionKind));
     });
-    dimEdit->addSmallAction(dimRefresh);
+    rows(dimEdit, {dimReset, dimRefresh});
 
     SARibbonPanel* dimLook = dim->addPanel(tr("Stil ve Değer"));
     ribbonLive_->dimStyle  = new ComboBox(dimLook);
@@ -1586,9 +1585,9 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     });
     dimLook->addSmallWidget(captioned(dimLook, tr("Birim"), ribbonLive_->dimUnit, 52));
 
+    // THE NEXT DIMENSION, carried on from the selected one.
     SARibbonPanel* dimMore = dim->addPanel(tr("Devam"));
-    dimMore->addSmallAction(actDimChain_);
-    dimMore->addSmallAction(actDimBaseline_);
+    rows(dimMore, {actDimChain_, actDimBaseline_});
     closer(dim);
 
     // -------------------------------------------------------------- `Tarama`
@@ -1614,8 +1613,8 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
             gallery->addCategoryActions(tr("Desenler"), ribbonLive_->hatchPatterns);
         group->setGalleryGroupStyle(SARibbonGalleryGroup::IconWithText);
         group->setDisplayRow(SARibbonGalleryGroup::DisplayOneRow);
-        group->setGridMinimumWidth(58);
-        group->setGridMaximumWidth(58);
+        group->setGridMinimumWidth(kPatternCell);
+        group->setGridMaximumWidth(kPatternCell);
         gallery->setCurrentViewGroup(group);
     }
 
@@ -1659,7 +1658,7 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
         onSelection(QStringLiteral("TARAMADÜZENLE cift=%1")
                         .arg(on ? QStringLiteral("evet") : QStringLiteral("hayır")));
     });
-    hatchLook->addSmallAction(ribbonLive_->hatchCross);
+    rows(hatchLook, {ribbonLive_->hatchCross});
 
     // THE ISLAND RULE as three pictures of the same nested squares.
     SARibbonPanel* islands = hatch->addPanel(tr("Adalar"));
@@ -1684,161 +1683,122 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
         const QString w = QString::fromLatin1(word);
         connect(a, &QAction::triggered, this,
                 [onSelection, w] { onSelection(QStringLiteral("TARAMADÜZENLE stil=%1").arg(w)); });
-        islands->addSmallAction(a);
+        rows(islands, {a});
         ribbonLive_->hatchIslands << a;
     }
 
-    SARibbonPanel* hatchBounds = hatch->addPanel(tr("Sınır"));
-    hatchBounds->addLargeAction(actBoundary_);
-    hatchBounds->addSmallAction(actHatchEdit_);
+    // THE HATCH ITSELF: edited in one go, and its area read — a hatch covers
+    // the ground its pattern fills.
+    SARibbonPanel* hatchEdit = hatch->addPanel(tr("Düzenle"));
+    leads(hatchEdit, {actHatchEdit_});
+    rows(hatchEdit, {actMeasureArea_, actEntityInfo_});
     closer(hatch);
 
     // ---------------------------------------------------------------- `Alan`
     //
-    // WHAT IS DONE TO A PARCEL ONCE IT IS PICKED, each on the picked parcel and
-    // in one press: its area read, its corners numbered, its edges written, cut,
-    // merged, hatched. A tool that needs a figure first (TAMPON's distance,
-    // ALANDÜZENLE's target area) says so with `…` and opens where the figure is
-    // typed.
+    // WHAT IS DONE TO A CLOSED AREA ONCE IT IS PICKED — a parcel, a building, a
+    // fenced plot — each on the picked area and in one press: its corners and
+    // edges reshaped, cut as a parcel, combined with another, offset or
+    // hatched, its area read and its corners and edges written. A tool that
+    // needs a figure first (TAMPON's distance, ALANDÜZENLE's target area) says
+    // so with `…` and opens where the figure is typed.
     SARibbonCategory* area =
         context(RibbonContext::Area, tr("Alan Araçları"), tr("Alan"), t.accent);
-    // Straight to the command, on the selection with the tool's defaults —
-    // which is what every tool that needs no figure does now.
-    const auto direct = [this](const char* id, const QString& word) {
-        return processingAction(QString::fromLatin1(id), word);
-    };
-    // READ AND WRITE IN ONE PANEL of rows: the large buttons of this tab are
-    // what is done TO a parcel — cut, merge, round — and the tab fits a 1440 px
-    // window only with the measuring and the writing beside them in two
-    // columns (the ribbon sheet's width finding).
-    SARibbonPanel* areaRead = area->addPanel(tr("Ölç ve Yaz"));
-    areaRead->addSmallAction(actMeasureArea_);
-    areaRead->addSmallAction(actEntityInfo_);
-    areaRead->addSmallAction(actCoordinate_);
-    areaRead->addSmallAction(direct("islem.kose_numarala", tr("Köşe Numarala")));
-    areaRead->addSmallAction(direct("islem.uzunluk_yaz", tr("Uzunluk Yaz")));
-    launcher(areaRead, tr("Numaralama ve uzunluk yazma ayarları — Araçlar paneli"),
-             [this] { showToolsPanel(QStringLiteral("islem.kose_numarala")); });
+    SARibbonPanel* areaCorners = area->addPanel(tr("Köşe ve Kenar"));
+    areaCorners->setObjectName(QStringLiteral("ribbonAreaCorners"));
+    leads(areaCorners, {families.fillet});
+    rows(areaCorners,
+         {actVertexMove_, actVertexAdd_, actVertexDelete_, actEdgeKind_, actPolylineEdit_});
+    SARibbonPanel* areaParcel = area->addPanel(tr("Parsel"));
+    leads(areaParcel, {actParcelSplit_, families.split});
+    rows(areaParcel, {actAreaSplit_, actUnion_, tool("islem.alan_duzenle", tr("Alanı Düzenle"))});
     SARibbonPanel* areaBoolean = area->addPanel(tr("Alan İşlemleri"));
     areaBoolean->setObjectName(QStringLiteral("ribbonContextAreaBoolean"));
-    areaBoolean->addMediumAction(actAreaUnion_);
-    areaBoolean->addMediumAction(actAreaIntersection_);
-    areaBoolean->addMediumAction(actAreaDifference_);
-    areaBoolean->addMediumAction(actAreaSymdifference_);
-    SARibbonPanel* areaCadastre = area->addPanel(tr("Kadastro"));
-    areaCadastre->addLargeAction(actParcelSplit_);
-    areaCadastre->addSmallAction(actAreaSplit_);
-    areaCadastre->addSmallAction(actUnion_);
-    areaCadastre->addSmallAction(actTopology_);
-    // CUT AND ROUND, on the parcel that is picked: BÖL's cut line across it, a
-    // corner rounded with a true arc, a corner moved, added or taken away.
-    SARibbonPanel* areaCut = area->addPanel(tr("Kes ve Köşe"));
-    areaCut->setObjectName(QStringLiteral("ribbonAreaCorners"));
-    family(areaCut, {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_},
-           true, tr("Böl"));
-    family(areaCut, {actFillet_, actFilletAll_}, false, tr("Yuvarla"));
-    family(areaCut, {actChamfer_, actChamferAll_}, false, tr("Pah"));
-    areaCut->addSmallAction(actVertexMove_);
-    areaCut->addSmallAction(actVertexAdd_);
-    areaCut->addSmallAction(actVertexDelete_);
-    areaCut->addSmallAction(actEdgeKind_);
-    SARibbonPanel* areaShape = area->addPanel(tr("Düzenle"));
-    areaShape->addSmallAction(actHatch_);
-    areaShape->addSmallAction(actOffset_);
-    areaShape->addSmallAction(processingAction(QStringLiteral("islem.tampon"), tr("Tampon…")));
-    areaShape->addSmallAction(
-        processingAction(QStringLiteral("islem.alan_duzenle"), tr("Alanı Düzenle…")));
-    areaShape->addSmallAction(actExplode_);
-    objectVerbs(area);
+    leads(areaBoolean, {actAreaUnion_});
+    rows(areaBoolean, {actAreaIntersection_, actAreaDifference_, actAreaSymdifference_});
+    SARibbonPanel* areaMake = area->addPanel(tr("Dönüştür"));
+    leads(areaMake, {actOffset_});
+    rows(areaMake, {tool("islem.tampon", tr("Tampon")), actHatch_, actExplode_});
+    // READ, CHECKED AND WRITTEN: its area, what it is, whether it overlaps or
+    // leaves a gap against its neighbours — TOPOLOJİ checks the selection when
+    // there is one — and its corners and edges written on the sheet.
+    SARibbonPanel* areaRead = area->addPanel(tr("Ölç ve Yaz"));
+    leads(areaRead, {actMeasureArea_});
+    rows(areaRead, {actEntityInfo_, actTopology_, tool("islem.kose_numarala", tr("Köşe Numarala")),
+                    tool("islem.uzunluk_yaz", tr("Uzunluk Yaz"))});
+    launcher(areaRead, tr("Numaralama ve uzunluk yazma ayarları — Araçlar paneli"),
+             [this] { showToolsPanel(QStringLiteral("islem.kose_numarala")); });
     closer(area);
 
     // --------------------------------------------------------------- `Çizgi`
     //
-    // AN OPEN LINE, and what is done to one once it is picked: cut back, carried
-    // on, broken, joined, rounded at a corner, closed into an area.
-    SARibbonCategory* line =
+    // AN OPEN LINE, and what is done to one once it is picked: cut and carried
+    // on, its corners and edges reshaped, closed into an area, offset, written.
+    // Buda and Uzat take the picked line as the edge to cut or reach to, the way
+    // every CAD reads a selection made before them.
+    SARibbonCategory* lineTab =
         context(RibbonContext::Line, tr("Çizgi Araçları"), tr("Çizgi"), t.accent);
-    SARibbonPanel* lineCut = line->addPanel(tr("Kes ve Uzat"));
+    SARibbonPanel* lineCut = lineTab->addPanel(tr("Kes ve Uzat"));
     lineCut->setObjectName(QStringLiteral("ribbonLineCut"));
-    family(lineCut, {actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_}, true, tr("Buda"));
-    family(lineCut, {actExtend_, actExtendFence_, actExtendCarry_}, true, tr("Uzat"));
-    lineCut->addSmallAction(actBreak_);
-    lineCut->addSmallAction(actLengthen_);
-    family(lineCut, {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_},
-           false, tr("Böl"));
-    SARibbonPanel* lineCorner = line->addPanel(tr("Köşe"));
-    family(lineCorner, {actFillet_, actFilletAll_}, true, tr("Yuvarla"));
-    family(lineCorner, {actChamfer_, actChamferAll_}, true, tr("Pah"));
-    lineCorner->addSmallAction(actVertexMove_);
-    lineCorner->addSmallAction(actVertexAdd_);
-    lineCorner->addSmallAction(actVertexDelete_);
-    SARibbonPanel* lineMake = line->addPanel(tr("Dönüştür"));
-    lineMake->addLargeAction(actToArea_);
-    lineMake->addSmallAction(actJoin_);
-    lineMake->addSmallAction(actPolylineEdit_);
-    lineMake->addSmallAction(actEdgeKind_);
-    lineMake->addSmallAction(actExplode_);
-    lineMake->addSmallAction(actDivide_);
-    SARibbonPanel* lineMore = line->addPanel(tr("Ofset ve Yaz"));
-    lineMore->addLargeAction(actOffset_);
-    lineMore->addSmallAction(direct("islem.uzunluk_yaz", tr("Uzunluk Yaz")));
-    lineMore->addSmallAction(processingAction(QStringLiteral("islem.tampon"), tr("Tampon…")));
-    lineMore->addSmallAction(actEntityInfo_);
-    objectVerbs(line);
-    closer(line);
+    leads(lineCut, {families.trim, families.split});
+    rows(lineCut, {actBreak_, actLengthen_, actDivide_});
+    SARibbonPanel* lineCorner = lineTab->addPanel(tr("Köşe ve Kenar"));
+    leads(lineCorner, {families.fillet});
+    rows(lineCorner,
+         {actVertexMove_, actVertexAdd_, actVertexDelete_, actEdgeKind_, actPolylineEdit_});
+    SARibbonPanel* lineMake = lineTab->addPanel(tr("Dönüştür"));
+    leads(lineMake, {actOffset_, actToArea_});
+    rows(lineMake, {actJoin_, tool("islem.tampon", tr("Tampon")), actExplode_});
+    SARibbonPanel* lineRead = lineTab->addPanel(tr("Ölç ve Yaz"));
+    rows(lineRead, {actEntityInfo_, tool("islem.uzunluk_yaz", tr("Uzunluk Yaz")),
+                    tool("islem.kose_numarala", tr("Köşe Numarala"))});
+    closer(lineTab);
 
     // ---------------------------------------------------------------- `Eğri`
     //
-    // A CIRCLE, AN ARC, AN ELLIPSE OR A SPLINE: measured, cut, carried on and
-    // offset — never numbered at the corners it does not have.
+    // A CIRCLE, AN ARC, AN ELLIPSE OR A SPLINE: cut and carried on, rounded
+    // against what it meets, combined as an area when it closes, offset —
+    // never numbered at the corners it does not have.
     SARibbonCategory* curve =
         context(RibbonContext::Curve, tr("Eğri Araçları"), tr("Eğri"), t.accent);
-    SARibbonPanel* curveRead = curve->addPanel(tr("Ölç"));
-    curveRead->addLargeAction(actMeasureArea_);
-    curveRead->addSmallAction(actEntityInfo_);
-    curveRead->addSmallAction(actCoordinate_);
-    SARibbonPanel* curveBoolean = curve->addPanel(tr("Alan İşlemleri"));
-    curveBoolean->addMediumAction(actAreaUnion_);
-    curveBoolean->addMediumAction(actAreaIntersection_);
-    curveBoolean->addMediumAction(actAreaDifference_);
-    curveBoolean->addMediumAction(actAreaSymdifference_);
     SARibbonPanel* curveCut = curve->addPanel(tr("Kes ve Uzat"));
     curveCut->setObjectName(QStringLiteral("ribbonCurveCut"));
-    family(curveCut, {actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_}, true, tr("Buda"));
-    family(curveCut, {actExtend_, actExtendFence_, actExtendCarry_}, true, tr("Uzat"));
-    curveCut->addSmallAction(actBreak_);
-    curveCut->addSmallAction(actLengthen_);
-    family(curveCut, {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_},
-           false, tr("Böl"));
+    leads(curveCut, {families.trim, families.split});
+    rows(curveCut, {actBreak_, actLengthen_, actDivide_});
+    SARibbonPanel* curveJoin = curve->addPanel(tr("Köşe ve Birleştir"));
+    leads(curveJoin, {families.fillet});
+    rows(curveJoin, {actJoin_});
+    SARibbonPanel* curveBoolean = curve->addPanel(tr("Alan İşlemleri"));
+    leads(curveBoolean, {actAreaUnion_});
+    rows(curveBoolean, {actAreaIntersection_, actAreaDifference_, actAreaSymdifference_});
     SARibbonPanel* curveMake = curve->addPanel(tr("Dönüştür"));
-    curveMake->addLargeAction(actOffset_);
-    curveMake->addLargeAction(actHatch_);
-    curveMake->addSmallAction(actDivide_);
-    curveMake->addSmallAction(processingAction(QStringLiteral("islem.tampon"), tr("Tampon…")));
-    objectVerbs(curve);
+    leads(curveMake, {actOffset_});
+    rows(curveMake, {tool("islem.tampon", tr("Tampon")), actHatch_});
+    SARibbonPanel* curveRead = curve->addPanel(tr("Ölç"));
+    leads(curveRead, {actMeasureArea_});
+    rows(curveRead, {actEntityInfo_});
     closer(curve);
 
     // ---------------------------------------------------------------- `Blok`
+    //
+    // A PLACED BLOCK: its definition edited, its base moved, broken back into
+    // its parts, and clipped (TODOS C-14) — every way to give the boundary, the
+    // boundary drawn out, and the clip taken off.
     SARibbonCategory* block =
         context(RibbonContext::Block, tr("Blok Araçları"), tr("Blok"), t.accent);
     SARibbonPanel* blockEdit = block->addPanel(tr("Blok"));
-    blockEdit->addLargeAction(actBlockEdit_);
+    leads(blockEdit, {actBlockEdit_});
     ribbonLive_->editors[static_cast<std::size_t>(RibbonContext::Block)] = actBlockEdit_;
-    blockEdit->addLargeAction(actBlockBase_);
-    blockEdit->addLargeAction(actExplode_);
-    blockEdit->addLargeAction(actInsert_);
-    blockEdit->addSmallAction(actBlock_);
-    blockEdit->addSmallAction(actEntityInfo_);
-    blockEdit->addSmallAction(actXrefReload_);
-    // CLIPPING THE SELECTED REFERENCE (TODOS C-14): every way to give the
-    // boundary, the boundary drawn out, and the clip taken off.
+    rows(blockEdit, {actBlockBase_, actExplode_, actEntityInfo_});
+    // EVERY WAY TO GIVE THE BOUNDARY IS ITS OWN BUTTON here (TODOS C-14), not a
+    // family: this tab is about one thing, and a hand on it should not have to
+    // remember which member the face last ran. The drawing tab's `Blok` panel
+    // keeps them under one split button, where room is short.
     SARibbonPanel* clipping = block->addPanel(tr("Kırpma"));
     clipping->setObjectName(QStringLiteral("ribbonBlockClipPanel"));
-    clipping->addLargeAction(actBlockClip_);
-    clipping->addSmallAction(actBlockClipPolygon_);
-    clipping->addSmallAction(actBlockClipObject_);
-    clipping->addSmallAction(actBlockClipBoundary_);
-    clipping->addLargeAction(actBlockUnclip_);
+    leads(clipping, {actBlockClip_});
+    rows(clipping,
+         {actBlockClipPolygon_, actBlockClipObject_, actBlockClipBoundary_, actBlockUnclip_});
     closer(block);
 
     // ------------------------------------------------------- `Blok: <ad>`
@@ -2854,30 +2814,112 @@ int MainWindow::probeRibbonSheet()
              "METİN 5,10 \"1234/7\" 2000",
              "TARAMA nesneler=1",
              "ÖLÇÜ 0,-5 30,-5 15,-9",
+             // A BLOCK, defined from a circle and placed once, for the Blok tab.
+             "DAİRE 90,10 92,10",
+             "BLOK ad=KAPAK taban=90,10 nesneler=7",
+             "BLOKEKLE ad=KAPAK nokta=100,10",
          }) {
         runScriptLine(QString::fromUtf8(line));
         endCommand();
     }
     settle();
+    // The placed block's key, as the drawing gave it.
+    QString blockKey;
+    {
+        const core::Document& doc = controller_->document();
+        for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+            if (doc.alive(e) && doc.entities().kind[e] == core::kBlockReferenceKind) {
+                blockKey = keyText(doc.key_of(e));
+                break;
+            }
+    }
 
     // THE WIDTH A TAB ASKS FOR, panel by panel: what decides whether it fits a
     // 1440 px window without scrolling — the laptop the ribbon is laid out for
     // (docs/baslangic/arayuz.md). A wider one is a finding, editor tabs too.
     constexpr int kFits = 1440;
     QStringList too_wide;
-    const auto measure = [&too_wide](const SARibbonCategory* tab) {
+    // AND THE GRAMMAR (`place_item`): a button is large, picture over word, or a
+    // labelled row of one row's height. A bare picture, or a row two rows tall,
+    // is the third size the user read as "some big, some small, all jumbled".
+    QStringList off_grammar;
+    // AND THE QUICK ACCESS PRINTER'S ARROW (`theme.cpp`, the ::menu-button rule):
+    // Fusion paints the arrow half of a split button in a button group from a
+    // transparent `Button` role and, on Linux, drew a slab of black beside the
+    // printer that the Mac never showed.
+    QStringList black_arrows;
+    // AND THE DRAWING FACE (`.claude/ui.md` R55): the desktop's platform theme
+    // names its own font for some widget classes — Plasma gives QToolButton, QMenu
+    // and QLabel Noto Sans 10 pt — and a ribbon that came out in it was 5% wider
+    // than the design's IBM Plex. A widget of each of those classes, polished the
+    // way a real one is, must come out in the program's face on this platform.
+    QStringList wrong_faces;
+    {
+        const auto face = [&wrong_faces](const char* who, QWidget* w) {
+            w->ensurePolished();
+            if (!w->font().family().startsWith(QStringLiteral("IBM Plex Sans")))
+                wrong_faces << QStringLiteral("%1: %2").arg(QString::fromLatin1(who),
+                                                            w->font().family());
+        };
+        QToolButton button(this);
+        QLabel label(this);
+        QMenu menu(this);
+        face("QToolButton", &button);
+        face("QLabel", &label);
+        face("QMenu", &menu);
+        for (const SARibbonToolButton* b : bar->findChildren<SARibbonToolButton*>())
+            if (b->defaultAction() != nullptr) {
+                face("şerit düğmesi", const_cast<SARibbonToolButton*>(b));
+                break;
+            }
+    }
+    const auto measure = [&too_wide, &off_grammar](const SARibbonCategory* tab) {
         int wanted = 0;
         QStringList widths;
         for (const SARibbonPanel* panel : tab->panelList()) {
             const int w = panel->sizeHint().width();
             wanted += w;
             widths << QStringLiteral("%1 %2").arg(panel->panelName()).arg(w);
+            // THE MAP, as a reader of the manual meets it: `Tab ▸ Panel`, then
+            // each button with ▣ for a lead and · for a row. What the pages
+            // under /docs cite is checked against these lines.
+            QStringList items;
+            int rowHeight = 0;
+            for (const SARibbonToolButton* b : panel->ribbonToolButtons())
+                if (b->buttonType() != SARibbonToolButton::LargeButton && b->isVisible())
+                    rowHeight = rowHeight == 0 ? b->height() : std::min(rowHeight, b->height());
+            for (const SARibbonToolButton* b : panel->ribbonToolButtons()) {
+                const QAction* a = b->defaultAction();
+                if (a == nullptr || !b->isVisible()) continue;
+                const bool lead    = b->buttonType() == SARibbonToolButton::LargeButton;
+                const QString word = QString(a->iconText()).remove(QLatin1Char('&'));
+                items << (lead ? QStringLiteral("▣ ") : QStringLiteral("· ")) + word;
+                const bool bare = b->toolButtonStyle() == Qt::ToolButtonIconOnly;
+                const bool tall = !lead && rowHeight > 0 && b->height() > (rowHeight * 3) / 2;
+                if (bare || tall)
+                    off_grammar << QStringLiteral("%1 ▸ %2 ▸ %3 (%4)")
+                                       .arg(tab->categoryName(), panel->panelName(), word,
+                                            bare ? QStringLiteral("yalnız resim")
+                                                 : QStringLiteral("iki satır boyu"));
+            }
+            (void)std::fprintf(stdout, "[şerit] yol: %s ▸ %s: %s\n",
+                               qPrintable(tab->categoryName()), qPrintable(panel->panelName()),
+                               qPrintable(items.join(QStringLiteral(", "))));
         }
-        (void)std::fprintf(stdout, "[şerit] genişlik %s: %d (%s)\n",
-                           qPrintable(tab->categoryName()), wanted,
+        // WHAT THE TAB NEEDS WITH THE GAPS BETWEEN ITS PANELS, against the room
+        // the window gives it: the panels' own widths summed passed at 1417 px
+        // while the last panel was already cut off at the window's edge.
+        // AGAINST THE DESIGN'S WIDTH, not against whatever the window manager
+        // granted: a 1366 px laptop clamps the 1440 px window, and every tab would
+        // then "not fit" for a reason that is the screen's and not the ribbon's.
+        constexpr int kRoom = kFits - 4; // the bar's width inside a 1440 px window
+        const int need      = std::max(wanted, tab->sizeHint().width());
+        const int room      = kRoom;
+        (void)std::fprintf(stdout, "[şerit] genişlik %s: %d, gereken %d, yer %d (%s)\n",
+                           qPrintable(tab->categoryName()), wanted, need, room,
                            qPrintable(widths.join(QStringLiteral(", "))));
-        if (wanted > kFits)
-            too_wide << QStringLiteral("%1 (%2)").arg(tab->categoryName()).arg(wanted);
+        if (need > room)
+            too_wide << QStringLiteral("%1 (%2 > %3)").arg(tab->categoryName()).arg(need).arg(room);
     };
 
     // ---- every tab, in the order the bar has them ----
@@ -2893,16 +2935,21 @@ int MainWindow::probeRibbonSheet()
     }
 
     // ---- every editor tab, raised by an object of its kind ----
-    const std::array<std::pair<const char*, const char*>, 6> picks{{
-        {"1", "alan"},
-        {"2", "cizgi"},
-        {"3", "egri"},
-        {"4", "yazi"},
-        {"5", "tarama"},
-        {"6", "olcu"},
+    const std::array<std::pair<QString, const char*>, 7> picks{{
+        {QStringLiteral("1"), "alan"},
+        {QStringLiteral("2"), "cizgi"},
+        {QStringLiteral("3"), "egri"},
+        {QStringLiteral("4"), "yazi"},
+        {QStringLiteral("5"), "tarama"},
+        {QStringLiteral("6"), "olcu"},
+        {blockKey, "blok"},
     }};
     for (const auto& [key, word] : picks) {
-        runScriptLine(QStringLiteral("SEÇ mod=NESNE nesneler=") + QString::fromLatin1(key));
+        if (key.isEmpty()) {
+            (void)std::fprintf(stderr, "[şerit] %s sekmesi için nesne yok\n", word);
+            continue;
+        }
+        runScriptLine(QStringLiteral("SEÇ mod=NESNE nesneler=") + key);
         endCommand();
         settle();
         if (const SARibbonCategory* raised = bar->categoryByIndex(bar->currentIndex());
@@ -2929,6 +2976,38 @@ int MainWindow::probeRibbonSheet()
         settle();
         const QString themeName =
             mode == ThemeMode::Light ? QStringLiteral("acik") : QStringLiteral("koyu");
+        // THE ARROW HALF OF THE PRINTER BUTTON, on the light ground, where black
+        // cannot hide: its right 14 logical pixels may hold the small grey
+        // triangle and nothing darker over more than a fifth of them.
+        if (mode == ThemeMode::Light)
+            if (const auto* quick = bar->quickAccessBar(); quick != nullptr)
+                if (auto* printer = findChild<QAction*>(QStringLiteral("quickPrint"));
+                    printer != nullptr)
+                    if (QWidget* button = quick->widgetForAction(printer); button != nullptr) {
+                        // CROPPED OUT OF THE WHOLE BAR'S PICTURE: the button alone
+                        // grabs on a transparent ground, and transparent reads as
+                        // black.
+                        const QImage whole = bar->grab().toImage();
+                        const qreal dpr    = whole.devicePixelRatio();
+                        const QRect box = QRect(button->mapTo(bar, QPoint(0, 0)), button->size());
+                        const int arrow = static_cast<int>(14.0 * dpr);
+                        qint64 dark     = 0;
+                        qint64 all      = 0;
+                        const int right = static_cast<int>(box.right() * dpr);
+                        for (int y = static_cast<int>(box.top() * dpr);
+                             y <= static_cast<int>(box.bottom() * dpr) && y < whole.height(); ++y)
+                            for (int x = std::max(0, right - arrow);
+                                 x <= right && x < whole.width(); ++x) {
+                                ++all;
+                                if (qGray(whole.pixel(x, y)) < 70) ++dark;
+                            }
+                        const double share =
+                            all > 0 ? static_cast<double>(dark) / static_cast<double>(all) : 0.0;
+                        (void)std::fprintf(stdout, "[şerit] yazdır oku: koyu piksel payı %.0f%%\n",
+                                           share * 100.0);
+                        if (share > 0.2)
+                            black_arrows << QStringLiteral("%1%").arg(share * 100.0, 0, 'f', 0);
+                    }
         for (const auto& [box, name] : {std::pair{ribbonLive_->dimStyle, "stil"},
                                         std::pair{ribbonLive_->dimPrecision, "hassasiyet"},
                                         std::pair{ribbonLive_->dimUnit, "birim"}}) {
@@ -3038,7 +3117,22 @@ int MainWindow::probeRibbonSheet()
                                qPrintable(it.value().join(QStringLiteral(", "))));
     for (const QString& tab : std::as_const(too_wide)) {
         ++findings;
-        (void)std::fprintf(stdout, "[şerit] %d pikselden geniş: %s\n", kFits, qPrintable(tab));
+        (void)std::fprintf(stdout, "[şerit] pencereye sığmıyor (%d piksel): %s\n", kFits,
+                           qPrintable(tab));
+    }
+    for (const QString& button : std::as_const(off_grammar)) {
+        ++findings;
+        (void)std::fprintf(stdout, "[şerit] boy kuralı dışında: %s\n", qPrintable(button));
+    }
+    for (const QString& face : std::as_const(wrong_faces)) {
+        ++findings;
+        (void)std::fprintf(stdout, "[şerit] yazı tipi IBM Plex Sans değil — %s\n",
+                           qPrintable(face));
+    }
+    for (const QString& share : std::as_const(black_arrows)) {
+        ++findings;
+        (void)std::fprintf(stdout, "[şerit] yazdır okunun yanı siyah (açık temada %s koyu)\n",
+                           qPrintable(share));
     }
     (void)std::fprintf(stdout, "[şerit] %zu düğme, %d bulgu\n", entries.size(), findings);
     return 0;

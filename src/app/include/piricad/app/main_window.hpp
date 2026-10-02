@@ -481,6 +481,13 @@ public:
     /// the message says.
     int probeStatusStrip();
 
+    /// THE THEME SWITCH, TIMED THE WAY A HAND FEELS IT (`PIRICAD_THEME_PROBE=<n>`):
+    /// `n` toggles of the Koyu Tema action — the road a click takes, command
+    /// and all — each timed until the call returns and until the window has
+    /// nothing left to lay out or paint. Developer tooling, for the reason the
+    /// probes around it are.
+    int probeThemeSwitch();
+
     /// DOES THE WINDOW FIT A LAPTOP? Asks for the sizes of the screens this
     /// program is run on — 1280×720 and 1440×860 of usable desktop — and reports
     /// the size the window actually took, the minimum each part of it imposes,
@@ -832,9 +839,10 @@ private:
     /// Every button of the ribbon, on every tab, in the order the tabs show them.
     QList<QToolButton*> ribbonButtons() const;
 
-    /// THE EDITOR TABS (`.claude/ui.md` R48): `Yazı`, `Ölçü`, `Tarama`, `Alan`, `Blok`,
-    /// each a face on the commands that edit what is selected.
-    void buildContextTabs(SARibbonBar* bar);
+    /// THE EDITOR TABS (`.claude/ui.md` R48): `Yazı`, `Ölçü`, `Tarama`, `Alan`,
+    /// `Çizgi`, `Eğri`, `Blok`, each a face on the commands that edit what is
+    /// selected, with the split buttons `families` the other tabs show too.
+    void buildContextTabs(SARibbonBar* bar, const RibbonFamilies& families);
 
     /// Reads the hatch pattern and dimension style catalogues the galleries and
     /// lists show, from the files the App settings name.

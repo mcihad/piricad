@@ -135,7 +135,7 @@ Nesne 5 ('YOL') 128 köşeli sınırla kırpıldı; dışında kalan çizilmiyor
 
 - **Çizim ▸ Blok ▸ Kırp** — bölünmüş düğme: yüzü en son kullanılan yolu çalıştırır, oku
   **Kırp** (dikdörtgen), **Çokgenle Kırp** ve **Nesneyle Kırp**'ı listeler.
-- **Harita ▸ Veri ▸ Kırp** — dış referansların yanında.
+- **Harita ▸ Dış Referans ▸ Kırp** — dış referansın yanında.
 - Bir blok ya da dış referans seçiliyken beliren **Blok** sekmesinde **Kırpma** paneli:
   **Kırp**, **Çokgenle Kırp**, **Nesneyle Kırp**, **Kırpma Sınırını Çiz**, **Kırpmayı
   Kaldır**.

@@ -106,8 +106,7 @@ ALIM 0,0 aci=0 kenar=50 aci=100 kenar=50 aci=200 kenar=50 aci=300 kenar=50 cizgi
 
 ### Arayüz
 
-Şeritte **Çizim ▸ Nokta ve Alım ▸ Alım**'a basın ya da **Giriş ▸ Çizim** panelindeki
-**Nokta** düğmesinin okundan **Alım**'ı seçin.
+Şeritte **Çizim ▸ Nokta ve Alım ▸ Alım**'a basın.
 
 **İstasyon ekranda kalır**, ve `baglama` verdiyseniz bağlama doğrultusu da:
 karne yazılırken aletin durduğu yer işaretli durur. İkisi de çizimin nesnesi

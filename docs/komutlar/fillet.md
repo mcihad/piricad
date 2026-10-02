@@ -229,9 +229,9 @@ YUVARLA nesne=1 hepsi=evet yaricap=2
 
 ### Arayüz
 
-Şeritte **Giriş ▸ Değiştir ▸ Yuvarla**'ya (ya da **Değiştir ▸ Köşe ▸ Yuvarla**'ya) basın.
-Bir alan ya da çizgi seçiliyken araç, öne gelen **Alan ▸ Kes ve Köşe** ya da **Çizgi ▸
-Köşe** sekmesinde de durur.
+Şeritte **Giriş ▸ Değiştir ▸ Yuvarla**'ya (ya da **Değiştir ▸ Köşe ve Kenar ▸ Yuvarla**'ya) basın.
+Bir alan ya da çizgi seçiliyken araç, öne gelen **Alan ▸ Köşe ve Kenar** ya da **Çizgi ▸
+Köşe ve Kenar** sekmesinde de durur.
 
 1. Yuvarlatılacak köşeye tıklayın. Nesne de bu tıklamayla seçilir.
 2. İmleci köşeden uzaklaştırın: yuvarlanmış köşe, yayıyla birlikte tuvalde vurgulu

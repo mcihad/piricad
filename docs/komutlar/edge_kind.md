@@ -86,7 +86,7 @@ Kenar düzleştirildi; yay kalmadığı için düz çoklu çizgi oldu.
 
 ### Arayüz
 
-Şeritte **Değiştir ▸ Köşe ▸ Kenar Türü**'ne basın.
+Şeritte **Değiştir ▸ Köşe ve Kenar ▸ Kenar Türü**'ne basın.
 
 1. Türü değişecek kenara tıklayın. Nesne de bu tıklamayla seçilir.
 2. Kenar düzse yaya döner: imleci götürün, kenar imleçten geçen yay olarak vurgulu

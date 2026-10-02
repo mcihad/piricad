@@ -106,7 +106,7 @@ ALANÜRET kapsam=proje bosluk=0.1 katman=PARSEL
 
 ### Arayüz
 
-Şeritte **Analiz ▸ İşlem araçları ▸ Alan Üret**'e (ya da **Kadastro ▸ Yazım ▸ Alan Üret**'e)
+Şeritte **Analiz ▸ İşlem araçları ▸ Alan Üret**'e (ya da **Kadastro ▸ Parsel ▸ Alan Üret**'e)
 basın ya da sağ paneldeki **Araçlar** sekmesinde **Geometri ▸ Çizgilerden alan üret**'i
 seçin. Kartta kapsamı (Seçili · Görünüm · Proje)
 seçin, çıktı katmanını yazın ve **Çalıştır**'a basın. Kapsam seçiliyse ve seçim boşsa

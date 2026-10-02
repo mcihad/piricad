@@ -148,8 +148,7 @@ BULDEĞİŞTİR bul="Çamlık Mah." degistir="Çamlıbel Mah." katman=PLAN_NOTLA
 
 ### Arayüz
 
-Şeritte **Giriş ▸ Açıklama ▸ Bul ve Değiştir…**'e (aynı düğme **Açıklama ▸ Yazı**'da ve bir
-yazı seçiliyken beliren **Yazı** sekmesinde de vardır) ya da **Ctrl+H**'ye basın (macOS'ta
+Şeritte **Açıklama ▸ Yazı ▸ Bul ve Değiştir…**'e ya da **Ctrl+H**'ye basın (macOS'ta
 **Cmd+Option+F**; orada Cmd+H programı gizler). Pencere açık kalır ve arkasındaki çizim
 kullanılabilir durumda kalır.
 

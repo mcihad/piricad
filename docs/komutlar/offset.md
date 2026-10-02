@@ -194,7 +194,7 @@ Sağ yan `(0,-2)`, `(10,-2)`, `(12,0)`, `(12,10)` noktalarından, sol yan `(0,2)
 
 ### Arayüz
 
-Şeritte **Giriş ▸ Değiştir ▸ Ofset**'e (ya da **Değiştir ▸ Dizi ve Ofset ▸ Ofset**'e) basın.
+Şeritte **Giriş ▸ Değiştir ▸ Ofset**'e (ya da **Değiştir ▸ Çoğalt ▸ Ofset**'e) basın.
 
 1. Nesneler seçili değilse komut sorar: tıklayın ya da kutu sürükleyin, sonra Enter.
 2. **Mesafeyi** metre olarak yazın ve Enter'a basın (`3.5`).

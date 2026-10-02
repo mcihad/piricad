@@ -141,7 +141,7 @@ aktif yapar. (Seçim varken aynı liste seçili nesneleri o katmana taşır; bkz
 katmanını aktif yapar.
 
 Yeni bir katmanı **Katmanlar** panelinin başlığındaki **+** açar; büyük **Katmanlar**
-düğmesi (**Giriş ▸ Katmanlar**, **Görünüm ▸ Pencereler**) paneli gösterir.
+düğmesi (**Giriş ▸ Katmanlar**, **Görünüm ▸ Katmanlar**) paneli gösterir.
 
 Sağdaki **Katmanlar** paneli her katmanı tek bir satırda gösterir: solda **göz**,
 yanında renk kutucuğu, katmanın adı, sağda nesne sayısı ve **kilit**.

@@ -90,8 +90,8 @@ Tarama düzenlendi: 1 tarama; 'ANSI37' deseni, açı 15,00°.
 
 ### Arayüz
 
-**Çizim ▸ Tarama ▸ Taramayı Düzenle**, ya da **Giriş ▸ Çizim** panelindeki **Tarama**
-düğmesinin okundan **Taramayı Düzenle**: taramayı tıklayın, Enter'a basın, deseni yazın.
+**Çizim ▸ Tarama ▸ Taramayı Düzenle** (bir tarama seçiliyken beliren **Tarama**
+sekmesinde de vardır): taramayı tıklayın, Enter'a basın, deseni yazın.
 Komut çalışmıyorken taramaya **çift tıklamak** da aynısıdır: tarama tek başına seçilir ve
 komut desenini sorar.
 

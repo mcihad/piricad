@@ -79,6 +79,50 @@
         <source>SİMETRİKFARK — iki kapalı alanın ortak bölgesini çıkarır, yalnız birine ait bölgeleri bırakır</source>
         <translation>SYMMETRIC DIFFERENCE — removes the common region and keeps regions belonging to only one area</translation>
     </message>
+    <message>
+        <source>Çizgi ve Eğri</source>
+        <translation>Lines and Curves</translation>
+    </message>
+    <message>
+        <source>Kapalı Şekil</source>
+        <translation>Closed Shapes</translation>
+    </message>
+    <message>
+        <source>Çoğalt</source>
+        <translation>Duplicate</translation>
+    </message>
+    <message>
+        <source>Köşe ve Kenar</source>
+        <translation>Corners and Edges</translation>
+    </message>
+    <message>
+        <source>Köşe ve Birleştir</source>
+        <translation>Corners and Joins</translation>
+    </message>
+    <message>
+        <source>Birleştir ve Ayır</source>
+        <translation>Combine and Separate</translation>
+    </message>
+    <message>
+        <source>Dış Referans</source>
+        <translation>External Reference</translation>
+    </message>
+    <message>
+        <source>Temizle</source>
+        <translation>Clean Up</translation>
+    </message>
+    <message>
+        <source>Panoya Kopyala</source>
+        <translation>Copy to Clipboard</translation>
+    </message>
+    <message>
+        <source>Paneller</source>
+        <translation>Panels</translation>
+    </message>
+    <message>
+        <source>Panelleri açar ya da kapatır: Katmanlar, Öznitelikler, Yapay Zeka, Komut Günlüğü, Python Konsolu, Komut Satırı; Yerleşimi Sıfırla başlangıç düzenine döner</source>
+        <translation>Opens or closes the panels: Layers, Attributes, AI, Command Journal, Python Console, Command Line; Reset Layout returns to the starting arrangement</translation>
+    </message>
 </context>
 
 <context>

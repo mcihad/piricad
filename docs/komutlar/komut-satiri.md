@@ -5,7 +5,7 @@ dört ayrı biçimde girebilecek, satır içi hesap yapabilecek ve hata mesajlar
 çözebileceksiniz.
 
 Komut satırı harita alanının hemen altındadır ve **her zaman açıktır**; **Ctrl+9** ile ya da
-**Görünüm ▸ Pencereler ▸ Komut Satırı** ile gizlenir, aynı yolla geri gelir. Geri
+**Görünüm ▸ Pencereler ▸ Paneller ▸ Komut Satırı** ile gizlenir, aynı yolla geri gelir. Geri
 geldiğinde odak doğrudan oraya gelir.
 
 ## Komut çağırmak

@@ -143,8 +143,8 @@ PAH nesne=1 2 hepsi=evet mesafe=1
 
 ### Arayüz
 
-Şeritte **Değiştir ▸ Köşe ▸ Pah**'a basın (**Giriş ▸ Değiştir** panelinde **Yuvarla**
-düğmesinin okunda da vardır).
+Şeritte **Değiştir ▸ Köşe ve Kenar** panelindeki **Yuvarla** düğmesinin okundan **Pah**'ı
+seçin (**Giriş ▸ Değiştir** panelindeki **Yuvarla** düğmesinin okunda da vardır).
 
 1. Kesilecek köşeye tıklayın. Nesne de bu tıklamayla seçilir.
 2. İmleci köşeden uzaklaştırın: kesilmiş köşe tuvalde vurgulu çizilir, yanında
@@ -159,7 +159,7 @@ ikinciye. İmleci iki çizginin buluştuğu yerden uzaklaştırdıkça pah ve k�
 çizgiler tuvalde çizilir ve imlecin yanında `mesafe X m` yazar. Tıklayın ya da
 mesafeyi yazın.
 
-**Pah — bütün köşeler** **Pah** düğmesinin okundadır:
+**Pah — bütün köşeler** **Yuvarla** düğmesinin okundadır:
 nesneye tıklayın ya da önce birden çok nesne seçip düğmeye basın; mesafeyi yazın ya
 da gösterin. Bütün nesnelerin bütün köşeleri birlikte önizlenir.
 

@@ -138,8 +138,8 @@ türlere göre parça sayısı (`turler`) ve parçaların kimlikleri (`parcalar`
 
 ### Arayüz
 
-**Değiştir ▸ Birleştir ▸ Patlat** (aynı düğme **Giriş ▸ Değiştir**'de, **Çizim ▸ Blok**'ta ve
-bir blok seçiliyken beliren **Blok** sekmesinde de vardır). Nesneleri seçip Enter'a basın.
+**Değiştir ▸ Birleştir ve Ayır ▸ Patlat** (aynı düğme alan, çizgi ya da blok seçiliyken
+beliren **Alan**, **Çizgi** ve **Blok** sekmelerinde de vardır). Nesneleri seçip Enter'a basın.
 
 ### Betik
 
