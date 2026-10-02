@@ -35,8 +35,6 @@ template<class T> core::Result<T> err(ErrorCode code, std::string message)
     return core::err(code, std::move(message));
 }
 
-constexpr const char* kErrNoBackend = "io.no_dwg";
-
 } // namespace
 
 bool dwg_backend_available()
@@ -60,6 +58,13 @@ std::string dwg_backend_status()
 
 #ifndef PIRICAD_HAVE_DWG
 
+namespace {
+
+// Only the build without LibreDWG says it, so only that build has it.
+constexpr const char* kErrNoBackend = "io.no_dwg";
+
+} // namespace
+
 command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std::string path,
                                                   ImportOptions options, std::stop_token stop)
 {
@@ -76,21 +81,43 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
 namespace {
 
 /// The layer an entity sits on, defaulting to `0` exactly as DWG does.
+///
+/// FOUND THROUGH THE LIBRARY'S REFERENCE RESOLVER, never by following `layer->obj`
+/// ourselves — which is what `dwg_ent_get_layer_name` does. LibreDWG's decoder for the
+/// releases before R13 reallocates its object array as it reads and flags every
+/// `Dwg_Object_Ref::obj` stale (`dirty_refs`), then resolves them again on its way
+/// out; releases up to 2.0b leave through an earlier return that skips that step, so a
+/// file of that age comes back with pointers into freed memory, and `fuzz_dwg` (io.md
+/// R19) found `dwg_ent_get_layer_name` reading them. `dwg_ref_object_silent` looks at
+/// `dirty_refs` first and repairs the table, which is the only way the API promises a
+/// reference may be followed.
+///
+/// Two smaller defects went with the old call. It answered with the literal `"0"` when
+/// the layer did not resolve, and the free below ran on whatever came back for a 2007+
+/// file — a free of a string literal. And an empty name returned before the free, so
+/// the copy leaked.
 std::string layer_of(const Dwg_Object* obj)
 {
-    if (obj == nullptr || obj->supertype != DWG_SUPERTYPE_ENTITY || obj->tio.entity == nullptr)
+    if (obj == nullptr || obj->supertype != DWG_SUPERTYPE_ENTITY || obj->tio.entity == nullptr ||
+        obj->parent == nullptr)
         return "0";
 
-    int error   = 0;
-    char* named = ::dwg_ent_get_layer_name(obj->tio.entity, &error);
-    if (error != 0 || named == nullptr || *named == 0) return "0";
+    Dwg_Object* table = ::dwg_ref_object_silent(obj->parent, obj->tio.entity->layer);
+    if (table == nullptr) return "0";
 
-    std::string out(named);
-    // `dwg_ent_get_layer_name` returns a copy on r2007+ and a borrowed pointer
-    // otherwise; the API's own tools free it either way when the version is
-    // 2007 or newer. Copying first and freeing there is what upstream does.
-    if (obj->parent != nullptr && obj->parent->header.version >= R_2007) ::free(named);
-    return out;
+    int error   = 0;
+    char* named = ::dwg_obj_table_get_name(table, &error);
+
+    std::string out;
+    if (error == 0 && named != nullptr) out = named;
+
+    // `dwg_obj_table_get_name` returns a copy on 2007+ files (their strings are
+    // UTF-16, converted on the way out) and the library's own pointer before; the
+    // API's tools free the copy and only the copy. Copying first and freeing here
+    // is what upstream does.
+    if (named != nullptr && obj->parent->header.version >= R_2007) ::free(named);
+
+    return out.empty() ? std::string("0") : out;
 }
 
 /// A DWG version code as the file declares it, for the report.

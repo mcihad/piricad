@@ -56,6 +56,14 @@ if(PIRICAD_WITH_GDAL)
     piricad_fuzz_target(piricad_fuzz_shp fuzz_shp.cpp)
 endif()
 
+# The DWG harness exercises src/io/src/dwg.cpp over LibreDWG, so it only exists
+# when that reader is compiled in — which every sanctioned preset does (`canvas`
+# in CMakePresets.json). A DWG is the file an engineer receives from somebody else
+# and its decoder is a C library, which is why io.md R19 is not optional for it.
+if(PIRICAD_WITH_DWG)
+    piricad_fuzz_target(piricad_fuzz_dwg fuzz_dwg.cpp)
+endif()
+
 # A short deterministic run per target, so a broken harness is caught by `ctest`
 # rather than by the nightly fuzzing job three days later.
 #
@@ -69,7 +77,7 @@ endif()
 set(PIRICAD_FUZZ_SCRATCH "${CMAKE_BINARY_DIR}/fuzz-corpus")
 file(MAKE_DIRECTORY "${PIRICAD_FUZZ_SCRATCH}/proje" "${PIRICAD_FUZZ_SCRATCH}/komut"
                     "${PIRICAD_FUZZ_SCRATCH}/dxf" "${PIRICAD_FUZZ_SCRATCH}/shp"
-                    "${PIRICAD_FUZZ_SCRATCH}/ncz")
+                    "${PIRICAD_FUZZ_SCRATCH}/dwg" "${PIRICAD_FUZZ_SCRATCH}/ncz")
 
 add_test(NAME fuzz_proje_smoke
     COMMAND piricad_fuzz_proje "${PIRICAD_FUZZ_SCRATCH}/proje"
@@ -96,4 +104,22 @@ if(PIRICAD_WITH_GDAL)
         COMMAND piricad_fuzz_shp "${PIRICAD_FUZZ_SCRATCH}/shp"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tohum/shp"
                 -runs=2000 -max_total_time=30 -seed=1)
+endif()
+
+# `-max_len`: libFuzzer cuts every input to 4096 bytes unless told otherwise, and the
+# DWG seeds run to 75 KB. `-timeout=10`: its default is twenty minutes per input, so
+# a decoder that loops on a lying section count would stall the run, not fail it.
+if(PIRICAD_WITH_DWG)
+    add_test(NAME fuzz_dwg_smoke
+        COMMAND piricad_fuzz_dwg "${PIRICAD_FUZZ_SCRATCH}/dwg"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tohum/dwg"
+                -runs=2000 -max_total_time=60 -seed=1 -max_len=131072 -timeout=10)
+
+    # LibreDWG leaves memory behind on the error paths of a damaged file (its decoders
+    # for R2004 and R2007 pages, the pre-R13 entity decoder: 25 of 25 leak reports in
+    # the first run were inside the library). LeakSanitizer would call each one a
+    # crash and the run would never get past them to the memory-safety bugs it is
+    # here for, which are not leaks. The leaks are the library's, and they are small:
+    # a refused file costs a few kilobytes once.
+    set_tests_properties(fuzz_dwg_smoke PROPERTIES ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0")
 endif()

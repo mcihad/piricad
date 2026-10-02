@@ -2603,6 +2603,73 @@ TEST_CASE("IO: DXF ve Shapefile tohum korpusu da içe aktarımdan geçirilir")
     CHECK(handled >= 3);
 }
 
+TEST_CASE("IO: DWG tohum korpusu çökmeden ve belgeye iz bırakmadan ele alınır")
+{
+#ifndef PIRICAD_DWG_SAMPLES
+    PENDING("PIRICAD_WITH_DWG=OFF; DWG tohumları sınanamıyor.");
+#else
+    // io.md R19: DWG has a libFuzzer harness (`tests/fuzz/fuzz_dwg.cpp`) and a seed
+    // corpus, and the same claim as the DXF one above applies to it: a corpus only
+    // a Clang build ever read is dead weight on every ordinary machine. The seeds
+    // are LibreDWG's own small drawings, one or two per format generation from
+    // release 1.4 to 2018, and damaged copies of them (`scripts/dwg-tohum.py` says
+    // how each was made).
+    //
+    // TWO INVARIANTS, the harness's: a refusal leaves the document EXACTLY as it
+    // was (io.md R17), and an acceptance leaves entities whose layers exist.
+    // Accepting or refusing the old releases and the damaged files is the reader's
+    // business; the 2000-and-later seeds are real drawings and MUST open, because a
+    // drop there is the coverage regression R14 asks the build to break on.
+    //
+    // `90-bayat-basvuru-r10.dwg` is the first thing the fuzzer found (test.md R10): 496
+    // bytes, minimised from 32 KB, that made LibreDWG reallocate its object array
+    // while decoding the tables of a release 10 file and leave every layer reference
+    // pointing into freed memory, which `layer_of` then read. The reader now says "no
+    // readable geometry" and refuses it, the same as it would have without the bug —
+    // so no outcome here can tell the fixed reader from the broken one in an ordinary
+    // build. What does is a sanitizer: `fuzz_dwg_smoke` replays this seed under ASan
+    // with LibreDWG compiled in, and fails on the old `dwg_ent_get_layer_name` call.
+    if (!io::dwg_backend_available()) PENDING(io::dwg_backend_status());
+
+    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "dwg";
+    if (!fs::exists(corpus)) PENDING("DWG tohum korpusu bulunamadı: " + corpus.string());
+
+    std::vector<fs::path> seeds;
+    for (const auto& entry : fs::directory_iterator(corpus))
+        if (entry.is_regular_file() && entry.path().extension() == ".dwg")
+            seeds.push_back(entry.path());
+    std::sort(seeds.begin(), seeds.end()); // test.md R19: sorted iteration
+    REQUIRE(seeds.size() >= 15);
+
+    std::size_t opened = 0;
+    for (const fs::path& seed : seeds) {
+        INFO(seed.filename().string());
+        Rig rig;
+        (void)rig.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test);
+        const std::uint64_t before = rig.doc.content_hash();
+
+        auto imported = rig.bus.execute_line("İÇEAKTAR \"" + seed.string() + "\"", Origin::Test);
+
+        if (imported) {
+            ++opened;
+            for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e)
+                CHECK(rig.doc.entities().layer[e] < rig.doc.layers().size());
+        } else {
+            CHECK_EQ(rig.doc.content_hash(), before);
+        }
+
+        // Seeds 08-15 are real drawings of releases 2000 to 2018 that hold geometry
+        // this reader translates. (16 is a real one that holds none: refused.)
+        const int number = std::stoi(seed.filename().string().substr(0, 2));
+        if (number >= 8 && number <= 15) {
+            INFO("refused: " << (imported ? std::string{} : imported.error().message));
+            CHECK(static_cast<bool>(imported));
+        }
+    }
+    CHECK(opened >= 8);
+#endif
+}
+
 TEST_CASE("DXF: daire daire, yay yay olarak okunur — çokgen olarak değil")
 {
     // WHAT THIS LOCKS. OGR's DXF driver tessellates a CIRCLE and an ARC into a

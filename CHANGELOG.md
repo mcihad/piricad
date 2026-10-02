@@ -24,6 +24,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   Durdurma, okuma hatası ve program içi hatalar hâlâ bütün içe aktarmayı geri alır.
   İmarss, kontrol ve deneme_suşehri gerçek dosyalarında sonuç öncekiyle birebir aynı.
 
+### Eklendi — DWG okuyucuya fuzz düzeneği; LibreDWG'de bulunan bellek hatası giderildi
+
+- DWG okuma hazır ön ayarlarda açık geldiği için `io.md` R19'un borcu ödendi:
+  `piricad_fuzz_dwg` (libFuzzer + ASan), r1.4'ten 2018'e her sürümden LibreDWG'nin kendi
+  örnek çizimleriyle ve bozuk türevleriyle kurulan 23 tohum (`scripts/dwg-tohum.py`), her
+  sıradan derlemede tohumları yeniden oynatan birim testi. Hiçbir kullanıcı çizimi
+  tohumlara girmedi.
+- İlk dakikada gerçek bir hata buldu: R10 biçimli bir dosyada LibreDWG nesne dizisini
+  yeniden boyutlandırıp katman başvurularını serbest bırakılmış belleğe baktırıyor,
+  `dwg_ent_get_layer_name` onu okuyordu (heap-use-after-free). 32 KB'lık girdi 496 bayta
+  indirildi ve tohum olarak eklendi; okuyucu katmanı artık kütüphanenin başvuru
+  çözücüsüyle buluyor. Aynı çağrının iki küçük kusuru da gitti (R2007+ dosyada sabit `"0"`
+  metnini `free` etmek, boş adda kopyayı sızdırmak). Düzeltmeden sonra sekiz işçiyle 15
+  dakika (745 bin çalıştırma) başka hata çıkarmadı.
+- Fuzz derlemesi için notlar `tests/fuzz/README.md`'de: LibreDWG'nin C kodu da sanitizer
+  bayraklarıyla derlenmeli; sabitlenmiş `fmt` 11.0.2 Clang 20 ve üstünde derlenmiyor;
+  LibreDWG hatalı dosyalarda sızıntı bırakıyor, bu yüzden `detect_leaks=0`.
+
 ### Değişti — şerit yeniden düzenlendi: iki boy, tek sıra, her panel bir iş
 
 - Şeritte "bazıları büyük bazıları küçük" olan karışıklık bir kurala bağlandı: panelin
