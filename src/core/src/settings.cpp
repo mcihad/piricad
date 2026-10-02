@@ -1328,6 +1328,8 @@ PIRICAD_SETTING(dugum_toleransi)
         .summary  = "Topoloji düğüm toleransı, zeminde milimetre. Birbirine bu mesafeden "
                     "yakın iki köşe aynı nokta sayılır; ifraz, tevhit ve topoloji "
                     "denetiminin sonucunu değiştirdiği için proje kapsamındadır. "
+                    "TOPOLOJİ örtüşme parçalarının etkin genişliğini (2 × alan / çevre) "
+                    "bu eşikle karşılaştırır; 0 bütün pozitif örtüşmeleri bildirir. "
                     "Varsayılan 10 mm = 1 cm.",
         .section  = "Çizim ve Yakalama", // ui-label
     };
@@ -1344,10 +1346,11 @@ PIRICAD_SETTING(en_kucuk_alan)
         .range    = SettingRange::between(0, 1000000000),
         .values   = {},
         .unit     = "mm²",
-        .summary  = "Kırpıntı poligon eşiği, milimetrekare (500000 = 0,5 m²). Bu alandan "
-                    "küçük artık yüzeyler topoloji denetiminde kırpıntı olarak raporlanacak; "
-                    "bugün hiçbir denetim okumuyor, parseller arası boşluk denetimiyle Faz 1'de "
-                    "gelecek. Denetim çıktısını değiştireceği için proje kapsamındadır.",
+        .summary  = "Kırpıntı adayı alan eşiği, milimetrekare (500000 = 0,5 m²). TOPOLOJİ "
+                    "delikler çıkarıldıktan sonra pozitif alanı bu eşikten küçük olan "
+                    "kapalı yüzeyleri işaretler; 0 bu denetimi kapatır. Örtüşmeleri "
+                    "gizlemez, geometriyi değiştirmez. Denetim çıktısını değiştirdiği "
+                    "için proje kapsamındadır.",
         .section  = "Çizim ve Yakalama", // ui-label
     };
 }

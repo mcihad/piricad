@@ -63,6 +63,7 @@ add_executable(piricad_tests
     unit/test_one_operation.cpp
     unit/test_long_work.cpp
     unit/test_kernel.cpp
+    unit/test_area_boolean.cpp
     unit/test_targets.cpp
     unit/test_rounded.cpp
     unit/test_tool_drive.cpp

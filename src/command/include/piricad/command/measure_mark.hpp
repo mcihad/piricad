@@ -38,9 +38,10 @@ struct MeasureMark
                ///< linework when there is any; `labels[0]` the gap's width (SINIR)
     };
 
-    Shape shape{Shape::Run};          ///< which of the five
-    std::vector<core::Point2> points; ///< see `Shape`
-    std::vector<std::string> labels;  ///< see `Shape`, in the user's language and units
+    Shape shape{Shape::Run};                      ///< which of the five
+    std::vector<core::Point2> points;             ///< see `Shape`
+    std::vector<std::string> labels;              ///< see `Shape`, in the user's language and units
+    std::vector<std::vector<core::Point2>> holes; ///< Ring: excluded islands, outline and fill
 };
 
 } // namespace piricad::command

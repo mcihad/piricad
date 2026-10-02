@@ -1,0 +1,84 @@
+crs TUREF/TM36
+katman-sayisi 2
+nesne-sayisi 6
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman BOOLEAN gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=6
+nesne 2 katman=BOOLEAN stil=0 halka=1
+  halka rol=1 parca=0 tepe=8
+    485300000 4310200000
+    485310000 4310200000
+    485310000 4310205000
+    485315000 4310205000
+    485315000 4310215000
+    485305000 4310215000
+    485305000 4310210000
+    485300000 4310210000
+  alan_mm2 175000000  cevre_mm 60000
+  koken core.area_union 1 2
+nesne 5 katman=BOOLEAN stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    485325000 4310205000
+    485330000 4310205000
+    485330000 4310210000
+    485325000 4310210000
+  alan_mm2 25000000  cevre_mm 20000
+  koken core.area_intersection 4 5
+nesne 8 katman=BOOLEAN stil=0 halka=2
+  halka rol=1 parca=0 tepe=4
+    485340000 4310200000
+    485350000 4310200000
+    485350000 4310210000
+    485340000 4310210000
+  halka rol=2 parca=0 tepe=4
+    485342000 4310202000
+    485342000 4310208000
+    485348000 4310208000
+    485348000 4310202000
+  alan_mm2 64000000  cevre_mm 64000
+  koken core.area_difference 7 8
+nesne 11 katman=BOOLEAN stil=0 halka=1
+  halka rol=1 parca=0 tepe=6
+    485360000 4310200000
+    485370000 4310200000
+    485370000 4310205000
+    485365000 4310205000
+    485365000 4310210000
+    485360000 4310210000
+  alan_mm2 75000000  cevre_mm 40000
+  koken core.area_symdifference 10 11
+nesne 12 katman=BOOLEAN stil=0 halka=1
+  halka rol=1 parca=0 tepe=6
+    485370000 4310205000
+    485375000 4310205000
+    485375000 4310215000
+    485365000 4310215000
+    485365000 4310210000
+    485370000 4310210000
+  alan_mm2 75000000  cevre_mm 40000
+  koken core.area_symdifference 10 11
+nesne 15 katman=BOOLEAN stil=0 halka=1 tur=6 yuk=0100000000000000000000000000000002000000000000002863ee1c000000004882e80001000000881300000000000001010000002863ee1c000000004882e80001000000881300000000000001
+  halka rol=1 parca=0 tepe=3
+    485385000 4310200000
+    485390000 4310205000
+    485385000 4310210000
+  alan_mm2 39269908  cevre_mm 25708
+  koken core.area_intersection 14 15
+kapsam 485300000 4310200000 485390000 4310215000
+icerik-ozeti ea88b2dcbd9402da
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"BOOLEAN"},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":2,"cmd":"core.area","args":{"noktalar":[[485300000,4310200000],[485310000,4310200000],[485310000,4310210000],[485300000,4310210000]]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":3,"cmd":"core.area","args":{"noktalar":[[485305000,4310205000],[485315000,4310205000],[485315000,4310215000],[485305000,4310215000]]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":4,"cmd":"core.area_union","args":{"nesneler":[1,2],"kaynaklari_koru":false},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":5,"cmd":"core.area","args":{"noktalar":[[485320000,4310200000],[485330000,4310200000],[485330000,4310210000],[485320000,4310210000]]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":6,"cmd":"core.area","args":{"noktalar":[[485325000,4310205000],[485335000,4310205000],[485335000,4310215000],[485325000,4310215000]]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":7,"cmd":"core.area_intersection","args":{"nesneler":[4,5],"kaynaklari_koru":false},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":8,"cmd":"core.area","args":{"noktalar":[[485340000,4310200000],[485350000,4310200000],[485350000,4310210000],[485340000,4310210000]]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":9,"cmd":"core.area","args":{"noktalar":[[485342000,4310202000],[485348000,4310202000],[485348000,4310208000],[485342000,4310208000]]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":10,"cmd":"core.area_difference","args":{"nesneler":[7,8],"kaynaklari_koru":false},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":11,"cmd":"core.area","args":{"noktalar":[[485360000,4310200000],[485370000,4310200000],[485370000,4310210000],[485360000,4310210000]]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":12,"cmd":"core.area","args":{"noktalar":[[485365000,4310205000],[485375000,4310205000],[485375000,4310215000],[485365000,4310215000]]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":13,"cmd":"core.area_symdifference","args":{"nesneler":[10,11],"kaynaklari_koru":false},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":14,"cmd":"core.circle_draw","args":{"merkez":[485385000,4310205000],"cevre":[485390000,4310205000]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":15,"cmd":"core.area","args":{"noktalar":[[485385000,4310195000],[485395000,4310195000],[485395000,4310215000],[485385000,4310215000]]},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}
+  {"seq":16,"cmd":"core.area_intersection","args":{"nesneler":[14,15],"kaynaklari_koru":false},"origin":"test","crs":"TUREF/TM36","katman":"BOOLEAN"}

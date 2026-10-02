@@ -3,10 +3,17 @@
 
 #include <cmath>
 
+#if defined(TRACY_ENABLE)
+#include <tracy/Tracy.hpp>
+#endif
+
 namespace piricad::render {
 
 bool fill_ring_reversed(std::span<const float> xs, std::span<const float> ys, bool is_hole) noexcept
 {
+#if defined(TRACY_ENABLE)
+    ZoneScopedN("fill_ring_reversed");
+#endif
     if (xs.size() < 3 || xs.size() != ys.size()) return false;
 
     // Orientation of decorative screen vertices, not a document area calculation.

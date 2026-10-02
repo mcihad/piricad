@@ -1257,6 +1257,11 @@ private:
             painter.setBrush(batch.fill_rgba != 0 ? QBrush(from_rgba(batch.fill_rgba))
                                                   : QBrush(Qt::NoBrush));
 
+            // The whole face in one path: a diagnostic ring can have covered
+            // islands. Painting each contour separately filled those islands
+            // and disagreed with the GPU's nonzero winding mask.
+            QPainterPath path;
+            path.setFillRule(Qt::WindingFill);
             std::size_t offset = 0;
             for (std::size_t r = 0; r < batch.runs.size(); ++r) {
                 const std::uint32_t run = batch.runs[r];
@@ -1265,7 +1270,6 @@ private:
                     continue;
                 }
 
-                QPainterPath path;
                 path.moveTo(static_cast<double>(batch.xs[offset]),
                             static_cast<double>(batch.ys[offset]));
                 for (std::uint32_t v = 1; v < run; ++v)
@@ -1273,9 +1277,9 @@ private:
                                 static_cast<double>(batch.ys[offset + v]));
                 if (r < batch.closed.size() && batch.closed[r] != 0) path.closeSubpath();
 
-                painter.drawPath(path);
                 offset += run;
             }
+            painter.drawPath(path);
             painter.setBrush(Qt::NoBrush);
         }
     }

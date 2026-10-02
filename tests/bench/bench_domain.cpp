@@ -4,6 +4,7 @@
 
 #include "piricad/command/transaction.hpp"
 #include "piricad/core/document.hpp"
+#include "piricad/core/kernel.hpp"
 #include "piricad/domain/cadastre/topology.hpp"
 
 #include <array>
@@ -16,9 +17,10 @@ using namespace piricad;
 
 /// A hundred thousand parcels at TUREF/TM30 magnitudes, 316 to a row, each a
 /// quadrilateral on a 20 m grid — and each with two corners pulled up to 1,2 m
-/// off the grid, so a parcel's box overlaps its neighbours' and the pairwise
-/// pass has real work to do on every one of them. Axis-aligned squares only
-/// touch along a side, which would measure the check on its easiest case.
+/// INTO its cell. Seven distinct shapes repeat under translation; their boxes
+/// meet along cell edges, but the parcels have no positive-area overlap. This
+/// measures validity, neighbour filtering, redundancy and the network pass;
+/// it is not a budget measurement of 100k distinct OCCT boolean operations.
 /// Deterministic, like every fixture here (piricad.md §7.3).
 core::Document& parcels_100k()
 {
@@ -60,6 +62,72 @@ void topology_100k(benchmark::State& state)
     }
 }
 
+/// The expensive branch separately: 1000 true, differently positioned overlaps
+/// in OCCT. No neighbour filtering or translation cache can avoid these calls.
+/// Pure kernel values are fixtures, not edits to a Document.
+void overlaps_1000(benchmark::State& state)
+{
+    const auto face = [](core::Mm x, core::Mm y) {
+        core::CurvePath path;
+        path.closed = true;
+        const std::array<core::Point2, 4> ring{
+            core::Point2{x, y}, {x + 10'000, y}, {x + 10'000, y + 10'000}, {x, y + 10'000}};
+        for (std::size_t i = 0; i < ring.size(); ++i)
+            path.pieces.push_back(
+                core::PathPiece{.from = ring[i], .to = ring[(i + 1) % ring.size()]});
+        return core::KernelFace{std::move(path), {}};
+    };
+    const auto first = face(485'000'000, 4'310'000'000);
+    std::vector<core::KernelFace> neighbours;
+    for (core::Mm i = 0; i < 1000; ++i)
+        neighbours.push_back(
+            face(485'000'000 + 1'000 + i * 7, 4'310'000'000 + 500 + (i * 7919) % 3'000));
+    for (auto _ : state) {
+        for (const auto& next : neighbours) {
+            auto checked = core::kernel_overlap(first, next, 10);
+            if (!checked || !checked.value().exceeds_tolerance || checked.value().area <= 0) {
+                state.SkipWithError("OpenCASCADE gerçek örtüşmeyi denetleyemedi.");
+                return;
+            }
+            benchmark::DoNotOptimize(checked);
+        }
+    }
+}
+
+/// One native coverage union of 1000 faces: 250 disconnected four-parcel
+/// frames, each enclosing 100 m². No translation cache skips native booleans.
+void coverage_1000(benchmark::State& state)
+{
+    const auto face = [](core::Mm x0, core::Mm y0, core::Mm x1, core::Mm y1) {
+        core::CurvePath path;
+        path.closed = true;
+        const std::array<core::Point2, 4> ring{core::Point2{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}};
+        for (std::size_t i = 0; i < ring.size(); ++i)
+            path.pieces.push_back(
+                core::PathPiece{.from = ring[i], .to = ring[(i + 1) % ring.size()]});
+        return core::KernelFace{std::move(path), {}};
+    };
+    std::vector<core::KernelFace> faces;
+    for (core::Mm i = 0; i < 250; ++i) {
+        const core::Mm x = 485'000'000 + (i % 25) * 50'000;
+        const core::Mm y = 4'310'000'000 + (i / 25) * 50'000;
+        faces.push_back(face(x, y, x + 30'000, y + 10'000));
+        faces.push_back(face(x, y + 10'000, x + 10'000, y + 20'000));
+        faces.push_back(face(x + 20'000, y + 10'000, x + 30'000, y + 20'000));
+        faces.push_back(face(x, y + 20'000, x + 30'000, y + 30'000));
+    }
+    for (auto _ : state) {
+        auto gaps = core::kernel_coverage_gaps(faces, 10);
+        if (!gaps || gaps.value().size() != 250 ||
+            std::ranges::any_of(gaps.value(),
+                                [](const auto& gap) { return gap.area != 100'000'000; })) {
+            state.SkipWithError("OpenCASCADE kapalı kapsama boşluklarını denetleyemedi.");
+            return;
+        }
+        benchmark::DoNotOptimize(gaps);
+    }
+}
+
 } // namespace
 
 PIRICAD_BENCH(topology_validation){bench::Case{
@@ -70,4 +138,22 @@ PIRICAD_BENCH(topology_validation){bench::Case{
     .repetitions = 3,
     .iterations  = 1,
     .body        = &topology_100k,
+}};
+
+PIRICAD_BENCH(topology_intersections){bench::Case{
+    .id          = "domain.topoloji_1000_ortusme",
+    .title       = "OpenCASCADE: 1000 gerçek örtüşme",
+    .unit        = "ms",
+    .repetitions = 3,
+    .iterations  = 1,
+    .body        = &overlaps_1000,
+}};
+
+PIRICAD_BENCH(topology_coverage){bench::Case{
+    .id          = "domain.kapsama_1000_alan",
+    .title       = "OpenCASCADE: 1000 alanda 250 kapalı boşluk",
+    .unit        = "ms",
+    .repetitions = 3,
+    .iterations  = 1,
+    .body        = &coverage_1000,
 }};

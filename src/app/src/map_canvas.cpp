@@ -2249,6 +2249,28 @@ void MapCanvas::buildMeasureMarks()
                 cy += static_cast<double>(v.y);
             }
             addWorldRun(fill, curve_scratch_x_, curve_scratch_y_, true);
+            const auto normalize = [&](std::size_t offset, bool hole) {
+                auto& batch   = overlay_.batches[fill];
+                const auto xs = std::span(batch.xs).subspan(offset);
+                const auto ys = std::span(batch.ys).subspan(offset);
+                if (render::fill_ring_reversed(xs, ys, hole)) {
+                    std::ranges::reverse(xs);
+                    std::ranges::reverse(ys);
+                }
+            };
+            normalize(0, false);
+            for (const auto& hole : m.holes) {
+                if (hole.size() < 3) continue;
+                curve_scratch_x_.clear();
+                curve_scratch_y_.clear();
+                for (const auto p : hole) {
+                    curve_scratch_x_.push_back(p.x);
+                    curve_scratch_y_.push_back(p.y);
+                }
+                const auto offset = overlay_.batches[fill].xs.size();
+                addWorldRun(fill, curve_scratch_x_, curve_scratch_y_, true);
+                normalize(offset, true);
+            }
             if (!m.labels.empty()) {
                 // CENTRED on the face, by the label's own width.
                 const auto n           = static_cast<double>(m.points.size());

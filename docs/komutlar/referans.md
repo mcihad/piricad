@@ -56,6 +56,10 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.copy`](copy.md) | Kopyala | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`core.array`](array.md) | Dizi | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır. |
 | [`core.combine`](combine.md) | Birleştir | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
+| [`core.area_union`](area_union.md) | Birleşim | `BİRLEŞİM`, `BIRLESIM`, `UNION`, `ABR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli, uzun iş | Kapalı alanların bütününü OpenCASCADE ile birleştirir; ayrı parçaları korur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
+| [`core.area_intersection`](area_intersection.md) | Kesişim | `KESİŞİM`, `KESISIM`, `INTERSECTION`, `AKS` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli, uzun iş | İki kapalı alanın ortak bölgesini OpenCASCADE ile oluşturur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
+| [`core.area_difference`](area_difference.md) | Fark | `FARK`, `DIFFERENCE`, `SUBTRACT`, `AFR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli, uzun iş | İlk seçilen kapalı alandan diğerlerini OpenCASCADE ile çıkarır; sıra önemlidir. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
+| [`core.area_symdifference`](area_symdifference.md) | Simetrik Fark | `SİMETRİKFARK`, `SIMETRIKFARK`, `SYMDIFFERENCE`, `XOR`, `ASF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli, uzun iş | İki kapalı alanın yalnız birine ait bölgeleri oluşturur; ortak bölgeyi OpenCASCADE ile çıkarır. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
 | [`core.split`](split.md) | Böl | `BÖL`, `BOL`, `OBJEBÖL`, `OBJEBOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır. |
 | [`core.trim`](trim.md) | Buda | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
 | [`core.extend`](extend.md) | Uzat | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca. |
@@ -138,7 +142,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.merge`](merge.md) | Tevhit | `TEVHİT`, `TEVHIT`, `MERGE`, `TVH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Komşu parselleri tek parselde birleştirir (tevhit). |
 | [`core.split_parcel`](split_parcel.md) | İfraz | `İFRAZ`, `IFRAZ`, `SUBDIVIDE`, `İFR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz). |
 | [`core.split_area`](split_area.md) | Alana Göre İfraz | `ALANİFRAZ`, `ALANIFRAZ`, `SPLITAREA`, `ALİF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Parselden verilen yöne paralel, istenen alanda bir parça ayırır. |
-| [`core.topology`](topology.md) | Topoloji Denetimi | `TOPOLOJİ`, `TOPOLOJI`, `TOPOLOGY`, `TPL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur, uzun iş | Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. |
+| [`core.topology`](topology.md) | Topoloji Denetimi | `TOPOLOJİ`, `TOPOLOJI`, `TOPOLOGY`, `TPL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur, uzun iş | Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. OpenCASCADE gerçek eğrileri ve delikleri denetler; düğüm toleransını aşan örtüşmeleri ve en küçük alan eşiğinin altındaki kırpıntı adaylarını gösterir. kapsama=evet aynı katmanda kapalı kapsama boşluklarını ayrıca denetler. |
 | [`core.contour`](contour.md) | Eşyükselti Eğrileri | `EŞYÜKSELTİ`, `ESYUKSELTI`, `CONTOUR`, `EŞY` | Çizim | tek işlem | betiklenebilir, AI erişimli, uzun iş | Kotlu noktalardan eş yükselti eğrileri çizer. |
 | [`core.earthwork`](earthwork.md) | Hacim Hesabı | `HACİM`, `HACIM`, `EARTHWORK`, `HCM` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur, uzun iş | Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar. |
 | [`core.layers`](layers.md) | Katmanları Listele | `KATMANLAR`, `LAYERS`, `KTL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler. |
@@ -817,6 +821,59 @@ Uygulandığı nesneler: çizgi, alan.
 | `nesneler` | selection | en az 0 | Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim |
 
 Ayrıntılı kullanım: [BİRLEŞTİR](combine.md)
+
+### `core.area_union` — BİRLEŞİM (Birleşim)
+
+Kapalı alanların bütününü OpenCASCADE ile birleştirir; ayrı parçaları korur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+Uygulandığı nesneler: alan, eğri.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur |
+| `kaynaklari_koru` | bool | isteğe bağlı | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur |
+
+Ayrıntılı kullanım: [BİRLEŞİM](area_union.md)
+
+### `core.area_intersection` — KESİŞİM (Kesişim)
+
+İki kapalı alanın ortak bölgesini OpenCASCADE ile oluşturur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+Uygulandığı nesneler: alan, eğri.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | 0–2 | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur |
+| `kaynaklari_koru` | bool | isteğe bağlı | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur |
+
+Ayrıntılı kullanım: [KESİŞİM](area_intersection.md)
+
+### `core.area_difference` — FARK (Fark)
+
+İlk seçilen kapalı alandan diğerlerini OpenCASCADE ile çıkarır; sıra önemlidir. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+Uygulandığı nesneler: alan, eğri.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur |
+| `kaynaklari_koru` | bool | isteğe bağlı | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur |
+| `tutulan` | selection | isteğe bağlı | Nesneler içinden tutulacak alan; verilmezse açık listedeki ilk alan, çoklu etkin seçimde ayrıca sorulur |
+
+Ayrıntılı kullanım: [FARK](area_difference.md)
+
+### `core.area_symdifference` — SİMETRİKFARK (Simetrik Fark)
+
+İki kapalı alanın yalnız birine ait bölgeleri oluşturur; ortak bölgeyi OpenCASCADE ile çıkarır. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+Uygulandığı nesneler: alan, eğri.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | 0–2 | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur |
+| `kaynaklari_koru` | bool | isteğe bağlı | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur |
+
+Ayrıntılı kullanım: [SİMETRİKFARK](area_symdifference.md)
 
 ### `core.split` — BÖL (Böl)
 
@@ -2123,11 +2180,12 @@ Ayrıntılı kullanım: [ALANİFRAZ](split_area.md)
 
 ### `core.topology` — TOPOLOJİ (Topoloji Denetimi)
 
-Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.
+Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. OpenCASCADE gerçek eğrileri ve delikleri denetler; düğüm toleransını aşan örtüşmeleri ve en küçük alan eşiğinin altındaki kırpıntı adaylarını gösterir. kapsama=evet aynı katmanda kapalı kapsama boşluklarını ayrıca denetler.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim |
+| `kapsama` | bool | isteğe bağlı | evet: her katmanda alanların çevrelediği kapalı boşlukları denetle; çizilmiş delikler hariç. Varsayılan hayır; seçimin dışı denetlenmez |
 
 Ayrıntılı kullanım: [TOPOLOJİ](topology.md)
 
@@ -3146,6 +3204,196 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "ALAN",
         "AREA",
         "AL"
+      ]
+    }
+  },
+  {
+    "name": "core_area_difference",
+    "title": "Fark",
+    "description": "İlk seçilen kapalı alandan diğerlerini OpenCASCADE ile çıkarır; sıra önemlidir. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.\nKomut: FARK (DIFFERENCE, SUBTRACT, AFR)\nUygulandığı nesneler: alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kaynaklari_koru": {
+          "type": "boolean",
+          "description": "evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur (evet/hayır)"
+        },
+        "tutulan": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Nesneler içinden tutulacak alan; verilmezse açık listedeki ilk alan, çoklu etkin seçimde ayrıca sorulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.piricad/commandId": "core.area_difference",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
+        "FARK",
+        "DIFFERENCE",
+        "SUBTRACT",
+        "AFR"
+      ]
+    }
+  },
+  {
+    "name": "core_area_intersection",
+    "title": "Kesişim",
+    "description": "İki kapalı alanın ortak bölgesini OpenCASCADE ile oluşturur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.\nKomut: KESİŞİM (KESISIM, INTERSECTION, AKS)\nUygulandığı nesneler: alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kaynaklari_koru": {
+          "type": "boolean",
+          "description": "evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur (evet/hayır)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.piricad/commandId": "core.area_intersection",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
+        "KESİŞİM",
+        "KESISIM",
+        "INTERSECTION",
+        "AKS"
+      ]
+    }
+  },
+  {
+    "name": "core_area_symdifference",
+    "title": "Simetrik Fark",
+    "description": "İki kapalı alanın yalnız birine ait bölgeleri oluşturur; ortak bölgeyi OpenCASCADE ile çıkarır. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.\nKomut: SİMETRİKFARK (SIMETRIKFARK, SYMDIFFERENCE, XOR, ASF)\nUygulandığı nesneler: alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kaynaklari_koru": {
+          "type": "boolean",
+          "description": "evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur (evet/hayır)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.piricad/commandId": "core.area_symdifference",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
+        "SİMETRİKFARK",
+        "SIMETRIKFARK",
+        "SYMDIFFERENCE",
+        "XOR",
+        "ASF"
+      ]
+    }
+  },
+  {
+    "name": "core_area_union",
+    "title": "Birleşim",
+    "description": "Kapalı alanların bütününü OpenCASCADE ile birleştirir; ayrı parçaları korur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.\nKomut: BİRLEŞİM (BIRLESIM, UNION, ABR)\nUygulandığı nesneler: alan, eğri.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kaynaklari_koru": {
+          "type": "boolean",
+          "description": "evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur (evet/hayır)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.piricad/commandId": "core.area_union",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
+        "BİRLEŞİM",
+        "BIRLESIM",
+        "UNION",
+        "ABR"
       ]
     }
   },
@@ -13700,7 +13948,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
   {
     "name": "core_topology",
     "title": "Topoloji Denetimi",
-    "description": "Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.\nKomut: TOPOLOJİ (TOPOLOJI, TOPOLOGY, TPL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. OpenCASCADE gerçek eğrileri ve delikleri denetler; düğüm toleransını aşan örtüşmeleri ve en küçük alan eşiğinin altındaki kırpıntı adaylarını gösterir. kapsama=evet aynı katmanda kapalı kapsama boşluklarını ayrıca denetler.\nKomut: TOPOLOJİ (TOPOLOJI, TOPOLOGY, TPL)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -13708,6 +13956,10 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
           "description": "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kapsama": {
+          "type": "boolean",
+          "description": "evet: her katmanda alanların çevrelediği kapalı boşlukları denetle; çizilmiş delikler hariç. Varsayılan hayır; seçimin dışı denetlenmez (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",

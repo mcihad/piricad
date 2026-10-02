@@ -8,6 +8,7 @@
 #include "piricad/core/planar.hpp"
 #include "piricad/core/spatial_index.hpp"
 
+#include "piricad/command/area_face.hpp"
 #include "piricad/command/bus.hpp"
 #include "piricad/command/context.hpp"
 #include "piricad/command/job.hpp"
@@ -17,9 +18,15 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
+#include <map>
 #include <set>
 #include <span>
 #include <string>
+
+#if defined(TRACY_ENABLE)
+#include <tracy/Tracy.hpp>
+#endif
 
 namespace piricad::domain::cadastre {
 namespace {
@@ -53,31 +60,50 @@ bool polygon_of(const core::Document& doc, core::EntityId slot, core::Polygon& o
     return out.exterior.size() >= 3;
 }
 
-core::Mm2 abs_area(core::Mm2 v)
+/// The actual area path, including standalone circles, ellipses and closed
+/// splines. Open curves and text have no face to validate.
+std::optional<core::KernelFace> face_of(const core::Document& doc, core::EntityId slot)
 {
-    return v < 0 ? -v : v;
+    if (auto area = command::area_face(doc, slot)) return std::move(area->face);
+    auto path = core::path_of(doc, slot, core::PathScope::Curves);
+    if (!path || !path->closed) return std::nullopt;
+    return core::KernelFace{std::move(*path), {}};
 }
 
-/// Whether the boundary crosses itself.
-///
-/// Asked of the LIBRARY rather than answered here: a union of a ring with nothing
-/// resolves every self-crossing into separate simple rings, so a ring that comes
-/// back as more than one piece — or whose area changes — was not simple. That is
-/// the same engine the boolean uses, so a ring this accepts is a ring TEVHİT and
-/// İFRAZ can work with, which is the property that actually matters.
-bool self_intersecting(const core::Polygon& poly)
+/// Translation does not change validity. Repeated straight parcel shapes may
+/// reuse an OCCT diagnosis within this check only, keyed by every relative
+/// endpoint (not a lossy hash). Curves and holes are always checked individually.
+std::vector<core::Mm> validity_key(const core::KernelFace& face)
 {
-    auto resolved = core::polygon_boolean({poly}, {}, core::BooleanOp::Union);
-    if (!resolved) return true; // a shape the boolean refuses is not usable either
-    if (resolved.value().size() != 1) return true;
+    constexpr std::size_t kMaxEdges = 64;
+    if (!face.holes.empty() || face.outer.pieces.empty() || face.outer.pieces.size() > kMaxEdges)
+        return {};
+    std::vector<core::Mm> key;
+    const auto origin = face.outer.pieces.front().from;
+    for (const auto& p : face.outer.pieces) {
+        if (p.kind != core::PathPiece::Kind::Segment) return {};
+        for (const auto at : {p.from, p.to}) {
+            const core::Int128 x = static_cast<core::Int128>(at.x) - origin.x;
+            const core::Int128 y = static_cast<core::Int128>(at.y) - origin.y;
+            if (x > std::numeric_limits<core::Mm>::max() ||
+                x < std::numeric_limits<core::Mm>::min() ||
+                y > std::numeric_limits<core::Mm>::max() ||
+                y < std::numeric_limits<core::Mm>::min())
+                return {};
+            key.push_back(static_cast<core::Mm>(x));
+            key.push_back(static_cast<core::Mm>(y));
+        }
+    }
+    return key;
+}
 
-    const core::Mm2 before = abs_area(core::ring_area(poly.exterior));
-    const core::Mm2 after  = abs_area(core::ring_area(resolved.value().front().exterior));
-
-    // A self-crossing ring loses the lobe it folds back over, so its resolved area
-    // is smaller. A millimetre of slack keeps a legitimately collinear vertex from
-    // reading as a defect.
-    return before > after + 1000;
+void locate_region(Defect& defect)
+{
+    core::Box2 box;
+    for (const auto p : defect.region)
+        box.extend(p);
+    if (!box.empty())
+        defect.at = {(box.min_x / 2) + (box.max_x / 2), (box.min_y / 2) + (box.max_y / 2)};
 }
 
 } // namespace
@@ -85,10 +111,17 @@ bool self_intersecting(const core::Polygon& poly)
 core::Result<std::vector<Defect>> check_topology(const core::Document& doc,
                                                  const std::vector<core::EntityKey>& keys,
                                                  core::Mm tolerance,
-                                                 const command::JobControl& control)
+                                                 const command::JobControl& control,
+                                                 core::Mm2 minimum_area, bool coverage)
 {
-    // HOW OFTEN THE STOP IS LOOKED AT: a few thousand polygons, or a few
-    // hundred of the pairwise pass, are well inside the 100 ms a stop has.
+#if defined(TRACY_ENABLE)
+    ZoneScopedN("check_topology");
+#endif
+    if (tolerance < 0 || minimum_area < 0)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Topoloji toleransı ve en küçük alan negatif olamaz.");
+    // Progress updates are batched; cancellation is also checked before each
+    // native geometry operation, whose cost depends on the boundary complexity.
     constexpr std::size_t kStride     = 2048;
     constexpr std::size_t kPairStride = 256;
     const auto stopped                = [] {
@@ -111,10 +144,13 @@ core::Result<std::vector<Defect>> check_topology(const core::Document& doc,
     }
 
     // ---- pass one, 0..10 %: the areas, and what is wrong with one alone ----
-    std::vector<core::Polygon> polys;
+    std::vector<core::KernelFace> faces;
     std::vector<core::EntityKey> owners;
-    polys.reserve(slots.size());
+    std::vector<core::LayerId> layers;
+    faces.reserve(slots.size());
     owners.reserve(slots.size());
+    std::map<std::vector<core::Mm>, core::KernelFaceIssue> validity;
+    constexpr std::size_t kMaxCached = 4096;
 
     for (std::size_t n = 0; n < slots.size(); ++n) {
         if (n % kStride == 0) {
@@ -122,25 +158,50 @@ core::Result<std::vector<Defect>> check_topology(const core::Document& doc,
             control.at(n, slots.size(), 0, 100);
         }
         const core::EntityId slot = slots[n];
-        core::Polygon poly;
-        if (!polygon_of(doc, slot, poly)) continue; // not an area; nothing to check
+        auto face                 = face_of(doc, slot);
+        if (!face) continue; // not an area; nothing to check
 
         const core::EntityKey key = doc.entities().key[slot];
 
         // WHERE TO LOOK: the first corner, which is where the canvas marks it.
-        const core::Point2 corner = poly.exterior.empty() ? core::Point2{} : poly.exterior.front();
-        if (abs_area(core::ring_area(poly.exterior)) == 0) {
+        const core::Point2 corner = face->outer.pieces.front().from;
+        if (command::outer_area(*face) == 0) {
             found.push_back(Defect{DefectKind::ZeroArea, key, core::EntityKey::None, 0, 0, corner});
             continue;
         }
-        if (self_intersecting(poly)) {
-            found.push_back(
-                Defect{DefectKind::SelfIntersecting, key, core::EntityKey::None, 0, 0, corner});
+        const auto signature = validity_key(*face);
+        auto previous        = signature.empty() ? validity.end() : validity.find(signature);
+        core::KernelFaceIssue issue;
+        if (previous != validity.end())
+            issue = previous->second;
+        else {
+            if (control.cancelled()) return stopped();
+            const auto checked = core::kernel_face_issue(*face);
+            if (!checked) return checked.error();
+            issue = checked.value();
+            if (!signature.empty() && validity.size() < kMaxCached)
+                validity.emplace(signature, issue);
+        }
+        if (issue != core::KernelFaceIssue::None) {
+            found.push_back(Defect{issue == core::KernelFaceIssue::SelfIntersection
+                                       ? DefectKind::SelfIntersecting
+                                       : DefectKind::InvalidRing,
+                                   key, core::EntityKey::None, 0, 0, corner});
             continue;
         }
-
-        polys.push_back(std::move(poly));
+        const core::Mm2 area = command::face_area(*face);
+        if (area > 0 && area < minimum_area) {
+            Defect d{DefectKind::Sliver, key, core::EntityKey::None, area, 0, corner};
+            std::vector<core::Mm> xs, ys;
+            core::path_outline(face->outer, xs, ys);
+            for (std::size_t v = 0; v < xs.size(); ++v)
+                d.region.push_back({xs[v], ys[v]});
+            locate_region(d);
+            found.push_back(std::move(d));
+        }
+        faces.push_back(std::move(*face));
         owners.push_back(key);
+        if (coverage) layers.push_back(doc.entities().layer[slot]);
     }
 
     // ---- pass two, 10..80 %: pairwise overlap, between neighbours only ----
@@ -150,18 +211,28 @@ core::Result<std::vector<Defect>> check_topology(const core::Document& doc,
     // then the boolean — orders of magnitude dearer — run on those alone. The
     // neighbours are taken in ascending order, so the findings come out in the
     // order the every-pair loop gave them.
-    std::vector<core::Box2> boxes(polys.size());
-    for (std::size_t i = 0; i < polys.size(); ++i)
-        for (const core::Point2& p : polys[i].exterior)
-            boxes[i].extend(p);
+    std::vector<core::Box2> boxes(faces.size());
+    for (std::size_t i = 0; i < faces.size(); ++i) {
+        if (i % kStride == 0 && control.cancelled()) return stopped();
+        const auto& outer = faces[i].outer;
+        const bool curved = std::ranges::any_of(
+            outer.pieces, [](const auto& p) { return p.kind != core::PathPiece::Kind::Segment; });
+        if (curved) {
+            if (control.cancelled()) return stopped();
+            auto bounded = core::kernel_bounds(outer);
+            if (!bounded) return bounded.error();
+            boxes[i] = bounded.value();
+        } else
+            boxes[i] = core::path_bounds(outer);
+    }
     core::SpatialIndex index;
     index.build(std::span<const core::Box2>(boxes));
 
     std::vector<core::EntityId> near;
-    for (std::size_t i = 0; i < polys.size(); ++i) {
+    for (std::size_t i = 0; i < faces.size(); ++i) {
         if (i % kPairStride == 0) {
             if (control.cancelled()) return stopped();
-            control.at(i, polys.size(), 100, 800);
+            control.at(i, faces.size(), 100, 800);
         }
         const core::Box2& bi = boxes[i];
         near.clear();
@@ -171,53 +242,59 @@ core::Result<std::vector<Defect>> check_topology(const core::Document& doc,
         for (const core::EntityId j : near) {
             if (j <= i) continue;
             const core::Box2& bj = boxes[j];
-            if (bi.max_x < bj.min_x || bj.max_x < bi.min_x) continue;
-            if (bi.max_y < bj.min_y || bj.max_y < bi.min_y) continue;
+            if (bi.max_x <= bj.min_x || bj.max_x <= bi.min_x) continue;
+            if (bi.max_y <= bj.min_y || bj.max_y <= bi.min_y) continue;
 
-            auto shared =
-                core::polygon_boolean({polys[i]}, {polys[j]}, core::BooleanOp::Intersection);
-            if (!shared || shared.value().empty()) continue;
-
-            core::Mm2 total              = 0;
-            core::Mm2 largest_area       = 0;
-            const core::Polygon* largest = nullptr;
-            for (const core::Polygon& piece : shared.value()) {
-                const core::Mm2 a = abs_area(core::ring_area(piece.exterior));
-                total += a;
-                if (largest == nullptr || a > largest_area) {
-                    largest      = &piece;
-                    largest_area = a;
-                }
-            }
-
-            // A SQUARE MILLIMETRE OF SLACK. Two parcels that share a boundary
-            // meet along it, and rounding a shared vertex to the millimetre can
-            // leave a sliver a few square millimetres wide. Reporting that as an
-            // overlap would bury the real ones.
-            if (total > 1000) {
+            if (control.cancelled()) return stopped();
+            auto shared = core::kernel_overlap(faces[i], faces[j], tolerance, control.stop);
+            if (!shared) return shared.error();
+            if (shared.value().area > 0 && shared.value().exceeds_tolerance) {
                 // THE GROUND THEY BOTH CLAIM, kept so the canvas can outline it:
                 // "12 ile 13 örtüşüyor" on a sheet of four thousand parcels says
                 // which, and the outline says where.
-                Defect d{DefectKind::Overlap, owners[i], owners[j], total};
-                if (largest != nullptr) {
-                    d.region = largest->exterior;
-                    core::Box2 around;
-                    for (const core::Point2& p : d.region)
-                        around.extend(p);
-                    d.at = core::Point2{
-                        (around.min_x / 2) + (around.max_x / 2),
-                        (around.min_y / 2) + (around.max_y / 2),
-                    };
-                }
+                Defect d{DefectKind::Overlap, owners[i], owners[j], shared.value().area};
+                d.region = std::move(shared.value().region);
+                locate_region(d);
                 found.push_back(std::move(d));
             }
         }
     }
 
-    // ---- pass three, 80..90 %: what TEMİZLE repairs, found by the finder it
+    // ---- optional coverage rule, 80..90 %: enclosed gaps, independently by layer ----
+    if (coverage) {
+        // Keep all faces of a layer together: disconnected islands can lie
+        // inside a gap without touching any enclosing parcel's individual box.
+        std::map<core::LayerId, std::vector<core::KernelFace>> groups;
+        for (std::size_t i = 0; i < faces.size(); ++i) {
+            if (i % kStride == 0) {
+                if (control.cancelled()) return stopped();
+                control.at(i, faces.size(), 800, 810);
+            }
+            groups[layers[i]].push_back(std::move(faces[i]));
+        }
+        std::size_t done = 0;
+        for (const auto& [layer, group] : groups) {
+            if (control.cancelled()) return stopped();
+            control.at(done++, groups.size(), 810, 900);
+            if (group.size() < 2) continue; // one valid face's holes are intentional
+            auto gaps = core::kernel_coverage_gaps(group, tolerance, control.stop);
+            if (!gaps) return gaps.error();
+            for (auto& gap : gaps.value()) {
+                Defect defect{DefectKind::CoverageGap};
+                defect.area           = gap.area;
+                defect.region         = std::move(gap.region);
+                defect.holes          = std::move(gap.holes);
+                defect.coverage_layer = doc.layer_key_of(layer);
+                locate_region(defect);
+                found.push_back(std::move(defect));
+            }
+        }
+    }
+
+    // ---- pass three, 90..95 %: what TEMİZLE repairs, found by the finder it
     //      repairs with ----
     if (control.cancelled()) return stopped();
-    control.at(0, 1, 800, 900);
+    control.at(0, 1, 900, 950);
     const auto key_of = [&doc](core::EntityId e) { return doc.entities().key[e]; };
     for (const core::Redundancy& r : core::find_redundant(doc, slots, tolerance)) {
         switch (r.kind) {
@@ -250,14 +327,14 @@ core::Result<std::vector<Defect>> check_topology(const core::Document& doc,
         }
     }
 
-    // ---- pass four, 90..100 %: the gaps of a line network, found by the
+    // ---- pass four, 95..100 %: the gaps of a line network, found by the
     //      network SINIR builds ----
     //
     // LINES ONLY. An open run that should meet another and stops short is the
     // defect a boundary-line layer has; a face is closed by definition and its
     // neighbours are checked pairwise above.
     if (control.cancelled()) return stopped();
-    control.at(0, 1, 900, 1000);
+    control.at(0, 1, 950, 1000);
     if (core::network_available()) {
         std::vector<core::NetworkPiece> pieces;
         for (const core::EntityId e : slots) {
@@ -295,8 +372,10 @@ core::Result<std::vector<Defect>> check_topology(const core::Document& doc,
 
 std::string square_metres(core::Mm2 area)
 {
+    // Small positive diagnostics must not appear as 0,00 m².
+    if (area < 10'000) return std::to_string(area) + " mm²";
     // Square metres to two decimals, in integers, the way ALANÖLÇ prints one.
-    const auto cm2   = static_cast<std::uint64_t>((area + 5000) / 10000);
+    const auto cm2   = (static_cast<std::uint64_t>(area) + 5000) / 10000;
     std::string frac = std::to_string(cm2 % 100);
     if (frac.size() < 2) frac = "0" + frac;
     return std::to_string(cm2 / 100) + "," + frac + " m²";
@@ -312,9 +391,22 @@ std::string describe(const core::Document& doc, const Defect& d)
     case DefectKind::SelfIntersecting:
         return "Nesne " + std::to_string(first) + ": sınır kendini kesiyor.";
     case DefectKind::ZeroArea: return "Nesne " + std::to_string(first) + ": alanı sıfır.";
+    case DefectKind::InvalidRing:
+        return "Nesne " + std::to_string(first) +
+               ": geçersiz halka; sınırın kapanışını ve "
+               "deliklerin alanın içinde kalmasını denetleyin.";
+    case DefectKind::Sliver:
+        return "Nesne " + std::to_string(first) + ": " + square_metres(d.area) +
+               ", en küçük alan eşiğinin altında (kırpıntı adayı).";
     case DefectKind::Overlap:
         return "Nesne " + std::to_string(first) + " ile " + std::to_string(second) +
                " örtüşüyor: " + square_metres(d.area) + ".";
+    case DefectKind::CoverageGap: {
+        std::string layer = std::to_string(core::raw(d.coverage_layer));
+        for (const auto& own : doc.layers())
+            if (own.key == d.coverage_layer) layer = own.name;
+        return "Katman " + layer + ": kapalı kapsama boşluğu, " + square_metres(d.area) + ".";
+    }
     case DefectKind::Duplicate:
         return "Nesne " + std::to_string(first) + ", nesne " + std::to_string(second) +
                "'in aynısı (yinelenen; TEMİZLE islem=onar siler).";
@@ -358,7 +450,7 @@ struct KindWords
 };
 
 /// In the order the summary counts them: what claims ground first.
-constexpr std::array<KindWords, 7> kKindWords{{
+constexpr std::array<KindWords, 10> kKindWords{{
     {domain::cadastre::DefectKind::Overlap, "ortusme", "örtüşme"},
     {domain::cadastre::DefectKind::SelfIntersecting, "kendini_kesen", "kendini kesen sınır"},
     {domain::cadastre::DefectKind::ZeroArea, "sifir_alan", "sıfır alanlı nesne"},
@@ -366,6 +458,9 @@ constexpr std::array<KindWords, 7> kKindWords{{
     {domain::cadastre::DefectKind::ZeroLength, "bos", "boş nesne"},
     {domain::cadastre::DefectKind::RepeatedVertex, "tekrarlanan_kose", "tekrarlanan köşeli nesne"},
     {domain::cadastre::DefectKind::Gap, "bosluk", "boşluk"},
+    {domain::cadastre::DefectKind::InvalidRing, "gecersiz_halka", "geçersiz halka"},
+    {domain::cadastre::DefectKind::Sliver, "kirpinti", "kırpıntı adayı"},
+    {domain::cadastre::DefectKind::CoverageGap, "kapsama_boslugu", "kapalı kapsama boşluğu"},
 }};
 
 /// How many findings the transcript lists one by one; the rest are counted,
@@ -403,6 +498,9 @@ Task<void> run_topology(Context& ctx)
     const core::Document& doc = ctx.document();
     const core::Mm tolerance =
         ctx.session().bus().project_settings().get("core.topoloji.dugum_toleransi").as_length();
+    const core::Mm2 minimum_area =
+        ctx.session().bus().project_settings().get("core.topoloji.en_kucuk_alan").as_int();
+    const bool coverage = ctx.argument("kapsama").as_bool();
 
     // WHAT WAS CHECKED, always. "No defects" is only reassuring if the user knows
     // how much was looked at; a report that says nothing about scope is a report
@@ -427,7 +525,8 @@ Task<void> run_topology(Context& ctx)
     Job job;
     job.label = "Topoloji denetimi";
     job.work  = [&](const JobControl& control) {
-        checked = domain::cadastre::check_topology(doc, keys, tolerance, control);
+        checked =
+            domain::cadastre::check_topology(doc, keys, tolerance, control, minimum_area, coverage);
     };
     co_await run_job(ctx.session(), job);
 
@@ -453,11 +552,29 @@ Task<void> run_topology(Context& ctx)
             if (kKindWords[k].kind == d.kind) ++counts[k];
         core::Json one;
         one.set("tur", core::Json::string(words_of(d.kind).id));
-        one.set("nesne", core::Json::integer(static_cast<std::int64_t>(core::raw(d.first))));
+        if (d.first != core::EntityKey::None)
+            one.set("nesne", core::Json::integer(static_cast<std::int64_t>(core::raw(d.first))));
         if (d.second != core::EntityKey::None)
             one.set("diger", core::Json::integer(static_cast<std::int64_t>(core::raw(d.second))));
-        if (d.kind == domain::cadastre::DefectKind::Overlap)
+        if (d.kind == domain::cadastre::DefectKind::Overlap ||
+            d.kind == domain::cadastre::DefectKind::Sliver ||
+            d.kind == domain::cadastre::DefectKind::CoverageGap)
             one.set("alan_mm2", core::Json::integer(d.area));
+        if (d.kind == domain::cadastre::DefectKind::CoverageGap) {
+            one.set("katman",
+                    core::Json::integer(static_cast<std::int64_t>(core::raw(d.coverage_layer))));
+            core::Json outer = core::Json::array({}), holes = core::Json::array({});
+            for (const auto point : d.region)
+                outer.push(point_json(point));
+            for (const auto& ring : d.holes) {
+                core::Json hole = core::Json::array({});
+                for (const auto point : ring)
+                    hole.push(point_json(point));
+                holes.push(std::move(hole));
+            }
+            one.set("sinir", std::move(outer));
+            one.set("adalar", std::move(holes));
+        }
         if (d.kind == domain::cadastre::DefectKind::RepeatedVertex)
             one.set("kose", core::Json::integer(static_cast<std::int64_t>(d.count)));
         if (d.kind == domain::cadastre::DefectKind::Gap) {
@@ -475,6 +592,11 @@ Task<void> run_topology(Context& ctx)
     core::Json report;
     report.set("kapsam", core::Json::string(keys.empty() ? "cizim" : "secim"));
     report.set("bakilan", core::Json::integer(static_cast<std::int64_t>(looked)));
+    report.set("dugum_toleransi_mm", core::Json::integer(tolerance));
+    report.set("en_kucuk_alan_mm2", core::Json::integer(minimum_area));
+    report.set("kapsama_kurali",
+               core::Json::string(coverage ? "katman_icinde_kapali_bosluk" : "yok"));
+    report.set("geometri_cekirdegi", core::Json::string(core::kernel_version()));
     report.set("kusur", core::Json::integer(static_cast<std::int64_t>(found.size())));
     report.set("turler", std::move(kinds));
     report.set("kusurlar", std::move(listed));
@@ -512,10 +634,16 @@ Task<void> run_topology(Context& ctx)
         if (d.kind == Kind::Gap) {
             ctx.mark(MeasureMark{
                 .shape = MeasureMark::Shape::Gap, .points = {d.at, d.to}, .labels = {"boşluk"}});
-        } else if (d.kind == Kind::Overlap && d.region.size() >= 3) {
+        } else if ((d.kind == Kind::Overlap || d.kind == Kind::Sliver ||
+                    d.kind == Kind::CoverageGap) &&
+                   d.region.size() >= 3) {
             ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Ring,
                                  .points = d.region,
-                                 .labels = {"örtüşme " + domain::cadastre::square_metres(d.area)}});
+                                 .labels = {(d.kind == Kind::Sliver        ? "kırpıntı "
+                                             : d.kind == Kind::CoverageGap ? "kapsama boşluğu "
+                                                                           : "örtüşme ") +
+                                            domain::cadastre::square_metres(d.area)},
+                                 .holes  = d.holes});
         } else {
             std::string label = "tekrarlanan köşe";
             if (d.kind == Kind::Duplicate) label = "yinelenen";
@@ -523,6 +651,9 @@ Task<void> run_topology(Context& ctx)
             if (d.kind == Kind::ZeroArea) label = "sıfır alan";
             if (d.kind == Kind::SelfIntersecting) label = "kendini kesen sınır";
             if (d.kind == Kind::Overlap) label = "örtüşme";
+            if (d.kind == Kind::Sliver) label = "kırpıntı";
+            if (d.kind == Kind::InvalidRing) label = "geçersiz halka";
+            if (d.kind == Kind::CoverageGap) label = "kapsama boşluğu";
             ctx.mark(MeasureMark{
                 .shape = MeasureMark::Shape::Point, .points = {d.at}, .labels = {label}});
         }
@@ -546,12 +677,21 @@ PIRICAD_COMMAND(topology)
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                            "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim"}
-                         .en("objects")},
+                         .en("objects"),
+                     Param::boolean(
+                         "kapsama", Arity::optional(),
+                         "evet: her katmanda alanların çevrelediği kapalı boşlukları denetle; "
+                         "çizilmiş delikler hariç. Varsayılan hayır; seçimin dışı denetlenmez")
+                         .en("coverage")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly | Flags::LongRunning,
-        .summary  = "Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş "
-                    "nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.",
-        .run      = &run_topology,
+        .summary =
+            "Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş "
+            "nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. "
+            "OpenCASCADE gerçek eğrileri ve delikleri denetler; düğüm toleransını "
+            "aşan örtüşmeleri ve en küçük alan eşiğinin altındaki kırpıntı adaylarını gösterir. "
+            "kapsama=evet aynı katmanda kapalı kapsama boşluklarını ayrıca denetler.",
+        .run = &run_topology,
     };
 }
 

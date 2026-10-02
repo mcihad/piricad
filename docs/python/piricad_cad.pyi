@@ -893,6 +893,56 @@ def combine(
         objects — Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim [kalıcı nesne anahtarı]
     """
 
+def area_union(
+    *,
+    objects: list[int] = ...,
+    keep_sources: bool = ...,
+) -> int:
+    """Kapalı alanların bütününü OpenCASCADE ile birleştirir; ayrı parçaları korur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+    Komut: core.area_union (BİRLEŞİM)
+        objects — Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur [kalıcı nesne anahtarı]
+        keep_sources — evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur
+    """
+
+def area_intersection(
+    *,
+    objects: list[int] = ...,
+    keep_sources: bool = ...,
+) -> int:
+    """İki kapalı alanın ortak bölgesini OpenCASCADE ile oluşturur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+    Komut: core.area_intersection (KESİŞİM)
+        objects — Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur [kalıcı nesne anahtarı]
+        keep_sources — evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur
+    """
+
+def area_difference(
+    *,
+    objects: list[int] = ...,
+    keep_sources: bool = ...,
+    base: list[int] = ...,
+) -> int:
+    """İlk seçilen kapalı alandan diğerlerini OpenCASCADE ile çıkarır; sıra önemlidir. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+    Komut: core.area_difference (FARK)
+        objects — Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur [kalıcı nesne anahtarı]
+        keep_sources — evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur
+        base — Nesneler içinden tutulacak alan; verilmezse açık listedeki ilk alan, çoklu etkin seçimde ayrıca sorulur [kalıcı nesne anahtarı]
+    """
+
+def area_symdifference(
+    *,
+    objects: list[int] = ...,
+    keep_sources: bool = ...,
+) -> int:
+    """İki kapalı alanın yalnız birine ait bölgeleri oluşturur; ortak bölgeyi OpenCASCADE ile çıkarır. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+    Komut: core.area_symdifference (SİMETRİKFARK)
+        objects — Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur [kalıcı nesne anahtarı]
+        keep_sources — evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur
+    """
+
 def split(
     *,
     object: list[int] = ...,
@@ -2606,11 +2656,13 @@ def split_area(
 def topology(
     *,
     objects: list[int] = ...,
+    coverage: bool = ...,
 ) -> int:
-    """Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.
+    """Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. OpenCASCADE gerçek eğrileri ve delikleri denetler; düğüm toleransını aşan örtüşmeleri ve en küçük alan eşiğinin altındaki kırpıntı adaylarını gösterir. kapsama=evet aynı katmanda kapalı kapsama boşluklarını ayrıca denetler.
 
     Komut: core.topology (TOPOLOJİ)
         objects — Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim [kalıcı nesne anahtarı]
+        coverage — evet: her katmanda alanların çevrelediği kapalı boşlukları denetle; çizilmiş delikler hariç. Varsayılan hayır; seçimin dışı denetlenmez
     """
 
 def contour(

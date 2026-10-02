@@ -118,6 +118,7 @@ Karar (CLAUDE.md 2.11): geometri işlemlerinin çekirdeği OpenCASCADE, varsayı
   **İlerleme (28 Eylül 2026) — BİRLEŞTİR ve çekirdeğin genel konumlu yayı:** BİRLEŞTİR yaylı kenarlı alanları `area_boolean` (çekirdek) ile birleştiriyor, yay aynı merkez/yarıçapla; yaylı çizgileri `core::join_paths` + `rewrite_path` ile uç uca ekliyor. Alan↔yüz yardımcıları `command/area_face.hpp`'ye taşındı; `cadastre/src/parcel_face.hpp` aynı adlarla ona yönlenen ince katman (komut dosyaları değişmedi, davranış aynı: 74 kadastro/altın testi). Yol üstünde bulunan kusur: KENARTÜRÜ'nün ya da DXF şişkinliğinin genel konumlu yayında merkez/yarıçap mm'ye yuvarlı olduğu için uçlar çemberden ~0,08 mm sapıyor, `BRepBuilderAPI_MakeEdge(çember, a, b)` kenarı reddediyor ve bütün boolean "command not done" ile düşüyordu (TEVHİT dahil); artık o yay iki uç + ortadan geçen çemberle (`GC_MakeArcOfCircle`) kuruluyor. Kanıt: `test_targets.cpp` "BİRLEŞTİR yaylı kenarlı alanı yayını koruyarak birleştiriyor" (merkez ve yarıçap birebir, alan iki alanın toplamı), "BİRLEŞTİR yaylı çizgiyi uç uca ekliyor"; `test_kernel.cpp` "uçları kendi çemberinden milimetre kesri sapan yay da kenar oluyor". Açık: TAMPON, altın senaryo.
   **TAMPON geldi (28 Eylül 2026), R46g ile:** yuvarlak köşe/uçlu tampon çekirdekten, gerçek yaylı — açık yolun her parçasının bandı ayrı (tek düz kenarın/yayın ofseti), hepsi `kernel_boolean` ile birleşiyor (tek parça iki yanlı ofset kolları yakın U'nun deliğini kaybediyordu), kapalı yol yüz ofsetiyle (`kernel_faces_of` halkaları yüz ve deliğe ayırıyor), sonuç `area_record` ile üç köşeli yaylı alan; köşeli/pahlı/düz/kare, elips/spline ve 256 parçadan uzun yol Clipper2'de (1000 parça çekirdekte 2,6 s ölçüldü), söylenerek. Yaya bağlı yazı için model.md R46g: `Attachment::along_arc` — yaylı kenarda `along` yürüme yönünde yay uzunluğu, `across` dış yarıçap boyunca; biçim 6, işaretli çizim `min_reader_version` 6, tohum `21-yay-bagi.pcad`. Kanıt: `test_processing.cpp` "yuvarlak köşe ve uç gerçek yay" (disk π·9 m², bant 278 539 816 mm², iki disk tek alan, yay köşeli alan, U deliği kısa kenarlarla ve not, uzun çizgi hızlı yol ve not), `test_rounded.cpp` "yay kenarına bağlı yazı durduğu yerde kalır…" (öteleme tam, 90° dönüşte yay üstündeki yeri, teğet), "yay boyunca ölçülen pay … aynı noktayı verir", `test_io.cpp` "yay boyunca ölçülen bağ dosyayla gider…", altın `tampon-yay.txt`; `test_dependency.cpp` "kuyusu taşınan tampon yerinde yeniden çizilir … bağlı yazı korunur" gerçek yaylı diskle de geçiyor. Açık: altın İFRAZ/TEVHİT yay senaryosu (kullanıcı mevzuatı tarif edince).
   **TAMPON bekletilmişti (28 Eylül 2026), bulgusuyla:** çekirdek yolu yazıldı ve denendi — noktanın diski gerçek daire, çizginin bandı yarım daire uçlu, alan yay köşeli; 20 m çizginin 5 m tamponu 278 539 816 mm² (= 200 + 25π) — ama kenarından bağlanmış bir bölge yazısı, tampon yeniden hesaplanınca 45° döndü: kenara bağlı yazı kenarın okuma yönüne döner ve büyük bir yayda bu yön yayın ortasındaki teğettir (3 yaylı diskte yazının durduğu yerden bir çeyrek ötede). Kusur değil kuralın yay kenarındaki anlamı: `Attachment::along` bugün yay ortasındaki teğet boyunca düz bir paydır. Önerilen çözüm, yay kenarında `along`'u YAY BOYUNCA uzunluk, `across`'u o noktadaki normal diye okumak — yazı yay üzerinde kayar ve oradaki teğete döner. Bu `model.md` anlam değişikliğidir (bugünkü O-2 kaydı saatlik; yine de göç kuralıyla yapılmalı). O gelene dek TAMPON Clipper2 yolunda. Yol üstünde düzeltilip gönderilenler: `core::attach_bends` (ölçme ve yerleştirme aynı yayı okuyor; `test_rounded.cpp` "yay kenarına bağlanan yazının yeri kaynağı taşınınca kaymıyor", düzeltmesiz 0,83 m kayıyor), çekirdekte tek düz kenarın ofseti (`test_offset_arcs.cpp` "iki noktalı düz çizginin yuvarlak köşeli paraleli"), `core::area_record` (`test_curve_path.cpp` "bir alanın sınırı hiçbir zaman daire değil").
+  **İlerleme (2 Ekim 2026) — genel alan işlemleri şeritte:** `BİRLEŞİM`, `KESİŞİM`, `FARK`, `SİMETRİKFARK` aynı komut yoluyla GUI/CLI/JSON/Python/AI yüzeyinde; Değiştir, Alan ve Eğri sekmelerinin Alan İşlemleri grubunda dört görünür düğme. Düz/yaylı alan ve daire OCCT'den; çok parçalı kaynakta her dış sınır kendi delikleriyle ayrı yüz; simetrik fark iki native farkın birleşimidir, ara sonuç mm'ye yuvarlanmaz. Tek seçili alan diğer girdiyi ister; çoklu etkin seçim sıralı olmadığı için FARK tutulacak alanı ayrıca sorar. `kaynaklari_koru`, tek geri alma, boş sonuçta kaynakları saklama ve OCCT içine durdurma; ilk katman/ortak öznitelikler korunur, FARK ilk kaynağın stil/verisini alır. Eğrili delik çıktısı bütünüyle reddedilir; mevcut modelin tek yaylı halka sınırı devam eder. Açık: eğrili delikli yüzlerin ve elips/spline boolean çıktılarının modelde saklanması, altın kadastro senaryosu. Kanıt: `test_area_boolean.cpp` (9 vaka), çekirdek simetrik fark/boş küme/durdurma; GUI = CLI = JSON ve günlük tekrarı, gerçek düğme tıklaması, çok parçalı GPKG ve delikleri, daire yayı, tam geri alma/iptal. Altın `alan-boolean.txt`; 1440 px gerçek ribbon görüntüsü, 0 yerleşim bulgusu; 67/67 CTest geçti.
 - [x] **O-4 · P1 — OFSET yayı koruyarak.** Açık/kapalı yol, yaylı çoklu çizgi ve daire ofseti gerçek yaylı.
   **Kanıt (28 Eylül 2026):** `core::entity_parallel` yaylı çoklu çizgiyi (açık ya da kapalı, her köşe biçiminde) ve yuvarlak köşe istenen düz çizgi ile deliksiz alanı `kernel_offset`'ten geçiriyor; sonuç yeni `ParallelPiece::Shape::Path` (yaylar yay), komut onu `path_record` ile yaylı çoklu çizgi ya da düz çizgi/alan olarak yazıyor, tuval `path_outline` ile çiziyor. Pah: çekirdek köşeyi yuvarlıyor, kaynağın köşesinde merkezli ve mesafe yarıçaplı yay kirişe çevriliyor (Clipper2'nin `Bevel`'i). Düz şeklin keskin/pahlı köşesi Clipper2'de, sonuç değişmeden; delikli alanın yuvarlak köşesi kirişli ve söyleniyor (`Parallel::round_as_chords`). Daire ve yay zaten kendi türünde. Kanıt: `test_offset_arcs.cpp` (9 vaka — dış/iç paralelde aynı merkezli yay ve kapalı biçim alan, yarıçaptan derinde sivri köşe, düz dikdörtgenin dört köşe yayı ve 200+60+π m², açık L'nin dış yayı ve iç keskin köşesi, açık yaylı çizginin iki yanı, pah, delikli alan notu, önizleme = sonuç, arayüz = komut satırı = betik ve günlük tekrarı); altın `ofset-yay.txt` (el hesabı: 262,068583 / 143,785398 / 263,141592 / 260,568583 m²). Destek matrisi: yaylı çoklu çizgide Paralel ◐ → ✓ (161 → 162 destekli).
 - [ ] **O-5 · P1 — Elips ve spline kesişimleri çekirdekten.** BUDA/UZAT/BÖL/KIR; elle yazılmış Newton çözücüsü kalkıyor; elips/spline içeren eğri çiftlerinin yuvarlanması OCCT `ChFi2d` ile (O-2'den alındı).
@@ -316,6 +317,49 @@ Karar (CLAUDE.md 2.11): geometri işlemlerinin çekirdeği OpenCASCADE, varsayı
   **Bağımlılık:** F-03/F-05/C-09; mevcut `domain/cadastre/topology` geliştirilir, alan bazlı istisnalar kuralda tanımlanır.
   **F-03'ten devreden (25 Eylül 2026):** `core.topoloji.en_kucuk_alan` (kırpıntı eşiği) tanımlı ama hiçbir denetim okumuyor (özeti artık bunu söylüyor); TOPOLOJİ'nin çakışma eşiği sabit 1000 mm² — uzun ortak kenarda milimetre yuvarlamasının bıraktığı şerit bunu aşar; eşik düğüm toleransından (genişlik) türetilmeli.
 
+  **İlerleme (2 Ekim 2026) — toleranslar ve gerçek eğrilerin denetimi:** F-03'ten
+  devreden iki ayar borcu kapalı alan denetiminde giderildi. TOPOLOJİ sınır ve delik
+  geçerliliğini OpenCASCADE BRepCheck ile, örtüşmeyi Common ve GProp ile hesaplıyor;
+  düz/yaylı alan, daire, elips ve uçları birbirine dönen kapalı spline kontrol ediliyor.
+  Örtüşme parçalarının etkin genişliği `2 × net alan / çevre` düğüm toleransıyla
+  karşılaştırılıyor; 0 bütün pozitif örtüşmeleri bildiriyor. Delikler toplam alandan
+  çıkarılıyor; tolerans raporlanan alanı küçültmüyor. `en_kucuk_alan` pozitif net alanı
+  eşikten küçük kapalı yüzeyleri **kırpıntı adayı** olarak işaretliyor; 0 kapatıyor,
+  örtüşme denetimini kapatmıyor. Çizim ve geri alma değişmiyor; eşikler ve çekirdek
+  sürümü yapılandırılmış cevapta. Durdur isteği OCCT boolean işleminin içine de
+  aktarılıyor. **Kanıt:** `test_cadastre.cpp` G-05 vakaları (100 m boyunca 1 mm
+  şerit, 25 mm gerçek örtüşme, delikli net alan, eşik sınırı, daire/elips, TM büyüklüğünde
+  koordinat); `test_kernel.cpp` kendini kesen sınır, yanlış delik, kapalı Bezier/NURBS,
+  eğri kutusu, doğruyla kapanan elips/spline kenarları, NURBS kapanışındaki milimetre
+  yuvarlaması ve durdurma. Gerçek pencere örneği `tests/bench/sahne/topoloji-occt.json`,
+  karesi `docs/komutlar/topoloji-occt.png`; 100k parsel ve 1000 gerçek OCCT örtüşmesinin
+  ayrı ölçümleri `tests/bench/README.md`. Kapsama boşlukları aşağıdaki aşamada
+  eklendi; **açık:** sınıf kuralları, ortak sınırı birlikte düzenleme ve toplu
+  onarım önizlemesi. G-05 bütünüyle
+  tamamlandı sayılmadı.
+
+  **İlerleme (2 Ekim 2026) — kapalı kapsama boşlukları:** `TOPOLOJİ kapsama=evet`
+  aynı katmandaki alanları OCCT Fuse + yüzey birleştirme ile toplar; birleşimin iç
+  boşluklarından kaplanan adaları ve açıkça çizilmiş delikleri OCCT Cut ile
+  çıkarır. Net alan ve etkin genişlik gerçek sınırdan ölçülür; gösterim köşeleri
+  yalnız işaret içindir. Çizilmiş delikler ve dışarıya açık alanlar hata sayılmaz.
+  Varsayılan kapalı kuraldır; seçim dışı parselleri katmaz, katmanları bağımsız
+  denetler, başka katmandaki bina boşluğu kapatmaz. Düğüm toleransı kullanılır;
+  küçük alan eşiği boşlukları gizlemez. JSON'da katman, net alan, sınır ve adalar;
+  tuvalde iç ada boyanmadan aynı işaret. Belge/günlük/geri alma değişmez, Durdur
+  native işlemlere ulaşır. **Kanıt:** çekirdek ve Bus vakalarında 100 m² kapalı
+  boşluk, 36 m² ada ile 64 m² net alan, çizilmiş delik, dışarıya açık sınır, gerçek
+  elips, örtüşen köprüyle iki parçaya bölünen boşluk, 100 m × 1 mm şerit, ters
+  yön/sıra, farklı katman, seçim kapsamı, yanlış
+  seçenek reddi; GUI=CLI=JSON ve worker=yerinde eşitlik, durdurmada iz bırakmama.
+  Painter/çıktı yolunda adanın boyanmaması ve gerçek GPU penceresi:
+  `tests/bench/sahne/topoloji-kapsama.json`, `docs/komutlar/topoloji-kapsama.png`.
+  **Performans:** olağan 100k kontrolü 135,913 ms (önce 132,680 ms; yaklaşık %2,4),
+  ayrı native 1000 alan/250 boşluk ölçümü 185,218 ms. Bu, 100k alanı birleştirmenin
+  2 s'de tamamlandığı iddiası değildir; kural büyük katmanlarda daha pahalıdır.
+  **Açık:** dış çalışma sınırıyla kapsama, sınıf/istisna kuralları, ortak sınırı
+  birlikte düzenleme ve toplu onarım önizlemesi. G-05 kutusu açık.
+
 - [ ] **G-06 · P1 — Profesyonel semboloji ve kartografya.** Tek sembol, kategori, dereceli ve kural temelli gösterim; ölçek aralığı, sembol düzeyi, dolgu/çizgi/işaret, ifade tabanlı özellikler ve temalar.
   **Kabul:** Aynı veri ekran/pafta/lejantta tutarlı görünür. CAD nesnesine özel stil ile sınıf/katman gösteriminin önceliği açık olur; stil değiştirmek asıl geometriyi bozmaz. Mevcut QGIS backend sınırları belgelenir.
   **Bağımlılık:** F-02/U-05; QGIS kullanılmayan derlemede destek kaybı sessiz olmaz.
@@ -327,6 +371,13 @@ Karar (CLAUDE.md 2.11): geometri işlemlerinin çekirdeği OpenCASCADE, varsayı
   değerlendirmesi, bileşik SVG parçalarının ayrı form alanları ve serpilmiş desenin
   sonsuz hücre davranışı; mevcut uyarlama sabit yedek değer ve tekrar eden SVG döşeme
   kullanır. G-06 tamamlandı sayılmadı.
+
+  **Düzeltme (2 Ekim 2026) — kesişimde dolgu kaybı:** Aynı stil grubundaki ayrı
+  alanlar artık kesişimlerini silmiyor. Dolgu, çizgi/nokta taraması ve görsel dolguda
+  yalnız gerçek iç halkalar delik; iç içe ve ters yönde çizilmiş alanlar korunuyor.
+  Sahne, tasarımcı ve PDF yolu sınandı; alfa kesişimde iki kez uygulanmıyor ve nesne
+  başına ek çizim çağrısı yok. `render-desen` gerçek GPU görüntüsünü, `style-designer`
+  dört dolgu türünü etkin ve ödünç painter üzerinde denetliyor.
 
   **İlerleme (1 Ekim 2026) — ölçü birimleri ve katmanlı alan stili:** QGIS'in
   gerçek sembol düzenleyicisi incelendi. Birim dönüşümü önizlemedeki boyutu korur;

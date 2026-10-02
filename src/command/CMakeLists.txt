@@ -54,6 +54,7 @@ add_library(piricad_command STATIC
     src/commands/attribute.cpp
     src/commands/circle.cpp
     src/commands/combine.cpp
+    src/commands/area_boolean.cpp
     src/commands/line.cpp
     src/commands/text.cpp
     src/commands/extent_check.cpp

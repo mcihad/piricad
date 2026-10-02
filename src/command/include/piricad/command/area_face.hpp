@@ -37,8 +37,12 @@ struct AreaFace
     bool curved{false};    ///< an edge bends: the kernel's road
 };
 
-/// The area in `slot` of `doc`, or nothing for an object that is not a closed
-/// area.
+/// All closed faces of an area, one per exterior part, with only that part's
+/// interior rings attached as holes. Nothing for open or malformed geometry.
+std::optional<std::vector<AreaFace>> area_faces(const core::Document& doc, core::EntityId slot);
+
+/// The single face in `slot`, or nothing for an open or multipart object.
+/// Commands that operate on multipart areas use `area_faces` instead.
 std::optional<AreaFace> area_face(const core::Document& doc, core::EntityId slot);
 
 /// The face as the polygon Clipper2 takes: for a face that does not bend.

@@ -123,6 +123,19 @@ bulunsun, tam `485320.150,4310220.400`'den başlar. Ayrıntı:
 
 ## Topoloji: düğüm toleransı
 
+[`TOPOLOJİ`](../komutlar/topology.md) örtüşmenin etkin genişliğini
+`2 × net alan / çevre` olarak gerçek eğrilerden OpenCASCADE ile hesaplar ve bu
+uzunluğu düğüm toleransıyla karşılaştırır. Böylece uzun ortak kenardaki ince bir
+yuvarlama şeridi, sırf toplam alanı büyük diye örtüşme sayılmaz. Tolerans 0 ise
+bütün pozitif örtüşmeler raporlanır; rapordaki alan toleransla küçültülmez.
+
+`en_küçük_alan` ayrı bir **alan** eşiğidir (varsayılan 500000 mm² = 0,5 m²).
+Delikler çıkarıldıktan sonra bu değerden küçük pozitif yüzeyler kırpıntı adayı
+olarak işaretlenir; 0 bu denetimi kapatır. Ayar örtüşmeleri gizlemez ve geometriyi
+değiştirmez. `TOPOLOJİ kapsama=evet` aynı katmandaki alanların çevrelediği kapalı
+boşluklara da düğüm toleransını uygular; çizilmiş delikler hariç tutulur ve kaplanan
+adalar net alandan çıkarılır. En küçük alan eşiği kapsama boşluğunu gizlemez.
+
 `düğüm_toleransı` (varsayılan 10 mm) birbirine bundan yakın iki köşenin **tek düğüm**
 sayıldığı mesafedir. SINIR, ALANÜRET, TEMİZLE, TOPOLOJİ, BİRLEŞTİR ve ALANAÇEVİR bu değeri
 kullanır. Bir proje ayarıdır: bir ifrazın ya da bir topoloji denetiminin sonucunu
@@ -179,7 +192,6 @@ DXF eğriyi eğri olarak yazar: `CIRCLE`, `ARC`, `ELLIPSE`, `SPLINE` ve şişkin
 | Yetenek | Ne zaman |
 |---|---|
 | Elips ve spline üzerinde yakalamanın ekrandaki kirişlerden değil eğrinin kendisinden yapılması | Faz 1 |
-| Kırpıntı eşiğinin (`en_küçük_alan`) topoloji denetiminde kullanılması | Faz 1 |
 
 ## İlgili
 

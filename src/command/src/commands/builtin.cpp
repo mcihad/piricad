@@ -57,6 +57,10 @@ namespace piricad::command {
     X(copy_objects)                                                                                \
     X(array_objects)                                                                               \
     X(combine)                                                                                     \
+    X(area_union)                                                                                  \
+    X(area_intersection)                                                                           \
+    X(area_difference)                                                                             \
+    X(area_symdifference)                                                                          \
     X(split)                                                                                       \
     X(trim)                                                                                        \
     X(extend)                                                                                      \

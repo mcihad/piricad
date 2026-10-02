@@ -344,6 +344,10 @@ enum class Glyph {
     FnBeyond,           ///< a line from A to B carried on past B, the point there: uzanti()
     FnXY,               ///< two points, the one at P's easting and Q's northing: xy()
     FnAlong,            ///< an arc, a point along it, stepped off to its right: boyunca()
+    AreaUnion,          ///< two overlapping faces with their combined boundary highlighted
+    AreaIntersection,   ///< two faces with only their common region highlighted
+    AreaDifference,     ///< the first face with the second face cut out
+    AreaSymdifference,  ///< both faces with their common region removed
 };
 
 /// The inks of a picture, one per ROLE (`Tokens::icon*`, `design.md` §5): what

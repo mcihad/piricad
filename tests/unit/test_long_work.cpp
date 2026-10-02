@@ -296,6 +296,41 @@ TEST_CASE("UZUN İŞ: işini bitirmeden giden bir oturum çizimi kilitli bırakm
 
 // ================================================================ TOPOLOJİ ===
 
+TEST_CASE("UZUN İŞ KAPSAMA G-05: yerinde ve işte aynı ada ve alan, durdurmada iz yok")
+{
+    Rig direct, hosted, cancelled;
+    for (auto* rig : {&direct, &hosted, &cancelled})
+        for (const auto* line :
+             {"ALAN noktalar=0,0 30,0 30,10 0,10", "ALAN noktalar=0,10 10,10 10,20 0,20",
+              "ALAN noktalar=20,10 30,10 30,20 20,20", "ALAN noktalar=0,20 30,20 30,30 0,30",
+              "ALAN noktalar=12,12 18,12 18,18 12,18"})
+            rig->run(line);
+    const Mark before = mark(hosted);
+    auto in_place     = direct.bus.execute_line("TOPOLOJİ kapsama=evet", Origin::Gui);
+    REQUIRE(in_place.ok());
+    auto session = park(hosted, "TOPOLOJİ kapsama=evet");
+    auto worker  = host(hosted, *session);
+    REQUIRE(worker.ok());
+    CHECK_EQ(session->report().dump(), in_place.value().report.dump());
+    CHECK_EQ(hosted.said, direct.said);
+    CHECK_EQ(mark(hosted), before);
+    CHECK_EQ(hosted.journal.canonical(), direct.journal.canonical());
+    REQUIRE_EQ(hosted.marks.size(), 1u);
+    REQUIRE_EQ(direct.marks.size(), 1u);
+    CHECK_EQ(hosted.marks[0].points, direct.marks[0].points);
+    CHECK_EQ(hosted.marks[0].holes, direct.marks[0].holes);
+    CHECK_EQ(hosted.marks[0].holes.size(), 1u);
+
+    const auto untouched = mark(cancelled);
+    auto stopped         = park(cancelled, "TOPOLOJİ kapsama=evet");
+    stopped->cancel();
+    REQUIRE(host(cancelled, *stopped).ok());
+    CHECK_EQ(mark(cancelled), untouched);
+    CHECK(cancelled.marks.empty());
+    CHECK(stopped->report().is_null());
+    CHECK(cancelled.said.find("sonuç verilmedi") != std::string::npos);
+}
+
 TEST_CASE("UZUN İŞ: TOPOLOJİ başka bir iş parçacığında da yerinde de aynı cevabı verir")
 {
     // The GUI hosts the job; the command line and a script run it in place. The

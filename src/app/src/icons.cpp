@@ -3291,6 +3291,36 @@ void draw(QPainter& p, Glyph g, const GlyphInks& k)
         p.drawPolyline(QPolygonF({QPointF(10.0, 14.6), QPointF(10.0, 9.4), QPointF(14.0, 9.4)}));
     } break;
 
+    case Glyph::AreaUnion:
+    case Glyph::AreaIntersection:
+    case Glyph::AreaDifference:
+    case Glyph::AreaSymdifference: {
+        // The same two offset faces make the four results comparable at the
+        // ribbon's small size. The washed outlines show the source regions.
+        QPainterPath first, second;
+        first.addRect(QRectF(3, 4, 11, 11));
+        second.addRect(QRectF(10, 10, 11, 11));
+        p.setPen(QPen(washed(c, 0.45F), 1.1, Qt::DashLine));
+        p.setBrush(Qt::NoBrush);
+        p.drawPath(first);
+        p.drawPath(second);
+        QPainterPath result;
+        if (g == Glyph::AreaUnion)
+            result = first.united(second);
+        else if (g == Glyph::AreaIntersection)
+            result = first.intersected(second);
+        else if (g == Glyph::AreaDifference)
+            result = first.subtracted(second);
+        else {
+            result.addPath(first);
+            result.addPath(second);
+            result.setFillRule(Qt::OddEvenFill);
+        }
+        p.setPen(stroke(k.add, 1.6));
+        p.setBrush(k.fill);
+        p.drawPath(result);
+    } break;
+
     case Glyph::Polygonize: {
         // LINES THAT RUN PAST EACH OTHER, AND THE FACE THEY CLOSE — what ALANÜRET
         // finds in loose linework. Three lines, not a grid: at 16 px a grid

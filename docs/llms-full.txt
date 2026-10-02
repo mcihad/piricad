@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 122 (106 tanesi onay ister)
-- Katalog parmak izi: `8154496810715726910`
+- Araç sayısı: 126 (110 tanesi onay ister)
+- Katalog parmak izi: `5191027262399886724`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -164,6 +164,67 @@ Onay ister.
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Alanın köşe noktaları; kapanış noktası tekrarlanmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `bolum` | array | hayır | Halka uzunlukları: ilki dış sınır, sonrakiler delik (tam sayı) |
 | `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_area_difference` — Fark
+
+İlk seçilen kapalı alandan diğerlerini OpenCASCADE ile çıkarır; sıra önemlidir. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+Komut: FARK (DIFFERENCE, SUBTRACT, AFR)
+Uygulandığı nesneler: alan, eğri.
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kaynaklari_koru` | boolean | hayır | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur (evet/hayır) |
+| `tutulan` | string | hayır | Nesneler içinden tutulacak alan; verilmezse açık listedeki ilk alan, çoklu etkin seçimde ayrıca sorulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_area_intersection` — Kesişim
+
+İki kapalı alanın ortak bölgesini OpenCASCADE ile oluşturur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+Komut: KESİŞİM (KESISIM, INTERSECTION, AKS)
+Uygulandığı nesneler: alan, eğri.
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kaynaklari_koru` | boolean | hayır | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur (evet/hayır) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_area_symdifference` — Simetrik Fark
+
+İki kapalı alanın yalnız birine ait bölgeleri oluşturur; ortak bölgeyi OpenCASCADE ile çıkarır. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+Komut: SİMETRİKFARK (SIMETRIKFARK, SYMDIFFERENCE, XOR, ASF)
+Uygulandığı nesneler: alan, eğri.
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kaynaklari_koru` | boolean | hayır | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur (evet/hayır) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_area_union` — Birleşim
+
+Kapalı alanların bütününü OpenCASCADE ile birleştirir; ayrı parçaları korur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+Komut: BİRLEŞİM (BIRLESIM, UNION, ABR)
+Uygulandığı nesneler: alan, eğri.
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kaynaklari_koru` | boolean | hayır | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_array` — Dizi
@@ -1907,7 +1968,7 @@ Doğrudan çalışır.
 
 ### `core_topology` — Topoloji Denetimi
 
-Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.
+Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. OpenCASCADE gerçek eğrileri ve delikleri denetler; düğüm toleransını aşan örtüşmeleri ve en küçük alan eşiğinin altındaki kırpıntı adaylarını gösterir. kapsama=evet aynı katmanda kapalı kapsama boşluklarını ayrıca denetler.
 Komut: TOPOLOJİ (TOPOLOJI, TOPOLOGY, TPL)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -1916,6 +1977,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kapsama` | boolean | hayır | evet: her katmanda alanların çevrelediği kapalı boşlukları denetle; çizilmiş delikler hariç. Varsayılan hayır; seçimin dışı denetlenmez (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_tracking` — Geçici İzleme

@@ -17,21 +17,33 @@
 #include <utility>
 #include <vector>
 
+#if defined(TRACY_ENABLE)
+#include <tracy/Tracy.hpp>
+#endif
+
 #if PIRICAD_HAVE_OCCT
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepAlgoAPI_BooleanOperation.hxx>
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
+#include <BRepBndLib.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
+#include <BRepCheck_Analyzer.hxx>
+#include <BRepCheck_Wire.hxx>
+#include <BRepGProp.hxx>
 #include <BRepOffsetAPI_MakeOffset.hxx>
 #include <BRepTools.hxx>
 #include <BRepTools_WireExplorer.hxx>
+#include <BRep_Builder.hxx>
 #include <BRep_Tool.hxx>
+#include <Bnd_Box.hxx>
+#include <GCPnts_QuasiUniformDeflection.hxx>
 #include <GC_MakeArcOfCircle.hxx>
+#include <GProp_GProps.hxx>
 #include <Geom2dAPI_InterCurveCurve.hxx>
 #include <Geom2dInt_GInter.hxx>
 #include <Geom2d_BSplineCurve.hxx>
@@ -40,14 +52,17 @@
 #include <Geom2d_Ellipse.hxx>
 #include <Geom2d_Line.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
+#include <GeomAPI.hxx>
 #include <GeomAbs_CurveType.hxx>
 #include <GeomAbs_JoinType.hxx>
 #include <Geom_TrimmedCurve.hxx>
 #include <IntRes2d_IntersectionPoint.hxx>
 #include <IntRes2d_IntersectionSegment.hxx>
+#include <Message_ProgressIndicator.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_Version.hxx>
+#include <StdFail_NotDone.hxx>
 #include <TColStd_Array1OfInteger.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <TColgp_Array1OfPnt2d.hxx>
@@ -67,6 +82,7 @@
 #include <gp_Ax2d.hxx>
 #include <gp_Circ.hxx>
 #include <gp_Dir2d.hxx>
+#include <gp_Pln.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Pnt2d.hxx>
 #include <gp_Vec2d.hxx>
@@ -138,8 +154,8 @@ std::string kernel_version()
     return "Bu yapıda geometri çekirdeği (OpenCASCADE) yok; PIRICAD_WITH_OCCT=ON ile derleyin.";
 }
 
-Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace>,
-                                               std::span<const KernelFace>, BooleanOp)
+Result<std::vector<KernelFace>>
+kernel_boolean(std::span<const KernelFace>, std::span<const KernelFace>, BooleanOp, std::stop_token)
 {
     return err(ErrorCode::Unsupported, kernel_version());
 }
@@ -154,9 +170,44 @@ Result<PathMeets> kernel_meets(const PathPiece&, const PathPiece&)
     return err(ErrorCode::Unsupported, kernel_version());
 }
 
+Result<KernelFaceIssue> kernel_face_issue(const KernelFace&)
+{
+    return err(ErrorCode::Unsupported, kernel_version());
+}
+
+Result<KernelOverlap> kernel_overlap(const KernelFace&, const KernelFace&, Mm, std::stop_token)
+{
+    return err(ErrorCode::Unsupported, kernel_version());
+}
+
+Result<Box2> kernel_bounds(const CurvePath&)
+{
+    return err(ErrorCode::Unsupported, kernel_version());
+}
+
+Result<std::vector<KernelCoverageGap>> kernel_coverage_gaps(std::span<const KernelFace>, Mm,
+                                                            std::stop_token)
+{
+    return err(ErrorCode::Unsupported, kernel_version());
+}
+
 #else
 
 namespace {
+
+/// OCCT observes the command worker's stop during the boolean itself.
+class StopProgress final : public Message_ProgressIndicator
+{
+public:
+    explicit StopProgress(std::stop_token stop) : stop_(stop) {}
+
+    Standard_Boolean UserBreak() override { return stop_.stop_requested(); }
+
+    void Show(const Message_ProgressScope&, Standard_Boolean) override {}
+
+private:
+    std::stop_token stop_;
+};
 
 /// The frame every shape is built in: millimetres, about an origin the input
 /// gives, so a TUREF coordinate of four thousand kilometres does not spend the
@@ -371,6 +422,38 @@ TopoDS_Wire wire_of(const CurvePath& path, const Frame& f)
         return wire.Wire();
     }
 
+    // Topology diagnostics take ellipses and NURBS as their true curves. The
+    // existing boolean writer still restricts its output to segments/arcs.
+    // Let OCCT create the curve's own vertices: rounded ellipse endpoints need
+    // not lie on the unrounded ellipse to the kernel's confusion tolerance.
+    if (n == 1 && (path.pieces.front().kind == PathPiece::Kind::Ellipse ||
+                   path.pieces.front().kind == PathPiece::Kind::Spline)) {
+        auto curve = curve2d(path.pieces.front(), f);
+        if (!curve) throw Standard_Failure(curve.error().message.c_str());
+        const auto& c      = curve.value();
+        const auto spatial = GeomAPI::To3d(c.curve, gp_Pln(gp::XOY()));
+        TopoDS_Edge edge;
+        if (path.closed) {
+            // A closed NURBS can return to the same stored millimetre with
+            // endpoints a fraction of a millimetre apart on the true curve.
+            // Use its single declared corner with the rounded-fit allowance,
+            // just as mixed curve/segment wires share their rounded corners.
+            const TopoDS_Vertex corner = BRepBuilderAPI_MakeVertex(f.pnt(path.pieces.front().from));
+            BRep_Builder vertices;
+            vertices.UpdateVertex(corner, kRoundedFitMm);
+            edge = BRepBuilderAPI_MakeEdge(spatial, corner, corner, std::min(c.start, c.end),
+                                           std::max(c.start, c.end))
+                       .Edge();
+        } else {
+            edge =
+                BRepBuilderAPI_MakeEdge(spatial, std::min(c.start, c.end), std::max(c.start, c.end))
+                    .Edge();
+        }
+        if (c.start > c.end) edge.Reverse();
+        wire.Add(edge);
+        return wire.Wire();
+    }
+
     std::vector<TopoDS_Vertex> at;
     at.reserve(n + 1);
     for (const PathPiece& p : path.pieces)
@@ -385,6 +468,26 @@ TopoDS_Wire wire_of(const CurvePath& path, const Frame& f)
         if (p.kind == PathPiece::Kind::Segment) {
             if (p.from == p.to) continue;
             wire.Add(BRepBuilderAPI_MakeEdge(a, b).Edge());
+            continue;
+        }
+        if (p.kind == PathPiece::Kind::Ellipse || p.kind == PathPiece::Kind::Spline) {
+            auto curve = curve2d(p, f);
+            if (!curve) throw Standard_Failure(curve.error().message.c_str());
+            const auto& c = curve.value();
+            // Stored curve endpoints are rounded millimetres. OCCT retains
+            // the exact curve and shares the document's corner vertices with
+            // adjoining segments, within the existing rounded-fit allowance.
+            BRep_Builder vertices;
+            vertices.UpdateVertex(a, kRoundedFitMm);
+            vertices.UpdateVertex(b, kRoundedFitMm);
+            const bool forward = c.start < c.end;
+            TopoDS_Edge edge =
+                BRepBuilderAPI_MakeEdge(GeomAPI::To3d(c.curve, gp_Pln(gp::XOY())), forward ? a : b,
+                                        forward ? b : a, std::min(c.start, c.end),
+                                        std::max(c.start, c.end))
+                    .Edge();
+            if (!forward) edge.Reverse();
+            wire.Add(edge);
             continue;
         }
         // THE CIRCLE'S OWN DIRECTION IS COUNTER-CLOCKWISE about +Z; an arc
@@ -546,11 +649,296 @@ std::string failure(const Standard_Failure& e)
            (said != nullptr && *said != '\0' ? std::string(": ") + said : std::string()) + ".";
 }
 
+/// A display contour, not a source for measurements or stored geometry.
+Result<std::vector<Point2>> display_wire(const TopoDS_Wire& wire, const TopoDS_Face& face,
+                                         const Frame& frame, std::stop_token stop)
+{
+    std::vector<Point2> out;
+    for (BRepTools_WireExplorer w(wire, face); w.More(); w.Next()) {
+        if (stop.stop_requested())
+            return err(ErrorCode::Cancelled, "Topoloji denetimi durduruldu; sonuç verilmedi.");
+        const TopoDS_Edge edge = w.Current();
+        const BRepAdaptor_Curve curve(edge);
+        GCPnts_QuasiUniformDeflection points(curve, 1.0);
+        if (!points.IsDone())
+            return err(ErrorCode::Internal, "OpenCASCADE topoloji işaretini üretemedi.");
+        const bool reverse = edge.Orientation() == TopAbs_REVERSED;
+        for (int n = 1; n <= points.NbPoints(); ++n) {
+            const Point2 p = frame.back(points.Value(reverse ? points.NbPoints() + 1 - n : n));
+            if (out.empty() || out.back() != p) out.push_back(p);
+        }
+    }
+    if (out.size() > 1 && out.front() == out.back()) out.pop_back();
+    // Canonical seam for deterministic reports, independent of native traversal.
+    if (!out.empty()) {
+        const auto first = std::ranges::min_element(
+            out, [](Point2 a, Point2 b) { return std::tie(a.y, a.x) < std::tie(b.y, b.x); });
+        std::rotate(out.begin(), first, out.end());
+    }
+    return out;
+}
+
 } // namespace
 
 bool kernel_available() noexcept
 {
     return true;
+}
+
+Result<KernelFaceIssue> kernel_face_issue(const KernelFace& face)
+{
+#if defined(TRACY_ENABLE)
+    ZoneScopedN("kernel_face_issue");
+#endif
+    const auto connected = [](const CurvePath& path) {
+        if (path.pieces.empty() || !path.closed) return false;
+        for (std::size_t i = 0; i < path.pieces.size(); ++i)
+            if (path.pieces[i].to != path.pieces[(i + 1) % path.pieces.size()].from) return false;
+        return true;
+    };
+    if (!connected(face.outer)) return KernelFaceIssue::InvalidBoundary;
+    for (const auto& hole : face.holes)
+        if (!connected(hole)) return KernelFaceIssue::InvalidBoundary;
+    const Frame frame{face.outer.pieces.front().from};
+    try {
+        const TopoDS_Face shape = face_of(face, frame);
+        for (TopExp_Explorer w(shape, TopAbs_WIRE); w.More(); w.Next()) {
+            BRepCheck_Wire check(TopoDS::Wire(w.Current()));
+            TopoDS_Edge first, second;
+            if (check.SelfIntersect(shape, first, second) == BRepCheck_SelfIntersectingWire)
+                return KernelFaceIssue::SelfIntersection;
+        }
+        return BRepCheck_Analyzer(shape, Standard_True).IsValid()
+                   ? KernelFaceIssue::None
+                   : KernelFaceIssue::InvalidBoundary;
+    } catch (const StdFail_NotDone&) {
+        // A disconnected or degenerate wire cannot be made into a face. That
+        // is a finding, not a repaired face nor a successfully empty check.
+        return KernelFaceIssue::InvalidBoundary;
+    } catch (const Standard_Failure& e) {
+        return err(ErrorCode::Internal, failure(e));
+    }
+}
+
+Result<Box2> kernel_bounds(const CurvePath& path)
+{
+#if defined(TRACY_ENABLE)
+    ZoneScopedN("kernel_bounds");
+#endif
+    if (path.pieces.empty()) return Box2{};
+    const Frame frame{path.pieces.front().from};
+    try {
+        Bnd_Box box;
+        BRepBndLib::AddOptimal(wire_of(path, frame), box, Standard_False, Standard_False);
+        if (box.IsVoid()) return Box2{};
+        double x0, y0, z0, x1, y1, z1;
+        box.Get(x0, y0, z0, x1, y1, z1);
+        return Box2{
+            frame.origin.x + mm_round(std::floor(x0)), frame.origin.y + mm_round(std::floor(y0)),
+            frame.origin.x + mm_round(std::ceil(x1)), frame.origin.y + mm_round(std::ceil(y1))};
+    } catch (const Standard_Failure& e) {
+        return err(ErrorCode::Internal, failure(e));
+    }
+}
+
+Result<KernelOverlap> kernel_overlap(const KernelFace& a, const KernelFace& b, Mm tolerance,
+                                     std::stop_token stop)
+{
+#if defined(TRACY_ENABLE)
+    ZoneScopedN("kernel_overlap");
+#endif
+    if (tolerance < 0) return err(ErrorCode::InvalidArgument, "Topoloji toleransı negatif olamaz.");
+    const auto stopped = [] {
+        return err(ErrorCode::Cancelled, "Topoloji denetimi durduruldu; sonuç verilmedi.");
+    };
+    if (stop.stop_requested()) return stopped();
+    for (const auto* face : {&a, &b}) {
+        if (face->outer.pieces.empty() || !face->outer.closed)
+            return err(ErrorCode::InvalidArgument, "Örtüşme denetimi kapalı alanlar ister.");
+        for (const auto& hole : face->holes)
+            if (hole.pieces.empty() || !hole.closed)
+                return err(ErrorCode::InvalidArgument, "Örtüşme denetimi kapalı delikler ister.");
+    }
+    const Frame frame{a.outer.pieces.front().from};
+    try {
+        BRepAlgoAPI_Common common;
+        TopTools_ListOfShape arguments, tools;
+        arguments.Append(face_of(a, frame));
+        tools.Append(face_of(b, frame));
+        common.SetArguments(arguments);
+        common.SetTools(tools);
+        common.SetRunParallel(Standard_False);
+        Handle(Message_ProgressIndicator) progress = new StopProgress(stop);
+        common.Build(progress->Start());
+        if (stop.stop_requested()) return stopped();
+        if (!common.IsDone() || common.HasErrors())
+            return err(ErrorCode::Internal, "OpenCASCADE örtüşme denetimini tamamlayamadı; "
+                                            "sonuç verilmedi.");
+
+        KernelOverlap out;
+        std::vector<double> areas;
+        double largest_area = 0.0;
+        TopoDS_Face largest;
+        for (TopExp_Explorer f(common.Shape(), TopAbs_FACE); f.More(); f.Next()) {
+            if (stop.stop_requested()) return stopped();
+            const TopoDS_Face piece = TopoDS::Face(f.Current());
+            GProp_GProps surface, boundary;
+            BRepGProp::SurfaceProperties(piece, surface);
+            BRepGProp::LinearProperties(piece, boundary);
+            const double area = std::abs(surface.Mass());
+            areas.push_back(area);
+            if (area > 0.0 && 2.0 * area > static_cast<double>(tolerance) * boundary.Mass())
+                out.exceeds_tolerance = true;
+            if (area > largest_area) {
+                largest_area = area;
+                largest      = piece;
+            }
+        }
+        // A named summation order independent of OCCT's face traversal:
+        // smaller contributions first, then one square-millimetre rounding.
+        std::ranges::sort(areas);
+        double total = 0.0;
+        for (const double area : areas)
+            total += area;
+        out.area = mm_round(total);
+        if (out.exceeds_tolerance && !largest.IsNull()) {
+            // Only the canvas outline is sampled. Area and tolerance were
+            // computed on the exact intersection above, without these points.
+            const TopoDS_Wire outer = BRepTools::OuterWire(largest);
+            for (BRepTools_WireExplorer w(outer, largest); w.More(); w.Next()) {
+                if (stop.stop_requested()) return stopped();
+                const TopoDS_Edge edge = w.Current();
+                const BRepAdaptor_Curve curve(edge);
+                GCPnts_QuasiUniformDeflection points(curve, 1.0);
+                if (!points.IsDone())
+                    return err(ErrorCode::Internal, "OpenCASCADE örtüşme işaretini üretemedi.");
+                const bool reverse = edge.Orientation() == TopAbs_REVERSED;
+                for (int n = 1; n <= points.NbPoints(); ++n) {
+                    const Point2 p =
+                        frame.back(points.Value(reverse ? points.NbPoints() + 1 - n : n));
+                    if (out.region.empty() || out.region.back() != p) out.region.push_back(p);
+                }
+            }
+            if (out.region.size() > 1 && out.region.front() == out.region.back())
+                out.region.pop_back();
+        }
+        if (stop.stop_requested()) return stopped();
+        return out;
+    } catch (const Standard_Failure& e) {
+        if (stop.stop_requested()) return stopped();
+        return err(ErrorCode::Internal, failure(e));
+    }
+}
+
+Result<std::vector<KernelCoverageGap>> kernel_coverage_gaps(std::span<const KernelFace> faces,
+                                                            Mm tolerance, std::stop_token stop)
+{
+#if defined(TRACY_ENABLE)
+    ZoneScopedN("kernel_coverage_gaps");
+#endif
+    if (tolerance < 0) return err(ErrorCode::InvalidArgument, "Topoloji toleransı negatif olamaz.");
+    const auto stopped = [] {
+        return err(ErrorCode::Cancelled, "Topoloji denetimi durduruldu; sonuç verilmedi.");
+    };
+    if (stop.stop_requested()) return stopped();
+    for (const auto& face : faces) {
+        if (face.outer.pieces.empty() || !face.outer.closed)
+            return err(ErrorCode::InvalidArgument, "Kapsama denetimi kapalı alanlar ister.");
+        for (const auto& hole : face.holes)
+            if (hole.pieces.empty() || !hole.closed)
+                return err(ErrorCode::InvalidArgument, "Kapsama denetimi kapalı delikler ister.");
+    }
+    if (faces.size() < 2) return std::vector<KernelCoverageGap>{};
+    const Frame frame{origin_of(faces, {})};
+    try {
+        TopTools_ListOfShape arguments, tools, exclusions;
+        for (const auto& face : faces) {
+            if (stop.stop_requested()) return stopped();
+            const TopoDS_Face shape = face_of(face, frame);
+            if (arguments.IsEmpty())
+                arguments.Append(shape);
+            else
+                tools.Append(shape);
+            for (const auto& hole : face.holes)
+                exclusions.Append(face_of(KernelFace{hole, {}}, frame));
+        }
+        Handle(Message_ProgressIndicator) progress = new StopProgress(stop);
+        BRepAlgoAPI_Fuse unite;
+        unite.SetArguments(arguments);
+        unite.SetTools(tools);
+        unite.SetRunParallel(Standard_False);
+        unite.SetNonDestructive(Standard_True);
+        unite.Build(progress->Start());
+        if (stop.stop_requested()) return stopped();
+        if (!unite.IsDone() || unite.HasErrors())
+            return err(ErrorCode::Internal, "OpenCASCADE kapsama birleşimini tamamlayamadı; "
+                                            "sonuç verilmedi.");
+        // Fuse retains adjacent coplanar subfaces. Native unification removes
+        // their seams, exposing the actual inner wires of the whole coverage.
+        unite.SimplifyResult(Standard_True, Standard_True);
+        if (stop.stop_requested()) return stopped();
+        TopTools_ListOfShape candidates;
+        for (TopExp_Explorer f(unite.Shape(), TopAbs_FACE); f.More(); f.Next()) {
+            const TopoDS_Face face  = TopoDS::Face(f.Current());
+            const TopoDS_Wire outer = BRepTools::OuterWire(face);
+            for (TopExp_Explorer w(face, TopAbs_WIRE); w.More(); w.Next()) {
+                if (stop.stop_requested()) return stopped();
+                if (w.Current().IsSame(outer)) continue;
+                auto wire = TopoDS::Wire(w.Current());
+                wire.Reverse(); // an inner boundary becomes the candidate's exterior
+                candidates.Append(BRepBuilderAPI_MakeFace(wire, Standard_True).Face());
+            }
+        }
+        if (candidates.IsEmpty()) return std::vector<KernelCoverageGap>{};
+        // A hole of the union can contain disconnected covered islands. Remove
+        // the coverage AND declared exclusions before measuring each gap.
+        exclusions.Append(unite.Shape());
+        BRepAlgoAPI_Cut uncovered;
+        uncovered.SetArguments(candidates);
+        uncovered.SetTools(exclusions);
+        uncovered.SetRunParallel(Standard_False);
+        uncovered.SetNonDestructive(Standard_True);
+        uncovered.Build(progress->Start());
+        if (stop.stop_requested()) return stopped();
+        if (!uncovered.IsDone() || uncovered.HasErrors())
+            return err(ErrorCode::Internal, "OpenCASCADE kapsama boşluklarını çıkaramadı; "
+                                            "sonuç verilmedi.");
+        uncovered.SimplifyResult(Standard_True, Standard_True);
+        std::vector<KernelCoverageGap> out;
+        for (TopExp_Explorer f(uncovered.Shape(), TopAbs_FACE); f.More(); f.Next()) {
+            if (stop.stop_requested()) return stopped();
+            const TopoDS_Face face = TopoDS::Face(f.Current());
+            GProp_GProps surface, boundary;
+            BRepGProp::SurfaceProperties(face, surface);
+            BRepGProp::LinearProperties(face, boundary);
+            const double area = std::abs(surface.Mass());
+            if (!(area > 0.0 && 2.0 * area > static_cast<double>(tolerance) * boundary.Mass()))
+                continue;
+            KernelCoverageGap gap;
+            gap.area = mm_round(area); // each independent finding, rounded once
+            if (gap.area <= 0) continue;
+            const TopoDS_Wire outer = BRepTools::OuterWire(face);
+            auto region             = display_wire(outer, face, frame, stop);
+            if (!region) return region.error();
+            gap.region = std::move(region.value());
+            for (TopExp_Explorer w(face, TopAbs_WIRE); w.More(); w.Next()) {
+                if (w.Current().IsSame(outer)) continue;
+                auto hole = display_wire(TopoDS::Wire(w.Current()), face, frame, stop);
+                if (!hole) return hole.error();
+                gap.holes.push_back(std::move(hole.value()));
+            }
+            std::ranges::sort(gap.holes);
+            out.push_back(std::move(gap));
+        }
+        std::ranges::sort(out, [](const auto& a, const auto& b) {
+            return std::tie(a.region, a.holes, a.area) < std::tie(b.region, b.holes, b.area);
+        });
+        if (stop.stop_requested()) return stopped();
+        return out;
+    } catch (const Standard_Failure& e) {
+        if (stop.stop_requested()) return stopped();
+        return err(ErrorCode::Internal, failure(e));
+    }
 }
 
 std::string kernel_version()
@@ -642,15 +1030,28 @@ Result<PathMeets> kernel_meets(const PathPiece& a, const PathPiece& b)
 }
 
 Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace> a,
-                                               std::span<const KernelFace> b, BooleanOp op)
+                                               std::span<const KernelFace> b, BooleanOp op,
+                                               std::stop_token stop)
 {
+#if defined(TRACY_ENABLE)
+    ZoneScopedN("kernel_boolean");
+#endif
+    const auto stopped = [] {
+        return err(ErrorCode::Cancelled, "Alan işlemi durduruldu; sonuç oluşturulmadı.");
+    };
+    if (stop.stop_requested()) return stopped();
     for (const auto set : {a, b})
         for (const KernelFace& face : set) {
             if (auto why = unfit(face.outer, true)) return err(ErrorCode::InvalidArgument, *why);
             for (const CurvePath& hole : face.holes)
                 if (auto why = unfit(hole, true)) return err(ErrorCode::InvalidArgument, *why);
         }
-    if (a.empty()) return std::vector<KernelFace>{};
+    if (a.empty()) {
+        if (b.empty()) return std::vector<KernelFace>{};
+        if (op == BooleanOp::Union || op == BooleanOp::SymmetricDifference)
+            return kernel_boolean(b, {}, BooleanOp::Union, stop);
+        return std::vector<KernelFace>{};
+    }
 
     const Frame f{origin_of(a, b)};
     try {
@@ -658,10 +1059,14 @@ Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace> a,
         // cut against each other too: a compound argument is taken whole.
         TopTools_ListOfShape arguments;
         TopTools_ListOfShape tools;
-        for (const KernelFace& face : a)
+        for (const KernelFace& face : a) {
+            if (stop.stop_requested()) return stopped();
             arguments.Append(face_of(face, f));
-        for (const KernelFace& face : b)
+        }
+        for (const KernelFace& face : b) {
+            if (stop.stop_requested()) return stopped();
             tools.Append(face_of(face, f));
+        }
         // NOTHING ON THE OTHER SIDE: nothing is common with it, taking it away
         // takes nothing, and a union of ONE set is its first face fused with
         // the rest — or, for a single face, the face as the kernel hands a face
@@ -672,6 +1077,7 @@ Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace> a,
                 ShapeUpgrade_UnifySameDomain alone(arguments.First(), Standard_True, Standard_True,
                                                    Standard_False);
                 alone.Build();
+                if (stop.stop_requested()) return stopped();
                 return faces_of(alone.Shape(), f);
             }
             tools = arguments;
@@ -679,7 +1085,50 @@ Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace> a,
             const TopoDS_Shape first = arguments.First();
             arguments.Clear();
             arguments.Append(first);
-            if (op == BooleanOp::Difference) op = BooleanOp::Union;
+            if (op == BooleanOp::Difference || op == BooleanOp::SymmetricDifference)
+                op = BooleanOp::Union;
+        }
+
+        Handle(Message_ProgressIndicator) progress = new StopProgress(stop);
+        const auto build = [&](BRepAlgoAPI_BooleanOperation& operation) -> Result<void> {
+            operation.SetRunParallel(Standard_False);
+            operation.SetNonDestructive(Standard_True);
+            operation.Build(progress->Start());
+            if (stop.stop_requested()) return stopped();
+            if (!operation.IsDone() || operation.HasErrors())
+                return err(ErrorCode::Internal,
+                           "OpenCASCADE alan işlemini tamamlayamadı; kaynaklar değiştirilmedi.");
+            return {};
+        };
+        if (op == BooleanOp::SymmetricDifference) {
+            BRepAlgoAPI_Cut left, right;
+            left.SetArguments(arguments);
+            left.SetTools(tools);
+            if (auto done = build(left); !done) return done.error();
+            right.SetArguments(tools);
+            right.SetTools(arguments);
+            if (auto done = build(right); !done) return done.error();
+            const bool has_left  = TopExp_Explorer(left.Shape(), TopAbs_FACE).More();
+            const bool has_right = TopExp_Explorer(right.Shape(), TopAbs_FACE).More();
+            TopoDS_Shape result;
+            if (has_left && has_right) {
+                BRepAlgoAPI_Fuse joined;
+                TopTools_ListOfShape first, second;
+                first.Append(left.Shape());
+                second.Append(right.Shape());
+                joined.SetArguments(first);
+                joined.SetTools(second);
+                if (auto done = build(joined); !done) return done.error();
+                joined.SimplifyResult(Standard_True, Standard_True);
+                result = joined.Shape();
+            } else if (has_left)
+                result = left.Shape();
+            else if (has_right)
+                result = right.Shape();
+            else
+                return std::vector<KernelFace>{};
+            if (stop.stop_requested()) return stopped();
+            return faces_of(result, f);
         }
 
         BRepAlgoAPI_Fuse fuse;
@@ -692,20 +1141,17 @@ Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace> a,
         run->SetTools(tools);
         // ONE THREAD: the kernel's parallel mode may meet the same faces in a
         // different order, and the order is not allowed to show (§7.3).
-        run->SetRunParallel(Standard_False);
-        run->Build();
-        if (!run->IsDone() || run->HasErrors())
-            return err(ErrorCode::Internal,
-                       "Geometri çekirdeği bu alan işlemini tamamlayamadı; sınırlardan biri "
-                       "kendini kesiyor ya da açık olabilir.");
+        if (auto done = build(*run); !done) return done.error();
 
         // THE SEAMS THE OPERATION LEFT go: two collinear edges, or two arcs of
         // one circle, that it cut and put back side by side are one again.
         ShapeUpgrade_UnifySameDomain unify(run->Shape(), Standard_True, Standard_True,
                                            Standard_False);
         unify.Build();
+        if (stop.stop_requested()) return stopped();
         return faces_of(unify.Shape(), f);
     } catch (const Standard_Failure& e) {
+        if (stop.stop_requested()) return stopped();
         return err(ErrorCode::Internal, failure(e));
     }
 }

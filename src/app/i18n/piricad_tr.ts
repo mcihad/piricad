@@ -44,6 +44,42 @@
         <source>%1 nesne · %2/%1</source>
         <translation>%1 nesne · %2/%1</translation>
     </message>
+    <message>
+        <source>Alan İşlemleri</source>
+        <translation>Alan İşlemleri</translation>
+    </message>
+    <message>
+        <source>Birleşim</source>
+        <translation>Birleşim</translation>
+    </message>
+    <message>
+        <source>Kesişim</source>
+        <translation>Kesişim</translation>
+    </message>
+    <message>
+        <source>Fark</source>
+        <translation>Fark</translation>
+    </message>
+    <message>
+        <source>Simetrik Fark</source>
+        <translation>Simetrik Fark</translation>
+    </message>
+    <message>
+        <source>BİRLEŞİM — kapalı alanların bütününü birleştirir; ayrı parçaları korur</source>
+        <translation>BİRLEŞİM — kapalı alanların bütününü birleştirir; ayrı parçaları korur</translation>
+    </message>
+    <message>
+        <source>KESİŞİM — iki kapalı alanın yalnız ortak bölgesini bırakır</source>
+        <translation>KESİŞİM — iki kapalı alanın yalnız ortak bölgesini bırakır</translation>
+    </message>
+    <message>
+        <source>FARK — tutulacak alanı belirleyin; diğer alanların kapladığı kısımlar ondan çıkarılır</source>
+        <translation>FARK — tutulacak alanı belirleyin; diğer alanların kapladığı kısımlar ondan çıkarılır</translation>
+    </message>
+    <message>
+        <source>SİMETRİKFARK — iki kapalı alanın ortak bölgesini çıkarır, yalnız birine ait bölgeleri bırakır</source>
+        <translation>SİMETRİKFARK — iki kapalı alanın ortak bölgesini çıkarır, yalnız birine ait bölgeleri bırakır</translation>
+    </message>
 </context>
 
 <context>

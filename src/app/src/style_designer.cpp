@@ -2101,8 +2101,8 @@ QStringList StyleDesigner::probeRenderer(const QString& column)
         render::Overlay overlay;
         overlay.background_rgba = 0xffffffffu;
         const std::string svg   = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" "
-                                  "height=\"12\"><circle cx=\"6\" cy=\"6\" r=\"3\" "
-                                  "fill=\"#cc3377\"/></svg>";
+                                  "height=\"12\"><circle cx=\"6\" cy=\"6\" r=\"3\" fill=\"" +
+                                  QColor::fromRgba(face.rgba).name().toStdString() + "\"/></svg>";
         auto backend            = make_builtin_backend();
         for (const auto type :
              {core::SymbolLayerType::SimpleFill, core::SymbolLayerType::LinePatternFill,
@@ -2113,6 +2113,7 @@ QStringList StyleDesigner::probeRenderer(const QString& column)
             pass.wants_fill    = true;
             pass.line_rgba     = face.rgba;
             pass.fill_rgba     = face.rgba;
+            pass.opacity       = type == core::SymbolLayerType::SimpleFill ? 128 : 255;
             pass.line_width_px = 2;
             pass.interval_px   = 8;
             pass.size_px       = 12;
@@ -2142,11 +2143,44 @@ QStringList StyleDesigner::probeRenderer(const QString& column)
                 correct = correct && ink(-110, 0, 7) > 0 && ink(0, 0, 7) > 0 &&
                           ink(90, 40, 7) > 0 && ink(-95, -50, 3) == 0 && ink(-75, -50, 7) > 0 &&
                           ink(75, -70, 7) == 0;
+                if (type == core::SymbolLayerType::SimpleFill)
+                    correct = correct && image.pixelColor(90, 110) == image.pixelColor(200, 150);
             }
             out << QStringLiteral("dolgu örtüşmesi / delik / çıktı: %1 · %2")
                        .arg(QString::fromUtf8(core::symbol_layer_type_name(type)),
                             correct ? QStringLiteral("tamam") : QStringLiteral("BAŞARISIZ"));
         }
+        // The same overlay consumed by MapCanvas diagnostics. Its island must
+        // remain unpainted on both QImage and borrowed painter/PDF paths.
+        render::Overlay marked;
+        marked.background_rgba = overlay.background_rgba;
+        render::OverlayBatch mark;
+        mark.rgba      = face.rgba;
+        mark.fill_rgba = face.rgba;
+        mark.xs        = {80, 320, 320, 80, 170, 170, 230, 230};
+        mark.ys        = {60, 60, 240, 240, 120, 180, 180, 120};
+        mark.runs      = {4, 4};
+        mark.closed    = {1, 1};
+        marked.batches.push_back(std::move(mark));
+        bool correct = true;
+        for (const bool borrowed : {false, true}) {
+            QImage image(400, 300, QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::white);
+            QPainter painter;
+            if (borrowed) painter.begin(&image);
+            render::FrameContext context;
+            context.width_px          = image.width();
+            context.height_px         = image.height();
+            context.target_is_painter = borrowed;
+            context.target = borrowed ? static_cast<void*>(&painter)
+                                      : static_cast<void*>(static_cast<QPaintDevice*>(&image));
+            backend->render(render::DrawList{}, marked, context);
+            if (borrowed) painter.end();
+            correct = correct && image.pixelColor(110, 150) == QColor::fromRgba(face.rgba) &&
+                      image.pixelColor(200, 150) == QColor(Qt::white);
+        }
+        out << QStringLiteral("kapsama boşluğu / ada / çıktı: %1")
+                   .arg(correct ? QStringLiteral("tamam") : QStringLiteral("BAŞARISIZ"));
     }
     setRenderer(Renderer::Single);
     const QString directory = QString::fromLocal8Bit(qgetenv("PIRICAD_DESIGNER_PROBE"));

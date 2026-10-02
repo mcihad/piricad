@@ -18,6 +18,8 @@ birleştirilir: sonuçtaki yay aynı merkez ve yarıçapla yaydır, alan yayın 
 hesaplanır. Yaylı bir çizgi de uç uca eklenirken yayını korur; sonuç yaylı çoklu
 çizgidir. Yalnız düz kenarlı girdiler eskisi gibi hızlı yoldan (Clipper2) birleşir.
 
+Alanlara özgü dört işlem şeritte **Değiştir ▸ Alan İşlemleri** grubundadır: [Birleşim](area_union.md), [Kesişim](area_intersection.md), [Fark](area_difference.md) ve [Simetrik Fark](area_symdifference.md). Bu araçlar düz sınırları da OpenCASCADE üzerinden işler.
+
 ## Bu komut tevhit değildir
 
 `BİRLEŞTİR` **genel bir geometri işlemidir**; kadastro işlemi değildir.

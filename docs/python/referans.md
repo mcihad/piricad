@@ -136,6 +136,10 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.copy`](#cadcopy) | `core.copy` | `KOPYALA` | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`cad.array`](#cadarray) | `core.array` | `DİZİ` | Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır. |
 | [`cad.combine`](#cadcombine) | `core.combine` | `BİRLEŞTİR` | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
+| [`cad.area_union`](#cadarea_union) | `core.area_union` | `BİRLEŞİM` | Kapalı alanların bütününü OpenCASCADE ile birleştirir; ayrı parçaları korur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
+| [`cad.area_intersection`](#cadarea_intersection) | `core.area_intersection` | `KESİŞİM` | İki kapalı alanın ortak bölgesini OpenCASCADE ile oluşturur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
+| [`cad.area_difference`](#cadarea_difference) | `core.area_difference` | `FARK` | İlk seçilen kapalı alandan diğerlerini OpenCASCADE ile çıkarır; sıra önemlidir. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
+| [`cad.area_symdifference`](#cadarea_symdifference) | `core.area_symdifference` | `SİMETRİKFARK` | İki kapalı alanın yalnız birine ait bölgeleri oluşturur; ortak bölgeyi OpenCASCADE ile çıkarır. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
 | [`cad.split`](#cadsplit) | `core.split` | `BÖL` | Nesneleri bir kesme çizgisiyle, üstündeki noktalardan, kesişimlerinden, baştan bir uzaklıktan ya da eşit parçalara böler; yaylar yay kalır. |
 | [`cad.trim`](#cadtrim) | `core.trim` | `BUDA` | Tıklanan parçayı kesme sınırları arasından atar; çizgide, yayda ve dairede çalışır. |
 | [`cad.extend`](#cadextend) | `core.extend` | `UZAT` | Tıklanan ucu sınıra ulaşana kadar uzatır: çizginin ucunu doğrultusunda, yayınkini çemberi boyunca. |
@@ -218,7 +222,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.merge`](#cadmerge) | `core.merge` | `TEVHİT` | Komşu parselleri tek parselde birleştirir (tevhit). |
 | [`cad.split_parcel`](#cadsplit_parcel) | `core.split_parcel` | `İFRAZ` | Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz). |
 | [`cad.split_area`](#cadsplit_area) | `core.split_area` | `ALANİFRAZ` | Parselden verilen yöne paralel, istenen alanda bir parça ayırır. |
-| [`cad.topology`](#cadtopology) | `core.topology` | `TOPOLOJİ` | Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. |
+| [`cad.topology`](#cadtopology) | `core.topology` | `TOPOLOJİ` | Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. OpenCASCADE gerçek eğrileri ve delikleri denetler; düğüm toleransını aşan örtüşmeleri ve en küçük alan eşiğinin altındaki kırpıntı adaylarını gösterir. kapsama=evet aynı katmanda kapalı kapsama boşluklarını ayrıca denetler. |
 | [`cad.contour`](#cadcontour) | `core.contour` | `EŞYÜKSELTİ` | Kotlu noktalardan eş yükselti eğrileri çizer. |
 | [`cad.earthwork`](#cadearthwork) | `core.earthwork` | `HACİM` | Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar. |
 | [`cad.layers`](#cadlayers) | `core.layers` | `KATMANLAR` | Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler. |
@@ -1407,6 +1411,88 @@ cad.combine(
 | `objects` | `list[int]` | `nesneler` | Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/combine.md)
+
+### `cad.area_union`
+
+Kapalı alanların bütününü OpenCASCADE ile birleştirir; ayrı parçaları korur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+Komut: `core.area_union` — `BİRLEŞİM`
+
+```python
+cad.area_union(
+    objects: list[int],
+    keep_sources: bool,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur [kalıcı nesne anahtarı] |
+| `keep_sources` | `bool` | `kaynaklari_koru` | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur |
+
+[Komut sayfası](../komutlar/area_union.md)
+
+### `cad.area_intersection`
+
+İki kapalı alanın ortak bölgesini OpenCASCADE ile oluşturur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+Komut: `core.area_intersection` — `KESİŞİM`
+
+```python
+cad.area_intersection(
+    objects: list[int],
+    keep_sources: bool,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur [kalıcı nesne anahtarı] |
+| `keep_sources` | `bool` | `kaynaklari_koru` | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur |
+
+[Komut sayfası](../komutlar/area_intersection.md)
+
+### `cad.area_difference`
+
+İlk seçilen kapalı alandan diğerlerini OpenCASCADE ile çıkarır; sıra önemlidir. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+Komut: `core.area_difference` — `FARK`
+
+```python
+cad.area_difference(
+    objects: list[int],
+    keep_sources: bool,
+    base: list[int],
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur [kalıcı nesne anahtarı] |
+| `keep_sources` | `bool` | `kaynaklari_koru` | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur |
+| `base` | `list[int]` | `tutulan` | Nesneler içinden tutulacak alan; verilmezse açık listedeki ilk alan, çoklu etkin seçimde ayrıca sorulur [kalıcı nesne anahtarı] |
+
+[Komut sayfası](../komutlar/area_difference.md)
+
+### `cad.area_symdifference`
+
+İki kapalı alanın yalnız birine ait bölgeleri oluşturur; ortak bölgeyi OpenCASCADE ile çıkarır. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir.
+
+Komut: `core.area_symdifference` — `SİMETRİKFARK`
+
+```python
+cad.area_symdifference(
+    objects: list[int],
+    keep_sources: bool,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `objects` | `list[int]` | `nesneler` | Kapalı alanlar; yoksa etkin seçim veya tıklayarak seçim. Farkta ilk alan tutulur [kalıcı nesne anahtarı] |
+| `keep_sources` | `bool` | `kaynaklari_koru` | evet: sonuç oluşturulurken kaynaklar saklanır; varsayılan hayır. Boş sonuçta daima korunur |
+
+[Komut sayfası](../komutlar/area_symdifference.md)
 
 ### `cad.split`
 
@@ -3760,19 +3846,21 @@ cad.split_area(
 
 ### `cad.topology`
 
-Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar.
+Kendini kesen sınır, sıfır alan ve örtüşen parselleri; yinelenen ve boş nesneleri, tekrarlanan köşeleri ve çizgi ağındaki boşlukları raporlar. OpenCASCADE gerçek eğrileri ve delikleri denetler; düğüm toleransını aşan örtüşmeleri ve en küçük alan eşiğinin altındaki kırpıntı adaylarını gösterir. kapsama=evet aynı katmanda kapalı kapsama boşluklarını ayrıca denetler.
 
 Komut: `core.topology` — `TOPOLOJİ`
 
 ```python
 cad.topology(
     objects: list[int],
+    coverage: bool,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim [kalıcı nesne anahtarı] |
+| `coverage` | `bool` | `kapsama` | evet: her katmanda alanların çevrelediği kapalı boşlukları denetle; çizilmiş delikler hariç. Varsayılan hayır; seçimin dışı denetlenmez |
 
 [Komut sayfası](../komutlar/topology.md)
 

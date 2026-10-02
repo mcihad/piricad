@@ -43,6 +43,42 @@
         <source>%1 nesne · %2/%1</source>
         <translation>%1 objects · %2/%1</translation>
     </message>
+    <message>
+        <source>Alan İşlemleri</source>
+        <translation>Area Operations</translation>
+    </message>
+    <message>
+        <source>Birleşim</source>
+        <translation>Union</translation>
+    </message>
+    <message>
+        <source>Kesişim</source>
+        <translation>Intersection</translation>
+    </message>
+    <message>
+        <source>Fark</source>
+        <translation>Difference</translation>
+    </message>
+    <message>
+        <source>Simetrik Fark</source>
+        <translation>Symmetric Difference</translation>
+    </message>
+    <message>
+        <source>BİRLEŞİM — kapalı alanların bütününü birleştirir; ayrı parçaları korur</source>
+        <translation>UNION — combines the regions of closed areas; preserves separate parts</translation>
+    </message>
+    <message>
+        <source>KESİŞİM — iki kapalı alanın yalnız ortak bölgesini bırakır</source>
+        <translation>INTERSECTION — keeps only the common region of two closed areas</translation>
+    </message>
+    <message>
+        <source>FARK — tutulacak alanı belirleyin; diğer alanların kapladığı kısımlar ondan çıkarılır</source>
+        <translation>DIFFERENCE — keeps the chosen base area and subtracts the other areas; input order matters</translation>
+    </message>
+    <message>
+        <source>SİMETRİKFARK — iki kapalı alanın ortak bölgesini çıkarır, yalnız birine ait bölgeleri bırakır</source>
+        <translation>SYMMETRIC DIFFERENCE — removes the common region and keeps regions belonging to only one area</translation>
+    </message>
 </context>
 
 <context>

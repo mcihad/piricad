@@ -93,6 +93,10 @@ Tek tek komutlar:
 | `DİZİ` | [Nesne çoğaltma dizisi](komutlar/array.md) |
 | `BÖL` | [Kesme çizgisiyle bölme](komutlar/split.md) |
 | `BİRLEŞTİR` | [Alan ve çizgi birleştirme](komutlar/combine.md) |
+| `BİRLEŞİM` | [Birleşim](komutlar/area_union.md) |
+| `KESİŞİM` | [Kesişim](komutlar/area_intersection.md) |
+| `FARK` | [Fark](komutlar/area_difference.md) |
+| `SİMETRİKFARK` | [Simetrik Fark](komutlar/area_symdifference.md) |
 | `BUDA` | [Parçayı kesme sınırlarına kadar budama](komutlar/trim.md) |
 | `UZAT` | [Ucu sınıra kadar uzatma](komutlar/extend.md) |
 | `PAH` | [Köşe pahı kırma](komutlar/chamfer.md) |

@@ -6,6 +6,38 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — şeritte dört alan işlemi
+
+- Birleşim, Kesişim, Fark ve Simetrik Fark; Değiştir, Alan ve Eğri sekmelerinde
+  ayrı simgelerle görünür. Dördü de düz/yaylı kapalı sınırları OpenCASCADE ile işler.
+- Tek seçili alanla araç açılınca diğer girdi istenir. Çoklu seçimde Fark,
+  tutulacak alanı ayrıca sorar; komut satırında ilk alan veya `tutulan=` kullanılır.
+- Kaynakları koruma seçeneği, tek geri alma adımı, yapılandırılmış sonuç ve
+  durdurma desteği vardır. Boş sonuç kaynak silmez. Eğrili delikler sessizce
+  düzleştirilmez; modelin saklayamadığı sonuç tam geri alınır.
+
+### Eklendi — G-05 kapalı kapsama boşluğu kuralı
+
+- `TOPOLOJİ kapsama=evet`, aynı katmandaki alanların çevrelediği kapalı
+  boşlukları OCCT birleşim/fark işlemleriyle bulur. Çizilmiş delikler istisnadır;
+  boşluğun içindeki parseller net alandan ve tuvaldeki işaretin dolgusundan çıkarılır.
+- Düğüm toleransı boşluğun etkin genişliğine uygulanır; küçük alan eşiği
+  boşlukları gizlemez. Katman, net alan, sınır ve adalar yapılandırılmış cevapta
+  yer alır. Seçim kapsamı korunur; denetim belgeyi ve geri alma yığınını değiştirmez.
+- Kural varsayılan kapalıdır; dışarıya açık boşlukları veya sınıf kurallarını
+  kapsamaz. Uzun native işlemlerde Durdur isteği de çekirdeğe aktarılır.
+
+### Düzeldi — G-05 topoloji toleransları ve eğrili alan denetimi
+
+- TOPOLOJİ, OpenCASCADE ile gerçek doğru/yay, daire, elips ve kapalı spline
+  sınırlarını ve delikleri denetler. Örtüşme alanından delikler çıkarılır;
+  başarısız bir çekirdek işlemi boş ve başarılı sonuç sayılmaz.
+- Sabit örtüşme alanı eşiği yerine parçanın etkin genişliği (`2 × alan / çevre`)
+  proje düğüm toleransıyla karşılaştırılır; 0 bütün pozitif örtüşmeleri bildirir.
+- “En küçük alan” ayarı artık küçük kapalı yüzeyleri kırpıntı adayı olarak
+  işaretler; eşik, çekirdek sürümü ve net alanlar rapora girer. Küçük bulgular
+  mm² olarak okunur. Denetim çizimi değiştirmez; Durdur OCCT işlemine de ulaşır.
+
 ### Düzeldi — kesişen alanlarda kaybolan tarama
 
 - Aynı stildeki ayrı polygonların kesişimi yanlışlıkla delik sayılıyordu.

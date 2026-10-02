@@ -154,9 +154,10 @@ Result<std::vector<Polygon>> buffer(const BufferSource& source, Mm distance,
 
 /// Which boolean to run.
 enum class BooleanOp : std::uint8_t {
-    Union,        ///< everything either side covers — TEVHİT
-    Difference,   ///< what the first covers and the second does not — İFRAZ's remainder
-    Intersection, ///< what both cover — the overlap a topology check looks for
+    Union,               ///< everything either side covers — TEVHİT
+    Difference,          ///< what the first covers and the second does not — İFRAZ's remainder
+    Intersection,        ///< what both cover — the overlap a topology check looks for
+    SymmetricDifference, ///< what exactly one side covers — shared ground removed
 };
 
 /// Runs `op` over two sets of polygons.

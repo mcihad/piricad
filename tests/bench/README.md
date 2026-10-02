@@ -48,6 +48,8 @@ otherwise a sub-microsecond case reports scheduler jitter as a regression.
 | `io.dwg_200mb_acilis` | ≤ 3 s | BEKLEMEDE — `/src/io` boş |
 | `io.laz_50m_ilk_goruntu` | ≤ 5 s | BEKLEMEDE — `/src/io` boş |
 | `domain.topoloji_100k_parsel` | ≤ 2 s | ölçülüyor |
+| `domain.topoloji_1000_ortusme` | — | bilgilendirme; 1000 gerçek OCCT kesişimi |
+| `domain.kapsama_1000_alan` | — | bilgilendirme; tek OCCT birleşiminde 1000 alan, 250 kapalı boşluk |
 | `uygulama.soguk_acilis` | ≤ 2 s | BEKLEMEDE — Qt içinde ölçülmeli |
 | `uygulama.bos_proje_ram` | ≤ 300 MB | BEKLEMEDE — Qt içinde ölçülmeli |
 | `arayuz.tus_ekran_gecikmesi` | ≤ 30 ms | BEKLEMEDE — Qt olay döngüsü gerekiyor |
@@ -63,6 +65,47 @@ macOS, optimize Clang/OCCT yapısında zoom fazı düzeltmesi sonrası
 `yogun-tarama.json` **0.128 ms / 27 çağrı**. İki sahne de 16 ms ve 100 çağrı
 bütçeleri içinde. Kayıtlı Linux temel değeri farklı makineye ait olduğundan
 yüzde regresyon karşılaştırması yapılmaz; bunlar yerel doğrulama ölçümleridir.
+
+### Yerel örtüşme doğrulaması — 2 Ekim 2026
+
+Aynı macOS makinesinde, aynı sahnelerle üçer koşumun ortancası; her koşum
+20 kareyi ölçer. Başlangıçta eski dolgu kuralı, sonrasında ayrı dış halkaları
+koruyan dolgu kuralı kullanıldı:
+
+| Sahne | Önce | Sonra | Çizim çağrısı |
+|---|---:|---:|---:|
+| `desen-yuku.json` | 0.438 ms | 0.449 ms | 81 → 81 |
+| `yogun-tarama.json` | 0.098 ms | 0.097 ms | 28 → 28 |
+
+Farklar %10 sınırının altında; iki sahne de 16 ms / 100 çağrı bütçesinde.
+`render.pan_zoom_5m` sahne kurma ölçümü 0.002 ms. Ayrı alanların kesişimi,
+iç içe alan, delik ve içbükey sınır gerçek GPU görüntüsünde doğrulandı.
+
+### G-05 topoloji — 2 Ekim 2026
+
+macOS, optimize Clang, OpenCASCADE 7.9.3: mevcut
+`domain.topoloji_100k_parsel` örneği önce **370.351 ± 9.838 ms**, OCCT geçerlilik
+denetimi ve örtüşme yolu sonrasında **132.680 ± 4.910 ms**; 2 s bütçesinde.
+Bu örnek, yedi farklı düz kenarlı parsel şeklinin bir ızgarada tekrarıdır:
+kutular ortak kenarda değer, pozitif alanla örtüşmez. Yeni yol kenar boyunca
+değen kutuları alan işleminden önce eler ve öteleme ile aynı kalan şekillerin
+OCCT geçerlilik sonucunu denetim boyunca paylaşır. Bu ölçüm 100 bin benzersiz
+karmaşık eğrinin veya yoğun pozitif örtüşmenin süresi olarak yorumlanmaz.
+`domain.topoloji_1000_ortusme`, öteleme önbelleği ve komşu elemesi olmadan
+1000 farklı pozitif örtüşmeyi doğrudan OCCT Common + GProp + gösterim sınırı
+yolunda ölçer: **271.245 ± 10.038 ms** (bilgilendirme, ayrı bir mutlak bütçe yok).
+Eğri dalları ayrı birim vakalarında sınanır; farklı makinenin kayıtlı temel
+değeri değiştirilmedi.
+
+Kapsama kuralı eklendikten sonra olağan 100k ölçümü **135.913 ± 7.446 ms**
+oldu (önce 132.680 ms, yaklaşık %2,4; aynı 2 s bütçesi). Bu koşum varsayılan
+`kapsama=false` denetimidir. `domain.kapsama_1000_alan` ayrı tek native birleşim,
+yüzey birleştirme ve fark işlemlerini ölçer: 250 ayrı dört-parsel grubunda 1000
+alan, her grupta tam 100 m² kapalı boşluk; **185.218 ± 9.468 ms**. Eşik ve alan
+sonuçları ölçüm sırasında da doğrulanır. Bu örneğin mutlak süre bütçesi yoktur;
+100k alanın kapsama birleşimine aynı süreyi veya 2 s sınırını atfetmez.
+Gerçek GPU pencere bütçeleri de yeniden geçti: desen yükü **284 µs / 81 çağrı**,
+yoğun tarama **107 µs / 27 çağrı**; ikisi de 16 ms ve 100 çağrı sınırında.
 
 ## Fixtures
 

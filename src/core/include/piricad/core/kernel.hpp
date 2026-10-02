@@ -34,6 +34,7 @@
 
 #include <cstdint>
 #include <span>
+#include <stop_token>
 #include <string>
 #include <vector>
 
@@ -63,14 +64,72 @@ struct KernelFace
     friend bool operator==(const KernelFace&, const KernelFace&) = default;
 };
 
-/// `op` over two sets of faces — union, intersection, difference — every arc
+/// OCCT's diagnosis of a closed face, including its holes.
+enum class KernelFaceIssue : std::uint8_t {
+    None,             ///< a usable closed face
+    SelfIntersection, ///< a boundary crosses itself
+    InvalidBoundary,  ///< disconnected edges, misplaced holes or invalid nesting
+};
+
+/// Checks the actual curves with OCCT's BRepCheck, without repairing them.
+/// Segments, circles, ellipse arcs and rational B-splines are supported. An
+/// invalid face is a diagnosis; a failed computation is an error.
+Result<KernelFaceIssue> kernel_face_issue(const KernelFace& face);
+
+/// A conservative whole-millimetre box of the actual curves, through OCCT.
+/// Unlike a vertex box, this includes a circle's and an arc's bulging boundary.
+Result<Box2> kernel_bounds(const CurvePath& path);
+
+/// A read-only intersection diagnosis; outlines are for display, never storage.
+struct KernelOverlap
+{
+    Mm2 area{0};                   ///< total common area, holes removed, rounded once
+    bool exceeds_tolerance{false}; ///< a piece's effective width 2*area/perimeter exceeds tolerance
+    std::vector<Point2> region;    ///< largest piece's outer outline, 1 mm display deflection
+};
+
+/// Intersects exact faces in OCCT. `tolerance` is a non-negative length in mm:
+/// each common piece is significant when 2*area/perimeter exceeds it. Zero
+/// reports every positive intersection. The reported area is the entire common
+/// area, not an area reduced by tolerance. Kernel failures are never empty success.
+/// Input faces must be valid; diagnose untrusted faces with `kernel_face_issue` first.
+/// `stop` is passed to OCCT's progress indicator; cancellation returns Cancelled
+/// and no partial diagnosis, including during the boolean operation itself.
+Result<KernelOverlap> kernel_overlap(const KernelFace& a, const KernelFace& b, Mm tolerance,
+                                     std::stop_token stop = {});
+
+/// One enclosed, uncovered piece of a parcel coverage. Display outlines alone
+/// are sampled; area and the effective width are computed on exact OCCT faces.
+struct KernelCoverageGap
+{
+    Mm2 area{0};                ///< independent uncovered piece's net area, rounded once
+    std::vector<Point2> region; ///< outer display contour at 1 mm deflection
+    std::vector<std::vector<Point2>> holes; ///< covered islands, excluded from area and display
+};
+
+/// Unites valid faces in OCCT and diagnoses the bounded holes of their union.
+/// Explicit input holes are intentional exclusions; they are subtracted from
+/// findings, as are covered islands. The unbounded exterior is never a gap.
+/// Each returned piece has positive rounded net area and effective width
+/// 2*area/perimeter > `tolerance`. Zero reports every positive piece. Output is
+/// sorted by outline coordinates; input order does not define finding order.
+/// This is a coverage rule, not an assumption about arbitrary CAD objects.
+/// Cancellation enters native booleans and returns no partial result.
+Result<std::vector<KernelCoverageGap>>
+kernel_coverage_gaps(std::span<const KernelFace> faces, Mm tolerance, std::stop_token stop = {});
+
+/// `op` over two sets of faces — union, intersection, difference or symmetric
+/// difference — every arc
 /// kept an arc. Collinear edges and arcs of one circle that the operation cut
 /// and joined again come back as one (a parcel fused back with the piece cut
 /// from it is the parcel it was). Refused, with the sentence a user reads, for
 /// a path that is not closed, one with an ellipse or a spline piece (the kernel
 /// takes those in a later stage), and when the kernel fails.
+/// Symmetric difference uses native cuts and union without rounding intermediate
+/// shapes. `stop` enters each native boolean; cancellation returns no result.
 Result<std::vector<KernelFace>> kernel_boolean(std::span<const KernelFace> a,
-                                               std::span<const KernelFace> b, BooleanOp op);
+                                               std::span<const KernelFace> b, BooleanOp op,
+                                               std::stop_token stop = {});
 
 /// FACES FROM RINGS: closed paths that do not cross, each told apart by what
 /// holds it — a ring inside none, or inside an even number, is a boundary; one

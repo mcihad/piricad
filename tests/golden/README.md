@@ -32,6 +32,18 @@ four axes exact in both rules and all three units, with and without the `g/d/r`
 suffix, so a platform that disagreed in the last bit would show up here as a
 moved vertex rather than as a surveyor's complaint.
 
+`alan-boolean.txt` fixes union (175 m²), intersection (25 m²), difference
+with a true hole (64 m²), symmetric difference (two 75 m² pieces) and a
+circle's half-disc intersection (39,269,908 mm²). The whole-millimetre paths,
+arc payloads, provenance and replayed journal are checked on every platform.
+The multipart unit fixture is imported through the public command from
+`cizim/alan-boolean-multipart.gpkg`; its two exteriors and first part's hole
+come from the adjacent GeoJSON source. Recreate the fixture with:
+
+```bash
+ogr2ogr -f GPKG /tmp/alan-boolean-multipart.gpkg tests/golden/cizim/alan-boolean-multipart.geojson
+```
+
 `occt-kesisim.txt` fixes the O-5 OpenCASCADE results at large TUREF coordinates:
 an ellipse meets a line at the hand-computed ±8 m, and two opposite quadratic
 splines meet at 1.464 m and 8.536 m after rounding once to millimetres. BUDA keeps

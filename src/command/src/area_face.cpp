@@ -39,7 +39,7 @@ core::Mm2 magnitude(core::Mm2 v)
 
 } // namespace
 
-std::optional<AreaFace> area_face(const core::Document& doc, core::EntityId slot)
+std::optional<std::vector<AreaFace>> area_faces(const core::Document& doc, core::EntityId slot)
 {
     const core::KindId kind = doc.entities().kind[slot];
     if (kind == core::kArcPolylineKind) {
@@ -50,7 +50,7 @@ std::optional<AreaFace> area_face(const core::Document& doc, core::EntityId slot
         AreaFace out;
         out.curved     = bends(*path);
         out.face.outer = std::move(*path);
-        return out;
+        return std::vector<AreaFace>{std::move(out)};
     }
     if (kind != core::kPolylineKind || doc.texts().has(doc.entities().slot[slot]))
         return std::nullopt;
@@ -59,8 +59,8 @@ std::optional<AreaFace> area_face(const core::Document& doc, core::EntityId slot
     // stores them (model.md R11).
     const core::RingGeometry& geom = doc.geometry();
     const core::RingSpan span      = geom.rings_of(doc.entities().slot[slot]);
-    AreaFace out;
-    bool have_outer = false;
+    std::vector<AreaFace> out;
+    std::uint32_t part = 0;
     for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
         if (geom.ring_role[r] == core::RingRole::Open) continue;
         const auto xs = geom.ring_xs(r);
@@ -69,16 +69,25 @@ std::optional<AreaFace> area_face(const core::Document& doc, core::EntityId slot
         ring.reserve(xs.size());
         for (std::size_t v = 0; v < xs.size(); ++v)
             ring.push_back(core::Point2{xs[v], ys[v]});
-        if (geom.ring_role[r] == core::RingRole::Exterior && !have_outer) {
+        if (geom.ring_role[r] == core::RingRole::Exterior) {
             if (ring.size() < 3) return std::nullopt;
-            out.face.outer = ring_path(ring);
-            have_outer     = true;
-        } else if (ring.size() >= 3) {
-            out.face.holes.push_back(ring_path(ring));
+            if (!out.empty() && geom.ring_part[r] == part) return std::nullopt;
+            part = geom.ring_part[r];
+            out.push_back(AreaFace{core::KernelFace{ring_path(ring), {}}, false});
+        } else {
+            if (out.empty() || geom.ring_part[r] != part || ring.size() < 3) return std::nullopt;
+            out.back().face.holes.push_back(ring_path(ring));
         }
     }
-    if (!have_outer) return std::nullopt;
+    if (out.empty()) return std::nullopt;
     return out;
+}
+
+std::optional<AreaFace> area_face(const core::Document& doc, core::EntityId slot)
+{
+    auto faces = area_faces(doc, slot);
+    if (!faces || faces->size() != 1) return std::nullopt;
+    return std::move(faces->front());
 }
 
 core::Polygon face_polygon(const core::KernelFace& face)
@@ -141,6 +150,10 @@ core::Result<std::vector<core::KernelFace>> area_boolean(std::span<const core::K
 core::Result<core::EntityId> add_face(Context& ctx, core::LayerId layer,
                                       const core::KernelFace& face)
 {
+    if (!face.holes.empty() && (bends(face.outer) || std::ranges::any_of(face.holes, bends)))
+        return core::err(core::ErrorCode::Unsupported,
+                         "Sonuç eğrili bir sınır ve delik içeriyor; bu alan biçimi henüz "
+                         "kaydedilemiyor. Kaynaklar değiştirilmedi.");
     if (!bends(face.outer)) {
         // A STRAIGHT-EDGED PIECE is the polyline it always was, written the way
         // it always was.
@@ -152,10 +165,6 @@ core::Result<core::EntityId> add_face(Context& ctx, core::LayerId layer,
             rings.push_back(core::RingGeometry::RingInput{hole, core::RingRole::Interior, 0});
         return ctx.transaction().add_area(layer, rings);
     }
-    if (!face.holes.empty())
-        return core::err(core::ErrorCode::Unsupported,
-                         "Sonuçtaki alanın hem yay kenarı hem içinde boşluğu var; yaylı kenarlı "
-                         "bir alan bu sürümde boşluk taşıyamaz.");
     const core::PathRecord rec = core::area_record(face.outer);
     const core::RingGeometry::RingInput ring{rec.ring, rec.role, 0};
     return ctx.transaction().add_kind(layer, rec.kind, {&ring, 1}, rec.payload);

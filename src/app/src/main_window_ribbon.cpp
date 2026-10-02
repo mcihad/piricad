@@ -764,8 +764,8 @@ void MainWindow::buildRibbon()
         group->setGridMinimumWidth(58);
         group->setGridMaximumWidth(58);
         gallery->setCurrentViewGroup(group);
-        // Three patterns show; the arrow under the scroll buttons opens them all.
-        gallery->setFixedWidth((3 * 58) + 20);
+        // Two patterns show; the arrow under the scroll buttons opens them all.
+        gallery->setFixedWidth((2 * 58) + 20);
     }
     small(fills, actHatchEdit_);
     small(fills, actBoundary_);
@@ -798,9 +798,19 @@ void MainWindow::buildRibbon()
     family(arrays, {actArray_, actArrayPolar_, actArrayPath_}, Size::Large, tr("Dizi"));
     large(arrays, actOffset_);
 
+    // All four operations remain visible; the selection order for FARK is
+    // explained by its action tooltip and by the shared command prompt.
+    SARibbonPanel* areaBoolean = modifyTab->addPanel(tr("Alan İşlemleri"));
+    areaBoolean->setObjectName(QStringLiteral("ribbonModifyAreaBoolean"));
+    for (QAction* action :
+         {actAreaUnion_, actAreaIntersection_, actAreaDifference_, actAreaSymdifference_}) {
+        areaBoolean->addMediumAction(action);
+        remember(action);
+    }
+
     SARibbonPanel* cuts = modifyTab->addPanel(tr("Kes ve Uzat"));
-    family(cuts, {actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_}, Size::Large, tr("Buda"));
-    family(cuts, {actExtend_, actExtendFence_, actExtendCarry_}, Size::Large, tr("Uzat"));
+    family(cuts, {actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_}, Size::Small, tr("Buda"));
+    family(cuts, {actExtend_, actExtendFence_, actExtendCarry_}, Size::Small, tr("Uzat"));
     small(cuts, actBreak_);
     small(cuts, actLengthen_);
     family(cuts, {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_},
@@ -810,10 +820,8 @@ void MainWindow::buildRibbon()
     SARibbonPanel* corners = modifyTab->addPanel(tr("Köşe"));
     family(corners, {actFillet_, actFilletAll_}, Size::Large, tr("Yuvarla"));
     family(corners, {actChamfer_, actChamferAll_}, Size::Large, tr("Pah"));
-    small(corners, actVertexMove_);
-    small(corners, actVertexAdd_);
-    small(corners, actVertexDelete_);
-    small(corners, actEdgeKind_);
+    family(corners, {actVertexMove_, actVertexAdd_, actVertexDelete_, actEdgeKind_}, Size::Small,
+           tr("Köşe"));
     small(corners, actPolylineEdit_);
     small(corners, editArea);
 
@@ -1711,10 +1719,16 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     areaRead->addSmallAction(direct("islem.uzunluk_yaz", tr("Uzunluk Yaz")));
     launcher(areaRead, tr("Numaralama ve uzunluk yazma ayarları — Araçlar paneli"),
              [this] { showToolsPanel(QStringLiteral("islem.kose_numarala")); });
+    SARibbonPanel* areaBoolean = area->addPanel(tr("Alan İşlemleri"));
+    areaBoolean->setObjectName(QStringLiteral("ribbonContextAreaBoolean"));
+    areaBoolean->addMediumAction(actAreaUnion_);
+    areaBoolean->addMediumAction(actAreaIntersection_);
+    areaBoolean->addMediumAction(actAreaDifference_);
+    areaBoolean->addMediumAction(actAreaSymdifference_);
     SARibbonPanel* areaCadastre = area->addPanel(tr("Kadastro"));
     areaCadastre->addLargeAction(actParcelSplit_);
-    areaCadastre->addLargeAction(actAreaSplit_);
-    areaCadastre->addLargeAction(actUnion_);
+    areaCadastre->addSmallAction(actAreaSplit_);
+    areaCadastre->addSmallAction(actUnion_);
     areaCadastre->addSmallAction(actTopology_);
     // CUT AND ROUND, on the parcel that is picked: BÖL's cut line across it, a
     // corner rounded with a true arc, a corner moved, added or taken away.
@@ -1722,8 +1736,8 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     areaCut->setObjectName(QStringLiteral("ribbonAreaCorners"));
     family(areaCut, {actSplit_, actSplitPoint_, actSplitCross_, actSplitEqual_, actSplitDistance_},
            true, tr("Böl"));
-    family(areaCut, {actFillet_, actFilletAll_}, true, tr("Yuvarla"));
-    family(areaCut, {actChamfer_, actChamferAll_}, true, tr("Pah"));
+    family(areaCut, {actFillet_, actFilletAll_}, false, tr("Yuvarla"));
+    family(areaCut, {actChamfer_, actChamferAll_}, false, tr("Pah"));
     areaCut->addSmallAction(actVertexMove_);
     areaCut->addSmallAction(actVertexAdd_);
     areaCut->addSmallAction(actVertexDelete_);
@@ -1783,6 +1797,11 @@ void MainWindow::buildContextTabs(SARibbonBar* bar)
     curveRead->addLargeAction(actMeasureArea_);
     curveRead->addSmallAction(actEntityInfo_);
     curveRead->addSmallAction(actCoordinate_);
+    SARibbonPanel* curveBoolean = curve->addPanel(tr("Alan İşlemleri"));
+    curveBoolean->addMediumAction(actAreaUnion_);
+    curveBoolean->addMediumAction(actAreaIntersection_);
+    curveBoolean->addMediumAction(actAreaDifference_);
+    curveBoolean->addMediumAction(actAreaSymdifference_);
     SARibbonPanel* curveCut = curve->addPanel(tr("Kes ve Uzat"));
     curveCut->setObjectName(QStringLiteral("ribbonCurveCut"));
     family(curveCut, {actTrim_, actTrimFence_, actTrimKeep_, actTrimCarry_}, true, tr("Buda"));
@@ -2818,6 +2837,11 @@ int MainWindow::probeRibbonSheet()
             if (!c.isLetterOrNumber()) c = QLatin1Char('-');
         return word;
     };
+
+    // Photograph the laptop width the layout is measured against, so a row
+    // outside the viewport is visible as a defect in the captured sheet.
+    resize(1440, 860);
+    settle();
 
     // ONE OF EACH KIND, so every editor tab can be brought up.
     runScriptLine(QStringLiteral("YENİ"));

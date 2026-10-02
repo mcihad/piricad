@@ -1100,10 +1100,14 @@ private:
     QAction* actPolygon_{nullptr};
     QAction* actRegular_{nullptr};
     QAction* actTrim_{nullptr};
-    QAction* actCombine_{nullptr};     ///< BİRLEŞTİR — generic; `Değiştir ▸ Birleştir`
-    QAction* actUnion_{nullptr};       ///< TEVHİT — cadastral; `Kadastro ▸ Parsel`
-    QAction* actParcelSplit_{nullptr}; ///< İFRAZ — cadastral; `Kadastro ▸ Parsel`
-    QAction* actAreaSplit_{nullptr};   ///< ALANİFRAZ — cadastral; `Kadastro ▸ Parsel`
+    QAction* actCombine_{nullptr};           ///< BİRLEŞTİR — generic; `Değiştir ▸ Birleştir`
+    QAction* actAreaUnion_{nullptr};         ///< BİRLEŞİM — generic face union, through OCCT
+    QAction* actAreaIntersection_{nullptr};  ///< KESİŞİM — the common region of two faces
+    QAction* actAreaDifference_{nullptr};    ///< FARK — first face minus the other faces
+    QAction* actAreaSymdifference_{nullptr}; ///< SİMETRİKFARK — regions belonging to only one face
+    QAction* actUnion_{nullptr};             ///< TEVHİT — cadastral; `Kadastro ▸ Parsel`
+    QAction* actParcelSplit_{nullptr};       ///< İFRAZ — cadastral; `Kadastro ▸ Parsel`
+    QAction* actAreaSplit_{nullptr};         ///< ALANİFRAZ — cadastral; `Kadastro ▸ Parsel`
     QAction* actMeasureArea_{nullptr};
     QAction* actCoordinate_{nullptr};
     QAction* actEntityInfo_{nullptr};    ///< NESNEBİLGİ — what is this

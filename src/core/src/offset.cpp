@@ -362,6 +362,7 @@ Result<std::vector<Polygon>> polygon_boolean(const std::vector<Polygon>& subject
     Clipper2Lib::ClipType type = Clipper2Lib::ClipType::Union;
     if (op == BooleanOp::Difference) type = Clipper2Lib::ClipType::Difference;
     if (op == BooleanOp::Intersection) type = Clipper2Lib::ClipType::Intersection;
+    if (op == BooleanOp::SymmetricDifference) type = Clipper2Lib::ClipType::Xor;
 
     // EVEN-ODD, not non-zero. A hole read from a DXF or a GML may be wound the
     // same way as its exterior — the format does not promise otherwise — and

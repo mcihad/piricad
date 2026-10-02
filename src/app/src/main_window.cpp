@@ -1335,6 +1335,20 @@ void MainWindow::buildActions()
                                 "değen çizgileri tek çizgi yapar  ·  kısaltma: BRL"));
     actUnion_   = modifyTool(Glyph::Union, tr("Tevhit"), QStringLiteral("TEVHİT"),
                              tr("TEVHİT — komşu parselleri tek parselde birleştirir (kadastro)"));
+    actAreaUnion_ =
+        modifyTool(Glyph::AreaUnion, tr("Birleşim"), QStringLiteral("BİRLEŞİM"),
+                   tr("BİRLEŞİM — kapalı alanların bütününü birleştirir; ayrı parçaları korur"));
+    actAreaIntersection_ =
+        modifyTool(Glyph::AreaIntersection, tr("Kesişim"), QStringLiteral("KESİŞİM"),
+                   tr("KESİŞİM — iki kapalı alanın yalnız ortak bölgesini bırakır"));
+    actAreaDifference_ =
+        modifyTool(Glyph::AreaDifference, tr("Fark"), QStringLiteral("FARK"),
+                   tr("FARK — tutulacak alanı belirleyin; diğer alanların kapladığı "
+                      "kısımlar ondan çıkarılır"));
+    actAreaSymdifference_ =
+        modifyTool(Glyph::AreaSymdifference, tr("Simetrik Fark"), QStringLiteral("SİMETRİKFARK"),
+                   tr("SİMETRİKFARK — iki kapalı alanın ortak bölgesini çıkarır, yalnız birine ait "
+                      "bölgeleri bırakır"));
     actParcelSplit_ =
         modifyTool(Glyph::ParcelSplit, tr("İfraz"), QStringLiteral("İFRAZ"),
                    tr("İFRAZ — bir parseli düz bir ayırma çizgisiyle ikiye böler (kadastro)"));
@@ -9232,6 +9246,13 @@ int MainWindow::probeRealMouse()
                        ribbonLive_->contexts[static_cast<std::size_t>(which)]->isHaveCategory(
                            current);
             };
+            const auto current_button = [bar](const QAction* action) -> SARibbonToolButton* {
+                SARibbonCategory* current = bar->categoryByIndex(bar->currentIndex());
+                if (current == nullptr) return nullptr;
+                for (auto* button : current->findChildren<SARibbonToolButton*>())
+                    if (button->defaultAction() == action) return button;
+                return nullptr;
+            };
             auto* home = bar->findChild<SARibbonCategory*>(QStringLiteral("ribbonHome"));
             // `nesneler=` once per object: SEÇ's first free place is `noktalar`, so
             // a bare second id would be read as a point.
@@ -9281,6 +9302,26 @@ int MainWindow::probeRealMouse()
             // BUDA stays: the parcel picked is the boundary it cuts back to.
             check(actTrim_->isEnabled() && !actToArea_->isEnabled(),
                   QStringLiteral("parselde Buda açık (sınır), Alana Çevir soluk"));
+            for (QAction* action :
+                 {actAreaUnion_, actAreaIntersection_, actAreaDifference_, actAreaSymdifference_}) {
+                auto* button = current_button(action);
+                check(action->isEnabled() && button != nullptr && button->isVisible(),
+                      QStringLiteral("Alan sekmesinde alan işlemi görünür ve açık: ") +
+                          action->text());
+                if (button != nullptr) {
+                    button->click();
+                    QCoreApplication::processEvents();
+                    check(controller_->awaitingInput() &&
+                              controller_->promptKind() == command::ParamKind::Selection,
+                          QStringLiteral("tek alanla ribbon düğmesi diğer alanı istiyor: ") +
+                              action->text());
+                    canvas_->setFocus(Qt::OtherFocusReason);
+                    QKeyEvent cancel(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                    QCoreApplication::sendEvent(canvas_, &cancel);
+                    QCoreApplication::processEvents();
+                    pick({1});
+                }
+            }
             shoot("serit-alan-sekmesi");
 
             // A LINE: `Çizgi`, where İFRAZ has no place.
@@ -9288,6 +9329,9 @@ int MainWindow::probeRealMouse()
             check(context_is_up(RibbonContext::Line), QStringLiteral("çizgi Çizgi sekmesini açtı"));
             check(actTrim_->isEnabled() && actToArea_->isEnabled() && !actParcelSplit_->isEnabled(),
                   QStringLiteral("çizgide Buda ve Alana Çevir açık, İfraz soluk"));
+            check(!actAreaUnion_->isEnabled() && !actAreaIntersection_->isEnabled() &&
+                      !actAreaDifference_->isEnabled() && !actAreaSymdifference_->isEnabled(),
+                  QStringLiteral("açık çizgide alan işlemleri soluk"));
             // WHAT DOES NOT READ THE SELECTION IS NOT GREYED BY IT: the area
             // measured by its corners, the save of a block edit.
             const QAction* byCorners =
@@ -9303,6 +9347,13 @@ int MainWindow::probeRealMouse()
             check(actOffset_->isEnabled() && !actParcelSplit_->isEnabled() &&
                       !actToArea_->isEnabled(),
                   QStringLiteral("dairede Ofset açık, İfraz ve Alana Çevir soluk"));
+            for (QAction* action :
+                 {actAreaUnion_, actAreaIntersection_, actAreaDifference_, actAreaSymdifference_}) {
+                auto* button = current_button(action);
+                check(action->isEnabled() && button != nullptr && button->isVisible(),
+                      QStringLiteral("Eğri sekmesinde alan işlemi görünür ve açık: ") +
+                          action->text());
+            }
             shoot("serit-egri-sekmesi");
 
             // A CAPTION: `Yazı`, and on `Giriş` the tools a caption has no use
