@@ -14,6 +14,8 @@
 #   * THE PROPERTY PANEL speaks for the layer: its rows are the commands that write them (one undo
 #     step each), and an empty scale window is refused there too.
 #   * A LAYER THE PICK PASSES OVER is not taken by a box.
+#   * SAVED LAYER STATES (`KATMANDURUM`) are in the layer list's own menu, each entry is the command
+#     that applies it, and applying one is a single undo step that brings every layer back as saved.
 #
 # `PIRICAD_LAYERPROPS_PROBE` drives the shell offscreen; with a directory in the variable it also
 # photographs the far and near views and the panel.
@@ -56,7 +58,9 @@ fi
 for gerekli in 'uzak görünümde INCE ölçek aralığıyla gizli' 'paftada ayrıca KILAVUZ yok' \
                'yakın görünümde GENEL kayboldu, INCE göründü' 'panel KILAVUZ' \
                'panelden yazılan basilir=evet katmanda' 'tek geri alma adımı' \
-               'boş ölçek aralığı panelden de reddediliyor' 'seçilemez katmandaki çizgi kutuyla seçilmedi'; do
+               'boş ölçek aralığı panelden de reddediliyor' 'seçilemez katmandaki çizgi kutuyla seçilmedi' \
+               'alt menü kayıtlı durumları ve kaydetme satırını sunuyor' \
+               'menüden Uygula — TUMU: katmanlar kayıttaki gibi geri geldi' 'durumu uygulamak tek geri alma adımı'; do
     if ! grep -qF "$gerekli" <<<"$cikti"; then
         echo "katman-ozellik: sondanın şu denetimi hiç yazılmadı: $gerekli" >&2
         exit 1

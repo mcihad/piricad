@@ -225,7 +225,7 @@ silinen bir nesne hiçbir yerde sayılmaz:
 { "degisiklik": { "eklenen": 3, "silinen": 0, "yeri_bicimi_degisen": 2,
                   "metni_degisen": 2, "degeri_degisen": 0, "katmani_degisen": 0,
                   "gorunusu_degisen": 0, "bagi_degisen": 0, "ayari_degisen_katman": 0,
-                  "bloklar": false, "yerlesimler": false, "kilavuzlar": false,
+                  "bloklar": false, "yerlesimler": false, "kilavuzlar": false, "katman_durumlari": false,
                   "koordinat_sistemi": false },
   "degisiklik_ozeti": "3 nesne eklendi; 2 nesnenin yeri ya da biçimi ve 2 yazının metni değişti" }
 ```
@@ -244,6 +244,7 @@ silinen bir nesne hiçbir yerde sayılmaz:
 | `bloklar` | Bir blok tanımı (üyeleri, taban noktası, dış referansı) değişti mi |
 | `yerlesimler` | Çıktı yerleşimleri değişti mi |
 | `kilavuzlar` | Kılavuz çizgiler değişti mi |
+| `katman_durumlari` | Kayıtlı katman durumları (`KATMANDURUM`) değişti mi |
 | `koordinat_sistemi` | Çizimin koordinat sistemi değişti mi |
 
 Alanların hepsi her zaman yazılır; `degisiklik_ozeti` aynı sayıların Türkçe cümlesidir ve

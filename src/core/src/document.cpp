@@ -263,6 +263,9 @@ std::uint64_t Document::content_hash() const
     // layouts existed still stands (the same bargain the kind fold makes below).
     h = layouts_.fold(h);
 
+    // THE SAVED LAYER STATES ARE CONTENT too, and fold nothing when there are none.
+    h = layer_states_.fold(h);
+
     for (EntityId e = 0; e < entities_.size(); ++e) {
         if (!entities_.alive(e) || (!external.empty() && external[e])) continue;
 
@@ -1464,6 +1467,29 @@ Status Document::set_layouts(std::vector<Layout> layouts, Op& undo_out)
     return ok();
 }
 
+Status Document::set_layer_states(std::vector<LayerState> states, Op& undo_out)
+{
+    // VALIDATED BEFORE ANYTHING IS RECORDED, as `set_layouts` is: a list that fails the floor must
+    // leave the document exactly as it was (Article 1.6).
+    LayerStateStore next;
+    for (LayerState& one : states)
+        if (Status held = next.upsert(std::move(one)); !held) return held;
+
+    undo_out                  = Op{};
+    undo_out.kind             = Op::Kind::SetLayerStates;
+    undo_out.layer_states_arg = layer_states_.all();
+
+    layer_states_ = std::move(next);
+    bump_revision();
+    return ok();
+}
+
+void Document::load_layer_states(std::vector<LayerState> states)
+{
+    layer_states_.load(std::move(states));
+    bump_revision();
+}
+
 void Document::load_layouts(std::vector<Layout> layouts)
 {
     layouts_.load(std::move(layouts));
@@ -2030,6 +2056,14 @@ Status Document::apply(const Op& op, Op* undo_out)
         inverse.kind        = Op::Kind::SetLayouts;
         inverse.layouts_arg = layouts_.all();
         load_layouts(op.layouts_arg);
+        return ok();
+    }
+    case Op::Kind::SetLayerStates: {
+        // The inverse of "restore this list" is "restore the one that is here now": redoable too.
+        inverse                  = Op{};
+        inverse.kind             = Op::Kind::SetLayerStates;
+        inverse.layer_states_arg = layer_states_.all();
+        load_layer_states(op.layer_states_arg);
         return ok();
     }
     case Op::Kind::SetGeometry: return restore_geometry(op.entity, op.geometry_slot, inverse);

@@ -185,6 +185,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.label`](#cadlabel) | `core.label` | `ETİKET` | Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler. |
 | [`cad.layer`](#cadlayer) | `core.layer` | `KATMAN` | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`cad.layer_visibility`](#cadlayer_visibility) | `core.layer_visibility` | `KATMANGÖRÜNÜM` | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
+| [`cad.layer_state`](#cadlayer_state) | `core.layer_state` | `KATMANDURUM` | Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler. |
 | [`cad.layout`](#cadlayout) | `core.layout` | `ÇIKTIYERLEŞİMİ` | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`cad.layout_item`](#cadlayout_item) | `core.layout_item` | `ÇIKTIÖĞE` | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`cad.layout_template`](#cadlayout_template) | `core.layout_template` | `ÇIKTIŞABLON` | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
@@ -2751,6 +2752,26 @@ cad.layer_visibility(
 | `layer` | `str` | `katman` | Katman adı; goster, gizle ve yalniz için gerekir, tersine için isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez |
 
 [Komut sayfası](../komutlar/layer_visibility.md)
+
+### `cad.layer_state`
+
+Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler.
+
+Komut: `core.layer_state` — `KATMANDURUM`
+
+```python
+cad.layer_state(
+    action: str,
+    name: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `action` | `str` | `islem` | liste (varsayılan), kaydet, uygula ya da sil |
+| `name` | `str` | `ad` | Durumun adı; kaydet, uygula ve sil için gerekir |
+
+[Komut sayfası](../komutlar/layer_state.md)
 
 ### `cad.layout`
 

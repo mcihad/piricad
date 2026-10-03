@@ -143,7 +143,7 @@ aracı gibi hemen çalışır. Bir ajan için yalnız ajana açık komutlar öni
 Yapılandırılmış cevap: `adim` ve `calisan` (kaç satır istendi, kaçı çalıştı),
 `degisiklik` (sayılar: `eklenen`, `silinen`, `yeri_bicimi_degisen`, `metni_degisen`,
 `degeri_degisen`, `katmani_degisen`, `gorunusu_degisen`, `bagi_degisen`,
-`ayari_degisen_katman`, `bloklar`, `yerlesimler`, `kilavuzlar`, `koordinat_sistemi`),
+`ayari_degisen_katman`, `bloklar`, `yerlesimler`, `kilavuzlar`, `katman_durumlari`, `koordinat_sistemi`),
 `degisiklik_ozeti` (Türkçe cümle), duracaksa `duracagi_adim` ve `hata`,
 `calistirilmayan` (`adim`, `komut`, `neden`), `silinecek` (silinecek nesnelerin
 kimlikleri) ve `taslaklar=evet` ile `taslaklar` (her biri için `yeni`, değişecekse

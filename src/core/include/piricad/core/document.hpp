@@ -29,6 +29,7 @@
 #include "piricad/core/identity.hpp"
 #include "piricad/core/image_store.hpp"
 #include "piricad/core/layer.hpp"
+#include "piricad/core/layer_state.hpp"
 #include "piricad/core/layout.hpp"
 #include "piricad/core/lineage.hpp"
 #include "piricad/core/result.hpp"
@@ -162,6 +163,11 @@ struct Op
         /// both correct and smaller than that bookkeeping would be.
         SetLayouts, ///< layouts_arg
 
+        /// The WHOLE list of saved layer states, restored as it was — the bargain `SetLayouts`
+        /// makes, for the same reason: a state is named by its name and its rows by layer keys, so
+        /// a finer record would have to describe a rename, a re-save and a delete separately.
+        SetLayerStates, ///< layer_states_arg
+
         /// A block's base point, put back (`Document::set_block_base`).
         SetBlockBase, ///< block_arg, point_arg — the base it had before
 
@@ -179,6 +185,7 @@ struct Op
     StyleId style_arg{kByLayerStyle};
     Appearance appearance_arg{};
     LayerProps props_arg{};
+    std::vector<LayerState> layer_states_arg{};
     std::string str_arg;
 
     // R28 is why there is ONE attribute variant and not one per type: an
@@ -313,6 +320,9 @@ public:
     /// to it is a transaction like any other (see `core/layout.hpp`).
     const LayoutStore& layouts() const noexcept { return layouts_; }
 
+    /// The drawing's saved layer states (`core/layer_state.hpp`).
+    const LayerStateStore& layer_states() const noexcept { return layer_states_; }
+
     CatalogueSet& catalogues() noexcept { return catalogues_; }
 
     /// Which state of the drawing this is: moved on by every edit, and put back
@@ -401,21 +411,21 @@ public:
     {
         std::uint64_t generation{0}; ///< which content it was taken of (`generation`)
         std::uint64_t revision{0};   ///< the revision it was taken at
-        std::size_t rows{0};
-        bool keys_sorted{true};
-        std::uint64_t next_entity_key{1};
-        std::uint64_t next_layer_key{1};
-        RingGeometry::Tail geometry{};
-        TextTable::Tail texts{};
-        AttrTable::Tail attributes{};
-        ForeignTable::Tail foreign{};
-        AttachTable::Tail attachments{};
-        std::size_t lineage_pool{0};
-        BlockTable::Tail blocks{};
-        std::size_t layers{0};
-        std::size_t styles{0};
-        std::size_t images{0};
-        std::size_t dashes{0};
+        std::size_t rows{0};         ///< entity rows
+        bool keys_sorted{true};      ///< whether the key column was in order
+        std::uint64_t next_entity_key{1}; ///< the entity key counter
+        std::uint64_t next_layer_key{1};  ///< the layer key counter
+        RingGeometry::Tail geometry{};    ///< the geometry arena
+        TextTable::Tail texts{};          ///< the caption table
+        AttrTable::Tail attributes{};     ///< the attribute columns
+        ForeignTable::Tail foreign{};     ///< foreign records
+        AttachTable::Tail attachments{};  ///< attachments
+        std::size_t lineage_pool{0};      ///< the lineage pool
+        BlockTable::Tail blocks{};        ///< block definitions
+        std::size_t layers{0};            ///< layers
+        std::size_t styles{0};            ///< styles
+        std::size_t images{0};            ///< pictures
+        std::size_t dashes{0};            ///< line patterns
     };
 
     /// The document's tail now.
@@ -637,6 +647,15 @@ public:
     /// a subsystem that would otherwise need a dozen of each.
     Status set_layouts(std::vector<Layout> layouts, Op& undo_out);
 
+    /// Replaces the whole list of saved layer states as ONE edit — add, re-save, delete. A list
+    /// that fails the store's floor (an empty name) leaves the document as it was and records
+    /// nothing.
+    Status set_layer_states(std::vector<LayerState> states, Op& undo_out);
+
+    /// Installs states read from a file; no undo record (the project reader's, like
+    /// `load_layouts`).
+    void load_layer_states(std::vector<LayerState> states);
+
     /// Puts a layout list back without recording anything — what undo calls.
     void load_layouts(std::vector<Layout> layouts);
 
@@ -852,6 +871,7 @@ private:
     LineageTable lineage_{};
     GuideStore guides_{};
     LayoutStore layouts_{};
+    LayerStateStore layer_states_{};
     ImageStore images_{};
     DashStore dashes_{};
     KeyAllocator keys_{};

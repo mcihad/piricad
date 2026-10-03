@@ -623,3 +623,81 @@ TEST_CASE("ÇİZİM: basılmayan katman ekranda durur, paftada yoktur; opaklık 
     CHECK(scene_of(r.doc, view, true).alpha == 255);
     CHECK(scene_of(r.doc, view, false).alpha == 128);
 }
+
+// =============================================================================
+// SAVED LAYER STATES (TODOS U-05): KATMANDURUM
+// =============================================================================
+
+TEST_CASE("KATMANDURUM: durum kaydedilir, tek adımda uygulanır, tek GERİAL ile döner")
+{
+    Rig r;
+    for (const char* name : {"PARSEL", "YOL", "BINA", "AGAC"})
+        r.run(std::string("KATMAN ad=") + name);
+    const std::uint64_t empty_hash = r.doc.content_hash();
+
+    // The picture to come back to: everything shown, nothing locked.
+    r.run("KATMANDURUM islem=kaydet ad=HEPSI");
+    CHECK(r.doc.layer_states().size() == 1);
+    CHECK(r.doc.content_hash() != empty_hash); ///< a state is content
+
+    // Work in another way: only the parcels, the roads locked and left off the sheet.
+    r.run("KATMAN ad=YOL kilitli=evet basilir=hayır");
+    r.run("KATMAN ad=BINA gorunur=hayır");
+    r.run("KATMAN ad=AGAC gorunur=hayır secilebilir=hayır");
+    r.run("KATMANDURUM islem=kaydet ad=INCELEME");
+    CHECK(r.doc.layer_states().size() == 2);
+
+    // Back to the first: ONE undo step, every layer as it was.
+    const std::size_t depth = r.undo.undo_depth();
+    r.run("KATMANDURUM islem=uygula ad=HEPSI");
+    CHECK(r.undo.undo_depth() - depth == 1);
+    for (const core::Layer& l : r.doc.layers()) {
+        INFO(l.name);
+        CHECK(l.visible);
+        CHECK_FALSE(l.locked);
+        CHECK(l.plottable);
+        CHECK(l.selectable);
+    }
+    r.run("GERİAL"); ///< the whole application, once
+    CHECK_FALSE(r.doc.layer(r.doc.find_layer("BINA"))->visible);
+    CHECK(r.doc.layer(r.doc.find_layer("YOL"))->locked);
+    CHECK_FALSE(r.doc.layer(r.doc.find_layer("AGAC"))->selectable);
+
+    // And forward to the second; the names are the Turkish-folded kind.
+    r.run("KATMANDURUM islem=uygula ad=hepsi");
+    r.run("KATMANDURUM uygula ad=Inceleme");
+    CHECK_FALSE(r.doc.layer(r.doc.find_layer("BINA"))->visible);
+    CHECK_FALSE(r.doc.layer(r.doc.find_layer("YOL"))->plottable);
+
+    // Re-saving a name replaces it in place; deleting forgets it; both are one undo step.
+    r.run("KATMANDURUM islem=kaydet ad=HEPSI");
+    CHECK(r.doc.layer_states().size() == 2);
+    r.run("KATMANDURUM islem=sil ad=HEPSI");
+    CHECK(r.doc.layer_states().size() == 1);
+    r.run("GERİAL");
+    CHECK(r.doc.layer_states().size() == 2);
+    CHECK_FALSE(r.bus.execute_line("KATMANDURUM islem=uygula ad=YOKTUR", Origin::Test).ok());
+    CHECK_FALSE(r.bus.execute_line("KATMANDURUM islem=kaydet", Origin::Test).ok());
+    CHECK_FALSE(r.bus.execute_line("KATMANDURUM islem=dondur ad=X", Origin::Test).ok());
+}
+
+TEST_CASE("KATMANDURUM: sonradan açılan katman durumda yok, uygulayınca olduğu gibi kalır")
+{
+    Rig r;
+    r.run("KATMAN ad=ESKI");
+    r.run("KATMAN ad=ESKI gorunur=hayır");
+    r.run("KATMANDURUM islem=kaydet ad=GIZLI");
+    r.run("KATMAN ad=ESKI gorunur=evet");
+
+    // A layer made after the state was saved is not in it and applying the state leaves it alone.
+    r.run("KATMAN ad=YENI");
+    r.run("KATMANDURUM islem=uygula ad=GIZLI");
+    CHECK_FALSE(r.doc.layer(r.doc.find_layer("ESKI"))->visible);
+    CHECK(r.doc.layer(r.doc.find_layer("YENI"))->visible);
+
+    // The journal says the verb and the name, in the words a script would.
+    const auto& last = r.journal.entries().back();
+    CHECK(last.command_id == "core.layer_state");
+    REQUIRE(last.args.find("islem") != nullptr);
+    CHECK(last.args.find("islem")->as_text() == "uygula");
+}

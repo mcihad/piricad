@@ -260,6 +260,55 @@ TEST_CASE("IO: katmanın basılabilirliği, seçilebilirliği, ölçek aralığ�
     CHECK(reloaded.transcript.find("katmanının") == std::string::npos);
 }
 
+TEST_CASE("IO: kayıtlı katman durumları dosyadan döner; durumsuz dosya eskisiyle aynı baytlar")
+{
+    TempDir tmp("katman-durumlari");
+    const std::string with_states = tmp.file("durumlu.pcad");
+    const std::string without     = tmp.file("durumsuz.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("ÇİZGİ 0,5 10,5", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + without + "\"", Origin::Test).ok());
+
+    REQUIRE(written.bus.execute_line("KATMANDURUM islem=kaydet ad=ONCE", Origin::Test).ok());
+    REQUIRE(written.bus
+                .execute_line(
+                    "KATMAN ad=YOL gorunur=hayır kilitli=evet basilir=hayır secilebilir=hayır",
+                    Origin::Test)
+                .ok());
+    REQUIRE(written.bus.execute_line("KATMANDURUM islem=kaydet ad=SONRA", Origin::Test).ok());
+    const std::uint64_t hash = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + with_states + "\"", Origin::Test).ok());
+
+    // A drawing with no state writes no block for it: a smaller file than the one that has them.
+    CHECK(fs::file_size(without) < fs::file_size(with_states));
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + with_states + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    REQUIRE(opened.ok());
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    REQUIRE(reloaded.doc.layer_states().size() == 2);
+    CHECK(reloaded.doc.layer_states().all() == written.doc.layer_states().all());
+
+    // The state still works on the reopened drawing: it brings the road back.
+    REQUIRE(reloaded.bus.execute_line("KATMANDURUM islem=uygula ad=ONCE", Origin::Test).ok());
+    const core::Layer* road = reloaded.doc.layer(reloaded.doc.find_layer("YOL"));
+    REQUIRE(road != nullptr);
+    CHECK(road->visible);
+    CHECK_FALSE(road->locked);
+    CHECK(road->plottable);
+    CHECK(road->selectable);
+
+    // And a file without states reads as it always did.
+    Rig plain;
+    REQUIRE(plain.bus.execute_line("AÇ \"" + without + "\"", Origin::Test).ok());
+    CHECK(plain.doc.layer_states().empty());
+}
+
 TEST_CASE("IO: belge -> dosya -> belge, içerik parmak izi birebir aynı")
 {
     TempDir tmp("roundtrip");

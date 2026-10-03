@@ -38,6 +38,7 @@ add_library(piricad_core STATIC
     src/geometry.cpp
     src/ellipse.cpp
     src/guide.cpp
+    src/layer_state.cpp
     src/layout.cpp
     src/layout_table.cpp
     src/offset.cpp

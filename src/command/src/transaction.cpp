@@ -471,6 +471,15 @@ Status Transaction::add_guide_row(const core::GuideRow& row)
                                                : add_guide(row.axis, row.coordinate);
 }
 
+Status Transaction::set_layer_states(std::vector<core::LayerState> states)
+{
+    core::Op undo;
+    auto st = doc_.set_layer_states(std::move(states), undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::set_layouts(std::vector<core::Layout> layouts)
 {
     core::Op undo;

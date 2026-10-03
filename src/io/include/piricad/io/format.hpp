@@ -446,6 +446,13 @@ enum BlockId : std::uint32_t {
     kBlkLayoutTables       = 0x009A, ///< LayoutTableRecord[]
     kBlkLayoutTableColumns = 0x009B, ///< LayoutTableColumnRecord[], per table a run
 
+    /// The saved layer states (`core::LayerStateStore`, TODOS U-05): one record per state and, per
+    /// state, a contiguous run of one row per layer. Written only when the drawing has one, so a
+    /// file without states is byte for byte what it was, and an older reader skips both blocks
+    /// (R10: optional, no version bump).
+    kBlkLayerStates    = 0x009C, ///< LayerStateRecord[]
+    kBlkLayerStateRows = 0x009D, ///< LayerStateRowRecord[], per state a run
+
     // ---- reserved. Declared here so the ids can never be re-meant. ----------
     /// Precomputed Douglas–Peucker LOD levels in quadtree tiles (io.md R6).
     /// Phase 1: no simplifier exists yet. See CLAUDE.md Article 8.
@@ -931,6 +938,27 @@ struct LayoutTableColumnRecord
 };
 
 static_assert(sizeof(LayoutTableColumnRecord) == 16, "wire record");
+
+/// One saved layer state (`kBlkLayerStates`).
+struct LayerStateRecord
+{
+    std::uint32_t name_string; ///<  0  into the string pool
+    std::uint32_t first_row;   ///<  4  into kBlkLayerStateRows
+    std::uint32_t row_count;   ///<  8
+    std::uint32_t reserved;    ///< 12  zero-filled
+};
+
+static_assert(sizeof(LayerStateRecord) == 16, "wire record");
+
+/// What one layer is in a state (`kBlkLayerStateRows`). The layer is named by its PERSISTENT key.
+struct LayerStateRowRecord
+{
+    std::uint64_t key;        ///<  0  LayerKey
+    std::uint8_t flags;       ///<  8  bit 0 shown, 1 locked, 2 printed, 3 selectable
+    std::uint8_t reserved[7]; ///<  9  zero-filled
+};
+
+static_assert(sizeof(LayerStateRowRecord) == 16, "wire record");
 
 /// One block definition (model.md R45). Members and uses are runs into their
 /// own columns, so a block with neither costs a record and nothing else.

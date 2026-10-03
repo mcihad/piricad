@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — kayıtlı katman durumları: `KATMANDURUM` (U-05)
+
+- Hangi katmanların **görünür, kilitli, basılır ve seçilir** olduğunu ad altında çizimin içine
+  kaydet, tek adımda uygula, sil: `KATMANDURUM islem=kaydet|uygula|sil|liste ad=<ad>`. Durum
+  katmanı **kalıcı anahtarıyla** tutar (silinmiş katman söylenerek atlanır, sonradan açılan katman
+  durumda yoktur ve dokunulmaz). Çizimin içindedir: dosyayla gelir, geri alınır, parmak izine girer
+  (durumsuz belgenin parmak izi ve dosyası eskisiyle aynı). Kaydetmek, silmek ve uygulamak birer
+  geri alma adımıdır.
+- Katmanlar panelinde sağ tık ▸ **Katman durumları**: kayıtlı her durum bir "Uygula — ad" satırı
+  (komutun kendisi), "Şimdiki durumu kaydet…", "Sil".
+- Dosya: iki isteğe bağlı blok (`kBlkLayerStates` 0x009C, `kBlkLayerStateRows` 0x009D), yalnız
+  durum varsa yazılır, eski okuyucular atlar. Değişiklik özeti yeni anahtarı taşır
+  (`katman_durumlari`).
+- Kanıt: `test_hand.cpp` (kaydet/uygula/sil/geri alma/anahtar/günlük), `test_io.cpp` (dosya
+  gidiş-dönüşü, durumsuz dosya küçük), kapı `ci-gate-katman-ozellik` (bağlam menüsünden uygula,
+  tek adım), kare `docs/baslangic/katman-durumlari-menu.png`, sayfa `docs/komutlar/layer_state.md`.
+
 ### Eklendi — katman özellikleri gerçekten bir şey yapıyor: ölçek aralığı, basılabilirlik, seçilebilirlik, opaklık (U-05)
 
 - **Bulgu:** `Layer`ın beş alanı — basılabilirlik, en küçük/en büyük ölçek, opaklık, açıklama —

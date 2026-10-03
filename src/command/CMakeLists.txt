@@ -44,6 +44,7 @@ add_library(piricad_command STATIC
     src/commands/print.cpp
     src/commands/label.cpp
     src/commands/layer.cpp
+    src/commands/layer_state.cpp
     src/commands/layer_visibility.cpp
     src/commands/layout.cpp
     src/commands/area.cpp

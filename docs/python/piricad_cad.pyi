@@ -1845,6 +1845,18 @@ def layer_visibility(
         layer — Katman adı; goster, gizle ve yalniz için gerekir, tersine için isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez
     """
 
+def layer_state(
+    *,
+    action: str = ...,
+    name: str = ...,
+) -> int:
+    """Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler.
+
+    Komut: core.layer_state (KATMANDURUM)
+        action — liste (varsayılan), kaydet, uygula ya da sil
+        name — Durumun adı; kaydet, uygula ve sil için gerekir
+    """
+
 def layout(
     *,
     action: str = ...,

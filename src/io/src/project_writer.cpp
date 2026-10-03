@@ -953,6 +953,26 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         }
     }
 
+    // The saved layer states, on the layouts' bargain: written only when there is one, rows built
+    // here because interning a name after the pool is snapshotted would move its bytes.
+    std::vector<LayerStateRecord> state_records;
+    std::vector<LayerStateRowRecord> state_rows;
+    for (const core::LayerState& s : doc.layer_states().all()) {
+        LayerStateRecord rec{};
+        rec.name_string = pool.intern(s.name);
+        rec.first_row   = static_cast<std::uint32_t>(state_rows.size());
+        rec.row_count   = static_cast<std::uint32_t>(s.rows.size());
+        for (const core::LayerStateRow& r : s.rows) {
+            LayerStateRowRecord row{};
+            row.key = raw(r.key);
+            row.flags =
+                static_cast<std::uint8_t>((r.visible ? 1u : 0u) | (r.locked ? 2u : 0u) |
+                                          (r.plottable ? 4u : 0u) | (r.selectable ? 8u : 0u));
+            state_rows.push_back(row);
+        }
+        state_records.push_back(rec);
+    }
+
     // ---- the block list, in id order so a hex dump reads like the spec ----
     std::vector<Pending> blocks;
 
@@ -1048,6 +1068,11 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             if (!table_column_rows.empty())
                 blocks.push_back(column(kBlkLayoutTableColumns, table_column_rows));
         }
+    }
+
+    if (!state_records.empty()) {
+        blocks.push_back(column(kBlkLayerStates, state_records));
+        if (!state_rows.empty()) blocks.push_back(column(kBlkLayerStateRows, state_rows));
     }
 
     const bool all_rows = external.empty();

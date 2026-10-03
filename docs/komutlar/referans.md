@@ -105,6 +105,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.label`](label.md) | Etiket | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden ve ölçülerinden okuyarak etiketler; etiket nesnesini izler. |
 | [`core.layer`](layer.md) | Katman | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`core.layer_visibility`](layer_visibility.md) | Katman Görünümü | `KATMANGÖRÜNÜM`, `KATMANGORUNUM`, `LAYERVIEW`, `KGÖ`, `KGO` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
+| [`core.layer_state`](layer_state.md) | Katman Durumu | `KATMANDURUM`, `KATMANDURUMU`, `LAYERSTATE`, `KDR` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler. |
 | [`core.layout`](layout.md) | Çıktı Yerleşimi | `ÇIKTIYERLEŞİMİ`, `CIKTIYERLESIMI`, `LAYOUT`, `ÇYR`, `CYR` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`core.layout_item`](layout_item.md) | Çıktı Öğesi | `ÇIKTIÖĞE`, `CIKTIOGE`, `LAYOUTITEM`, `ÇÖĞ`, `COG` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`core.layout_template`](layout_template.md) | Çıktı Şablonu | `ÇIKTIŞABLON`, `CIKTISABLON`, `LAYOUTTEMPLATE`, `ÇŞB`, `CSB` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
@@ -1571,6 +1572,17 @@ Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya
 | `katman` | text | isteğe bağlı | Katman adı; goster, gizle ve yalniz için gerekir, tersine için isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez |
 
 Ayrıntılı kullanım: [KATMANGÖRÜNÜM](layer_visibility.md)
+
+### `core.layer_state` — KATMANDURUM (Katman Durumu)
+
+Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | isteğe bağlı | liste (varsayılan), kaydet, uygula ya da sil |
+| `ad` | text | isteğe bağlı | Durumun adı; kaydet, uygula ve sil için gerekir |
+
+Ayrıntılı kullanım: [KATMANDURUM](layer_state.md)
 
 ### `core.layout` — ÇIKTIYERLEŞİMİ (Çıktı Yerleşimi)
 
@@ -8658,6 +8670,51 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "KATMAN",
         "LAYER",
         "KAT"
+      ]
+    }
+  },
+  {
+    "name": "core_layer_state",
+    "title": "Katman Durumu",
+    "description": "Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler.\nKomut: KATMANDURUM (KATMANDURUMU, LAYERSTATE, KDR)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "islem": {
+          "type": "string",
+          "description": "liste (varsayılan), kaydet, uygula ya da sil (metin)"
+        },
+        "ad": {
+          "type": "string",
+          "description": "Durumun adı; kaydet, uygula ve sil için gerekir (metin)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.piricad/commandId": "core.layer_state",
+      "cad.piricad/category": "Katman",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
+        "KATMANDURUM",
+        "KATMANDURUMU",
+        "LAYERSTATE",
+        "KDR"
       ]
     }
   },

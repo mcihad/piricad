@@ -73,7 +73,7 @@ bool ChangeSummary::empty() const noexcept
 {
     return created == 0 && erased == 0 && reshaped == 0 && reworded == 0 && revalued == 0 &&
            relayered == 0 && restyled == 0 && retied == 0 && layers == 0 && !blocks && !sheets &&
-           !guides && !crs;
+           !guides && !states && !crs;
 }
 
 ChangeSummary summarize_changes(const core::Document& doc, std::span<const core::Op> step)
@@ -95,6 +95,7 @@ ChangeSummary summarize_changes(const core::Document& doc, std::span<const core:
         case Op::Kind::SetCrs: out.crs = true; continue;
         case Op::Kind::SetGuides: out.guides = true; continue;
         case Op::Kind::SetLayouts: out.sheets = true; continue;
+        case Op::Kind::SetLayerStates: out.states = true; continue;
         case Op::Kind::SetBlockBase:
         case Op::Kind::SetBlockExternal: out.blocks = true; continue;
         default: break;
@@ -185,6 +186,7 @@ std::string describe_changes(const ChangeSummary& s, ChangeTense tense)
     if (s.blocks) changed.emplace_back("blok tanımları");
     if (s.sheets) changed.emplace_back("çıktı yerleşimleri");
     if (s.guides) changed.emplace_back("kılavuz çizgiler");
+    if (s.states) changed.emplace_back("katman durumları");
     if (s.crs) changed.emplace_back("koordinat sistemi");
 
     std::string out;
@@ -211,6 +213,7 @@ core::Json changes_json(const ChangeSummary& s)
     out.set("bloklar", core::Json::boolean(s.blocks));
     out.set("yerlesimler", core::Json::boolean(s.sheets));
     out.set("kilavuzlar", core::Json::boolean(s.guides));
+    out.set("katman_durumlari", core::Json::boolean(s.states));
     out.set("koordinat_sistemi", core::Json::boolean(s.crs));
     return out;
 }

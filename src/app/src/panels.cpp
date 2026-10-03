@@ -946,6 +946,50 @@ QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
     QAction* add = menu.addAction(tr("Yeni katman…"));
     connect(add, &QAction::triggered, this, &LayerPanel::addLayerInteractively);
 
+    // THE SAVED STATES (TODOS U-05, `KATMANDURUM`): which layers are shown, locked, printed and
+    // picked, kept in the drawing under a name. The list is the DOCUMENT'S, so a colleague's states
+    // are here the day the file opens; each entry is the command that applies it, and applying is
+    // one undo step. Saving asks for a name, as a new layer does.
+    {
+        QMenu* states                 = menu.addMenu(tr("Katman durumları"));
+        const core::Document& drawing = controller_.document();
+        for (const core::LayerState& saved : drawing.layer_states().all()) {
+            const QString state = QString::fromStdString(saved.name);
+            QAction* apply      = states->addAction(tr("Uygula — %1").arg(state));
+            apply->setToolTip(tr("%1 katmanın görünür, kilitli, basılır ve seçilir olma durumunu "
+                                 "kayıttaki gibi yapar")
+                                  .arg(saved.rows.size()));
+            connect(apply, &QAction::triggered, this, [this, state] {
+                controller_.runLine(QStringLiteral("KATMANDURUM islem=uygula ad=\"%1\"").arg(state),
+                                    command::Origin::Gui);
+            });
+        }
+        if (!drawing.layer_states().empty()) states->addSeparator();
+        QAction* save = states->addAction(tr("Şimdiki durumu kaydet…"));
+        connect(save, &QAction::triggered, this, [this] {
+            bool ok = false;
+            const QString state =
+                QInputDialog::getText(this, tr("Katman durumunu kaydet"),
+                                      tr("Durumun adı (aynı ad varsa yenisiyle değişir):"),
+                                      QLineEdit::Normal, QString(), &ok);
+            if (ok && !state.trimmed().isEmpty())
+                controller_.runLine(
+                    QStringLiteral("KATMANDURUM islem=kaydet ad=\"%1\"").arg(state.trimmed()),
+                    command::Origin::Gui);
+        });
+        if (!drawing.layer_states().empty()) {
+            QMenu* drop = states->addMenu(tr("Sil"));
+            for (const core::LayerState& saved : drawing.layer_states().all()) {
+                const QString state = QString::fromStdString(saved.name);
+                connect(drop->addAction(state), &QAction::triggered, this, [this, state] {
+                    controller_.runLine(
+                        QStringLiteral("KATMANDURUM islem=sil ad=\"%1\"").arg(state),
+                        command::Origin::Gui);
+                });
+            }
+        }
+    }
+
     if (!name.isEmpty()) {
         menu.addSeparator();
 

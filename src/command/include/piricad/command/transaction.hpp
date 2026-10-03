@@ -299,6 +299,9 @@ public:
     /// and retyping a title — and each is one transaction, one journal line and
     /// one Ctrl+Z, like every other edit (Article 1.5).
     Status set_layouts(std::vector<core::Layout> layouts);
+
+    /// The saved layer states as one edit and one undo record (`Document::set_layer_states`).
+    Status set_layer_states(std::vector<core::LayerState> states);
     /// Sets the document's CRS. The whole record, so undo restores the metadata
     /// the geodesy module resolved along with the id.
     Status set_crs(core::Crs crs);

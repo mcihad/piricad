@@ -876,6 +876,41 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
     // required beside the layouts block — a layout with no page is refused by
     // the store — while the item and name blocks are absent when nothing needs
     // them, exactly as every empty column is.
+    // THE SAVED LAYER STATES (TODOS U-05): checked before they are installed — a run that reaches
+    // past the rows block is a corrupt file (io.md R18), and a row whose layer the file does not
+    // have is kept (the layer may be one this build skipped), never matched to another.
+    if (view.has(kBlkLayerStates)) {
+        const std::uint64_t state_n = view.count_of(kBlkLayerStates);
+        auto records = view.column<LayerStateRecord>(kBlkLayerStates, state_n, "katman durumu");
+        if (!records) return records.error();
+        const std::uint64_t row_n = view.count_of(kBlkLayerStateRows);
+        auto rows =
+            view.column<LayerStateRowRecord>(kBlkLayerStateRows, row_n, "katman durumu satırı");
+        if (!rows) return rows.error();
+
+        std::vector<core::LayerState> states;
+        for (std::uint64_t i = 0; i < state_n; ++i) {
+            const LayerStateRecord& rec = records.value()[static_cast<std::size_t>(i)];
+            if (rec.first_row > row_n || rec.row_count > row_n - rec.first_row)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(i + 1) +
+                               ". katman durumunun satırları dosyanın satırlarını aşıyor.");
+            auto name = strings.at(rec.name_string, "katman durumu adı");
+            if (!name) return name.error();
+            core::LayerState state;
+            state.name = name.value();
+            for (std::uint32_t k = 0; k < rec.row_count; ++k) {
+                const LayerStateRowRecord& r =
+                    rows.value()[static_cast<std::size_t>(rec.first_row + k)];
+                state.rows.push_back(core::LayerStateRow{static_cast<core::LayerKey>(r.key),
+                                                         (r.flags & 1u) != 0, (r.flags & 2u) != 0,
+                                                         (r.flags & 4u) != 0, (r.flags & 8u) != 0});
+            }
+            states.push_back(std::move(state));
+        }
+        doc.load_layer_states(std::move(states));
+    }
+
     if (view.has(kBlkLayouts)) {
         const std::uint64_t layout_n = view.count_of(kBlkLayouts);
         auto layout_rows = view.column<LayoutRecord>(kBlkLayouts, layout_n, "çıktı yerleşimi");

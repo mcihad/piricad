@@ -3721,6 +3721,88 @@ int MainWindow::probeLayerProps()
     runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-20,55 80,65"));
     check(controller_->bus().selection().keys().empty(),
           QStringLiteral("seçilemez katmandaki çizgi kutuyla seçilmedi"));
+
+    // ---- 5. SAVED LAYER STATES (KATMANDURUM), from the layer list's own menu ----
+    //
+    // Two pictures of the drawing are saved — everything up, then only the parcels — and the first
+    // is brought back by CLICKING the menu entry, which must be the command that applies it: one
+    // undo step, every layer as it was.
+    {
+        const auto& layers_now = [this]() -> const std::vector<core::Layer>& {
+            return controller_->document().layers();
+        };
+        runScriptLine(QStringLiteral("KATMAN ad=GENEL gorunur=evet"));
+        runScriptLine(QStringLiteral("KATMAN ad=KILAVUZ gorunur=evet basilir=evet"));
+        runScriptLine(QStringLiteral("KATMANDURUM islem=kaydet ad=TUMU"));
+        for (const char* name : {"GENEL", "INCE", "KILAVUZ", "KORUMA"})
+            runScriptLine(QStringLiteral("KATMAN ad=%1 gorunur=hayır").arg(QLatin1String(name)));
+        runScriptLine(QStringLiteral("KATMAN ad=PARSEL kilitli=evet"));
+        runScriptLine(QStringLiteral("KATMANDURUM islem=kaydet ad=SADECE_PARSEL"));
+        check(controller_->document().layer_states().size() == 2,
+              QStringLiteral("iki katman durumu kaydedildi"));
+
+        layerPanel_->selectLayer(controller_->document().find_layer("PARSEL"));
+        QCoreApplication::processEvents();
+        const bool popped = layerPanel_->popContextMenu(
+            QStringLiteral("PARSEL"),
+            layerPanel_->mapToGlobal(QPoint(layerPanel_->width() / 3, 60)));
+        check(popped, QStringLiteral("katman listesinin bağlam menüsü açıldı"));
+        QMenu* menu     = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+        QAction* states = nullptr;
+        if (menu != nullptr)
+            for (QAction* a : menu->actions())
+                if (a->menu() != nullptr && a->text() == QStringLiteral("Katman durumları"))
+                    states = a;
+        check(states != nullptr, QStringLiteral("menüde Katman durumları alt menüsü var"));
+        if (states != nullptr) {
+            QStringList entries;
+            QAction* apply_all = nullptr;
+            for (QAction* a : states->menu()->actions()) {
+                entries << a->text();
+                if (a->text() == QStringLiteral("Uygula — TUMU")) apply_all = a;
+            }
+            check(entries.contains(QStringLiteral("Uygula — TUMU")) &&
+                      entries.contains(QStringLiteral("Uygula — SADECE_PARSEL")) &&
+                      entries.contains(QStringLiteral("Şimdiki durumu kaydet…")),
+                  QStringLiteral("alt menü kayıtlı durumları ve kaydetme satırını sunuyor (%1)")
+                      .arg(entries.join(QStringLiteral(" | "))));
+
+            // The submenu OPEN, as a hand opens it, for the picture.
+            menu->setActiveAction(states);
+            QKeyEvent right(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+            QCoreApplication::sendEvent(menu, &right);
+            QCoreApplication::processEvents();
+            // THE WHOLE SCREEN for this one: a popup is a window of its own and the submenu opens
+            // past the shell's edge, where the window grab does not reach.
+            if (into.size() > 1) {
+                QScreen* screen = windowHandle() != nullptr ? windowHandle()->screen() : nullptr;
+                if (screen != nullptr)
+                    (void)screen->grabWindow(0).save(into +
+                                                     QStringLiteral("/katman-durumlari-menu.png"));
+            }
+
+            const std::size_t depth_before = controller_->undoStack().undo_depth();
+            if (apply_all != nullptr) apply_all->trigger();
+            QCoreApplication::processEvents();
+            // As it was SAVED, not as a blank slate: KORUMA was locked when TUMU was taken and is
+            // locked again; the parcels, locked since, are open again.
+            bool all_up = true;
+            for (const core::Layer& l : layers_now())
+                all_up = all_up && l.visible;
+            const core::Layer* parcels =
+                controller_->document().layer(controller_->document().find_layer("PARSEL"));
+            const core::Layer* kept =
+                controller_->document().layer(controller_->document().find_layer("KORUMA"));
+            check(all_up && !parcels->locked && kept->locked,
+                  QStringLiteral("menüden Uygula — TUMU: katmanlar kayıttaki gibi geri geldi"));
+            check(controller_->undoStack().undo_depth() - depth_before == 1,
+                  QStringLiteral("durumu uygulamak tek geri alma adımı"));
+        }
+        while (QWidget* open = QApplication::activePopupWidget())
+            open->close();
+        picture("katman-durumlari-uygulandi");
+    }
+
     controller_->cancelAll();
     return failures;
 }

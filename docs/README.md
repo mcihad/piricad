@@ -111,6 +111,7 @@ Tek tek komutlar:
 | `SİL` | [Nesne silme](komutlar/erase.md) |
 | `KATMAN` | [Katman yönetimi](komutlar/layer.md) |
 | `KATMANGÖRÜNÜM` | [Katman görünürlüğü](komutlar/layer_visibility.md) |
+| `KATMANDURUM` | [Kayıtlı katman durumları](komutlar/layer_state.md) |
 | `STİL` | [Nesne stili ve gösterim kataloğu](komutlar/style.md) |
 | `SEMBOL` | [Gösterim rafı](komutlar/symbol.md) |
 | `ETİKET` | [Özniteliklerden yazı](komutlar/label.md) |

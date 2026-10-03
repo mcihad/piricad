@@ -98,7 +98,7 @@ bekle "[katman] Öznitelik tablosu · PARSEL → 2 satır"
 # Checked as a whole line rather than entry by entry, because the order is part
 # of the claim: a properties entry in the middle of the list is the thing this
 # replaced.
-bekle "[katman] menü · PARSEL: Yeni katman… | — | Tümünü seç | Katmana yakınlaş | Öznitelik tablosu | Aktif katman yap | Özniteliklerden etiketle… | — | Görünüm | Kilidi aç | — | Gruba taşı… | — | Katman Özellikleri…"
+bekle "[katman] menü · PARSEL: Yeni katman… | Katman durumları | — | Tümünü seç | Katmana yakınlaş | Öznitelik tablosu | Aktif katman yap | Özniteliklerden etiketle… | — | Görünüm | Kilidi aç | — | Gruba taşı… | — | Katman Özellikleri…"
 
 # THE GÖRÜNÜM SUBMENU. In the line above a submenu is its title and nothing more,
 # so its own shape is a line of its own. `Gizle` used to be a top-level entry

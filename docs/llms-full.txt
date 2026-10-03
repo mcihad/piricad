@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 126 (110 tanesi onay ister)
-- Katalog parmak izi: `18187551457092420418`
+- Araç sayısı: 127 (111 tanesi onay ister)
+- Katalog parmak izi: `16343682718729632024`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1094,6 +1094,20 @@ Onay ister.
 | `en_buyuk_olcek` | integer | hayır | Görünür olduğu en büyük ölçeğin 1:N paydası (en yakın görünüm); bundan yakından bakınca gizlenir. 0 = sınırsız (tam sayı) |
 | `opaklik` | integer | hayır | Ekranda opaklık, 0 saydam – 255 opak; paftada her zaman opak (tam sayı) |
 | `aciklama` | string | hayır | Katmanın açıklaması, serbest metin (metin) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_layer_state` — Katman Durumu
+
+Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler.
+Komut: KATMANDURUM (KATMANDURUMU, LAYERSTATE, KDR)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | hayır | liste (varsayılan), kaydet, uygula ya da sil (metin) |
+| `ad` | string | hayır | Durumun adı; kaydet, uygula ve sil için gerekir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_layer_visibility` — Katman Görünümü

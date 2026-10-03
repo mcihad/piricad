@@ -42,6 +42,7 @@ struct ChangeSummary
     bool blocks{false};       ///< a block's members, base point or external reference changed
     bool sheets{false};       ///< the sheet (layout) list changed
     bool guides{false};       ///< the guide list changed
+    bool states{false};       ///< the saved layer states changed
     bool crs{false};          ///< the coordinate system changed
 
     /// Whether the step changed nothing this counts.

@@ -106,6 +106,7 @@ namespace piricad::command {
     X(label)                                                                                       \
     X(layer)                                                                                       \
     X(layer_visibility)                                                                            \
+    X(layer_state)                                                                                 \
     X(layout)                                                                                      \
     X(layout_item)                                                                                 \
     X(layout_template)                                                                             \
