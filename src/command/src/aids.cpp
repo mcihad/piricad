@@ -62,7 +62,9 @@ const AidSettings& InputAids::settings(const core::Settings& app,
         out.modes                        = static_cast<std::uint32_t>(out.modes | core::SnapPolar);
     }
 
-    out.step        = session.get("core.yakalama.adim").as_length();
+    out.step          = session.get("core.yakalama.adim").as_length();
+    out.snap_locked   = app.get("core.yakalama.kilitli_katman").as_bool();
+    out.select_locked = app.get("core.secim.kilitli_katman").as_bool();
     out.snap_radius = radius_from_pixels(app.get("core.yakalama.tolerans").as_int(), mm_per_pixel_);
 
     // THE SAME DISTANCE THE OBJECT SNAP USES, and set AFTER it for that reason.
@@ -132,6 +134,8 @@ core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings
     q.normal_reach = s.normal_reach;
     q.reach        = s.reach;
     q.step         = s.step;
+
+    q.on_locked_layers = s.snap_locked;
 
     // THE MARKS, and the reach that switches them on. Carried here for the same
     // reason `normal_lock` had to be: a query field nobody writes is a feature

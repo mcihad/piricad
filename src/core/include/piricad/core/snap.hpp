@@ -264,6 +264,11 @@ struct SnapQuery
     /// direction lock chooses the ray and this chooses the length along it.
     Mm step{0};
 
+    /// Whether objects on a LOCKED layer are offered (`core.yakalama.kilitli_katman`). A locked
+    /// layer is drawn and cannot be edited, which is exactly the layer a point is taken FROM, so
+    /// the default is yes; a person who would rather it were out of the way says no.
+    bool on_locked_layers{true};
+
     /// The points the user MARKED for tracking (`SnapTracking`), newest last.
     ///
     /// A span rather than a vector: the marks live on the session and a query is

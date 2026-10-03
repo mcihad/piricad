@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — kilitli katmanın seçilmesi ve yakalanması ayarlanabilir; yüz üst üste nesne ölçüldü (U-03)
+
+- İki yeni ayar (varsayılanlar eski davranış): `core.yakalama.kilitli_katman` ve
+  `core.secim.kilitli_katman` (Ayarlar ▸ Çizim ve Yakalama). Hayır denince kilitli katmandaki
+  nesneler nesne yakalamaya ve pencere/tıklama/`SEÇ mod=KATMAN` seçimine girmez; `nesneler=` ile
+  açıkça verilen kimlikler ve önceki seçim etkilenmez. Gizli katman her zaman dışarıda.
+  Motorda `SnapQuery::on_locked_layers`, `core::drop_locked_layers`; tuval aynı süzgeci
+  seçim listesinde uyguluyor.
+- **Yüz üst üste nesne:** `SEÇ mod=NOKTA sira=1…100` her sırada tam o nesneyi seçer, 101 reddedilir
+  (`test_temporary_snap.cpp`); fare gerektirmeyen, betikten de giden yol.
+- Kanıt: `test_temporary_snap.cpp` (varsayılanlar, kapatınca seçim/yakalama/katman modu, gizli katman,
+  yüz nesne), ayarlar penceresi karesi `docs/baslangic/ayar-kilitli-katman.png`
+  (`PIRICAD_SETTINGS_SEARCH` ile uzun sayfa aranan satırda çekilebiliyor).
+
 ### Eklendi — geçici nesne yakalama: nokta beklenirken `orta`, `uç`, `kesişim`… (U-03)
 
 - Nokta beklenirken bir yakalamanın adını yazıp Enter: sürekli yakalamalar bir kenara konur ve

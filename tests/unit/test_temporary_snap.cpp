@@ -13,6 +13,7 @@
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
 #include "piricad/command/session.hpp"
+#include "piricad/core/pick.hpp"
 #include "piricad/core/snap.hpp"
 
 #include <string>
@@ -189,4 +190,119 @@ TEST_CASE("GEÇİCİ YAKALAMA: yazılan koordinat dokunulmaz, sonraki soru sözc
     CHECK(s.temporary_snap() == 0);
     s.cancel();
     (void)r.bus.finish(s);
+}
+
+// =============================================================================
+// ONE HUNDRED OBJECTS ON ONE SPOT (TODOS U-03): the wanted one can be taken
+// =============================================================================
+
+TEST_CASE("SEÇİM: yüz nesne üst üste iken istenen nesne komutla seçilebilir")
+{
+    // The acceptance of U-03: with a hundred objects under one click, the wanted one is reachable —
+    // and by the line a script and the keyboard send, not by a mouse gesture alone
+    // (CLAUDE.md 5.15).
+    Rig r;
+    r.run("KATMAN ad=YIGIN");
+    for (int i = 0; i < 100; ++i)
+        r.run("ÇİZGİ 0,0 10,0");
+    REQUIRE(r.doc.live_entity_count() == 100);
+
+    // The list a click sees: every one of them, once, in the order `sira` counts (nearest, then the
+    // lower slot — all are equally near, so the order of drawing).
+    std::vector<core::EntityId> under;
+    core::pick_all(r.doc, core::Point2{5'000, 0}, 100, under);
+    REQUIRE(under.size() == 100);
+    for (std::size_t i = 1; i < under.size(); ++i)
+        CHECK(under[i - 1] < under[i]);
+
+    // Every row of the list is reachable by `sira`, and selects exactly that object.
+    for (int row = 1; row <= 100; ++row) {
+        r.run("SEÇ TEMİZLE");
+        r.run("SEÇ mod=NOKTA noktalar=5,0 tolerans=0.1 sira=" + std::to_string(row));
+        const auto& keys = r.bus.selection().keys();
+        REQUIRE_MESSAGE(keys.size() == 1, "sıra " << row);
+        const core::EntityId wanted = under[static_cast<std::size_t>(row - 1)];
+        CHECK_MESSAGE(r.doc.slot_of(keys.front()) == wanted, "sıra " << row);
+    }
+
+    // And one past the end is refused with the count, not wrapped round.
+    r.run("SEÇ TEMİZLE");
+    auto past =
+        r.bus.execute_line("SEÇ mod=NOKTA noktalar=5,0 tolerans=0.1 sira=101", Origin::Test);
+    CHECK_FALSE(past.ok());
+}
+
+// =============================================================================
+// LOCKED AND HIDDEN LAYERS under the hand (TODOS U-03)
+// =============================================================================
+
+TEST_CASE("SEÇİM: kilitli katman varsayılanda seçilir ve yakalanır; ayar kapatınca atlanır")
+{
+    Rig r;
+    r.bus.aids().set_view_scale(100.0); ///< 100 mm a pixel: the aperture is 1.6 m
+    r.run("KATMAN ad=SINIR");
+    r.run("ÇİZGİ 0,0 10,0");
+    r.run("KATMAN ad=SINIR kilitli=evet");
+
+    const auto selected_by_point = [&r] {
+        r.run("SEÇ TEMİZLE");
+        r.run("SEÇ mod=NOKTA noktalar=5,0 tolerans=0.1");
+        return r.bus.selection().keys().size();
+    };
+    const auto snapped_to = [&r](core::Point2 aim) {
+        core::SnapQuery q;
+        q.aim              = aim;
+        q.radius           = 1'600;
+        q.modes            = core::SnapEndpoint;
+        q.on_locked_layers = r.bus.aid_settings().snap_locked;
+        return core::snap(r.doc, q);
+    };
+
+    // THE DEFAULTS ARE WHAT THE PROGRAM DID: a locked boundary is the one thing a point is taken
+    // FROM, and it can be selected to be read and measured though it cannot be edited.
+    CHECK(r.bus.aid_settings().snap_locked);
+    CHECK(r.bus.aid_settings().select_locked);
+    CHECK(selected_by_point() == 1);
+    CHECK(snapped_to(core::Point2{10'400, 300}).mode == core::SnapEndpoint);
+
+    // Said no, they leave the hand alone — selection and snap each by its own setting.
+    r.run("TERCİH core.secim.kilitli_katman hayır");
+    CHECK(selected_by_point() == 0);
+    CHECK(snapped_to(core::Point2{10'400, 300}).mode == core::SnapEndpoint); ///< snap is its own
+    r.run("TERCİH core.yakalama.kilitli_katman hayır");
+    CHECK_FALSE(r.bus.aid_settings().snap_locked);
+    CHECK(snapped_to(core::Point2{10'400, 300}).mode == core::SnapNone);
+
+    // The layer mode is a gesture too; an object named by id is not, and a script that names it
+    // gets it.
+    r.run("SEÇ TEMİZLE");
+    r.run("SEÇ mod=KATMAN katman=SINIR");
+    CHECK(r.bus.selection().keys().empty());
+    r.run("SEÇ TEMİZLE");
+    r.run("SEÇ mod=NESNE nesneler=1");
+    CHECK(r.bus.selection().keys().size() == 1);
+
+    // Unlocked, it is back whatever the settings say.
+    r.run("KATMAN ad=SINIR kilitli=hayır");
+    CHECK(selected_by_point() == 1);
+    CHECK(snapped_to(core::Point2{10'400, 300}).mode == core::SnapEndpoint);
+}
+
+TEST_CASE("SEÇİM: gizli katman ne seçilir ne yakalanır, ayardan bağımsız")
+{
+    Rig r;
+    r.bus.aids().set_view_scale(100.0);
+    r.run("KATMAN ad=GIZLI");
+    r.run("ÇİZGİ 0,0 10,0");
+    r.run("KATMAN ad=GIZLI gorunur=hayır");
+
+    r.run("SEÇ TEMİZLE");
+    r.run("SEÇ mod=NOKTA noktalar=5,0 tolerans=0.1");
+    CHECK(r.bus.selection().keys().empty());
+
+    core::SnapQuery q;
+    q.aim    = core::Point2{10'400, 300};
+    q.radius = 1'600;
+    q.modes  = core::SnapEndpoint;
+    CHECK(core::snap(r.doc, q).mode == core::SnapNone);
 }

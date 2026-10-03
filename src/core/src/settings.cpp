@@ -486,6 +486,8 @@ PIRICAD_SETTING(alan_birimi);
     X(izgara_ana_cizgi)                                                                            \
     X(yakalama_toleransi)                                                                          \
     X(secim_toleransi)                                                                             \
+    X(yakalama_kilitli_katman)                                                                     \
+    X(secim_kilitli_katman)                                                                        \
     X(yakalama_modlari)                                                                            \
     X(dik_mod)                                                                                     \
     X(yuzey_normali)                                                                               \
@@ -1581,6 +1583,46 @@ PIRICAD_SETTING(secim_toleransi)
                     "yakınındaki nesne tıklamayla seçilir. Yakalama toleransından ayrı "
                     "tutulur: nişan almak seçmekten daha geniş bir alan ister. Ele ve "
                     "ekrana ait bir büyüklük olduğu için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
+    };
+}
+
+PIRICAD_SETTING(yakalama_kilitli_katman)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.kilitli_katman",
+        .names    = {"yakalama_kilitli_katman", "kilitli_katmana_yakala", "snaplocked"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Kilitli katmandaki nesnelere nesne yakalama yapılsın mı. Evet (varsayılan): "
+                    "kilitli bir sınır katmanı düzenlenemez ama ona göre nokta alınabilir — "
+                    "kilidin bütün amacı budur. Hayır: kilitli katman yakalamada da yok sayılır. "
+                    "Gizli katmandakilere hiçbir zaman yakalanmaz. Ele ait bir tercih olduğu "
+                    "için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
+    };
+}
+
+PIRICAD_SETTING(secim_kilitli_katman)
+{
+    return SettingSpec{
+        .id       = "core.secim.kilitli_katman",
+        .names    = {"seçim_kilitli_katman", "secim_kilitli_katman", "kilitli_katman_secilir"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Kilitli katmandaki nesneler pencere, tıklama ve katman ile seçilebilsin mi. "
+                    "Evet (varsayılan): seçilir ama düzenlenemez (SİL, TAŞI … kilidi söyleyip "
+                    "reddeder); bilgi almak ve ölçmek için seçmek yine işe yarar. Hayır: kilitli "
+                    "katmandakiler seçime hiç girmez. Açıkça verilen nesne kimlikleri bundan "
+                    "etkilenmez. Ele ait bir tercih olduğu için uygulama kapsamındadır.",
         .section  = "Çizim ve Yakalama", // ui-label
     };
 }

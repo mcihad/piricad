@@ -277,6 +277,14 @@ void pick_in_circle(const Document& doc, Point2 centre, Mm radius, std::vector<E
 /// parcel round the window is not outside it. `SEÇ DIŞINDA`; slot order.
 void pick_outside_box(const Document& doc, const Box2& box, std::vector<EntityId>& out);
 
+/// Takes out of `ids` every entity that sits on a LOCKED layer, keeping the order of the rest.
+///
+/// A locked layer is drawn and cannot be edited; whether it can also be pointed at is the person's
+/// to say (`core.secim.kilitli_katman`, `core.yakalama.kilitli_katman`, TODOS U-03), so the pick
+/// and snap functions stay as they are and the caller that was told "not those" runs this over what
+/// they found. A hidden layer needs no filter: `visible` already leaves it out.
+void drop_locked_layers(const Document& doc, std::vector<EntityId>& ids);
+
 /// EVERY visible entity whose LINE comes within `radius` of `cursor`, nearest
 /// first — `pick_all` without its face rule: a parcel is through a point only
 /// along its boundary, not for a point inside it. `SEÇ GEÇEN`, "what passes

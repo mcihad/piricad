@@ -931,6 +931,9 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
 
         std::vector<EntityId> candidates;
         pick_candidates(doc, box, candidates);
+        // A LOCKED LAYER, when the person would rather it did not take a point (`core.yakalama.
+        // kilitli_katman`): left out of every object mode at once, here, where the candidates are.
+        if (!q.on_locked_layers) drop_locked_layers(doc, candidates);
 
         Best best[sizeof(kPriority) / sizeof(kPriority[0])]{};
         std::vector<NearSegment> near;

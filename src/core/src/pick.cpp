@@ -1022,4 +1022,14 @@ bool text_quad(const Document& doc, EntityId e, std::array<Point2, 4>& out)
     return true;
 }
 
+void drop_locked_layers(const Document& doc, std::vector<EntityId>& ids)
+{
+    const EntityTable& entities = doc.entities();
+    const auto& layers          = doc.layers();
+    std::erase_if(ids, [&](EntityId e) {
+        const LayerId layer = entities.layer[e];
+        return layer < layers.size() && layers[layer].locked;
+    });
+}
+
 } // namespace piricad::core

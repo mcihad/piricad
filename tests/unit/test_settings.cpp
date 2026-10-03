@@ -109,8 +109,10 @@ TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
     // style (`core.olcu.stil`, TODOS C-10), the export chord tolerance
     // (`core.aktarim.egri_sapmasi`, TODOS F-03), the hand that repeats the
     // last command (`core.arayuz.son_komut`, netcad_plan.md U-01) and the
-    // extent check's threshold (`core.denetim.kopukluk_carpani`, N-01).
-    CHECK(cat.size() == 76);
+    // extent check's threshold (`core.denetim.kopukluk_carpani`, N-01), and the
+    // two that say whether a locked layer takes a snap or a selection
+    // (`core.yakalama.kilitli_katman`, `core.secim.kilitli_katman`, TODOS U-03).
+    CHECK(cat.size() == 78);
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());

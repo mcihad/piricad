@@ -78,6 +78,11 @@ struct AidSettings
     /// easy to catch as a corner is.
     core::Mm tracking_reach{0};
 
+    /// Whether objects on a locked layer are offered to the object snaps (`core.yakalama.
+    /// kilitli_katman`, default yes) and to a selection (`core.secim.kilitli_katman`).
+    bool snap_locked{true};
+    bool select_locked{true};
+
     /// `core.yakalama.adim`: the multiple the distance from the previous point is
     /// rounded to, in millimetres. 0 is off.
     core::Mm step{0};

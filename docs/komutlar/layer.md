@@ -39,13 +39,31 @@ Argümansız çağırırsanız komut katman adını sorar.
 |---|---|
 | `ad` | Katman adı. Zorunlu. Yoksa katman yaratılır, her hâlükârda aktif olur |
 | `gorunur` | Katmanın görünürlüğü. `evet` / `hayır` |
-| `kilitli` | Katman kilidi. Kilitli katmana çizilemez |
+| `kilitli` | Katman kilidi. Kilitli katmana çizilemez, üzerindeki nesne düzenlenemez; seçilebilir ve nokta almak için yakalanabilir ([kilit ve imleç](#kilitli-ve-gizli-katman-imlecin-altında)) |
 | `renk` | Çizim rengi, `0xAARRGGBB` biçiminde tam sayı. Yeni katman **siyah** başlar |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
 Evet/hayır değerleri için `evet`, `hayır`, `yes`, `no`, `true`, `false`, `1`, `0` kabul
 edilir.
+
+### Kilitli ve gizli katman imlecin altında
+
+Kilit nesneyi **düzenlemeden** korur; ona bakmayı, ölçmeyi ve ona göre nokta almayı engellemez
+(bir sınır katmanını kilitlemenin amacı tam budur). Bu yüzden varsayılanda kilitli katmandaki
+nesneler seçilir ve nesne yakalama onları bulur; `SİL`, `TAŞI` gibi düzenlemeler kilidi
+söyleyip reddeder. İsterseniz bunu ayrı ayrı kapatırsınız
+(**Ayarlar ▸ Çizim ve Yakalama**, ya da `TERCİH`):
+
+| Ayar | Varsayılan | Kapatınca |
+|---|---|---|
+| `core.yakalama.kilitli_katman` | evet | Nesne yakalama kilitli katmandaki nesneleri yok sayar |
+| `core.secim.kilitli_katman` | evet | Pencere, tıklama ve `SEÇ mod=KATMAN` kilitli katmandakileri seçmez. `nesneler=` ile açıkça verilen kimlikler etkilenmez |
+
+![Ayarlar penceresinde kilitli katman anahtarları](../baslangic/ayar-kilitli-katman.png)
+
+**Gizli** katmandaki nesneler ise ayardan bağımsız olarak ne seçilir ne yakalanır: görünmeyen
+bir şeye nokta almak, ekrandaki görüntüden başka bir çizime göre çalışmak olurdu.
 
 ### Renk değerleri
 

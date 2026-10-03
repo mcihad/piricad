@@ -558,6 +558,8 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
         std::vector<core::EntityId> under;
         core::pick_all(controller_.document(), a, controller_.bus().aid_settings().pick_radius,
                        under);
+        if (!controller_.bus().aid_settings().select_locked)
+            core::drop_locked_layers(controller_.document(), under);
         // UNLESS THE QUESTION ALREADY SAYS WHICH. A command that acts on
         // hatches only asks for hatches, and the parcel under this one is not
         // an answer to it: the one hatch there is taken, by its place in the
@@ -1159,10 +1161,11 @@ void MapCanvas::buildSnapMarker()
         cursor_valid_) {
         const std::string text =
             std::string("yalnız ") + core::snap_mode_label(session->temporary_snap());
-        overlay_.labels.push_back(
-            render::OverlayLabel{tokens_->accent.rgba(), static_cast<float>(cursor_.x()) + 14.0F,
-                                 static_cast<float>(cursor_.y()) + 20.0F,
-                                 static_cast<float>(look_.hint_px), false, text});
+        const render::ScreenPointF at = toScreenF(cursor_);
+        overlay_.labels.push_back(render::OverlayLabel{tokens_->accent.rgba(), at.x + 14.0F,
+                                                       at.y + 20.0F,
+                                                       static_cast<float>(look_.hint_px), false,
+                                                       text});
         guide_label_ = guide_label_.empty() ? text : guide_label_ + " · " + text;
     }
 
@@ -4107,6 +4110,8 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
         std::vector<core::EntityId> under;
         core::pick_all(controller_.document(), at, controller_.bus().aid_settings().pick_radius,
                        under);
+        if (!controller_.bus().aid_settings().select_locked)
+            core::drop_locked_layers(controller_.document(), under);
         if (under.empty()) {
             emit echoRequested(
                 tr("Burada nesne yok; bir nesnenin üzerine tıklayın, Esc vazgeçer."));
@@ -4485,6 +4490,8 @@ void MapCanvas::mouseDoubleClickEvent(QMouseEvent* event)
         std::vector<core::EntityId> under;
         core::pick_all(controller_.document(), at, controller_.bus().aid_settings().pick_radius,
                        under);
+        if (!controller_.bus().aid_settings().select_locked)
+            core::drop_locked_layers(controller_.document(), under);
         if (!under.empty()) {
             selecting_ = false;
             emit entityActivated(controller_.document().key_of(under.front()));

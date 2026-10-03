@@ -1160,7 +1160,7 @@ kullanıcı için tek başına renk yeterli değildir.
 | **YAKALAMA** | `MOD ızgaraya_yakala` | Noktayı en yakın ızgara kesişimine oturtur (F9) |
 | **DİK** | `MOD dik_mod` | İmleci yatay ve düşey eksene kilitler (F8) |
 | **POLAR** | `MOD yakalama_modları` (kutupsal biti) | Önceki noktadan çıkan kutupsal ışınlara yakalar |
-| **OSNAP** | `MOD yakalama_modları` | Nesne yakalamayı açar/kapatır; kapatınca maske hatırlanır, açınca geri gelir (F3). Sağ tık mod listesini açar |
+| **OSNAP** | `MOD yakalama_modları` | Nesne yakalamayı açar/kapatır; kapatınca maske hatırlanır, açınca geri gelir (F3). Sağ tık mod listesini açar. Tek bir nokta için bir yakalamayı adıyla yazmak: [geçici yakalama](../komutlar/komut-satiri.md#geçici-nesne-yakalama-yalnız-bir-sonraki-nokta-için) |
 | **DİNAMİK GİRDİ** | `TERCİH core.arayuz.dinamik_girdi` | İmlecin yanındaki Uzunluk ve Açı alanlarını açar/kapatır; alanlara yazılır, **Tab** kilitler ([dinamik girdi](../komutlar/komut-satiri.md#imleç-yanında-uzunluk-ve-açı-dinamik-girdi)) |
 | **KALINLIK** | `TERCİH çizgi_kalınlığı` | Çizgi kalınlıklarını paftadaki ölçüsüyle çizer; kapalıyken her çizgi tek piksel kıl çizgidir. Kalınlık nesnede ve çıktıda durur, yalnız ekran değişir |
 

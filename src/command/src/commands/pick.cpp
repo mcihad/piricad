@@ -749,6 +749,30 @@ Task<void> run_select(Context& ctx)
         picked = std::move(kept);
     }
 
+    // ---- the locked-layer filter (TODOS U-03) ----
+    //
+    // A locked layer is drawn and cannot be edited. Whether its objects can also be PICKED is the
+    // person's to say (`core.secim.kilitli_katman`; yes by default — to measure and read a locked
+    // boundary you have to select it). When the answer is no they stay out of every gesture, the
+    // layer mode included; ids named outright, the previous selection and a clear are not gestures
+    // and are left alone.
+    if (mode != Mode::Clear && mode != Mode::Previous && mode != Mode::Objects &&
+        !bus.aid_settings().select_locked) {
+        std::vector<core::EntityId> slots_of;
+        slots_of.reserve(picked.size());
+        for (const EntityKey k : picked) {
+            const core::EntityId slot = doc.slot_of(k);
+            if (slot != core::kNoEntity) slots_of.push_back(slot);
+        }
+        core::drop_locked_layers(doc, slots_of);
+        std::vector<EntityKey> kept;
+        kept.reserve(slots_of.size());
+        for (const core::EntityId slot : slots_of)
+            kept.push_back(doc.key_of(slot));
+        std::sort(kept.begin(), kept.end());
+        picked = std::move(kept);
+    }
+
     // ---- apply ----
     const std::size_t before = selection.size();
 

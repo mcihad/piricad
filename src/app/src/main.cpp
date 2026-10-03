@@ -1062,6 +1062,14 @@ int main(int argc, char** argv)
             // yet and `activeWindow()` is still the shell — which grabs the wrong
             // picture, or none at all.
             if (QWidget* top = window.findChild<piricad::app::SettingsDialog*>(); top != nullptr) {
+                // `PIRICAD_SETTINGS_SEARCH` types into the search box first: a long page is
+                // photographed at the rows a change is about, not at its top.
+                if (const QString typed = qEnvironmentVariable("PIRICAD_SETTINGS_SEARCH");
+                    !typed.isEmpty())
+                    if (auto* box = top->findChild<QLineEdit*>(); box != nullptr) {
+                        box->setText(typed);
+                        QCoreApplication::processEvents();
+                    }
                 rc = top->grab().save(dir + QStringLiteral("/ayarlar.png")) ? 0 : 1;
                 (void)std::fprintf(stdout, "[ayarlar] %s — %s\n",
                                    rc == 0 ? "kare: ayarlar.png" : "kare yazılamadı",
