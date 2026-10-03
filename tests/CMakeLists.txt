@@ -27,6 +27,7 @@ add_executable(piricad_tests
     unit/test_io.cpp
     unit/test_ncz.cpp
     unit/test_jitter.cpp
+    unit/test_properties.cpp
     unit/test_python.cpp
     unit/test_settings.cpp
     unit/test_snap.cpp

@@ -6,6 +6,25 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — özellik tabanlı geometri testleri (Q-03)
+
+- `tests/unit/test_properties.cpp`: örnek değil **özellik**; her biri birkaç yüz tohumlu girdiyle
+  (`std::mt19937_64` + modulo: standardın dağılımları platformdan platforma farklı olduğu için
+  dağılım kullanılmıyor, bir başarısızlık tohumunu söyler ve her makinede yeniden oynar).
+  10 vaka, ~10 bin doğrulama: iki parselin birleşim/kesişimi alanı koruyor (`U + I = A + B`,
+  `(A − B) + (A ∩ B) = A`) ve her sonuç yüz denetiminden geçiyor; bir parseli doğruyla bölüp
+  birleştirmek tek yüz ve aynı alan; parselin içindeki ada tek yüz tek delik (delik saat yönünde);
+  aynı girdi aynı sonuç, işlenen sırası değişince aynı küme; yuvarlak köşeli parselin ofseti
+  Steiner formülüne uyuyor (dışa `A + P·d + π·d²`, içe `A − P·d + π·d²`) ve dışa+içe parseli
+  geri veriyor; rastgele çizim DXF'e yazılıp okununca nesne sayısı, katmanlar, kapsam ve alan
+  korunuyor; taşı+geri taşı, dört çeyrek dönüş, iki kez aynalama, ×2 sonra ×0,5 çizimi **tam**
+  (içerik özeti) geri veriyor; rastgele açı ve ters açı alanı ve kapsamı koruyor; yakalama uca
+  birebir, ortaya 1 mm içinde, en yakın ve dik ayak doğru üstünde ve dik, dairenin merkezine birebir.
+- Tolerans tahmin değil yuvarlama: alan, işlenenlerin çevresi × 1 mm ile ölçülüyor (bir köşe yarım
+  milimetre oynayınca alan kenar uzunluğu × o kadar oynar). Negatif kontrol: tolerans sıfırlanınca
+  test düşüyor. **Bu turda kusur bulunmadı** — çekirdek, ofset, DXF yazıcısı ve dönüşümler bu
+  girdilerde tutarlı; testler artık gerileme bekçisi. Kural: `test.md` R26.
+
 ### Eklendi — birimli sayı: `12.5 m` = `1250 cm` (U-02)
 
 - Uzunluk isteyen her yere sayı **birimiyle** yazılabiliyor: `mm cm dm m km`, bitişik ya da
