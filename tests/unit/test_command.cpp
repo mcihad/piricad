@@ -8752,7 +8752,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + KAPSAMDENETİM (netcad_plan.md N-01) + PRİZMA (N-02) + ÇİFTÇİZGİ (N-11)
     // + DÖRDÜNCÜKÖŞE (N-13) + KATMANDURUM (TODOS U-05) + ÖRNEKPROJE (TODOS U-06) + KAYNAK (TODOS
     // G-02)
-    CHECK_EQ(f.reg.size(), std::size_t{121});
+    // + ÖZNİTELİKHESAPLA (TODOS G-03)
+    CHECK_EQ(f.reg.size(), std::size_t{122});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

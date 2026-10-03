@@ -27,6 +27,8 @@
 #include <QString>
 #include <QVector>
 
+#include <unordered_map>
+
 class QLabel;
 class QLineEdit;
 class QToolButton;
@@ -35,6 +37,9 @@ namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
+
+/// The field calculator window; see field_calculator_dialog.hpp.
+class FieldCalculatorDialog;
 
 /// The component set; see widgets.hpp, datagrid.hpp, expression_edit.hpp.
 class Button;
@@ -82,6 +87,11 @@ public:
 
     /// The row an entity is shown on, or -1 when the filter dropped it.
     int rowOf(core::EntityKey key) const;
+
+    /// The numbers of `column` over the rows the table holds — read as figures for a numeric
+    /// column, a fixed 8 bytes a row — and how many cells were empty. The statistics panel's input;
+    /// it never builds a string per row.
+    QVector<double> numbersOf(int column, int* nulls) const;
 
     /// Every value of one column, as text, for the statistics panel.
     QVector<QString> columnValues(int column) const;
@@ -150,6 +160,10 @@ private:
 
     Controller& controller_;
     QVector<core::EntityKey> rows_; ///< the rows the filter kept, in slot or sort order
+
+    /// Where each key sits in `rows_`, built when `rowOf` is first asked and dropped whenever the
+    /// rows or their order change.
+    mutable std::unordered_map<core::EntityKey, int> positions_;
     QVector<core::AttrId> columns_; ///< every declared column, in declaration order
     QString filter_;
     QString search_;
@@ -235,6 +249,9 @@ private:
     /// Sends the grid's selection to the canvas as one `SEÇ`.
     void pushSelection();
 
+    /// Opens the field calculator over this table's layer and the filter the bar holds.
+    void openCalculator();
+
     /// Deletes the selected rows' entities through `SİL`.
     void deleteSelectedRows();
 
@@ -268,6 +285,9 @@ private:
     QLabel* complaint_{nullptr};
     CheckBox* onlySelected_{nullptr};
     CheckBox* followMap_{nullptr};
+
+    FieldCalculatorDialog* calculator_{
+        nullptr}; ///< the field calculator, made when first asked for
 
     QToolButton* editToggle_{nullptr};
     QToolButton* statsToggle_{nullptr};

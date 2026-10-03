@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 127 (111 tanesi onay ister)
-- Katalog parmak izi: `7210239642260487622`
+- Araç sayısı: 128 (112 tanesi onay ister)
+- Katalog parmak izi: `9794827268329005283`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -267,6 +267,24 @@ Onay ister.
 | `nesne` | integer | hayır | Nesnenin kalıcı kimliği (tam sayı) |
 | `deger` | string | hayır | Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır (metin) |
 | `nesneler` | string | hayır | Birden çok nesnenin kalıcı kimlikleri: deger hepsine tek işlemde (tek geri alma adımı) yazılır; biri reddederse hiçbiri değişmez — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_attribute_calc` — Alan Hesaplayıcı
+
+Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek geri alma adımı, önizlemesi ve değişim özetiyle.
+Komut: ÖZNİTELİKHESAPLA (OZNITELIKHESAPLA, ALANHESAPLA, FIELDCALC, ÖHESAPLA, OHESAPLA)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `ad` | string | evet | Hesaplanıp yazılacak sütunun kimliği (metin) |
+| `ifade` | string | evet | Hesaplanacak ifade; sütunlar "çift", metinler 'tek' tırnakta. Örnek: round("alan_m2" * 0.4, 2) (metin) |
+| `katman` | string | hayır | Bu katmanın bütün satırları; yoksa seçim, o da boşsa aktif katman (metin) |
+| `filtre` | string | hayır | Yalnız bu ifadenin doğru çıktığı satırlar (tablonun süzme ifadesiyle aynı dil) (metin) |
+| `onizle` | boolean | hayır | Hiçbir şey yazma: neyin değişeceğini söyle; varsayılan hayır (evet/hayır) |
+| `nesneler` | string | hayır | Yalnız bu nesnelerin kalıcı kimlikleri; verilirse katman ve seçim yok sayılır — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_block` — Blok Tanımla

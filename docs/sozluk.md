@@ -286,6 +286,16 @@ yürütülmesi. Betikler böyle çalışır.
 **Öznitelik** — Bir katmanın veya dokümanın sayısal olmayan özellikleri; **Öznitelikler**
 panelinde görünür.
 
+**İfade** — Bir satırın değerini ya da bir süzgecin evet/hayır cevabını veren yazı:
+`"alan_m2" > 2000`, `round($alan, 2)`. Süzme çubuğunda ve alan hesaplayıcıda aynı dille yazılır. Bkz. [İfade dili](veri/ifade-dili.md).
+
+**Alan hesaplayıcı** — Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa
+yazan pencere ve komut (`ÖZNİTELİKHESAPLA`). Önce önizler, tek geri alma adımıyla yazar.
+Bkz. [ÖZNİTELİKHESAPLA](komutlar/attribute_calc.md).
+
+**NULL** — Doldurulmamış bir hücre: bilinmeyen. Sıfır (`0`) ya da boş metin (`''`) değildir;
+aritmetikte boşla boş, karşılaştırmada boşla yanlış çıkar. Bkz. [İfade dili](veri/ifade-dili.md).
+
 **Transkript** — Komutların kullanıcıya yazdığı mesajların akışı.
 
 **Stil** — Bir nesnenin çizilirken kullanılacak görünümü: çizgi rengi, kâğıt kalınlığı,

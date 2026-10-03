@@ -6,6 +6,35 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — alan hesaplayıcı, tek ifade motoru ve bir milyon satırlık tablo (G-03)
+
+- **`ÖZNİTELİKHESAPLA ad= ifade= [katman=] [filtre=] [onizle=] [nesneler=]`** (`core.attribute_calc`): bir ifadeyi
+  satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar. **Önce bütün satırları hesaplar, sonra yazar** — tek
+  satır hata verirse hiçbir hücre değişmez ve mesaj hangi nesnenin hangi sebeple reddedildiğini söyler. Sonuç
+  sütunun türüne `attr_parse` ile çevrilir; tam sayı sütununa kesir **yuvarlanmaz, reddedilir**; uzunluk sütununa
+  sayı metre yazar (belge milimetre saklar). Boş sonuç hücreyi boşaltır ve özette sayılır. Tek geri alma adımı;
+  özet "şimdi → olacak" ilk beş satırı, değişen/aynı kalan/boşaltılan/süzgece uymayan sayılarını söyler; günlüğe
+  çözülmüş kapsam yazılır. Kapsam sırası: `nesneler`, `katman`, seçim, etkin katman.
+- **Tek ifade motoru** (`command/expression.hpp`): süzme çubuğu ile hesaplayıcı aynı dili konuşur — aritmetik, `||`,
+  `CASE`, `coalesce` ve 25 işlev (`round`, `lpad`, `upper`, `substr`, …), `$fid $katman $alan $uzunluk $x $y`.
+  Bir kez derlenir, her satır için bir kez işletilir. **NULL sıfır değil, boş metin de değil**: aritmetik ve `||`
+  boşla boş, karşılaştırma boşla yanlış (`!=` dahil). Hücrenin sayı gibi okunan metni kendi hanelerini korur
+  (`0012 || 'x'` = `0012x`). Hiçbir işlev saate, makineye ya da yerel ayara bakmaz; büyük/küçük harf Türkçe
+  kurallarıyla (`core::turkish_lower`). **CLAUDE.md 5.11 değişti**: iki okuyucu var (`parser.hpp` yazılanı,
+  `expression.hpp` satırın değerini); satır koşulu artık `parser.cpp` içindeki ayrı bir sınıf değil.
+- **Alan hesaplayıcı penceresi** (tablonun `ƒ` düğmesi): yazılacak sütun, ifade çubuğu, süzgeç, kapsam; sağda sütun ve
+  işlev listeleri (çift tıkla ifadeye eklenir; listeler şemadan ve ayrıştırıcının kendi işlev tablosundan gelir).
+  **Önizle** komutu `onizle=evet` ile gönderir, tabloyu komutun yapılandırılmış yanıtıyla doldurur; **Uygula** yalnız
+  önizlemeden sonra açılır, alanlardan biri değişirse yeniden kapanır. Pencere belgeye dokunmaz.
+- **Bir milyon satırlık tablo**: sıralama her satırın anahtarını bir kez çıkarır (eskiden her karşılaştırmada iki
+  kez biçimleniyordu); nesneden satıra gitmek O(1) (tablo); alan istatistikleri sayıyı doğrudan okur ve ortancayı
+  tam sıralamadan değil seçerek bulur. Ölçüm (bir milyon nokta): hesap 3,3 s, tabloyu açma 0,9 s, sona kaydırma
+  ≈ 20 ms, sıralama 0,5–0,6 s, süzme 0,09 s.
+- Belgeler: `komutlar/attribute_calc.md` (yeni), `veri/ifade-dili.md` (yeni; her işlev ve `$` sözcüğü bir testle
+  kılavuzla karşılaştırılır), `veri/oznitelik-tablosu.md`, sözlük. Kanıt: `test_attribute_calc.cpp` (hesap, kapsam,
+  NULL, uzunluk, tek adım, komut satırı = betik = oynatma, işlev tablosu = kılavuz), `ci-gate-alan-hesaplayici`
+  (`PIRICAD_CALC_PROBE`, `PIRICAD_BIGTABLE_PROBE`), kareler `docs/komutlar/alan-hesaplayici-*.png`.
+
 ### Eklendi — veri kaynağı bilgisi, salt görüntü ve gerçek eğrilerin içe alınması (G-02)
 
 - **`KAYNAK <dosya> [katman=]`** (`core.source`): bir veri kaynağını içe almadan, salt okunur açıp anlatır —

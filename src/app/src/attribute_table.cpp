@@ -5,16 +5,19 @@
 #include "piricad/app/datagrid.hpp"
 #include "piricad/app/export_dialog.hpp"
 #include "piricad/app/expression_edit.hpp"
+#include "piricad/app/field_calculator_dialog.hpp"
 #include "piricad/app/icons.hpp"
 #include "piricad/app/measure_text.hpp"
 #include "piricad/app/tokens.hpp"
 #include "piricad/app/widgets.hpp"
 #include "piricad/command/bus.hpp"
+#include "piricad/command/expression.hpp"
 #include "piricad/command/parser.hpp"
 #include "piricad/command/selection.hpp"
 #include "piricad/core/document.hpp"
 #include "piricad/core/text.hpp"
 
+#include <QCollator>
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -141,6 +144,7 @@ void AttributeModel::refresh()
     }
 
     rows_.clear();
+    positions_.clear();
     error_.clear();
 
     // THE LAYER SCOPE, resolved here and not cached. The window's title already
@@ -174,6 +178,24 @@ void AttributeModel::refresh()
                (!scoped || doc.entities().layer[e] == only);
     };
 
+    // THE FILTER IS READ ONCE (TODOS G-03): a layer of a million rows used to parse the same text a
+    // million times. A blank filter has nothing to run; a broken one is one complaint, below.
+    std::optional<command::Expression> compiled;
+    if (!filter_.trimmed().isEmpty()) {
+        auto read = command::Expression::compile(filter_.toStdString());
+        if (!read) {
+            error_ = QString::fromStdString(read.error().message);
+            rows_.clear();
+            for (core::EntityId all = 0; all < doc.entities().size(); ++all)
+                if (listed(all)) rows_.push_back(doc.entities().key[all]);
+            applySort();
+            endResetModel();
+            emit filtered(static_cast<int>(rows_.size()), static_cast<int>(rows_.size()));
+            return;
+        }
+        compiled = std::move(read.value());
+    }
+
     std::size_t total = 0;
     for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
         if (!listed(e)) continue;
@@ -194,17 +216,20 @@ void AttributeModel::refresh()
             return core::attr_display(cell.value(), core::DecimalMark::Point);
         };
 
-        auto matched = command::evaluate_predicate(filter_.toStdString(), field);
-        if (!matched) {
-            // One complaint, not one per row: a broken filter is a typing
-            // mistake and repeating it a thousand times helps nobody.
-            error_ = QString::fromStdString(matched.error().message);
-            rows_.clear();
-            for (core::EntityId all = 0; all < doc.entities().size(); ++all)
-                if (listed(all)) rows_.push_back(doc.entities().key[all]);
-            break;
+        if (compiled) {
+            auto matched = compiled->evaluate(field);
+            if (!matched) {
+                // One complaint, not one per row: a broken filter is a typing
+                // mistake and repeating it a thousand times helps nobody.
+                error_ = QString::fromStdString("'" + filter_.toStdString() +
+                                                "': " + matched.error().message);
+                rows_.clear();
+                for (core::EntityId all = 0; all < doc.entities().size(); ++all)
+                    if (listed(all)) rows_.push_back(doc.entities().key[all]);
+                break;
+            }
+            if (!matched.value().truthy()) continue;
         }
-        if (!matched.value()) continue;
 
         // THE QUICK SEARCH, over every cell of the row, folded the Turkish way.
         if (!needle.isEmpty()) {
@@ -248,7 +273,16 @@ core::EntityKey AttributeModel::keyAt(int row) const
 
 int AttributeModel::rowOf(core::EntityKey key) const
 {
-    return static_cast<int>(rows_.indexOf(key));
+    // A MAP, BUILT WHEN FIRST ASKED (TODOS G-03): `indexOf` is a scan, and a selection of a
+    // thousand objects on the map asks it a thousand times of a million rows. Rebuilt after any
+    // change of the rows or their order (`refresh`, `applySort` clear it).
+    if (positions_.empty()) {
+        positions_.reserve(static_cast<std::size_t>(rows_.size()));
+        for (qsizetype i = 0; i < rows_.size(); ++i)
+            positions_.emplace(rows_[i], static_cast<int>(i));
+    }
+    const auto at = positions_.find(key);
+    return at == positions_.end() ? -1 : at->second;
 }
 
 int AttributeModel::rowCount(const QModelIndex& parent) const
@@ -425,8 +459,8 @@ bool AttributeModel::setData(const QModelIndex& index, const QVariant& value, in
 
     const core::EntityKey key = keyAt(index.row());
     const QString mark        = QStringLiteral("%1:%2")
-                                    .arg(static_cast<qulonglong>(key))
-                                    .arg(static_cast<int>(columns_[index.column() - 1]));
+                             .arg(static_cast<qulonglong>(key))
+                             .arg(static_cast<int>(columns_[index.column() - 1]));
 
     // THROUGH THE BUS, like every other client. The table has no path into the
     // entity store and must not: a value edited here and the same value typed at
@@ -485,19 +519,101 @@ void AttributeModel::applySort()
     // Figures as figures, words as words with the locale's collation, and an
     // empty cell after everything either way — a NULL that sorted as zero would
     // put "unknown" among the smallest, which is a claim the data does not make.
-    const auto textOf = [&](core::EntityKey key) { return rawText(doc.slot_of(key), column); };
-    std::stable_sort(rows_.begin(), rows_.end(), [&](core::EntityKey a, core::EntityKey b) {
-        const QString ta = textOf(a);
-        const QString tb = textOf(b);
-        if (ta.isEmpty() != tb.isEmpty()) return tb.isEmpty(); // empties last, both orders
-        bool less = false;
-        if (figures) {
-            less = ta.toDouble() < tb.toDouble();
-        } else {
-            less = QString::localeAwareCompare(ta, tb) < 0;
+    //
+    // THE KEYS ARE MADE ONCE (TODOS G-03). The comparison used to rebuild both cells' text — a hash
+    // lookup, a formatter, a string — on every one of ~20 comparisons per row, which is minutes on
+    // a million rows. Now each row's key (its number, or the collator's sort key of its text) is
+    // built one time and the sort compares keys.
+    struct Key
+    {
+        core::EntityKey key{core::EntityKey::None};
+        bool empty{true};
+        double number{0.0};
+        std::optional<QCollatorSortKey>
+            text; ///< no default constructor: made only for a filled text cell
+    };
+
+    QCollator collator;
+    std::vector<Key> keys;
+    keys.reserve(static_cast<std::size_t>(rows_.size()));
+    for (const core::EntityKey row : rows_) {
+        Key k;
+        k.key           = row;
+        const QString t = rawText(doc.slot_of(row), column);
+        k.empty         = t.isEmpty();
+        if (!k.empty) {
+            if (figures)
+                k.number = t.toDouble();
+            else
+                k.text = collator.sortKey(t);
         }
-        return sortOrder_ == Qt::AscendingOrder ? less : (!less && ta != tb);
+        keys.push_back(std::move(k));
+    }
+    const bool ascending = sortOrder_ == Qt::AscendingOrder;
+    std::stable_sort(keys.begin(), keys.end(), [figures, ascending](const Key& a, const Key& b) {
+        if (a.empty != b.empty) return b.empty; // empties last, both orders
+        if (a.empty) return false;
+        int order = 0;
+        if (figures)
+            order = a.number < b.number ? -1 : (a.number > b.number ? 1 : 0);
+        else
+            order = a.text->compare(*b.text);
+        return ascending ? order < 0 : order > 0;
     });
+    for (std::size_t i = 0; i < keys.size(); ++i)
+        rows_[static_cast<qsizetype>(i)] = keys[i].key;
+    positions_.clear(); // the order changed: the key -> row map is stale
+}
+
+QVector<double> AttributeModel::numbersOf(int column, int* nulls) const
+{
+    QVector<double> out;
+    int empty = 0;
+    out.reserve(rows_.size());
+    const core::Document& doc = controller_.document();
+
+    // THE FIGURES OF A NUMERIC COLUMN are read as figures (TODOS G-03). Going through the display
+    // text — format, QString, parse back — for every one of a million rows made the statistics
+    // panel a second-long stall each time the current cell moved, and a gigabyte of strings
+    // besides.
+    if (numericColumn(column)) {
+        for (const core::EntityKey key : rows_) {
+            const core::EntityId slot = doc.slot_of(key);
+            if (column == 0) {
+                out.push_back(static_cast<double>(static_cast<std::uint64_t>(key)));
+                continue;
+            }
+            const auto cell = doc.attribute(columns_[column - 1], slot);
+            if (!cell || !cell.value().present) {
+                ++empty;
+                continue;
+            }
+            const core::AttrValue& v = cell.value();
+            double figure            = static_cast<double>(v.number);
+            if (v.type == core::AttrType::Length) figure /= 1000.0;
+            if (v.type == core::AttrType::Decimal) {
+                double divisor = 1.0;
+                for (int d = 0; d < v.scale; ++d)
+                    divisor *= 10.0;
+                figure /= divisor;
+            }
+            out.push_back(figure);
+        }
+        if (nulls != nullptr) *nulls = empty;
+        return out;
+    }
+
+    // A text column that happens to hold numbers: through the text, as it always was.
+    for (const QString& text : columnValues(column)) {
+        bool ok        = false;
+        const double v = text.toDouble(&ok);
+        if (ok)
+            out.push_back(v);
+        else if (text.isEmpty())
+            ++empty; // the edit role hands an absent cell back as nothing
+    }
+    if (nulls != nullptr) *nulls = empty;
+    return out;
 }
 
 QVector<QString> AttributeModel::columnValues(int column) const
@@ -810,8 +926,8 @@ QWidget* AttributeTable::buildToolRow()
     auto* filter = toolMark(Glyph::Filter, tr("Süz — ifade çubuğuna gider"), bar);
     connect(filter, &QToolButton::clicked, this, [this] { filter_->setFocus(); });
     row->addWidget(filter);
-    auto* calculator = toolMark(Glyph::Function, QString(), bar);
-    pending(calculator, tr("Alan hesaplayıcı"));
+    auto* calculator = toolMark(Glyph::Function, tr("Alan hesaplayıcı — ÖZNİTELİKHESAPLA"), bar);
+    connect(calculator, &QToolButton::clicked, this, &AttributeTable::openCalculator);
     row->addWidget(calculator);
     statsToggle_ = toolMark(Glyph::Sigma, tr("Alan istatistikleri panelini gösterir"), bar);
     statsToggle_->setCheckable(true);
@@ -1089,6 +1205,20 @@ void AttributeTable::followCanvas()
     refreshStatistics();
 }
 
+void AttributeTable::openCalculator()
+{
+    // ONE WINDOW, opened on the table's own layer and the filter the bar holds, so "calculate over
+    // what I am looking at" is the starting point and not a thing to retype.
+    if (calculator_ == nullptr) {
+        calculator_ = new FieldCalculatorDialog(controller_, layerName_, QString(), this);
+        calculator_->applyTheme(theme_);
+    }
+    calculator_->setFilter(filter_->expression());
+    calculator_->show();
+    calculator_->raise();
+    calculator_->activateWindow();
+}
+
 void AttributeTable::deleteSelectedRows()
 {
     QStringList keys;
@@ -1291,6 +1421,72 @@ QString AttributeTable::probeGrid(const QString& action, const QString& value)
         return keys.join(QLatin1Char(','));
     }
 
+    // SORT, FILTER AND SCROLL the way a person does (TODOS G-03): the header click, the filter
+    // bar's Enter and the scroll bar's end. A million rows is a thing to be driven, not described.
+    if (action == QStringLiteral("sirala")) {
+        const QStringList parts = value.split(QLatin1Char(','));
+        if (parts.size() != 2) return QStringLiteral("?");
+        view_->sortByColumn(parts[0].toInt(), parts[1] == QStringLiteral("azalan")
+                                                  ? Qt::DescendingOrder
+                                                  : Qt::AscendingOrder);
+        QCoreApplication::processEvents();
+        return QStringLiteral("sıralandı");
+    }
+
+    if (action == QStringLiteral("suz")) {
+        filter_->setExpression(value);
+        applyFilter();
+        QCoreApplication::processEvents();
+        return QString::number(model_->rowCount());
+    }
+
+    if (action == QStringLiteral("son")) {
+        view_->scrollToBottom();
+        QCoreApplication::processEvents();
+        const int last = view_->rowAt(view_->viewport()->height() - 1);
+        return QString::number(last >= 0 ? last + 1 : model_->rowCount());
+    }
+
+    // THE CALCULATOR WINDOW, driven like a hand: open it, type the column and the expression, press
+    // Önizle, then Uygula. `value` is `sütun|ifade`.
+    if (action == QStringLiteral("hesaplayici-ac")) {
+        openCalculator();
+        QCoreApplication::processEvents();
+        return calculator_ != nullptr && calculator_->isVisible() ? QStringLiteral("açık")
+                                                                  : QStringLiteral("kapalı");
+    }
+    if (action == QStringLiteral("hesaplayici-onizle") ||
+        action == QStringLiteral("hesaplayici-uygula")) {
+        if (calculator_ == nullptr) return QStringLiteral("pencere yok");
+        // The column id comes first and holds no bar; the expression after it may (`||`).
+        const qsizetype bar = value.indexOf(QLatin1Char('|'));
+        if (bar < 0) return QStringLiteral("?");
+        calculator_->runForProbe(value.left(bar), value.mid(bar + 1),
+                                 action == QStringLiteral("hesaplayici-onizle")
+                                     ? FieldCalculatorDialog::Step::Preview
+                                     : FieldCalculatorDialog::Step::Apply);
+        QCoreApplication::processEvents();
+        return QStringLiteral("%1|%2|%3")
+            .arg(calculator_->previewRows())
+            .arg(calculator_->applyEnabled() ? QStringLiteral("evet") : QStringLiteral("hayir"))
+            .arg(calculator_->summaryText());
+    }
+    if (action == QStringLiteral("hesaplayici-liste")) {
+        if (calculator_ == nullptr) return QStringLiteral("pencere yok");
+        return QStringLiteral("%1|%2")
+            .arg(calculator_->columnChoices())
+            .arg(calculator_->functionCount());
+    }
+    if (action == QStringLiteral("hesaplayici-islev")) {
+        if (calculator_ == nullptr) return QStringLiteral("pencere yok");
+        return calculator_->insertFunctionForProbe(value.toInt());
+    }
+    if (action == QStringLiteral("hesaplayici-resim")) {
+        if (calculator_ == nullptr) return QStringLiteral("pencere yok");
+        return calculator_->grab().save(value) ? QStringLiteral("tamam")
+                                               : QStringLiteral("yazılamadı");
+    }
+
     if (action == QStringLiteral("sikayet")) return complaint_->text();
 
     if (action == QStringLiteral("satirlar")) return QString::number(model_->rowCount());
@@ -1348,16 +1544,8 @@ void AttributeTable::refreshStatistics()
 
     const QString name = model_->headerData(column, Qt::Horizontal, Qt::DisplayRole).toString();
 
-    QVector<double> numbers;
-    int nulls = 0;
-    for (const QString& text : model_->columnValues(column)) {
-        bool ok        = false;
-        const double v = text.toDouble(&ok);
-        if (ok)
-            numbers.push_back(v);
-        else if (text.isEmpty())
-            ++nulls; // the edit role hands an absent cell back as nothing
-    }
+    int nulls               = 0;
+    QVector<double> numbers = model_->numbersOf(column, &nulls);
 
     statsField_->setText(tr("%1 · %2").arg(name, numbers.isEmpty() ? tr("metin") : tr("gerçek")));
     static_cast<Histogram*>(histogram_)->setValues(numbers, theme_);
@@ -1376,12 +1564,18 @@ void AttributeTable::refreshStatistics()
         return;
     }
 
-    std::sort(numbers.begin(), numbers.end());
-    const double total = std::accumulate(numbers.begin(), numbers.end(), 0.0);
-    const double mean  = total / static_cast<double>(numbers.size());
+    // NO FULL SORT: the median needs the middle one or two, which a selection finds in a single
+    // pass — a million-row column was sorted whole every time the current cell moved (TODOS G-03).
+    const auto [lowest, highest] = std::minmax_element(numbers.begin(), numbers.end());
+    const double smallest        = *lowest;
+    const double largest         = *highest;
+    const double total           = std::accumulate(numbers.begin(), numbers.end(), 0.0);
+    const double mean            = total / static_cast<double>(numbers.size());
+    const auto middle            = numbers.begin() + static_cast<qsizetype>(numbers.size() / 2);
+    std::nth_element(numbers.begin(), middle, numbers.end());
+    const double upper = *middle;
     const double median =
-        numbers.size() % 2 ? numbers[numbers.size() / 2]
-                           : (numbers[numbers.size() / 2 - 1] + numbers[numbers.size() / 2]) / 2.0;
+        numbers.size() % 2 ? upper : (*std::max_element(numbers.begin(), middle) + upper) / 2.0;
 
     double variance = 0.0;
     for (double v : numbers)
@@ -1391,8 +1585,8 @@ void AttributeTable::refreshStatistics()
     put(0, grouped(model_->rowCount(), 0));
     put(1, grouped(static_cast<double>(numbers.size()), 0));
     put(2, grouped(nulls, 0));
-    put(3, grouped(numbers.front()));
-    put(4, grouped(numbers.back()));
+    put(3, grouped(smallest));
+    put(4, grouped(largest));
     put(5, grouped(mean));
     put(6, grouped(median));
     put(7, grouped(std::sqrt(variance)));

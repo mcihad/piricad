@@ -3709,6 +3709,268 @@ int MainWindow::probeSamples()
     return failures;
 }
 
+int MainWindow::probeCalculator()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[hesaplayici] %s: %s\n",
+                           ok ? "tamam" : "BAŞARISIZ", what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+    const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_CALC_PROBE"));
+
+    // ---- six parcels, five columns ----
+    command::Bus& bus        = controller_->bus();
+    const char* corners[][2] = {{"0,0", "40,30"},  {"50,0", "80,30"},  {"90,0", "120,25"},
+                                {"0,40", "30,70"}, {"40,40", "70,65"}, {"80,40", "120,80"}};
+    const char* types[]      = {"Konut", "Konut", "Ticaret", "Konut", "Park", "Ticaret"};
+    (void)bus.execute_line("YENİ", command::Origin::Gui);
+    (void)bus.execute_line("KATMAN ad=PARSEL", command::Origin::Gui);
+    for (const auto& c : corners)
+        (void)bus.execute_line(QStringLiteral("DİKDÖRTGEN %1 %2").arg(c[0], c[1]).toStdString(),
+                               command::Origin::Gui);
+    for (const char* line : {"SÜTUN kimlik=ada tur=tam_sayi ad=\"Ada\"",
+                             "SÜTUN kimlik=parsel tur=tam_sayi ad=\"Parsel\"",
+                             "SÜTUN kimlik=alan_m2 tur=ondalik basamak=2 ad=\"Alan (m²)\"",
+                             "SÜTUN kimlik=kod tur=metin ad=\"Kod\"",
+                             "SÜTUN kimlik=tip tur=metin ad=\"İmar kullanımı\""})
+        (void)bus.execute_line(line, command::Origin::Gui);
+    for (int i = 1; i <= 6; ++i) {
+        (void)bus.execute_line(
+            QStringLiteral("ÖZNİTELİK ada %1 %2").arg(i).arg(i <= 3 ? 101 : 102).toStdString(),
+            command::Origin::Gui);
+        (void)bus.execute_line(
+            QStringLiteral("ÖZNİTELİK parsel %1 %2").arg(i).arg(i <= 3 ? i : i - 3).toStdString(),
+            command::Origin::Gui);
+        (void)bus.execute_line(QStringLiteral("ÖZNİTELİK tip %1 %2")
+                                   .arg(i)
+                                   .arg(QString::fromUtf8(types[i - 1]))
+                                   .toStdString(),
+                               command::Origin::Gui);
+    }
+    QCoreApplication::processEvents();
+
+    AttributeTable table(*controller_, QStringLiteral("PARSEL"), this);
+    table.applyTheme(theme_);
+    table.resize(1100, 640);
+    table.show();
+    QCoreApplication::processEvents();
+    const auto drive = [&table](const char* action, const QString& value = QString()) {
+        return table.probeGrid(QString::fromUtf8(action), value);
+    };
+    const auto cell = [&drive](int row, int column) {
+        return drive("hucre", QStringLiteral("%1,%2").arg(row).arg(column));
+    };
+
+    // ---- the window opens, with the schema and the language in its lists ----
+    check(drive("hesaplayici-ac") == QStringLiteral("açık"), QStringLiteral("pencere açıldı"));
+    const QStringList lists = drive("hesaplayici-liste").split(QLatin1Char('|'));
+    check(lists.size() == 2 && lists[0].toInt() >= 5 + 6 && lists[1].toInt() >= 20,
+          QStringLiteral("sütun ve işlev listeleri dolu (%1)")
+              .arg(lists.join(QStringLiteral(" / "))));
+    const QString inserted = drive("hesaplayici-islev", QStringLiteral("3"));
+    check(inserted.startsWith(QStringLiteral("round(")),
+          QStringLiteral("işleve çift tıklamak ifadeye ekler (%1)").arg(inserted));
+
+    // ---- a refused expression says why and writes nothing ----
+    const QString bad = drive("hesaplayici-onizle", QStringLiteral("alan_m2|\"ada\" +"));
+    check(bad.contains(QStringLiteral("|hayir|")),
+          QStringLiteral("hatalı ifade Uygula'yı açmaz (%1)").arg(bad));
+
+    // ---- preview, then apply: the area, in square metres, two digits ----
+    const std::size_t before = controller_->undoStack().undo_depth();
+    const QString shown = drive("hesaplayici-onizle", QStringLiteral("alan_m2|round($alan, 2)"));
+    check(shown.startsWith(QStringLiteral("5|evet|")) ||
+              shown.startsWith(QStringLiteral("6|evet|")),
+          QStringLiteral("önizleme örnekleri gösterdi, Uygula açıldı (%1)").arg(shown));
+    check(cell(0, 3).isEmpty(), QStringLiteral("önizleme hiçbir şey yazmadı"));
+    check(controller_->undoStack().undo_depth() == before,
+          QStringLiteral("önizleme geri alma adımı açmadı"));
+    if (!into.isEmpty() && into != QStringLiteral("1")) {
+        QDir().mkpath(into);
+        check(drive("hesaplayici-resim", into + QStringLiteral("/alan-hesaplayici-onizleme.png")) ==
+                  QStringLiteral("tamam"),
+              QStringLiteral("önizleme resmi yazıldı"));
+    }
+    drive("hesaplayici-uygula", QStringLiteral("alan_m2|round($alan, 2)"));
+    check(cell(0, 3) == QStringLiteral("1200") || cell(0, 3).startsWith(QStringLiteral("1200")),
+          QStringLiteral("birinci parselin alanı 1200 m² (%1)").arg(cell(0, 3)));
+    check(controller_->undoStack().undo_depth() == before + 1,
+          QStringLiteral("hesap tek geri alma adımı"));
+
+    // ---- THE PREVIEW IS THE GATE: Uygula without it writes nothing ----
+    const QString kod = QStringLiteral("kod|\"ada\" || '/' || lpad(\"parsel\", 3, '0')");
+    drive("hesaplayici-uygula", kod);
+    check(cell(0, 4).isEmpty() && controller_->undoStack().undo_depth() == before + 1,
+          QStringLiteral("önizlenmemiş ifade Uygula ile yazılmadı"));
+
+    // ---- a text from two columns ----
+    drive("hesaplayici-onizle", kod);
+    drive("hesaplayici-uygula", kod);
+    check(cell(0, 4) == QStringLiteral("101/001") && cell(5, 4) == QStringLiteral("102/003"),
+          QStringLiteral("kod iki sütundan kuruldu (%1, %2)").arg(cell(0, 4), cell(5, 4)));
+    if (!into.isEmpty() && into != QStringLiteral("1"))
+        (void)drive("hesaplayici-resim", into + QStringLiteral("/alan-hesaplayici-uygulandi.png"));
+
+    // ---- and one undo takes the last calculation back whole ----
+    (void)bus.execute_line("GERİAL", command::Origin::Gui);
+    QCoreApplication::processEvents();
+    check(cell(0, 4).isEmpty() && cell(5, 4).isEmpty(),
+          QStringLiteral("tek GERİAL kodu bütün satırlarda geri aldı"));
+    check(cell(0, 3).startsWith(QStringLiteral("1200")),
+          QStringLiteral("alan hesabı yerinde kaldı (%1)").arg(cell(0, 3)));
+
+    table.close();
+    controller_->cancelAll();
+    return failures;
+}
+
+int MainWindow::probeBigTable()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[büyüktablo] %s: %s\n",
+                           ok ? "tamam" : "BAŞARISIZ", what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+    const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_BIGTABLE_PROBE"));
+    QElapsedTimer clock;
+    const auto lap = [&clock](const char* what, qint64* out = nullptr) {
+        const qint64 ms = clock.restart();
+        (void)std::fprintf(stdout, "[büyüktablo] ölçüm: %s %lld ms\n", what,
+                           static_cast<long long>(ms));
+        (void)std::fflush(stdout);
+        if (out != nullptr) *out = ms;
+        return ms;
+    };
+    const auto resident_mb = [] {
+        QFile status(QStringLiteral("/proc/self/status"));
+        if (!status.open(QIODevice::ReadOnly)) return qint64{-1};
+        for (const QByteArray& line : status.readAll().split('\n'))
+            if (line.startsWith("VmRSS:"))
+                return line.simplified().split(' ').value(1).toLongLong() / 1024;
+        return qint64{-1};
+    };
+
+    // ---- a million surveyed points, read from a point list the way a surveyor's file arrives ----
+    //
+    // `NOKTALAR` is the command a field team's file goes in by, and it fills three columns of its
+    // own
+    // (`nokta_no`, `kot`, `kod`) — a million rows with real cells, made in one transaction.
+    const QString list = QDir::temp().filePath(QStringLiteral("piricad-buyuk-tablo.txt"));
+    {
+        QFile out(list);
+        if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            check(false, QStringLiteral("nokta listesi yazılamadı"));
+            return failures;
+        }
+        QTextStream text(&out);
+        for (int i = 1; i <= 1'000'000; ++i)
+            text << i << ';' << (485'000 + i % 1000) << ';' << (4'310'000 + i / 1000)
+                 << ";100.5;K\n";
+    }
+    clock.start();
+    runScriptLine(QStringLiteral("YENİ"));
+    endCommand();
+    runScriptLine(QStringLiteral("KATMAN ad=NOKTA"));
+    endCommand();
+    runScriptLine(QStringLiteral("NOKTALAR dosya=\"%1\"").arg(list));
+    endCommand();
+    lap("1 000 000 nokta (NOKTALAR)");
+    QFile::remove(list);
+    check(controller_->document().live_entity_count() == 1'000'000,
+          QStringLiteral("bir milyon nesne var (%1)")
+              .arg(controller_->document().live_entity_count()));
+    (void)std::fprintf(stdout, "[büyüktablo] ölçüm: bellek %lld MB\n",
+                       static_cast<long long>(resident_mb()));
+
+    qint64 calc_ms = 0;
+    clock.restart();
+    runScriptLine(
+        QStringLiteral("ÖZNİTELİKHESAPLA ad=kot ifade=\"round($x / 1000, 3)\" katman=NOKTA"));
+    endCommand();
+    lap("hesaplayıcı: kot = round($x / 1000, 3)", &calc_ms);
+    check(calc_ms < 60'000,
+          QStringLiteral("bir milyon satırın hesabı sınırın altında (%1 ms)").arg(calc_ms));
+    {
+        const QString said = transcript_->toPlainText();
+        check(said.contains(QStringLiteral("Hesaplandı: kot")) &&
+                  said.contains(QStringLiteral("1000000 satır değişti")),
+              QStringLiteral("kot sütunu bir milyon satırda değişti (transkript: %1)")
+                  .arg(said.right(240).replace(QLatin1Char('\n'), QLatin1Char('|'))));
+    }
+    runScriptLine(QStringLiteral(
+        "ÖZNİTELİKHESAPLA ad=kod ifade=\"'P' || lpad(\\\"nokta_no\\\", 7, '0')\" katman=NOKTA"));
+    endCommand();
+    lap("hesaplayıcı: kod = 'P' || lpad(nokta_no, 7, '0')");
+    (void)std::fprintf(stdout, "[büyüktablo] ölçüm: bellek (iki hesaptan sonra) %lld MB\n",
+                       static_cast<long long>(resident_mb()));
+
+    // ---- the table over it ----
+    clock.restart();
+    AttributeTable table(*controller_, QStringLiteral("NOKTA"), this);
+    table.applyTheme(theme_);
+    table.resize(1100, 640);
+    table.show();
+    QCoreApplication::processEvents();
+    qint64 open_ms = 0;
+    lap("tabloyu aç (1 000 000 satır)", &open_ms);
+    check(table.probeGrid(QStringLiteral("satirlar"), {}).toInt() == 1'000'000,
+          QStringLiteral("tablo bir milyon satırı sayıyor"));
+    check(open_ms < 10'000,
+          QStringLiteral("tablo bir milyon satırla sınırın altında açılıyor (%1 ms)").arg(open_ms));
+    (void)std::fprintf(stdout, "[büyüktablo] ölçüm: bellek %lld MB\n",
+                       static_cast<long long>(resident_mb()));
+    if (!into.isEmpty() && into != QStringLiteral("1")) {
+        QDir().mkpath(into);
+        (void)table.grab().save(into + QStringLiteral("/buyuk-tablo-acik.png"));
+    }
+
+    clock.restart();
+    const QString last = table.probeGrid(QStringLiteral("son"), {});
+    qint64 scroll_ms   = 0;
+    lap("sona kaydır", &scroll_ms);
+    check(last.toInt() >= 1'000'000 - 1 && scroll_ms < 2'000,
+          QStringLiteral("son satıra kaydırıldı (%1. satır, %2 ms)").arg(last).arg(scroll_ms));
+
+    clock.restart();
+    table.probeGrid(QStringLiteral("sirala"), QStringLiteral("0,azalan"));
+    qint64 sort_ms = 0;
+    lap("fid sütununa göre azalan sırala", &sort_ms);
+    {
+        QStringList top;
+        for (int c = 0; c < 4; ++c)
+            top << table.probeGrid(QStringLiteral("hucre"), QStringLiteral("0,%1").arg(c));
+        check(top.value(0) == QStringLiteral("1000000"),
+              QStringLiteral("en büyük numara en üstte (ilk satır: %1)")
+                  .arg(top.join(QStringLiteral(" | "))));
+    }
+    check(sort_ms < 20'000,
+          QStringLiteral("bir milyon satırın sıralaması sınırın altında (%1 ms)").arg(sort_ms));
+
+    clock.restart();
+    const QString kept =
+        table.probeGrid(QStringLiteral("suz"), QStringLiteral("\"nokta_no\" > 999000"));
+    qint64 filter_ms = 0;
+    lap("süz: \"nokta_no\" > 999000", &filter_ms);
+    check(kept.toInt() == 1000, QStringLiteral("süzgeç 1000 satır bıraktı (%1)").arg(kept));
+    check(filter_ms < 20'000,
+          QStringLiteral("bir milyon satırın süzülmesi sınırın altında (%1 ms)").arg(filter_ms));
+
+    clock.restart();
+    const QString several = table.probeGrid(
+        QStringLiteral("suz"),
+        QStringLiteral("\"kot\" > 4310.5 AND \"nokta_no\" % 2 = 0 OR \"kod\" = 'P0000042'"));
+    lap("süz: iki sütunlu bileşik ifade");
+    check(several.toInt() > 0, QStringLiteral("bileşik süzgeç satır buldu (%1)").arg(several));
+    table.close();
+
+    controller_->cancelAll();
+    return failures;
+}
+
 int MainWindow::probeLayerProps()
 {
     int failures     = 0;

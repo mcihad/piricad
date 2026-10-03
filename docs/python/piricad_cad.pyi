@@ -1885,6 +1885,26 @@ def source(
         layer — Yalnız bu katmanı anlat; verilmezse kaynağın bütün katmanları
     """
 
+def attribute_calc(
+    *,
+    name: str = ...,
+    expression: str = ...,
+    layer: str = ...,
+    filter: str = ...,
+    preview: bool = ...,
+    objects: list[int] = ...,
+) -> int:
+    """Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek geri alma adımı, önizlemesi ve değişim özetiyle.
+
+    Komut: core.attribute_calc (ÖZNİTELİKHESAPLA)
+        name — Hesaplanıp yazılacak sütunun kimliği
+        expression — Hesaplanacak ifade; sütunlar "çift", metinler 'tek' tırnakta. Örnek: round("alan_m2" * 0.4, 2)
+        layer — Bu katmanın bütün satırları; yoksa seçim, o da boşsa aktif katman
+        filter — Yalnız bu ifadenin doğru çıktığı satırlar (tablonun süzme ifadesiyle aynı dil)
+        preview — Hiçbir şey yazma: neyin değişeceğini söyle; varsayılan hayır
+        objects — Yalnız bu nesnelerin kalıcı kimlikleri; verilirse katman ve seçim yok sayılır [kalıcı nesne anahtarı]
+    """
+
 def layout(
     *,
     action: str = ...,

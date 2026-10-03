@@ -108,6 +108,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.layer_state`](layer_state.md) | Katman Durumu | `KATMANDURUM`, `KATMANDURUMU`, `LAYERSTATE`, `KDR` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler. |
 | [`core.sample`](sample.md) | Örnek Proje | `ÖRNEKPROJE`, `ORNEKPROJE`, `SAMPLE`, `ÖRNEK`, `ORNEK` | Dosya | komuta özel | etkileşimli, betiklenebilir, salt okunur | Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, aplikasyon) boş bir çizim olarak açar ve ne deneyeceğinizi söyler. |
 | [`core.source`](source.md) | Kaynak Bilgisi | `KAYNAK`, `KAYNAKBİLGİ`, `KAYNAKBILGI`, `SOURCE`, `KYN` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır. |
+| [`core.attribute_calc`](attribute_calc.md) | Alan Hesaplayıcı | `ÖZNİTELİKHESAPLA`, `OZNITELIKHESAPLA`, `ALANHESAPLA`, `FIELDCALC`, `ÖHESAPLA`, `OHESAPLA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek geri alma adımı, önizlemesi ve değişim özetiyle. |
 | [`core.layout`](layout.md) | Çıktı Yerleşimi | `ÇIKTIYERLEŞİMİ`, `CIKTIYERLESIMI`, `LAYOUT`, `ÇYR`, `CYR` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`core.layout_item`](layout_item.md) | Çıktı Öğesi | `ÇIKTIÖĞE`, `CIKTIOGE`, `LAYOUTITEM`, `ÇÖĞ`, `COG` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`core.layout_template`](layout_template.md) | Çıktı Şablonu | `ÇIKTIŞABLON`, `CIKTISABLON`, `LAYOUTTEMPLATE`, `ÇŞB`, `CSB` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
@@ -1609,6 +1610,21 @@ Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, s
 | `katman` | text | isteğe bağlı | Yalnız bu katmanı anlat; verilmezse kaynağın bütün katmanları |
 
 Ayrıntılı kullanım: [KAYNAK](source.md)
+
+### `core.attribute_calc` — ÖZNİTELİKHESAPLA (Alan Hesaplayıcı)
+
+Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek geri alma adımı, önizlemesi ve değişim özetiyle.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | 1 | Hesaplanıp yazılacak sütunun kimliği |
+| `ifade` | text | 1 | Hesaplanacak ifade; sütunlar "çift", metinler 'tek' tırnakta. Örnek: round("alan_m2" * 0.4, 2) |
+| `katman` | text | isteğe bağlı | Bu katmanın bütün satırları; yoksa seçim, o da boşsa aktif katman |
+| `filtre` | text | isteğe bağlı | Yalnız bu ifadenin doğru çıktığı satırlar (tablonun süzme ifadesiyle aynı dil) |
+| `onizle` | bool | isteğe bağlı | Hiçbir şey yazma: neyin değişeceğini söyle; varsayılan hayır |
+| `nesneler` | selection | en az 0 | Yalnız bu nesnelerin kalıcı kimlikleri; verilirse katman ve seçim yok sayılır |
+
+Ayrıntılı kullanım: [ÖZNİTELİKHESAPLA](attribute_calc.md)
 
 ### `core.layout` — ÇIKTIYERLEŞİMİ (Çıktı Yerleşimi)
 
@@ -3680,6 +3696,73 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "ATTRIBUTE",
         "ÖZN",
         "OZN"
+      ]
+    }
+  },
+  {
+    "name": "core_attribute_calc",
+    "title": "Alan Hesaplayıcı",
+    "description": "Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek geri alma adımı, önizlemesi ve değişim özetiyle.\nKomut: ÖZNİTELİKHESAPLA (OZNITELIKHESAPLA, ALANHESAPLA, FIELDCALC, ÖHESAPLA, OHESAPLA)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ad": {
+          "type": "string",
+          "description": "Hesaplanıp yazılacak sütunun kimliği (metin)"
+        },
+        "ifade": {
+          "type": "string",
+          "description": "Hesaplanacak ifade; sütunlar \"çift\", metinler 'tek' tırnakta. Örnek: round(\"alan_m2\" * 0.4, 2) (metin)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Bu katmanın bütün satırları; yoksa seçim, o da boşsa aktif katman (metin)"
+        },
+        "filtre": {
+          "type": "string",
+          "description": "Yalnız bu ifadenin doğru çıktığı satırlar (tablonun süzme ifadesiyle aynı dil) (metin)"
+        },
+        "onizle": {
+          "type": "boolean",
+          "description": "Hiçbir şey yazma: neyin değişeceğini söyle; varsayılan hayır (evet/hayır)"
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yalnız bu nesnelerin kalıcı kimlikleri; verilirse katman ve seçim yok sayılır — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [
+        "ad",
+        "ifade"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.piricad/commandId": "core.attribute_calc",
+      "cad.piricad/category": "Düzenleme",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
+        "ÖZNİTELİKHESAPLA",
+        "OZNITELIKHESAPLA",
+        "ALANHESAPLA",
+        "FIELDCALC",
+        "ÖHESAPLA",
+        "OHESAPLA"
       ]
     }
   },

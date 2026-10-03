@@ -40,6 +40,11 @@ std::string format_general(double value, int significant);
 /// name matches through — see `turkish_fold_key`.
 std::string turkish_upper(std::string_view utf8);
 
+/// Turkish-aware UTF-8 lower-casing, the other direction of the same table: `İ` to `i`, `I` to the
+/// dotless `ı`, and the five other Turkish letters. The DISPLAY operation (what a word looks like
+/// written in small letters), like `turkish_upper`; never a matching key (`turkish_fold_key`).
+std::string turkish_lower(std::string_view utf8);
+
 /// Case-insensitive (Turkish-aware) equality.
 bool turkish_iequals(std::string_view a, std::string_view b);
 

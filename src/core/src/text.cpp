@@ -128,6 +128,50 @@ std::string turkish_upper(std::string_view s)
     return out;
 }
 
+std::string turkish_lower(std::string_view s)
+{
+    std::string out;
+    out.reserve(s.size());
+
+    std::size_t i = 0;
+    while (i < s.size()) {
+        // The pair table read from its upper side: dotted capital I to i, plain capital I to
+        // dotless i, capital C-cedilla to its small form, and so on.
+        bool matched = false;
+        for (const auto& p : kTurkishPairs) {
+            const std::size_t n = std::strlen(p.upper);
+            if (s.size() - i >= n && s.compare(i, n, p.upper) == 0) {
+                out += p.lower;
+                i += n;
+                matched = true;
+                break;
+            }
+        }
+        if (matched) continue;
+
+        const unsigned char c = static_cast<unsigned char>(s[i]);
+        if (c >= 'A' && c <= 'Z') {
+            out += static_cast<char>(c - 'A' + 'a');
+            ++i;
+        } else if (c < 0x80) {
+            out += static_cast<char>(c);
+            ++i;
+        } else {
+            std::size_t n = 1;
+            if ((c & 0xE0) == 0xC0)
+                n = 2;
+            else if ((c & 0xF0) == 0xE0)
+                n = 3;
+            else if ((c & 0xF8) == 0xF0)
+                n = 4;
+            n = (i + n <= s.size()) ? n : 1;
+            out.append(s.substr(i, n));
+            i += n;
+        }
+    }
+    return out;
+}
+
 bool turkish_iequals(std::string_view a, std::string_view b)
 {
     return turkish_upper(a) == turkish_upper(b);

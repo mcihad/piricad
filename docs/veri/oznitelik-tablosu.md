@@ -92,6 +92,10 @@ NOT "malik" = 'Belediye'
 Çift tırnak sütun, tek tırnak metin — bu SQL'in yazımıdır ve CBS kullanan herkesin
 elinde zaten vardır.
 
+Süzgeçte aritmetik, metin birleştirme (`||`), `CASE` ve `upper`, `lpad`, `round` gibi
+işlevler de yazılabilir: süzme çubuğu, alan hesaplayıcıyla **aynı dili** konuşur.
+Hepsi [İfade dili](ifade-dili.md) sayfasındadır.
+
 ### Boş hücre bilinmeyendir
 
 Doldurulmamış bir hücreye yapılan **her** karşılaştırma yanlıştır — `!=` dahil.
@@ -103,11 +107,12 @@ Boş hücreleri aramak için `IS NULL` yazın.
 
 ### Aynı dilbilgisi, her yerde
 
-Bu ifadeyi okuyan çözümleyici, komut satırındaki `@(100*3),0` ifadesini okuyanla
-**aynıdır**. Projede tam olarak bir dilbilgisi vardır
-(`piricad/command/parser.hpp`, CLAUDE.md 5.11) ve öznitelik süzgeci onun bir
-istisnası değildir. Bunun pratik sonucu şudur: burada işe yarayan bir ifade
-betikte de, yapay zekâya verilen bir görevde de aynı anlama gelir.
+Süzme çubuğu ile alan hesaplayıcı **tek bir ifade motorunu** paylaşır
+(`piricad/command/expression.hpp`, CLAUDE.md 5.11): bir kez okunur, her satır için bir
+kez işletilir. Komut satırının sayı ve birim okuyucusu (`@(100*3),0`, `12,5 m`) ayrı bir
+iştir ve süzgeçte birim yazılmaz: bir sütunun sayısının dönüştürüleceği bir birim yoktur.
+Bunun pratik sonucu şudur: burada işe yarayan bir ifade hesaplayıcıda, betikte ve yapay
+zekâya verilen bir görevde de aynı anlama gelir.
 
 Hatalı bir ifade tabloyu boşaltmaz — hiçbir şey süzülmez ve çubuğun ipucunda hata
 nedeni yazar.
@@ -186,7 +191,7 @@ Boş bırakılan bir hücre `yok` değerini alır, yani gerçekten boşalır —
 Üstteki araç satırı beş grup taşır, gruplar ince çizgilerle ayrılır: düzenleme kipi ·
 kaydet · geri/yinele │ satır ekle · seçili satırları sil (`SİL nesneler=…`) · çoğalt │
 tümünü seç · seçimi kaldır · seçimi tersine çevir · seçiliye yakınlaş │ süz (ifade çubuğuna
-gider) · alan hesaplayıcı · alan istatistikleri paneli · sütunlar (göster/gizle menüsü) │
+gider) · [alan hesaplayıcı](../komutlar/attribute_calc.md) · alan istatistikleri paneli · sütunlar (göster/gizle menüsü) │
 dışa aktar ([Dışa Aktar](../baslangic/disa-aktarma.md) penceresi) · yazdır. Henüz
 gelmemiş olanlar soluk durur ve ipucunda hangi fazda geleceğini söyler; sağ uçta
 `Tablo | Form` segmenti (form görünümü Faz 2'de).
@@ -194,8 +199,14 @@ gelmemiş olanlar soluk durur ve ipucunda hangi fazda geleceğini söyler; sağ 
 İfade çubuğunun sağındaki **Tabloda ara…** kutusu hızlı süzgeçtir: yazdığınız metni
 herhangi bir hücresinde geçiren satırlar kalır, Türkçe büyük-küçük harf gözetilmez.
 
+**Alan hesaplayıcı** (`ƒ` düğmesi) bir ifadeyi satırlar üzerinde hesaplayıp bir sütuna
+yazar; önce önizler, sonra tek adımda yazar ve `Ctrl+Z` hepsini geri alır. Ayrıntısı
+[ÖZNİTELİKHESAPLA](../komutlar/attribute_calc.md) sayfasındadır.
+
 Bir sütun başlığına tıklamak o sütuna göre sıralar (ikinci tık tersine çevirir); sayılar
 sayı olarak, sözcükler Türkçe alfabetik sıralanır, boş hücreler her iki yönde en sonda.
+Sıralama her satırın anahtarını bir kez çıkarır; bir milyon satırlık tablo yaklaşık
+bir saniyede sıralanır.
 Bu oturumda yazdığınız hücreler turuncu yazı ve ince turuncu çerçeveyle işaretlidir;
 pencere başlığı da `1 düzenlendi` diye sayar.
 

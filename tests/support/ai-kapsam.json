@@ -19,6 +19,14 @@
       "kalici": true,
       "sebep": "Kaydedilmemiş çalışmayı sorgusuz atar ve geri alınamaz; `AÇ` ile aynı sebeple kapalıdır. Bir öneri, insanın imzaladığı belgeyi yok edemez (ai.md R3)."
     },
+    "core.sample": {
+      "kalici": true,
+      "sebep": "Çizimin yerine bir örnek proje kurar; kaydedilmemiş çalışmayı atabilir ve geri alınamaz, `YENİ` ile aynı sebeple kapalıdır. Bir öneri, insanın imzaladığı belgeyi yok edemez (ai.md R3)."
+    },
+    "core.source": {
+      "plan": "A-02",
+      "sebep": "Verilen yoldaki dosyayı ya da veritabanını açıp içeriğini anlatır; hangi yolları okuyabileceği disk politikası (A-02) belirlenmeden bir öneri makinenin dosyalarını yoklayamaz."
+    },
     "core.open": {
       "plan": "A-02",
       "sebep": "Dosya açmak çalışma oturumunu değiştirir; hedef, seçenek ve sonuç URI sözleşmesi C-02 etkileriyle birlikte tanımlanacak."

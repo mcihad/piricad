@@ -3399,6 +3399,19 @@ int main(int argc, char** argv)
         });
     }
 
+    // THE FIELD CALCULATOR WINDOW over a small parcel layer (TODOS G-03).
+    if (qEnvironmentVariableIsSet("PIRICAD_CALC_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            QApplication::exit(window.probeCalculator() == 0 ? 0 : 1);
+        });
+    }
+
+    // A MILLION-ROW LAYER in the attribute table and the field calculator (TODOS G-03).
+    if (qEnvironmentVariableIsSet("PIRICAD_BIGTABLE_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeBigTable() == 0 ? 0 : 1); });
+    }
+
     // EACH SAMPLE PROJECT, opened and edited and printed the way a new user would (TODOS U-06).
     if (qEnvironmentVariableIsSet("PIRICAD_SAMPLE_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window,

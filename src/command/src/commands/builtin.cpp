@@ -109,6 +109,7 @@ namespace piricad::command {
     X(layer_state)                                                                                 \
     X(sample)                                                                                      \
     X(source)                                                                                      \
+    X(attribute_calc)                                                                              \
     X(layout)                                                                                      \
     X(layout_item)                                                                                 \
     X(layout_template)                                                                             \

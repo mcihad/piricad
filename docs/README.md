@@ -109,6 +109,7 @@ Tek tek komutlar:
 | `RENK` | [Nesnenin çizgi ve dolgu rengi](komutlar/colour.md) |
 | `STİLAKTAR` | [Stili QGIS'e aktarma](komutlar/exportstyle.md) |
 | `ÖZNİTELİK` | [Nesnelerin verisi](komutlar/attribute.md) |
+| `ÖZNİTELİKHESAPLA` | [Alan hesaplayıcı: bir ifadeyi satırlara yazma](komutlar/attribute_calc.md) |
 | `SÜTUN` | [Öznitelik sütunu tanımlama](komutlar/column.md) |
 | `SEÇ` | [Nesne seçme](komutlar/select.md) |
 | `SİL` | [Nesne silme](komutlar/erase.md) |
@@ -233,6 +234,7 @@ Yapay zeka bu programda geometri üretmez, **komut üretir**; ürettiği her şe
 | [Netcad NCZ çizimleri](veri/netcad-ncz.md) | `.ncz` dosyasını içe alma ve altlık olarak bağlama: nesnelerin eşlemesi, katman ve renkler, akıllı nesneler, pafta çerçeveleri, koordinat sistemi uyarıları, raporun her satırı |
 | [Dışa Aktar penceresi](baslangic/disa-aktarma.md) | Çizimi, bir nesnenin köşelerini ya da bir stili tek pencereden yazma |
 | [Öznitelik tablosu](veri/oznitelik-tablosu.md) | Satırları süzme, düzenleme, alan istatistikleri; süzme ifadesinin dilbilgisi |
+| [İfade dili](veri/ifade-dili.md) | Süzgeç ve alan hesaplayıcının ortak dili: yazım, işlevler, `$` sözcükleri, boş hücre kuralı, hata iletileri |
 | [Geometri çekirdeği](veri/geometri-cekirdegi.md) | OpenCASCADE: yayları koruyan hesap, her bilgisayarda aynı milimetre, hangi işlemin hangi aşamada çekirdeğe geçtiği |
 | [Sayısal doğruluk ve toleranslar](veri/hassasiyet.md) | Milimetre depolama, hesap eşikleri, ekrandaki yakalama pikseli, topoloji düğüm toleransı ve dışa aktarmadaki eğri sapması: hangi sayı neye karar verir |
 | [Nesne kimliği ve kökeni](veri/kimlik-ve-koken.md) | Kimliği neyin değiştirmediği, neyin yeni nesne doğurduğu; türetilen nesnenin hangi işle ve nereden geldiği |

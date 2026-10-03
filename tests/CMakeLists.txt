@@ -48,6 +48,7 @@ add_executable(piricad_tests
     unit/test_hand.cpp
     unit/test_locale.cpp
     unit/test_samples.cpp
+    unit/test_attribute_calc.cpp
     unit/test_split_join.cpp
     unit/test_fillet.cpp
     unit/test_grips.cpp

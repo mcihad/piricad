@@ -188,6 +188,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.layer_state`](#cadlayer_state) | `core.layer_state` | `KATMANDURUM` | Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler. |
 | [`cad.sample`](#cadsample) | `core.sample` | `ÖRNEKPROJE` | Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, aplikasyon) boş bir çizim olarak açar ve ne deneyeceğinizi söyler. |
 | [`cad.source`](#cadsource) | `core.source` | `KAYNAK` | Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır. |
+| [`cad.attribute_calc`](#cadattribute_calc) | `core.attribute_calc` | `ÖZNİTELİKHESAPLA` | Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek geri alma adımı, önizlemesi ve değişim özetiyle. |
 | [`cad.layout`](#cadlayout) | `core.layout` | `ÇIKTIYERLEŞİMİ` | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`cad.layout_item`](#cadlayout_item) | `core.layout_item` | `ÇIKTIÖĞE` | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`cad.layout_template`](#cadlayout_template) | `core.layout_template` | `ÇIKTIŞABLON` | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
@@ -2818,6 +2819,34 @@ cad.source(
 | `layer` | `str` | `katman` | Yalnız bu katmanı anlat; verilmezse kaynağın bütün katmanları |
 
 [Komut sayfası](../komutlar/source.md)
+
+### `cad.attribute_calc`
+
+Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek geri alma adımı, önizlemesi ve değişim özetiyle.
+
+Komut: `core.attribute_calc` — `ÖZNİTELİKHESAPLA`
+
+```python
+cad.attribute_calc(
+    name: str,
+    expression: str,
+    layer: str,
+    filter: str,
+    preview: bool,
+    objects: list[int],
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `name` | `str` | `ad` | Hesaplanıp yazılacak sütunun kimliği |
+| `expression` | `str` | `ifade` | Hesaplanacak ifade; sütunlar "çift", metinler 'tek' tırnakta. Örnek: round("alan_m2" * 0.4, 2) |
+| `layer` | `str` | `katman` | Bu katmanın bütün satırları; yoksa seçim, o da boşsa aktif katman |
+| `filter` | `str` | `filtre` | Yalnız bu ifadenin doğru çıktığı satırlar (tablonun süzme ifadesiyle aynı dil) |
+| `preview` | `bool` | `onizle` | Hiçbir şey yazma: neyin değişeceğini söyle; varsayılan hayır |
+| `objects` | `list[int]` | `nesneler` | Yalnız bu nesnelerin kalıcı kimlikleri; verilirse katman ve seçim yok sayılır [kalıcı nesne anahtarı] |
+
+[Komut sayfası](../komutlar/attribute_calc.md)
 
 ### `cad.layout`
 

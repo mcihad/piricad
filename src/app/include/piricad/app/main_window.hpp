@@ -395,6 +395,15 @@ public:
     /// U-06).
     int probeSamples();
 
+    /// THE FIELD CALCULATOR WINDOW, driven end to end over a small parcel layer: the lists, a
+    /// preview, an apply, a refused expression, one undo (`PIRICAD_CALC_PROBE`, TODOS G-03).
+    int probeCalculator();
+
+    /// A MILLION-ROW LAYER in the attribute table and the field calculator: open, scroll to the
+    /// end, sort, filter and calculate, each timed in the real shell (`PIRICAD_BIGTABLE_PROBE`,
+    /// TODOS G-03).
+    int probeBigTable();
+
     /// `PIRICAD_MENU_PROBE`: opens every menu in turn, photographs it and prints
     /// what it holds. Returns the failure count.
     ///

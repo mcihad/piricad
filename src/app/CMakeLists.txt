@@ -86,6 +86,7 @@ qt_add_executable(piricad
     src/measure_text.cpp
     src/painter_backend.cpp
     src/find_replace_dialog.cpp
+    src/field_calculator_dialog.cpp
     src/style_designer.cpp
     src/symbol_image.cpp
     src/symbol_preview.cpp
@@ -140,6 +141,7 @@ qt_add_executable(piricad
     include/piricad/app/xref_panel.hpp
     include/piricad/app/tools_panel.hpp
     include/piricad/app/find_replace_dialog.hpp
+    include/piricad/app/field_calculator_dialog.hpp
     include/piricad/app/qgis_backend.hpp
     include/piricad/app/settings_dialog.hpp
     include/piricad/app/shell_chrome.hpp
