@@ -29,14 +29,27 @@ Task<void> run(Context& ctx)
         drawn.push_back(*p1);
 
         for (;;) {
-            auto p2 = co_await ctx.point("noktalar", "Sonraki nokta — ⌫: son noktayı geri al",
-                                         PointOptions{.rubber_band   = true,
-                                                      .rubber_origin = drawn.back(),
-                                                      .rubber_chain  = drawn,
-                                                      .can_retract   = true});
+            auto p2 =
+                co_await ctx.point("noktalar", "Sonraki nokta — ⌫: son noktayı geri al, K: kapat",
+                                   PointOptions{.rubber_band   = true,
+                                                .rubber_origin = drawn.back(),
+                                                .rubber_chain  = drawn,
+                                                .can_retract   = true,
+                                                .words         = {close_word()}});
             if (p2) {
                 drawn.push_back(*p2);
                 continue;
+            }
+            if (ctx.chose() == "kapat") {
+                // CLOSING IS THE FIRST POINT GIVEN AGAIN, so the journal says what a script
+                // would: `noktalar=a b c a`. The word itself is never recorded (`PromptWord`).
+                // Fewer than three corners is a line drawn over itself, not a figure.
+                if (drawn.size() < 3) {
+                    ctx.echo("Kapatmak için en az üç nokta gerekir.");
+                    continue;
+                }
+                drawn.push_back(drawn.front());
+                break;
             }
             if (!ctx.took_back()) break;
             drawn.pop_back(); ///< back to the first point asks for it again

@@ -118,6 +118,12 @@ ve komut o noktayı yeniden ister. Arka arkaya basarak birkaç nokta geri gidebi
 noktayı da geri alırsanız komut `İlk nokta`yı yeniden sorar. Geri alınan nokta günlüğe
 yazılmaz — günlükte, çizmek istediğiniz çizim kalır.
 
+**Başladığınız noktada kapatmak.** Üç ya da daha fazla nokta verdikten sonra komut satırına
+`K` yazıp Enter'a basın (`KAPAT` ve `CLOSE` da olur): çizgi ilk noktanıza döner ve komut biter.
+Kapatma, ilk noktayı bir kez daha vermekle aynıdır — günlüğe `noktalar` olarak `a b c a`
+yazılır, "kapat" sözcüğü yazılmaz; betikte aynı çizimi `noktalar` listesinin sonuna ilk noktayı
+ekleyerek elde edersiniz. Üç noktadan azıyla `K` kapatmaz, bunu söyler ve sormaya devam eder.
+
 **Çalışmanın kendi noktaları yakalanır.** Henüz belgede olmayan noktalar da uç nokta
 olarak, aralarındaki parçalar orta, yakın, dik ve kesişim olarak yakalanır. Bir sınırı
 başladığı noktada kapatmak için imleci ilk noktaya götürmeniz yeter.

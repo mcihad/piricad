@@ -10512,6 +10512,44 @@ int MainWindow::probeAnswerable()
         QCoreApplication::processEvents();
     }
 
+    // ---- A PROMPT'S OWN WORDS (TODOS U-01) ---------------------------------------------------
+    //
+    // `K` at the next-point prompt of ÇOKLUÇİZGİ closes the run on its first point. The unit tests
+    // prove the session; this proves the SHELL routes the typed line to it before the registry
+    // sees `K` — and that a word the prompt does not take (`K` at the first point, where there is
+    // nothing to close) is not swallowed as one.
+    {
+        const auto type = [this](const QString& line) {
+            commandLine_->setText(line);
+            QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QCoreApplication::sendEvent(commandLine_, &enter);
+            QCoreApplication::processEvents();
+        };
+        controller_->cancelInteractive();
+        const std::size_t before = controller_->bus().document().live_entity_count();
+        runScriptLine(QStringLiteral("ÇOKLUÇİZGİ"));
+        QCoreApplication::processEvents();
+        type(QStringLiteral("200,200"));
+        type(QStringLiteral("230,200"));
+        type(QStringLiteral("230,230"));
+        const command::Session* live = controller_->session();
+        check(live != nullptr && live->waiting() && !live->prompt().words.empty(),
+              QStringLiteral("ÇOKLUÇİZGİ üç noktadan sonra K seçeneğini sunuyor"));
+        const qsizetype transcript_before = transcript_->toPlainText().size();
+        type(QStringLiteral("k"));
+        // The tool stays in the hand for the next run (the right button's rule), so "ended" is
+        // the first-point prompt again — or no command at all.
+        const command::Session* next = controller_->session();
+        const bool ended = next == nullptr || (next->waiting() && next->prompt().words.empty() &&
+                                               !next->prompt().has_rubber_band);
+        check(ended, QStringLiteral("K çizgiyi kapatıp koşuyu bitirdi"));
+        controller_->cancelInteractive();
+        check(controller_->bus().document().live_entity_count() == before + 1,
+              QStringLiteral("K tek kapalı nesne yazdı"));
+        check(transcript_->toPlainText().mid(transcript_before).contains(QStringLiteral("kapalı")),
+              QStringLiteral("K sonucu transkripte kapalı olarak yazıldı"));
+    }
+
     // ---- AND THE ROWS THAT DO NOT RUN A COMMAND AT ALL --------------------
     //
     // Two kinds looked dead for two different reasons, and a user reported both

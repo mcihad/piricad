@@ -29,6 +29,24 @@ bool asks_retract(const Registry& registry, std::string_view line)
     return spec != nullptr && spec->id == "core.undo";
 }
 
+const PromptWord* prompt_word(const Prompt& prompt, std::string_view line)
+{
+    if (prompt.words.empty()) return nullptr;
+    while (!line.empty() && (line.front() == ' ' || line.front() == '\t'))
+        line.remove_prefix(1);
+    while (!line.empty() && (line.back() == ' ' || line.back() == '\t'))
+        line.remove_suffix(1);
+    // ONE WORD OR NOTHING: a line with a space is a coordinate pair, a number with a unit or a
+    // command with arguments, and `K 1,2` is not a request to close.
+    if (line.empty() || line.find_first_of(" \t") != std::string_view::npos) return nullptr;
+
+    const std::string typed = core::turkish_fold_key(line);
+    for (const PromptWord& word : prompt.words)
+        for (const std::string& name : word.names)
+            if (core::turkish_fold_key(name) == typed) return &word;
+    return nullptr;
+}
+
 std::string rearm_line(const Registry& registry, std::string_view line)
 {
     // The words of the line as typed, a quoted caption kept whole.
@@ -315,6 +333,18 @@ core::Status Session::supply(Value v)
         if (task_.done() && state_ == SessionState::Running) state_ = ended();
     }
     return core::ok();
+}
+
+core::Status Session::choose(std::string_view id)
+{
+    const auto word = std::find_if(prompt_.words.begin(), prompt_.words.end(),
+                                   [id](const PromptWord& w) { return w.id == id; });
+    if (state_ != SessionState::Waiting || word == prompt_.words.end())
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Bu istem '" + std::string(id) + "' seçeneğini almıyor.");
+
+    word_ = word->id;
+    return supply(Value{});
 }
 
 core::Status Session::retract()

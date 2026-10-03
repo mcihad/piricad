@@ -108,6 +108,29 @@ enum class RubberShape : std::uint8_t {
                    ///< `rubber_payload` asks of it, drawn by `core::double_line`: ÇİFTÇİZGİ
 };
 
+/// A WORD A PROMPT TAKES IN PLACE OF A POINT — the options every CAD prints beside a
+/// drawing prompt (`[Kapat/Geri al]`; TODOS U-01, "çizim anında komut seçenekleri").
+///
+/// A word is an answer to the SAME question the point answers, typed as the whole line:
+/// `K` at the next-point prompt of ÇİZGİ closes the run. It reaches the body as an empty answer
+/// that `Context::chose` names, exactly as a taken-back point does, so no client has a
+/// private road (CLAUDE.md 1.2) — and what a word DOES must leave nothing in the journal
+/// that the points alone do not say: closing a run records the first point again, so the
+/// script `ÇİZGİ a b c a` is the same drawing, byte for byte (6.4).
+struct PromptWord
+{
+    std::string id;                 ///< what the body reads: "kapat"
+    std::vector<std::string> names; ///< what is typed, Turkish first: KAPAT, K, CLOSE
+    std::string label;              ///< what the shell shows beside it: "Kapat"
+};
+
+/// The word a drawing run takes to close on its first point: `K`, `KAPAT`, `CLOSE`. Not `C`:
+/// folded, that is the `Ç` that already names ÇİZGİ.
+inline PromptWord close_word()
+{
+    return PromptWord{"kapat", {"KAPAT", "K", "CLOSE"}, "Kapat"};
+}
+
 struct Prompt
 {
     std::string message;                         ///< Turkish, user-facing
@@ -228,6 +251,11 @@ struct Prompt
     /// edge landed ON the edge and was refused as "on a line". The canvas
     /// shows no snap marker for such a prompt, since none will be taken.
     bool aids{true};
+
+    /// THE WORDS THIS PROMPT TAKES BESIDE A POINT. See `PromptWord`; empty for almost
+    /// every prompt. Checked before the registry, as `G`/`U` are: a prompt that offers
+    /// `K` means `K` here, and a command abbreviated `K` is reachable by its full name.
+    std::vector<PromptWord> words{};
 };
 
 /// Supplies values to a running command. Implementations: queued arguments

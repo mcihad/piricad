@@ -136,6 +136,10 @@ struct PointOptions
     /// the body learns of it through `Context::took_back`.
     bool can_retract{false};
 
+    /// The words the prompt takes beside a point. See `Prompt::words`; the body learns of
+    /// one through `Context::chose`.
+    std::vector<PromptWord> words{};
+
     /// The input aids apply to the answer. See `Prompt::aids`: off for a
     /// region's seed, a point that only has to be inside.
     bool aids{true};
@@ -339,6 +343,11 @@ public:
     /// than with an end: both reach the body as an empty answer, and a run loop
     /// asks this to tell them apart. True once per retraction.
     bool took_back() noexcept;
+
+    /// THE WORD THE LAST POINT PROMPT WAS ANSWERED WITH (`PromptWord::id`), or nothing
+    /// when it was an end. Like `took_back`, true once: the empty answer a word makes is
+    /// told from ESC by asking this.
+    std::string chose() noexcept;
 
 private:
     Session& session_;

@@ -20,6 +20,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace piricad::command {
@@ -50,6 +51,11 @@ class Registry;
 /// Undoing the COMMAND there would first write the run out and then take the
 /// whole of it back, which is the one thing the user did not mean.
 bool asks_retract(const Registry& registry, std::string_view line);
+
+/// The word of `prompt` that `line` is, when the whole line is one of its names (folded as
+/// every name is, CLAUDE.md 5.6): `k`, `Kapat` and `CLOSE` are `kapat`. Nothing when the
+/// prompt takes no words or the line is anything else — a point, a number, a command.
+const PromptWord* prompt_word(const Prompt& prompt, std::string_view line);
 
 /// THE UNIT A LENGTH TYPED AT `prompt` IS IN, as a power of ten in metres — 0 metres, -3
 /// millimetres — or nothing when the prompt asks for no length (TODOS U-02, `evaluate_answer`).
@@ -159,6 +165,15 @@ public:
     /// `take_retract` — so it drops the point and asks again. Refused, with a
     /// sentence, at any other prompt.
     core::Status retract();
+
+    /// ANSWERS THE PROMPT WITH ONE OF ITS WORDS (`Prompt::words`): the command is resumed
+    /// with an empty answer and `take_word` names the word. Refused, with a sentence, when
+    /// the prompt takes no such word. What the body does with it is its own; a word that
+    /// changes the drawing records the points it implies (`PromptWord`), never the word.
+    core::Status choose(std::string_view id);
+
+    /// The word the last empty answer was, or "" when it was an end; once.
+    std::string take_word() noexcept { return std::exchange(word_, {}); }
 
     /// Whether the last empty answer was a retraction; true once.
     bool take_retract() noexcept
@@ -338,6 +353,7 @@ private:
     void resume_once();
 
     bool retracted_{false}; ///< the last empty answer was `retract`
+    std::string word_{};    ///< the last empty answer was this `PromptWord::id`
 
     Bus& bus_;
     const CommandSpec* spec_;

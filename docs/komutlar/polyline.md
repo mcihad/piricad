@@ -77,6 +77,13 @@ ve komut o noktayı yeniden ister. Arka arkaya basarak birkaç nokta geri gidebi
 noktayı da geri alırsanız komut `İlk nokta`yı yeniden sorar. Geri alınan nokta günlüğe
 yazılmaz — günlükte, çizmek istediğiniz çizim kalır.
 
+**Kapalı çoklu çizgi.** Üç ya da daha fazla köşe verdikten sonra komut satırına `K` yazıp
+Enter'a basın (`KAPAT` ve `CLOSE` da olur): hat ilk köşeye döner ve komut biter; sonuç **tek**
+kapalı nesnedir (son köşesi ilk köşesiyle aynı). Günlükte ve betikte bu, ilk köşenin listenin
+sonunda bir kez daha yer almasıdır — "kapat" sözcüğü yazılmaz. Üç köşeden azıyla `K` kapatmaz,
+bunu söyler ve sormaya devam eder. Kapalı bir hattan boyanabilir bir alan isterseniz
+[`ALAN`](area.md) kullanın.
+
 **Çalışmanın kendi noktaları yakalanır.** Henüz belgede olmayan noktalar da uç nokta
 olarak, aralarındaki parçalar orta, yakın, dik ve kesişim olarak yakalanır. Bir sınırı
 başladığı noktada kapatmak için imleci ilk noktaya götürmeniz yeter.

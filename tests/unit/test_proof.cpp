@@ -236,6 +236,53 @@ TEST_CASE("PROOF: geri alınan köşe hiçbir yolda kalmaz — arayüz, komut sa
     CHECK(replay.doc.slot_of(static_cast<core::EntityKey>(2)) != core::kNoEntity);
 }
 
+TEST_CASE("PROOF: ÇOKLUÇİZGİ'de K ile kapatma — arayüz, komut satırı, betik, oynatma aynı")
+{
+    // TODOS U-01. `K` at the next-point prompt closes the run on its first point. The word
+    // is the keyboard's way to an answer; what reaches the record is the points, so the
+    // typed line `ÇOKLUÇİZGİ a b c a` and the script's list are the same drawing and the
+    // same journal line, byte for byte.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("ÇOKLUÇİZGİ", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(kP0)).ok());
+        CHECK(session.supply(Value::point(kP1)).ok());
+        CHECK(session.supply(Value::point(kP2)).ok());
+        CHECK(session.choose("kapat").ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    CHECK(cli.bus
+              .execute_line("ÇOKLUÇİZGİ 485320.150,4310220.400 485370.150,4310250.400 "
+                            "485440.861,4310321.111 485320.150,4310220.400",
+                            Origin::CommandLine)
+              .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        CHECK(runner
+                  .run_text(R"({"ad":"Kanıt","komutlar":[{"cmd":"core.polyline","args":{
+                    "noktalar":[[485320150,4310220400],[485370150,4310250400],
+                                [485440861,4310321111],[485320150,4310220400]]}}]})")
+                  .ok());
+    }
+
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{1});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+
+    Rig replay;
+    for (const auto& e : gui.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), gui.doc.content_hash());
+}
+
 TEST_CASE("PROOF: BÖL yayı noktalarından — arayüz, komut satırı, betik ve oynatma aynı")
 {
     // TODOS C-05. A quarter arc split at two points on it: the pieces are arcs

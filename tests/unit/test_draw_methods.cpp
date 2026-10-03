@@ -113,6 +113,109 @@ TEST_CASE("C-02: ÇİZGİ'de yanlış son nokta geri alınır, çizim kaybolmaz"
     CHECK(r.echoed.find("2 çizgi çizildi") != std::string::npos);
 }
 
+// =============================================================================
+// A prompt's own words (TODOS U-01): `K` closes a run
+// =============================================================================
+
+TEST_CASE("U-01: istemin sözcüğü yalnız tek sözcük olan satırdır, Türkçe katlanarak")
+{
+    Rig r;
+    auto started = r.bus.begin_interactive("ÇİZGİ");
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    // The FIRST point has nothing to close: the prompt offers no word there.
+    CHECK(s.prompt().words.empty());
+    CHECK(prompt_word(s.prompt(), "K") == nullptr);
+
+    REQUIRE(s.supply(Value::point(kA)).ok());
+    REQUIRE(s.supply(Value::point(kB)).ok());
+    REQUIRE_EQ(s.prompt().words.size(), std::size_t{1});
+    for (const char* typed : {"K", "k", "KAPAT", "kapat", "Kapat", "  close ", "CLOSE"}) {
+        const PromptWord* word = prompt_word(s.prompt(), typed);
+        REQUIRE_MESSAGE(word != nullptr, typed);
+        CHECK(word->id == "kapat");
+    }
+    // Not a word: a pair with a space (a coordinate), the empty line, another word, and `C`
+    // — which folded is the `Ç` that already names ÇİZGİ.
+    for (const char* typed : {"K 1,2", "", "   ", "KAPATMA", "C", "G"})
+        CHECK_MESSAGE(prompt_word(s.prompt(), typed) == nullptr, typed);
+    CHECK(s.prompt().message.find("K: kapat") != std::string::npos);
+}
+
+TEST_CASE("U-01: ÇİZGİ'de K ilk noktaya döner, günlük ilk noktayı yeniden yazar")
+{
+    Rig r;
+    auto started = r.bus.begin_interactive("ÇİZGİ");
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    for (const core::Point2 p : {kA, kB, kC})
+        REQUIRE(s.supply(Value::point(p)).ok());
+    REQUIRE(s.choose("kapat").ok());
+    REQUIRE(r.bus.finish(s).ok());
+
+    // Three corners and the way back: three objects, each its own, the last ending where
+    // the first began; and the journal says exactly that — never the word.
+    CHECK_EQ(r.doc.live_entity_count(), std::size_t{3});
+    CHECK(ring_of(r.doc, 3) == std::vector<core::Point2>{kC, kA});
+    CHECK(journalled_run(r.journal) == Value::Points{kA, kB, kC, kA});
+    CHECK_EQ(r.undo.undo_depth(), std::size_t{1});
+    CHECK(r.echoed.find("3 çizgi çizildi") != std::string::npos);
+}
+
+TEST_CASE("U-01: ÇOKLUÇİZGİ'de K tek kapalı nesne yapar")
+{
+    Rig r;
+    auto started = r.bus.begin_interactive("ÇOKLUÇİZGİ");
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    for (const core::Point2 p : {kA, kB, kC, kD})
+        REQUIRE(s.supply(Value::point(p)).ok());
+    REQUIRE(s.choose("kapat").ok());
+    REQUIRE(r.bus.finish(s).ok());
+
+    CHECK_EQ(r.doc.live_entity_count(), std::size_t{1});
+    CHECK(ring_of(r.doc, 1) == std::vector<core::Point2>{kA, kB, kC, kD, kA});
+    CHECK(journalled_run(r.journal) == Value::Points{kA, kB, kC, kD, kA});
+    CHECK(r.echoed.find("kapalı") != std::string::npos);
+}
+
+TEST_CASE("U-01: üç noktadan azıyla K kapatmaz, söyler ve sormaya devam eder")
+{
+    Rig r;
+    auto started = r.bus.begin_interactive("ÇOKLUÇİZGİ");
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::point(kA)).ok());
+    REQUIRE(s.supply(Value::point(kB)).ok());
+    REQUIRE(s.choose("kapat").ok());
+    REQUIRE(s.waiting());
+    CHECK(r.echoed.find("en az üç nokta") != std::string::npos);
+    CHECK_EQ(s.prompt().rubber_chain.size(), std::size_t{2}); ///< nothing was added
+
+    REQUIRE(s.supply(Value::point(kC)).ok());
+    REQUIRE(s.choose("kapat").ok());
+    REQUIRE(r.bus.finish(s).ok());
+    CHECK(ring_of(r.doc, 1) == std::vector<core::Point2>{kA, kB, kC, kA});
+}
+
+TEST_CASE("U-01: istemin almadığı sözcük reddedilir ve istem açık kalır")
+{
+    Rig r;
+    auto started = r.bus.begin_interactive("ÇİZGİ");
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+
+    // At the first point, where the prompt offers nothing.
+    CHECK_FALSE(s.choose("kapat").ok());
+    REQUIRE(s.waiting());
+    REQUIRE(s.supply(Value::point(kA)).ok());
+    CHECK_FALSE(s.choose("yok").ok());
+    CHECK(s.waiting());
+    // And a word is told from ESC: after ESC no word is pending.
+    s.cancel();
+    CHECK(s.take_word().empty());
+}
+
 TEST_CASE("C-02: ÇİZGİ Esc'te o ana kadar çizileni yazar")
 {
     // The run is held until it ends now, so Esc is where it is written — the

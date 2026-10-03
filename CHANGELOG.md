@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — çizim anında komut seçenekleri: `K` ile kapat (U-01)
+
+- İstemler artık bir noktanın yerine geçen **sözcük** alabiliyor (`Prompt::words`, `PromptWord`;
+  `command.md` R30). `ÇİZGİ` ve `ÇOKLUÇİZGİ` sonraki noktayı beklerken `K` (`KAPAT`, `CLOSE`)
+  çalışmayı ilk noktaya kapatıp bitiriyor; istem metni bunu söylüyor (`… K: kapat`). Sözcük tek
+  başına satır olmalı (`K 1,2` koordinat çiftidir), Türkçe katlanarak ve komut adlarından önce
+  aranır; `C` ayrılmadı (katlanınca `ÇİZGİ`nin kendi `Ç`si). Üç noktadan azıyla kapatmaz,
+  söyler ve sormaya devam eder.
+- **Sözcük kayda girmez:** kapatma ilk noktanın bir kez daha verilmesi olarak yazılır, yani
+  arayüz, komut satırı, betik ve oynatma aynı çizimi ve aynı günlük satırını verir
+  (`test_proof.cpp` "ÇOKLUÇİZGİ'de K ile kapatma"). ÇOKLUÇİZGİ sonucu "kapalı" diye söylüyor.
+- Kanıt: `test_draw_methods.cpp` (5 vaka: sözcük eşleme, ÇİZGİ, ÇOKLUÇİZGİ, az nokta, almayan
+  istem), `PIRICAD_ANSWER_PROBE` kabuk bloğu (yazılan `k` kapatıyor).
+
 ### Eklendi — özellik tabanlı geometri testleri (Q-03)
 
 - `tests/unit/test_properties.cpp`: örnek değil **özellik**; her biri birkaç yüz tohumlu girdiyle

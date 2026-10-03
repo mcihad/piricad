@@ -37,14 +37,25 @@ Task<void> run(Context& ctx)
         points.push_back(*p1);
 
         for (;;) {
-            auto next = co_await ctx.point("noktalar", "Sonraki nokta — ⌫: son noktayı geri al",
-                                           PointOptions{.rubber_band   = true,
-                                                        .rubber_origin = points.back(),
-                                                        .rubber_chain  = points,
-                                                        .can_retract   = true});
+            auto next =
+                co_await ctx.point("noktalar", "Sonraki nokta — ⌫: son noktayı geri al, K: kapat",
+                                   PointOptions{.rubber_band   = true,
+                                                .rubber_origin = points.back(),
+                                                .rubber_chain  = points,
+                                                .can_retract   = true,
+                                                .words         = {close_word()}});
             if (next) {
                 points.push_back(*next);
                 continue;
+            }
+            if (ctx.chose() == "kapat") {
+                // The first vertex given again: what the journal records and a script sends.
+                if (points.size() < 3) {
+                    ctx.echo("Kapatmak için en az üç nokta gerekir.");
+                    continue;
+                }
+                points.push_back(points.front());
+                break;
             }
             if (!ctx.took_back()) break;
             points.pop_back();
@@ -66,7 +77,9 @@ Task<void> run(Context& ctx)
     }
 
     ctx.record("noktalar", Value::points(points));
-    ctx.echo(std::to_string(points.size()) + " noktalı tek çoklu çizgi çizildi.");
+    const bool closed = points.size() > 2 && points.front() == points.back();
+    ctx.echo(std::to_string(points.size()) + (closed ? " noktalı kapalı tek çoklu çizgi çizildi."
+                                                     : " noktalı tek çoklu çizgi çizildi."));
 }
 
 } // namespace

@@ -384,6 +384,19 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
             return command::DispatchResult{};
         }
 
+        // AN OPTION OF THE PROMPT (`Prompt::words`): `K` at the next-point prompt of ÇİZGİ closes
+        // the run. The same word a script cannot send is never needed — the command records the
+        // points it implies — so the line is only the keyboard's way to the same answer.
+        if (const command::PromptWord* word =
+                command::prompt_word(session_->prompt(), trimmed.toStdString())) {
+            if (const auto st = session_->choose(word->id); !st) {
+                refused(st.error());
+                return st.error();
+            }
+            settleSession();
+            return command::DispatchResult{};
+        }
+
         // `katman=YOL` WHILE A DRAWING WAITS names the layer it goes on
         // (`command::amend_from_line`, plan open question 19). The prompt goes
         // on asking; the value is the run's, as if its first line had carried

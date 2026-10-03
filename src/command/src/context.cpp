@@ -147,6 +147,7 @@ InputAwaiter<Point2> Context::point(std::string param, std::string message, Poin
     prompt.rubber_chain    = std::move(o.rubber_chain);
     prompt.rubber_payload  = std::move(o.rubber_payload);
     prompt.can_retract     = o.can_retract;
+    prompt.words           = std::move(o.words);
     prompt.aids            = o.aids;
     return InputAwaiter<Point2>(session_, std::move(p), std::move(prompt), &to_point);
 }
@@ -154,6 +155,11 @@ InputAwaiter<Point2> Context::point(std::string param, std::string message, Poin
 bool Context::took_back() noexcept
 {
     return session_.take_retract();
+}
+
+std::string Context::chose() noexcept
+{
+    return session_.take_word();
 }
 
 InputAwaiter<double> Context::number(std::string param, std::string message, PointOptions o)
