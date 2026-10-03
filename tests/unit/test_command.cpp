@@ -154,6 +154,48 @@ TEST_CASE("arama: önce ad, hemen ardından başka programın adı; sonra başla
     CHECK(rank("core.line", "YOKBÖYLE").tier == SearchMatch::kNone);
 }
 
+TEST_CASE("arama: son kullanılanlar ve favoriler düz kimlik listesidir (U-01)")
+{
+    // `Ctrl+K` opens on the commands a person starred and the ones they ran last, and
+    // both are lists of ids: a name can be translated or aliased, an id cannot.
+    std::vector<std::string> recent;
+    note_use(recent, "core.line", 3);
+    note_use(recent, "core.move", 3);
+    note_use(recent, "core.copy", 3);
+    CHECK(recent == std::vector<std::string>{"core.copy", "core.move", "core.line"});
+
+    // Running one again moves it to the front and does not list it twice.
+    note_use(recent, "core.line", 3);
+    CHECK(recent == std::vector<std::string>{"core.line", "core.copy", "core.move"});
+
+    // The list is cut at its limit, the oldest going first; an empty id is nothing.
+    note_use(recent, "core.rotate", 3);
+    CHECK(recent == std::vector<std::string>{"core.rotate", "core.line", "core.copy"});
+    note_use(recent, "", 3);
+    CHECK_EQ(recent.size(), 3u);
+
+    std::vector<std::string> starred;
+    CHECK(toggle_member(starred, "core.line"));
+    CHECK(toggle_member(starred, "core.offset"));
+    CHECK(starred == std::vector<std::string>{"core.line", "core.offset"}); ///< order of adding
+    CHECK_FALSE(toggle_member(starred, "core.line"));                       ///< off again
+    CHECK(starred == std::vector<std::string>{"core.offset"});
+    CHECK_FALSE(toggle_member(starred, ""));
+
+    // What is worth remembering: a tool, not a view change and not an undo.
+    Fixture f;
+    for (const char* id : {"core.line", "core.move", "core.offset"}) {
+        const CommandSpec* spec = f.reg.by_id(id);
+        REQUIRE(spec != nullptr);
+        CHECK_MESSAGE(worth_remembering(*spec), id);
+    }
+    for (const char* id : {"core.zoom", "core.pan", "core.undo", "core.redo"}) {
+        const CommandSpec* spec = f.reg.by_id(id);
+        REQUIRE(spec != nullptr);
+        CHECK_MESSAGE(!worth_remembering(*spec), id);
+    }
+}
+
 TEST_CASE("bilinmeyen komut: başka programın adıysa buradaki karşılığını söyler")
 {
     Fixture f;
@@ -3637,6 +3679,11 @@ TEST_CASE("GRAMER: fuzz tohum korpusundaki her satır çökmeden ayrıştırıl�
                 }
             }
             (void)evaluate_expression(line);
+            (void)evaluate_quantity(line, 0);
+            (void)evaluate_quantity(line, -3);
+            (void)evaluate_answer(line, 0);
+            (void)evaluate_answer(line, -3);
+            (void)evaluate_answer(line, std::nullopt);
             (void)evaluate_predicate(line, row);
             (void)parse_point(line, core::Point2{}, drawing);
 
@@ -3645,7 +3692,7 @@ TEST_CASE("GRAMER: fuzz tohum korpusundaki her satır çökmeden ayrıştırıl�
             (void)parse_point(line, core::Point2{}, ResolveContext{});
         }
     }
-    CHECK(seeds.size() >= 17);
+    CHECK(seeds.size() >= 19);
     CHECK(lines >= seeds.size());
 }
 
@@ -3659,6 +3706,223 @@ TEST_CASE("expression evaluator respects precedence and reports errors")
     CHECK(!evaluate_expression("1/0").ok());
     CHECK(!evaluate_expression("(1+2").ok());
     CHECK(!evaluate_expression("abc").ok());
+}
+
+TEST_CASE("birimli sayı: aynı büyüklük hangi yazılırsa yazılsın bire bir aynı sayıdır (U-02)")
+{
+    const auto metres = [](const char* text) {
+        auto q = evaluate_quantity(text, 0);
+        REQUIRE_MESSAGE(q.ok(), text);
+        return q.value();
+    };
+
+    // The acceptance sentence: `12.5 m` and `1250 cm` are one value — and one DOUBLE, not
+    // two that print alike, because the unit moves the decimal exponent instead of
+    // multiplying by a constant that is not exact.
+    CHECK(metres("12.5m").value == 12.5);
+    CHECK(metres("1250cm").value == 12.5);
+    CHECK(metres("12500mm").value == 12.5);
+    CHECK(metres("0.0125km").value == 12.5);
+    CHECK(metres("125dm").value == 12.5);
+    CHECK(metres("12.5 m").is_length);
+
+    // The harder ones: values that are not exact in binary. Equal as written, equal as read.
+    for (const char* pair : {"0.1253", "125.3mm", "12.53cm", "1.253dm"})
+        CHECK_MESSAGE(metres(pair).value == metres("0.1253").value, pair);
+    CHECK(metres("33.3cm").value == metres("333mm").value);
+    CHECK(metres("0.1m").value == metres("10cm").value);
+
+    // The unit the answer is wanted in (a parameter in millimetres): the same shift.
+    CHECK(evaluate_quantity("1250cm", -3).value().value == 12500.0);
+    CHECK(evaluate_quantity("12.5 m", -3).value().value == 12500.0);
+    CHECK(evaluate_quantity("125.3mm", -3).value().value == 125.3);
+
+    // A bare number is what it always was, in whatever unit the caller reads.
+    CHECK_FALSE(metres("42").is_length);
+    CHECK(evaluate_quantity("42", -3).value().value == 42.0);
+    CHECK(evaluate_quantity("(100*3)", 0).value().value == 300.0);
+
+    // Units combine as quantities. Sums need units on both sides; a ratio has none.
+    CHECK(metres("(2m+50cm)").value == 2.5);
+    CHECK(metres("(3m*2)").value == 6.0);
+    CHECK(metres("(10m/4)").value == 2.5);
+    CHECK_FALSE(metres("(10m/50cm)").is_length);
+    CHECK(metres("(10m/50cm)").value == 20.0);
+    CHECK(metres("-5cm").value == -0.05);
+    CHECK_FALSE(evaluate_quantity("2m+50", 0).ok());   ///< a length plus a bare number
+    CHECK_FALSE(evaluate_quantity("(2m*3m)", 0).ok()); ///< an area is not supported
+    CHECK_FALSE(evaluate_quantity("(2/3m)", 0).ok());  ///< a number over a length
+    CHECK_FALSE(evaluate_quantity("(2m^2)", 0).ok());
+    CHECK_FALSE(evaluate_quantity("5xyz", 0).ok());    ///< not a unit: named, not skipped
+    CHECK(evaluate_quantity("5xyz", 0).error().message.find("xyz") != std::string::npos);
+
+    // Where units are not asked for they stay an error, as they were: the filter grammar and
+    // `evaluate_expression` never learnt them.
+    CHECK_FALSE(evaluate_expression("5m").ok());
+    CHECK_FALSE(evaluate_expression("2 cm").ok());
+
+    // `1.2.3` was read as 1.2 and the rest dropped without a word.
+    CHECK_FALSE(evaluate_expression("1.2.3").ok());
+    CHECK_FALSE(evaluate_quantity("1.2.3m", 0).ok());
+}
+
+TEST_CASE("birimli sayı: satırda bitişik, boşluklu, koordinatta ve tırnaklı aynı okunur (U-02)")
+{
+    // The first word of a line is its command; a coordinate is tried the way the shell tries an
+    // answer, with a stand-in word in front.
+    const auto number_of = [](const char* line) {
+        const std::string full = std::string(line).starts_with("OFSET") ||
+                                         std::string(line).starts_with("KATMAN")
+                                     ? std::string(line)
+                                     : "YANIT " + std::string(line);
+        auto parsed = parse_line(full);
+        REQUIRE_MESSAGE(parsed.ok(), line);
+        REQUIRE_MESSAGE(parsed.value().tokens.size() == 1, line);
+        return parsed.value().tokens.front();
+    };
+
+    // A unit after a space belongs to the number before it; the token is ONE token.
+    const Token spaced = number_of("OFSET 12.5 m");
+    CHECK(spaced.kind == Token::Kind::Number);
+    CHECK(spaced.is_length);
+    CHECK(spaced.a == 12.5);
+    CHECK(number_of("OFSET 1250cm").a == 12.5);
+    CHECK(number_of("OFSET 1250 CM").a == 12.5); ///< any case
+
+    // After a key, in both spellings.
+    const Token keyed = number_of("OFSET mesafe=1250 cm");
+    REQUIRE(keyed.kind == Token::Kind::KeyValue);
+    CHECK(keyed.nested.front().is_length);
+    CHECK(number_of("OFSET mesafe=1250cm").nested.front().a == 12.5);
+
+    // A word that merely is "m" after something that is not a number stays a word, and so
+    // does a quoted one: quoting delimits, it does not retype.
+    auto layer = parse_line("KATMAN ad m");
+    REQUIRE(layer.ok());
+    CHECK(layer.value().tokens.size() == 2);
+    auto quoted = parse_line("OFSET 12.5 \"m\"");
+    REQUIRE(quoted.ok());
+    CHECK(quoted.value().tokens.size() == 2);
+
+    // Coordinates take units on each part, in metres whatever was written; the angle does not.
+    const Token absolute = number_of("1250cm,3000cm");
+    CHECK(absolute.kind == Token::Kind::Absolute);
+    CHECK(absolute.a == 12.5);
+    CHECK(absolute.b == 30.0);
+    const Token relative = number_of("@50cm,2m");
+    CHECK(relative.a == 0.5);
+    CHECK(relative.b == 2.0);
+    const Token polar = number_of("@1250cm<45");
+    CHECK(polar.kind == Token::Kind::Polar);
+    CHECK(polar.a == 12.5);
+    CHECK_FALSE(parse_line("YANIT @10<45m").ok());
+
+    // A name or a date that only looks like a number stays what it was typed as.
+    CHECK(number_of("2026.10.03").kind == Token::Kind::Word);
+    CHECK(number_of("101A").kind == Token::Kind::Word);
+}
+
+TEST_CASE("birimli sayı: cevap bildirilen birimde gelir; uzunluk olmayana birim yazılırsa söylenir (U-02)")
+{
+    // What a prompt takes, with the decimal comma a Turkish keyboard types.
+    CHECK(evaluate_answer("12.5", 0).value() == 12.5);
+    CHECK(evaluate_answer("12,5", 0).value() == 12.5);
+    CHECK(evaluate_answer("1.250,5", 0).value() == 1250.5);
+    CHECK(evaluate_answer("1,250.5", 0).value() == 1250.5);
+    CHECK(evaluate_answer(" 12,5 m ", 0).value() == 12.5);
+    CHECK(evaluate_answer("1250 cm", 0).value() == 12.5);
+    CHECK(evaluate_answer("1250 cm", -3).value() == 12500.0);
+    CHECK(evaluate_answer("(2m+50cm)", -3).value() == 2500.0);
+    CHECK_FALSE(evaluate_answer("1,2,3", 0).ok());
+    CHECK_FALSE(evaluate_answer("abc", 0).ok());
+
+    // A unit where the prompt asks for no length (a count, an angle, a scale) is told so.
+    const auto count = evaluate_answer("5 m", std::nullopt);
+    REQUIRE_FALSE(count.ok());
+    CHECK(count.error().message.find("birimli sayı almıyor") != std::string::npos);
+    CHECK(evaluate_answer("5", std::nullopt).value() == 5.0);
+}
+
+TEST_CASE("birimli sayı: OFSET mesafesi hangi yazımla verilirse aynı belge, aynı günlük (U-02)")
+{
+    const auto run = [](const char* offset_line) {
+        Fixture f;
+        REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+        REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+        auto made = f.bus.execute_line(offset_line, Origin::Test);
+        INFO(offset_line << " -> " << (made.ok() ? "ok" : made.error().message));
+        REQUIRE(made.ok());
+        std::string journal;
+        for (const auto& e : f.journal.entries())
+            journal += e.command_id + " " + e.args.to_json().dump() + "\n";
+        return std::pair{f.doc.content_hash(), journal};
+    };
+
+    // `mesafe` is millimetres. 1 m is 1000 whichever way it is written.
+    const auto plain = run("OFSET nesneler=1 mesafe=1000");
+    CHECK(run("OFSET nesneler=1 mesafe=1m") == plain);
+    CHECK(run("OFSET nesneler=1 mesafe=1 m") == plain);
+    CHECK(run("OFSET nesneler=1 mesafe=100cm") == plain);
+    CHECK(run("OFSET nesneler=1 mesafe=100 cm") == plain);
+    CHECK(run("OFSET nesneler=1 mesafe=1000mm") == plain);
+    CHECK(run("OFSET nesneler=1 mesafe=\"1 m\"") == plain); ///< a script's quoted form
+    CHECK(run("OFSET nesneler=1 mesafe=(50cm+500mm)") == plain);
+
+    // The journal holds the number in the parameter's unit, never the text that was typed,
+    // so a replay needs no parser to know what was meant (Article 1.4).
+    CHECK(plain.second.find("\"mesafe\":1000") != std::string::npos);
+}
+
+TEST_CASE("birimli sayı: istemin birimi argümanınkinden farklı olabilir; metre sorulur, milimetre yazılır (U-02)")
+{
+    Fixture f;
+    const auto exponent = [&f](const char* id, const char* param, ParamKind kind) {
+        const CommandSpec* spec = f.reg.by_id(id);
+        REQUIRE_MESSAGE(spec != nullptr, id);
+        Prompt prompt{.message = "?", .kind = kind, .param = param};
+        return prompt_length_exponent(*spec, prompt);
+    };
+
+    // OFSET's argument is an INTEGER IN MILLIMETRES and its prompt a NUMBER ASKED IN METRES, which
+    // the body multiplies: `5 m` typed at the prompt is 5, and reading the parameter's own unit
+    // for the prompt as well would have been 5000 — five kilometres once multiplied.
+    CHECK(exponent("core.offset", "mesafe", ParamKind::Number) == 0);
+    CHECK(f.reg.by_id("core.offset")->params[1].length_exponent() == -3);
+
+    // A NUMBER parameter declared in metres is metres at its prompt too.
+    CHECK(exponent("core.fillet", "yaricap", ParamKind::Number) == 0);
+    CHECK(exponent("core.chamfer", "mesafe", ParamKind::Number) == 0);
+    CHECK(exponent("core.double_line", "sol", ParamKind::Number) == 0);
+
+    // An integer prompt is in the parameter's own unit.
+    CHECK(exponent("core.offset", "mesafe", ParamKind::Integer) == -3);
+
+    // No length declared, or no parameter behind the prompt: no unit, so the answer is refused
+    // by name instead of being guessed.
+    CHECK_FALSE(exponent("core.rotate", "aci", ParamKind::Number));
+    CHECK_FALSE(exponent("core.offset", "yok_boyle_bir_parametre", ParamKind::Number));
+    CHECK_FALSE(exponent("core.array", "sayi", ParamKind::Integer));
+}
+
+TEST_CASE("birimli sayı: uzunluk olmayan parametreye birim yazmak adıyla reddedilir (U-02)")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    // `bolum` is a count in ALAN; `5m` must not quietly become 5.
+    auto refused = f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 bolum=5m", Origin::Test);
+    REQUIRE_FALSE(refused.ok());
+    INFO("mesaj: " << refused.error().message);
+    CHECK(refused.error().message.find("bolum") != std::string::npos);
+    CHECK(refused.error().message.find("uzunluk değil") != std::string::npos);
+
+    // A text parameter keeps what was typed: a layer called `10m` is a layer called `10m`.
+    REQUIRE(f.bus.execute_line("KATMAN ad=10m", Origin::Test).ok());
+    bool found = false;
+    for (const core::Layer& l : f.doc.layers())
+        found = found || core::turkish_key_equals(l.name, "10m");
+    CHECK(found);
 }
 
 TEST_CASE("filter predicate is one grammar with the expression evaluator")

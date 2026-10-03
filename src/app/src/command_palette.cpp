@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/app/command_palette.hpp"
 
+#include "piricad/app/command_usage.hpp"
 #include "piricad/app/icons.hpp"
 #include "piricad/app/tokens.hpp"
 #include "piricad/command/registry.hpp"
@@ -12,13 +13,16 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QStyledItemDelegate>
 #include <QVBoxLayout>
 
 #include <algorithm>
+#include <cmath>
 
 namespace piricad::app {
 namespace {
@@ -44,9 +48,45 @@ constexpr int kShortsRole = Qt::UserRole + 2;
 /// The one-line summary, drawn under the name.
 constexpr int kSummaryRole = Qt::UserRole + 3;
 
+/// Whether the command is starred; drawn as the star in the row's left gutter.
+constexpr int kFavouriteRole = Qt::UserRole + 4;
+
+/// The left gutter every command row keeps for its star, starred or not, so the names
+/// stay in one column.
+constexpr int kStarGutter = 26;
+
 constexpr int kRowHeight   = 40;
 constexpr int kGroupHeight = 26;
 constexpr int kPadX        = 12;
+
+/// A five-pointed star in `box`, outlined or filled.
+void draw_star(QPainter* p, const QRectF& box, bool filled, const QColor& colour)
+{
+    constexpr double kPi = 3.14159265358979323846;
+    const QPointF c      = box.center();
+    const double outer   = std::min(box.width(), box.height()) / 2.0;
+    const double inner   = outer * 0.42;
+    QPainterPath path;
+    for (int i = 0; i < 10; ++i) {
+        const double angle  = -kPi / 2.0 + i * kPi / 5.0;
+        const double radius = (i % 2 == 0) ? outer : inner;
+        const QPointF point(c.x() + radius * std::cos(angle), c.y() + radius * std::sin(angle));
+        if (i == 0)
+            path.moveTo(point);
+        else
+            path.lineTo(point);
+    }
+    path.closeSubpath();
+    p->setRenderHint(QPainter::Antialiasing, true);
+    if (filled) {
+        p->setPen(Qt::NoPen);
+        p->setBrush(colour);
+    } else {
+        p->setPen(QPen(colour, 1.2));
+        p->setBrush(Qt::NoBrush);
+    }
+    p->drawPath(path);
+}
 
 /// Draws one palette line: a group heading, or a command with its summary and
 /// the abbreviations the prompt takes.
@@ -125,7 +165,19 @@ public:
                         Qt::AlignRight | Qt::AlignVCenter, shorts);
         }
 
-        const QRect words = option.rect.adjusted(kPadX, 4, -wide, -4);
+        // THE STAR GUTTER. Starred: a filled star in the accent. Not starred: an outline
+        // that shows only under the cursor or on the selected row, so a list of
+        // ninety-eight commands is not ninety-eight faint stars, and the way to star
+        // one is still where the eye already is.
+        const bool starred = index.data(kFavouriteRole).toBool();
+        if (starred || picked || (option.state & QStyle::State_MouseOver) != 0) {
+            const QRectF box(option.rect.left() + kPadX - 2, option.rect.center().y() - 6.0, 12.0,
+                             12.0);
+            draw_star(p, box, starred, starred ? t.accent : t.textFaint);
+            p->setRenderHint(QPainter::Antialiasing, false);
+        }
+
+        const QRect words = option.rect.adjusted(kPadX + kStarGutter - 8, 4, -wide, -4);
 
         QFont named = option.font;
         named.setWeight(QFont::DemiBold);
@@ -229,8 +281,9 @@ QString parameter_table(const command::CommandSpec& spec)
 
 } // namespace
 
-CommandPalette::CommandPalette(const command::Registry& registry, QWidget* parent)
-    : QWidget(parent), registry_(registry)
+CommandPalette::CommandPalette(const command::Registry& registry, CommandUsage* usage,
+                               QWidget* parent)
+    : QWidget(parent), registry_(registry), usage_(usage)
 {
     setObjectName(QStringLiteral("commandPalette"));
     setWindowFlags(Qt::Popup | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
@@ -263,6 +316,8 @@ CommandPalette::CommandPalette(const command::Registry& registry, QWidget* paren
     list_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     rows_delegate_ = new PaletteRow(list_);
     list_->setItemDelegate(rows_delegate_);
+    // The star is clicked where it is drawn, in the list's own viewport.
+    list_->viewport()->installEventFilter(this);
     bodyRow->addWidget(list_, 1);
 
     // ---- the right-hand pane -------------------------------------------------
@@ -385,9 +440,38 @@ void CommandPalette::refilter()
     const std::string typed = query_->text().trimmed().toStdString();
 
     list_->clear();
+    topRows_ = 0;
 
     int shown = 0;
     if (typed.empty()) {
+        // WHAT A PERSON REACHES FOR, FIRST (TODOS U-01): the commands they starred,
+        // then the ones they ran last that are not starred — a command is listed once
+        // in this top part, and again under its category below, because the list
+        // underneath stays the whole reference and a palette that hid what it had
+        // already shown would have a hole in it.
+        const auto section = [this](const QString& title, const std::vector<std::string>& ids,
+                                    const std::vector<std::string>& skip) {
+            std::vector<const Row*> found;
+            for (const std::string& id : ids) {
+                if (std::ranges::find(skip, id) != skip.end()) continue;
+                const auto at = std::ranges::find_if(
+                    rows_, [&id](const Row& r) { return r.id.toStdString() == id; });
+                if (at != rows_.end()) found.push_back(&*at);
+            }
+            if (found.empty()) return;
+            auto* head = new QListWidgetItem(list_);
+            head->setData(kGroupRole, title);
+            head->setFlags(Qt::NoItemFlags);
+            for (const Row* row : found) {
+                addRow(*row, row->summary);
+                ++topRows_;
+            }
+        };
+        if (usage_ != nullptr) {
+            section(tr("Favoriler"), usage_->favourites(), {});
+            section(tr("Son kullanılanlar"), usage_->recents(), usage_->favourites());
+        }
+
         // BROWSING: every command under its category, in the order the
         // registry declared them.
         QString open;
@@ -421,7 +505,7 @@ void CommandPalette::refilter()
         for (const Row& row : rows_) {
             const command::CommandSpec* spec = registry_.by_id(row.id.toStdString());
             if (spec == nullptr) continue;
-            const command::SearchMatch match = command::search_match(*spec, typed);
+            const command::SearchMatch match = command::search_query(*spec, typed);
             if (match.tier != command::SearchMatch::kNone) hits.push_back({&row, match});
         }
         std::stable_sort(hits.begin(), hits.end(),
@@ -445,11 +529,14 @@ void CommandPalette::refilter()
     // be an empty box: the one moment the palette has to say something, and it
     // said nothing at all.
     if (shown == 0)
-        footer_->setText(tr("Eşleşen komut yok. Aramayı kısaltın ya da temizleyin — "
-                            "arama adı, kısaltmayı ve ne yaptığını birlikte tarar."));
-    else if (typed.empty())
         footer_->setText(
-            tr("%1 komut. Yazarak süzün; ↑ ↓ ile gezin, Enter komut satırına yazar.").arg(shown));
+            tr("Eşleşen komut yok. Başka sözcüklerle deneyin ya da aramayı temizleyin — "
+               "arama adı, kısaltmayı ve ne yaptığını birlikte tarar."));
+    else if (typed.empty())
+        footer_->setText(tr("%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın "
+                            "(“köşeyi yuvarla”); ↑ ↓ ile gezin, Enter komut satırına yazar; "
+                            "Ctrl+D ya da soldaki yıldız komutu favoriye ekler.")
+                             .arg(rows_.size()));
     else
         footer_->setText(
             tr("%1 / %2 komut eşleşti; en iyi eşleşen üstte.").arg(shown).arg(rows_.size()));
@@ -464,6 +551,7 @@ void CommandPalette::addRow(const Row& row, const QString& summary)
     item->setData(Qt::UserRole, row.name);
     item->setData(kShortsRole, row.shorts);
     item->setData(kSummaryRole, summary);
+    item->setData(kFavouriteRole, usage_ != nullptr && usage_->isFavourite(row.id.toStdString()));
     item->setToolTip(summary.isEmpty() ? row.id : row.id + QStringLiteral("\n") + summary);
 }
 
@@ -475,6 +563,11 @@ void CommandPalette::selectFirstCommand()
     for (int i = 0; i < list_->count(); ++i)
         if (list_->item(i)->data(Qt::UserRole).isValid()) {
             list_->setCurrentRow(i);
+            // BACK TO THE TOP. The list scrolls a row at a time, and bringing row one into
+            // view scrolled the heading above it out of it: the palette opened with
+            // "Favoriler" and "Son kullanılanlar" — the whole point of opening on them —
+            // hidden over the first row.
+            list_->scrollToTop();
             return;
         }
 }
@@ -517,6 +610,7 @@ CommandPalette::Shown CommandPalette::shown() const
         else
             ++out.headings;
 
+    out.top        = topRows_;
     out.scroll_max = list_->verticalScrollBar()->maximum();
     out.height     = height();
     if (QListWidgetItem* at = list_->currentItem(); at != nullptr)
@@ -525,6 +619,13 @@ CommandPalette::Shown CommandPalette::shown() const
         if (const QVariant carried = list_->item(i)->data(Qt::UserRole); carried.isValid())
             out.first << carried.toString();
     out.detail = detailName_->text();
+    for (int i = 0; i < list_->count(); ++i) {
+        const QListWidgetItem* item = list_->item(i);
+        if (const QString head = item->data(kGroupRole).toString(); !head.isEmpty())
+            out.headingNames << head;
+        else if (item->data(kFavouriteRole).toBool())
+            out.starred << item->data(Qt::UserRole).toString();
+    }
     return out;
 }
 
@@ -537,8 +638,55 @@ void CommandPalette::accept()
     emit chosen(item->data(Qt::UserRole).toString());
 }
 
+void CommandPalette::toggleFavourite()
+{
+    QListWidgetItem* item = list_->currentItem();
+    if (usage_ == nullptr || item == nullptr || !item->data(Qt::UserRole).isValid()) return;
+
+    const QString name = item->data(Qt::UserRole).toString();
+    const auto row = std::ranges::find_if(rows_, [&name](const Row& r) { return r.name == name; });
+    if (row == rows_.end()) return;
+    const int scrolled = list_->verticalScrollBar()->value();
+
+    (void)usage_->toggleFavourite(row->id.toStdString());
+
+    // Redrawn with the same query, and the cursor put back on the command it was on:
+    // a toggle that threw the selection to the top would make starring ten commands
+    // in a row ten trips back down the list.
+    refilter();
+    for (int i = 0; i < list_->count(); ++i)
+        if (list_->item(i)->data(Qt::UserRole).toString() == name) {
+            list_->setCurrentRow(i);
+            break;
+        }
+    list_->verticalScrollBar()->setValue(scrolled);
+}
+
 bool CommandPalette::eventFilter(QObject* watched, QEvent* event)
 {
+    // THE STAR, CLICKED: a press in a command row's left gutter stars it rather than
+    // choosing it. The mouse is not the only way (Ctrl+D below, Article 1.2's spirit:
+    // nothing here is reachable by mouse alone).
+    if (watched == list_->viewport() && event->type() == QEvent::MouseButtonPress) {
+        const auto* mouse   = static_cast<QMouseEvent*>(event);
+        QListWidgetItem* at = list_->itemAt(mouse->position().toPoint());
+        if (at != nullptr && at->data(Qt::UserRole).isValid() &&
+            mouse->position().x() < kPadX + kStarGutter - 4) {
+            list_->setCurrentItem(at);
+            toggleFavourite();
+            return true;
+        }
+    }
+
+    // Ctrl+D stars the row under the cursor without the caret leaving the field.
+    if (watched == query_ && event->type() == QEvent::KeyPress) {
+        const auto* key = static_cast<QKeyEvent*>(event);
+        if (key->key() == Qt::Key_D && (key->modifiers() & Qt::ControlModifier) != 0) {
+            toggleFavourite();
+            return true;
+        }
+    }
+
     // The arrow keys steer the list while the caret stays in the field, which is
     // what every palette does and what a user reaches for without being told.
     // Qt skips the headings on its own: they carry no flags, so they are not

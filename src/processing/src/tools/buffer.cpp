@@ -370,6 +370,7 @@ private:
                 ToolParam::number("mesafe",
                                   "Tampon mesafesi, metre; eksi değer yalnız alanları içeri "
                                   "aşındırır")
+                    .measured_in("m")
                     .en("distance"),
                 ToolParam::boolean("birlestir",
                                    "Üst üste binen tamponları tek alanda birleştir; kapalıysa her "

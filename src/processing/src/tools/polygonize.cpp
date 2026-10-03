@@ -238,6 +238,7 @@ private:
                                   "Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir "
                                   "boşluk kendiliğinden kapanmaz",
                                   "0")
+                    .measured_in("m")
                     .en("gap"),
             },
         .output        = OutputShape::NewEntities,

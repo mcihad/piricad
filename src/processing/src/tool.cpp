@@ -175,6 +175,7 @@ command::CommandSpec ToolSpec::to_command_spec() const
         // its own words a second time (CLAUDE.md 5.10). `Param` carries both.
         const auto carry = [&p](command::Param out) {
             out.english = p.english;
+            out.unit    = p.unit;
             out.choices = p.choices;
             out.low     = p.low;
             out.high    = p.high;

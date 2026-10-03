@@ -537,11 +537,12 @@ PIRICAD_COMMAND(measure_area)
                      Param::integer("bosluk", Arity::optional(),
                                     "yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; "
                                     "0 hiç")
+                         .measured_in("mm")
                          .en("gap")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary  = "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini "
-                    "yazar.",
+                    "hesaplar ve yazar.",
         .run      = &run_measure_area,
         .targets  = Targets::Faces | Targets::Curves | Targets::Hatches,
     };

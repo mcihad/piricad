@@ -100,6 +100,10 @@ struct ToolParam
     std::int64_t high{0};             ///< upper bound of that range
     bool bounded{false};              ///< whether `low..high` is enforced
 
+    /// The unit a number is typed in (`command::Param::unit`): `m`, `mm`. It is what lets
+    /// `12.5 m` and `1250 cm` reach a tool's distance as the same value.
+    std::string unit;
+
     /// A free-text parameter.
     static ToolParam text(std::string name, std::string help, std::string fallback = {});
     /// One of a fixed set of words.
@@ -128,6 +132,14 @@ struct ToolParam
     ToolParam&& en(std::string name_in_english) &&
     {
         english = std::move(name_in_english);
+        return std::move(*this);
+    }
+
+    /// Names the unit the number is in. Chained onto a factory:
+    /// `ToolParam::number("mesafe", "...").measured_in("m")`.
+    ToolParam&& measured_in(std::string what) &&
+    {
+        unit = std::move(what);
         return std::move(*this);
     }
 };

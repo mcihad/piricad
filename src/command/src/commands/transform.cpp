@@ -1445,8 +1445,8 @@ PIRICAD_COMMAND(copy_objects)
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya "
-                   "kadar öteleyerek koyar.",
+        .summary = "Seçilen nesneleri çoğaltır: kopyasını verilen her noktaya, başlangıçtan o "
+                   "noktaya kadar öteleyerek koyar.",
         .run     = &run_copy,
     };
 }
@@ -1473,9 +1473,11 @@ PIRICAD_COMMAND(array_objects)
                     .en("columns"),
                 Param::number("satir_aralik", Arity::optional(),
                               "Satır aralığı, metre; kuzeye artı")
+                    .measured_in("m")
                     .en("row_spacing"),
                 Param::number("sutun_aralik", Arity::optional(),
                               "Sütun aralığı, metre; doğuya artı")
+                    .measured_in("m")
                     .en("column_spacing"),
                 Param{"merkez", ParamKind::Point, Arity::optional(),
                       "Dizinin merkezi (kutupsal dizi)"}
@@ -1495,6 +1497,7 @@ PIRICAD_COMMAND(array_objects)
                     .en("path_point"),
                 Param::number("aralik", Arity::optional(),
                               "mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi")
+                    .measured_in("m")
                     .en("spacing"),
                 Param::boolean("hizala", Arity::optional(),
                                "mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; "
@@ -1586,8 +1589,10 @@ PIRICAD_COMMAND(scale)
                     .en("method"),
                 Param::number("referans", Arity::optional(),
                               "Referans uzunluk, metre; yeni onun olacağı uzunluktur")
+                    .measured_in("m")
                     .en("reference"),
                 Param::number("yeni", Arity::optional(), "Referans uzunluğun yeni değeri, metre")
+                    .measured_in("m")
                     .en("new_length"),
                 Param::points("referans_nokta", Arity{0, 2}, "Referans uzunluğu gösteren iki nokta")
                     .en("reference_point"),

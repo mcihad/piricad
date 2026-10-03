@@ -116,6 +116,7 @@ Sayfanın düzeni:
 | Bölüm | Ne gösterir |
 |---|---|
 | Üst alan | Süzgeç. Yazdığınız şey ad, kısaltma, komut kimliği ve açıklamada aranır; `cizgi` yazmak `ÇİZGİ`yi bulur |
+| Sol liste, üstte | Bir şey yazmadan açıldığında önce **Favoriler** (**Ctrl+D** ya da satırın solundaki yıldız) ve **Son kullanılanlar** (en son elle başlattığınız sekiz komut); ayrıntısı [Arayüz](../baslangic/arayuz.md#favoriler-ve-son-kullanılanlar) sayfasında |
 | Sol liste | Kategori başlıkları (Çizim, Düzenleme, Görünüm, Katman, Dosya, Sorgu, İşlem, Betik, Sistem) altında komutlar: adı, tek satır açıklaması ve sağ kenarda kısaltmaları |
 | Sağ bölme | İmlecin üzerinde olduğu komut: kategorisi, komut kimliği, kabul ettiği bütün yazımlar, açıklaması ve parametre listesi — her parametrenin tipi, gerekli mi, aralığı, birimi ve varsa sözcük listesi |
 | Alt satır | Komut sayısı ve tuşlar |

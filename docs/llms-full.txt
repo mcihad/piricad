@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 126 (110 tanesi onay ister)
-- Katalog parmak izi: `5191027262399886724`
+- Katalog parmak izi: `7705756160299649395`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -241,14 +241,14 @@ Onay ister.
 | `mod` | string | hayır | KUTUPSAL için kutupsal dizi, YOL için yol boyunca dizi; verilmezse satır/sütun dizisi (metin) |
 | `satir` | integer | hayır | Satır sayısı (dikdörtgen dizi) (tam sayı) |
 | `sutun` | integer | hayır | Sütun sayısı (dikdörtgen dizi) (tam sayı) |
-| `satir_aralik` | number | hayır | Satır aralığı, metre; kuzeye artı (sayı) |
-| `sutun_aralik` | number | hayır | Sütun aralığı, metre; doğuya artı (sayı) |
+| `satir_aralik` | number | hayır | Satır aralığı, metre; kuzeye artı [m] (sayı) |
+| `sutun_aralik` | number | hayır | Sütun aralığı, metre; doğuya artı [m] (sayı) |
 | `merkez` | konum (tutamak ya da göreli nokta) | hayır | Dizinin merkezi (kutupsal dizi) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `sayi` | integer | hayır | Toplam kopya sayısı, özgün dahil (kutupsal ve yol boyunca dizi) (tam sayı) |
 | `aci` | number | hayır | Süpürülecek toplam açı, derece; verilmezse tam tur (sayı) |
 | `yol` | string | hayır | mod=yol için dizinin izleyeceği yol: çizgi, yay, daire ya da yaylı çoklu çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `yol_nokta` | konum (tutamak ya da göreli nokta) | hayır | Yolu gösteren nokta; yol verilmişse sorulmaz — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `aralik` | number | hayır | mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi (sayı) |
+| `aralik` | number | hayır | mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi [m] (sayı) |
 | `hizala` | boolean | hayır | mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; varsayılan evet (evet/hayır) |
 | `taban` | konum (tutamak ya da göreli nokta) | hayır | mod=yol için nesnelerin yola taşınan taban noktası; varsayılan yolun başı — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
@@ -366,7 +366,7 @@ Onay ister.
 |---|---|---|---|
 | `nesne` | string | evet | Köşesi kesilecek nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `mesafe` | number | evet | Köşeden her iki kenar boyunca kesilecek mesafe, metre (sayı) |
+| `mesafe` | number | evet | Köşeden her iki kenar boyunca kesilecek mesafe, metre [m] (sayı) |
 | `ikinci_nokta` | konum (tutamak ya da göreli nokta) | hayır | İki nesnede ikincinin kalacak parçası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `ikinci_mesafe` | number | hayır | İki çizgi arasında ikinci çizgi boyunca kesilecek mesafe, metre; verilmezse mesafe [m] (sayı) |
 | `budama` | boolean | hayır | İki nesnede nesneler köşeye kadar kısaltılıp uzatılsın mı; varsayılan evet (evet/hayır) |
@@ -459,7 +459,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `aralik` | integer | hayır | Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) (tam sayı) |
+| `aralik` | integer | hayır | Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) [mm] (tam sayı) |
 | `katman` | string | hayır | Eğrilerin çizileceği katman; varsayılan ESYUKSELTI (metin) |
 | `nesneler` | string | hayır | Kotlu noktalar; verilmezse seçim, o da boşsa çizimdeki bütün noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
@@ -479,7 +479,7 @@ Onay ister.
 
 ### `core_copy` — Kopyala
 
-Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
+Seçilen nesneleri çoğaltır: kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
 Komut: KOPYALA (COPY, KP)
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
 
@@ -708,7 +708,7 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `kot` | integer | evet | Karşılaştırma kotu, milimetre (845 m = 845000) (tam sayı) |
+| `kot` | integer | evet | Karşılaştırma kotu, milimetre (845 m = 845000) [mm] (tam sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_edge_kind` — Kenar Türü
@@ -742,7 +742,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Düzenlenecek yazılar; verilmezse seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `yazi` | string | hayır | Yeni metin; verilmezse değişmez (metin) |
-| `yukseklik` | integer | hayır | Yeni yükseklik, zeminde milimetre; verilmezse değişmez (tam sayı) |
+| `yukseklik` | integer | hayır | Yeni yükseklik, zeminde milimetre; verilmezse değişmez [mm] (tam sayı) |
 | `hizalama` | string | hayır | Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez (metin) |
 | `satir_araligi` | number | hayır | Yeni satır aralığı, tek aralığın katı (0,25–4); verilmezse değişmez (sayı) |
 | `genislik` | number | hayır | Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez [m] (sayı) |
@@ -850,7 +850,7 @@ Onay ister.
 |---|---|---|---|
 | `nesne` | string | evet | Köşesi yuvarlatılacak nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `yaricap` | number | evet | Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe (sayı) |
+| `yaricap` | number | evet | Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe [m] (sayı) |
 | `ikinci_nokta` | konum (tutamak ya da göreli nokta) | hayır | İki nesnede ikincinin kalacak parçası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `budama` | boolean | hayır | İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan evet (evet/hayır) |
 | `hepsi` | boolean | hayır | Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır (evet/hayır) |
@@ -916,7 +916,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `yon` | string | hayır | yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir (metin) |
-| `deger` | integer | hayır | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa (tam sayı) |
+| `deger` | integer | hayır | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa [mm] (tam sayı) |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | Kılavuzun geçtiği nokta: açılı kılavuzda ve `deger` verilmemiş cetvel kılavuzunda; verilmezse sorulur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `tur` | string | hayır | doğru: iki yöne sonsuz · ışın: noktadan ileriye (metin) |
 | `sil` | boolean | hayır | Verilen yerdeki kılavuzu siler (evet/hayır) |
@@ -945,7 +945,7 @@ Onay ister.
 | `yontem` | string | hayır | nesne: seçilen kapalı nesneler (öntanımlı); nokta: köşeleri gösterilen sınır; ic: içine tıklanan bölge (metin) |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `ada` | boolean | hayır | yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak taranmaz (öntanımlı evet) (evet/hayır) |
-| `bosluk` | integer | hayır | yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç (tam sayı) |
+| `bosluk` | integer | hayır | yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç [mm] (tam sayı) |
 | `disarida` | string | hayır | Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler (Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `pay` | number | hayır | disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 [m] (sayı) |
 | `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
@@ -992,8 +992,8 @@ Onay ister.
 | `aci` | number | hayır | Dönme açısı, derece; varsayılan 0 (sayı) |
 | `sutun` | integer | hayır | Dizi sütun sayısı; varsayılan 1 (tam sayı) |
 | `satir` | integer | hayır | Dizi satır sayısı; varsayılan 1 (tam sayı) |
-| `sutun_aralik` | integer | hayır | Sütunlar arası, milimetre, döndürülmüş eksende (tam sayı) |
-| `satir_aralik` | integer | hayır | Satırlar arası, milimetre, döndürülmüş eksende (tam sayı) |
+| `sutun_aralik` | integer | hayır | Sütunlar arası, milimetre, döndürülmüş eksende [mm] (tam sayı) |
+| `satir_aralik` | integer | hayır | Satırlar arası, milimetre, döndürülmüş eksende [mm] (tam sayı) |
 | `deger` | array | hayır | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur (metin) |
 | `dosya` | string | hayır | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur (metin) |
 | `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
@@ -1016,8 +1016,8 @@ Onay ister.
 | `dorduncu` | konum (tutamak ya da göreli nokta) | hayır | İkinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `birinci_aci` | number | hayır | Birinci noktadan okunan doğrultu (sayı) |
 | `ikinci_aci` | number | hayır | İkinci noktadan okunan doğrultu (sayı) |
-| `birinci_mesafe` | number | hayır | Birinci noktadan ölçülen uzaklık (m) (sayı) |
-| `ikinci_mesafe` | number | hayır | İkinci noktadan ölçülen uzaklık (m) (sayı) |
+| `birinci_mesafe` | number | hayır | Birinci noktadan ölçülen uzaklık (m) [m] (sayı) |
+| `ikinci_mesafe` | number | hayır | İkinci noktadan ölçülen uzaklık (m) [m] (sayı) |
 | `yon` | string | hayır | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre (metin) |
 | `yon_nokta` | konum (tutamak ya da göreli nokta) | hayır | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `kesisim` | konum (tutamak ya da göreli nokta) | hayır | Bulunan nokta; günlüğe yazılır — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
@@ -1066,8 +1066,8 @@ Onay ister.
 | `katman` | string | evet | Etiketlenecek katmanın adı (metin) |
 | `bicim` | string | hayır | Etiket biçimi; {sutun} o sütunun değeriyle, {#alan} alanla, {#cevre} çevreyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez (metin) |
 | `hedef` | string | hayır | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' (metin) |
-| `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi (tam sayı) |
-| `kaydirma` | integer | hayır | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı (tam sayı) |
+| `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi [mm] (tam sayı) |
+| `kaydirma` | integer | hayır | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı [mm] (tam sayı) |
 | `bagla` | boolean | hayır | Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu değişince yeniden yazılır, komut yeniden çalışınca yenilenir; varsayılan evet (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
@@ -1154,7 +1154,7 @@ Onay ister.
 | `olcek` | integer | hayır | Harita öğesinin ölçeği 1:N; 0 kapsama uyar (tam sayı) |
 | `pencere` | konum (tutamak ya da göreli nokta) | hayır | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil] — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `izgara` | string | hayır | Harita öğesinin koordinat ızgarası (metin) |
-| `izgara_aralik` | integer | hayır | Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir (tam sayı) |
+| `izgara_aralik` | integer | hayır | Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir [mm] (tam sayı) |
 | `kilit` | boolean | hayır | Öğeyi taşımaya kapatır (evet/hayır) |
 | `cerceve` | boolean | hayır | Öğenin çevresine çerçeve çizer (evet/hayır) |
 | `sayfa` | integer | hayır | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir (tam sayı) |
@@ -1331,7 +1331,7 @@ Doğrudan çalışır.
 
 ### `core_measure_area` — Alan Ölç
 
-Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
+Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini hesaplar ve yazar.
 Komut: ALANÖLÇ (ALANOLC, ALANSOR, AREAOF, AÖ)
 Uygulandığı nesneler: alan, eğri, tarama.
 Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
@@ -1345,7 +1345,7 @@ Onay ister.
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | hayır | yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `ada` | boolean | hayır | yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak düşülür (öntanımlı evet) (evet/hayır) |
-| `bosluk` | integer | hayır | yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç (tam sayı) |
+| `bosluk` | integer | hayır | yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç [mm] (tam sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_merge` — Tevhit
@@ -1406,7 +1406,7 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Ofseti alınacak nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `mesafe` | integer | hayır | Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri (tam sayı) |
+| `mesafe` | integer | hayır | Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri [mm] (tam sayı) |
 | `kose` | string | hayır | Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz (metin) |
 | `taraf` | string | hayır | Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan (metin) |
 | `nokta` | konum (tutamak ya da göreli nokta) | hayır | Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
@@ -1472,8 +1472,8 @@ Onay ister.
 |---|---|---|---|
 | `baslangic` | konum (tutamak ya da göreli nokta) | evet | Taban çizgisinin ilk noktası (A) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `bitis` | konum (tutamak ya da göreli nokta) | evet | Taban çizgisinin ikinci noktası (B) — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
-| `ayak` | number | hayır | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir (sayı) |
-| `boy` | number | hayır | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir (sayı) |
+| `ayak` | number | hayır | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir [m] (sayı) |
+| `boy` | number | hayır | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir [m] (sayı) |
 | `cizgi` | boolean | hayır | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir (evet/hayır) |
 | `katman` | string | hayır | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
@@ -1591,11 +1591,11 @@ Onay ister.
 | `yazici` | string | hayır | Yazıcının adı; "" sistem varsayılanı. dosya ile birlikte verilmez (metin) |
 | `profil` | string | hayır | Yazdırma profili; verilmezse varsayılan profil (metin) |
 | `kagit` | string | hayır | Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel (genislik ve yukseklik ile) (metin) |
-| `genislik` | integer | hayır | ozel kâğıdın eni, milimetre (dikey duruşta) (tam sayı) |
-| `yukseklik` | integer | hayır | ozel kâğıdın boyu, milimetre (dikey duruşta) (tam sayı) |
+| `genislik` | integer | hayır | ozel kâğıdın eni, milimetre (dikey duruşta) [kâğıt mm] (tam sayı) |
+| `yukseklik` | integer | hayır | ozel kâğıdın boyu, milimetre (dikey duruşta) [kâğıt mm] (tam sayı) |
 | `yon` | string | hayır | dikey ya da yatay (metin) |
 | `dpi` | integer | hayır | Çözünürlük, inç başına nokta (72–4800) (tam sayı) |
-| `kenar` | integer | hayır | Dört yandaki kenar boşluğu, milimetre (tam sayı) |
+| `kenar` | integer | hayır | Dört yandaki kenar boşluğu, milimetre [kâğıt mm] (tam sayı) |
 | `baslik` | string | hayır | PDF belge başlığı (metin) |
 | `yazar` | string | hayır | PDF yazar alanı (metin) |
 | `sifre` | string | hayır | PDF açma şifresi (kullanıcı şifresi); günlüğe yazılmaz (metin) |
@@ -1678,8 +1678,8 @@ Onay ister.
 | `carpan_nokta` | konum (tutamak ya da göreli nokta) | hayır | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `carpan_y` | number | hayır | Yukarı yöndeki çarpan; verilirse carpan yalnız sağa yöndeki çarpandır ve daire elips olur (sayı) |
 | `yontem` | string | hayır | referans: bir uzunluk yenisine ölçeklenir; referans uzunluk iki noktayla gösterilir (metin) |
-| `referans` | number | hayır | Referans uzunluk, metre; yeni onun olacağı uzunluktur (sayı) |
-| `yeni` | number | hayır | Referans uzunluğun yeni değeri, metre (sayı) |
+| `referans` | number | hayır | Referans uzunluk, metre; yeni onun olacağı uzunluktur [m] (sayı) |
+| `yeni` | number | hayır | Referans uzunluğun yeni değeri, metre [m] (sayı) |
 | `referans_nokta` | konum (tutamak ya da göreli nokta) | hayır | Referans uzunluğu gösteren iki nokta — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `kopya` | boolean | hayır | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
@@ -1930,7 +1930,7 @@ Onay ister.
 |---|---|---|---|
 | `noktalar` | nokta listesi (tutamak ya da konum dizisi) | evet | Yazının başlangıç noktası — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz. |
 | `yazi` | string | evet | Yazılacak metin (metin) |
-| `yukseklik` | integer | hayır | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı (tam sayı) |
+| `yukseklik` | integer | hayır | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı [mm] (tam sayı) |
 | `bitis` | konum (tutamak ya da göreli nokta) | hayır | Yazının döneceği yöndeki bir nokta; taban çizgisi yazının genişliği kadardır. Yoksa yatay — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `hizalama` | string | hayır | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) (metin) |
 | `satir_araligi` | number | hayır | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü (sayı) |
@@ -2173,7 +2173,7 @@ Onay ister.
 | `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
 | `ada` | boolean | hayır | Bir gözün içindeki kapalı çizgiler o alanın deliği olsun; kapalıysa göz dış sınırıyla dolu çizilir; varsayılan evet (evet/hayır) |
-| `bosluk` | number | hayır | Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 (sayı) |
+| `bosluk` | number | hayır | Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 [m] (sayı) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `islem_bag_coz` — BAĞÇÖZ
@@ -2239,8 +2239,8 @@ Onay ister.
 | `dolgu` | string | hayır | Basamak dolgusu; varsayılan 0 (metin) |
 | `ilk` | integer | hayır | İlk köşenin numarası; varsayılan 1 (tam sayı) |
 | `sonek` | string | hayır | Numaranın arkasına gelen yazı (metin) |
-| `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 (tam sayı) |
-| `bosluk` | integer | hayır | Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 (tam sayı) |
+| `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 [mm] (tam sayı) |
+| `bosluk` | integer | hayır | Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 [mm] (tam sayı) |
 | `bagla` | boolean | hayır | Numarayı köşesine bağla: köşe taşınınca numara izler; varsayılan evet (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
@@ -2259,7 +2259,7 @@ Onay ister.
 | `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
 | `pencere` | konum (tutamak ya da göreli nokta) | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının tek tutamağı, ya da her elemanı bir tutamak ya da tutamaktan ölçüyle uzaklaşan göreli nokta olan dizi. Koordinat yazılamaz. |
 | `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
-| `mesafe` | number | hayır | Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır (sayı) |
+| `mesafe` | number | hayır | Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır [m] (sayı) |
 | `birlestir` | boolean | hayır | Üst üste binen tamponları tek alanda birleştir; kapalıysa her nesnenin tamponu ayrı alan olur; varsayılan evet (evet/hayır) |
 | `kose` | string | hayır | Dış köşelerin biçimi (yuvarlak / koseli / pah); varsayılan yuvarlak (metin) |
 | `uc` | string | hayır | Çizgi uçlarının biçimi (yuvarlak / duz / kare); varsayılan yuvarlak (metin) |
@@ -2285,9 +2285,9 @@ Onay ister.
 | `bicim` | string | hayır | Yazının kalıbı; {} sayının yerini tutar (örnek: "{} m", "L={}") (metin) |
 | `ayrac` | string | hayır | Ondalık ayracı (virgul / nokta); varsayılan virgul (metin) |
 | `taraf` | string | hayır | Yazının kenarın hangi yanına düşeceği (otomatik / sol / sag / dis / ic); varsayılan otomatik (metin) |
-| `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 (tam sayı) |
-| `bosluk` | integer | hayır | Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 (tam sayı) |
-| `enaz` | integer | hayır | Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 (tam sayı) |
+| `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 [mm] (tam sayı) |
+| `bosluk` | integer | hayır | Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 [mm] (tam sayı) |
+| `enaz` | integer | hayır | Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 [mm] (tam sayı) |
 | `bagla` | boolean | hayır | Yazıyı kenarına bağla: kenar taşınınca yazı izler, uzunluk yeniden yazılır; varsayılan evet (evet/hayır) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 

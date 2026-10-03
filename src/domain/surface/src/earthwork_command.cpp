@@ -169,6 +169,7 @@ PIRICAD_COMMAND(earthwork)
         .category = Category::Query,
         .params   = {Param::integer("kot", Arity::exactly(1),
                                     "Karşılaştırma kotu, milimetre (845 m = 845000)")
+                         .measured_in("mm")
                          .en("elevation")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly |

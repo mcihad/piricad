@@ -862,6 +862,7 @@ PIRICAD_COMMAND(select)
                 Param::number("tolerans", Arity::optional(),
                               "NOKTA ve GEÇEN modlarında arama yarıçapı, metre; yoksa seçim "
                               "toleransı")
+                    .measured_in("m")
                     .en("tolerance"),
                 Param::number("sira", Arity::optional(),
                               "Kaçıncı nesne: NOKTA'da 1 en yakını, 2 altındaki; İÇEREN'de 1 "

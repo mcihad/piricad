@@ -10,6 +10,7 @@
 #include "piricad/command/value.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -234,6 +235,17 @@ struct Param
         unit = std::move(what);
         return std::move(*this);
     }
+
+    /// THE POWER OF TEN, IN METRES, OF THE UNIT THIS PARAMETER IS TYPED IN — 0 for `m`, -3
+    /// for `mm` and `kâğıt mm` — when it is a length; nothing when it is not (an angle, a
+    /// scale, a count, an area, a parameter that never named its unit).
+    ///
+    /// WHAT IT IS FOR. A person types `12.5 m` or `1250 cm` (TODOS U-02) and the value must
+    /// arrive in the unit the command reads: 12.5 for a distance in metres, 12500 for one in
+    /// millimetres. Only the declaration knows which, so the conversion is read from here and
+    /// nowhere else; a unit written on a parameter that is not a length is refused by name
+    /// instead of being quietly taken for a plain number.
+    std::optional<int> length_exponent() const;
 
     /// Names what this parameter was called before it was renamed. Chained onto a
     /// factory: `Param::text("yerlesim", ...).renamed_from("pafta")`.

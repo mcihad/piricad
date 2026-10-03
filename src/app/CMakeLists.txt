@@ -51,6 +51,8 @@ qt_add_executable(piricad
     src/attribute_table.cpp
     src/command_line.cpp
     src/command_palette.cpp
+    src/command_usage.cpp
+    src/probe_env.cpp
     src/controller.cpp
     src/data_root.cpp
     src/datagrid.cpp
@@ -121,6 +123,8 @@ qt_add_executable(piricad
     include/piricad/app/schema_page.hpp
     include/piricad/app/attribute_table.hpp
     include/piricad/app/command_palette.hpp
+    include/piricad/app/command_usage.hpp
+    include/piricad/app/probe_env.hpp
     include/piricad/app/controller.hpp
     include/piricad/app/data_root.hpp
     include/piricad/app/dialog_chrome.hpp

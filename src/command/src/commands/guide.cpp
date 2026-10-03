@@ -285,6 +285,7 @@ PIRICAD_COMMAND(guide)
                     .en("direction"),
                 Param::integer("deger", Arity::optional(),
                                "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa")
+                    .measured_in("mm")
                     .en("value"),
                 Param::points("nokta", Arity::optional(),
                               "Kılavuzun geçtiği nokta: açılı kılavuzda ve `deger` verilmemiş "

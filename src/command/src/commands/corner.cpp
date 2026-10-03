@@ -648,6 +648,7 @@ PIRICAD_COMMAND(chamfer)
                     .en("point"),
                 Param::number("mesafe", Arity::exactly(1),
                               "Köşeden her iki kenar boyunca kesilecek mesafe, metre")
+                    .measured_in("m")
                     .en("distance"),
                 Param{"ikinci_nokta", ParamKind::Point, Arity::optional(),
                       "İki nesnede ikincinin kalacak parçası"}
@@ -694,6 +695,7 @@ PIRICAD_COMMAND(fillet)
                     .en("point"),
                 Param::number("yaricap", Arity::exactly(1),
                               "Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe")
+                    .measured_in("m")
                     .en("radius"),
                 Param{"ikinci_nokta", ParamKind::Point, Arity::optional(),
                       "İki nesnede ikincinin kalacak parçası"}

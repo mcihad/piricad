@@ -156,9 +156,11 @@ PIRICAD_COMMAND(perp_offset)
                 Param::point("bitis", "Taban çizgisinin ikinci noktası (B)").en("end"),
                 Param::number("ayak", Arity::at_least(0),
                               "A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir")
+                    .measured_in("m")
                     .en("chainage"),
                 Param::number("boy", Arity::at_least(0),
                               "Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir")
+                    .measured_in("m")
                     .en("offset"),
                 Param::boolean("cizgi", Arity::optional(),
                                "Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir")

@@ -4,7 +4,10 @@
 #include "piricad/core/text.hpp"
 
 #include <algorithm>
+#include <array>
 #include <numeric>
+#include <string_view>
+#include <vector>
 
 namespace piricad::command {
 
@@ -165,6 +168,32 @@ std::uint64_t Registry::fingerprint() const
     return h;
 }
 
+void note_use(std::vector<std::string>& recent, std::string_view id, std::size_t limit)
+{
+    if (id.empty()) return;
+    std::erase(recent, std::string(id));
+    recent.insert(recent.begin(), std::string(id));
+    if (recent.size() > limit) recent.resize(limit);
+}
+
+bool toggle_member(std::vector<std::string>& set, std::string_view id)
+{
+    if (id.empty()) return false;
+    const auto at = std::ranges::find(set, id);
+    if (at != set.end()) {
+        set.erase(at);
+        return false;
+    }
+    set.emplace_back(id);
+    return true;
+}
+
+bool worth_remembering(const CommandSpec& spec)
+{
+    return !has_flag(spec.flags, Flags::Transparent) && spec.id != "core.undo" &&
+           spec.id != "core.redo";
+}
+
 SearchMatch search_match(const CommandSpec& spec, std::string_view word)
 {
     SearchMatch out;
@@ -203,6 +232,159 @@ SearchMatch search_match(const CommandSpec& spec, std::string_view word)
     if (contains(core::turkish_fold_key(spec.title)) ||
         contains(core::turkish_fold_key(spec.summary)))
         better(6, nullptr);
+    return out;
+}
+
+namespace {
+
+/// The words of folded text: runs of A–Z and 0–9. Whatever else is in it — a space, a
+/// dash, a bracket, a symbol the fold leaves alone — ends a word.
+std::vector<std::string> words_of(const std::string& folded)
+{
+    std::vector<std::string> words;
+    std::string current;
+    for (const char ch : folded) {
+        const bool inside = (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9');
+        if (inside) {
+            current.push_back(ch);
+        } else if (!current.empty()) {
+            words.push_back(std::move(current));
+            current.clear();
+        }
+    }
+    if (!current.empty()) words.push_back(std::move(current));
+    return words;
+}
+
+/// What a request carries and no command is named for: the particles, the verbs of
+/// asking and doing, the English filler. Folded, so `için` is ICIN. A word the registry
+/// really uses is never dropped: this list is only consulted for the words of a text that
+/// matched nothing as a whole.
+bool is_filler(const std::string& word)
+{
+    static constexpr auto kFiller = std::to_array<std::string_view>(
+        {"VE", "ILE", "BIR", "BU", "SU", "ICIN", "YA", "DA", "DE", "MI", "MU", "GIBI", "NE",
+         "NASIL", "YAP", "YAPMAK", "ET", "ETMEK", "BANA", "HANGI", "VAR", "ISTIYORUM", "LUTFEN",
+         "KOMUT", "ARAC",
+         // How many, which: a request counts and points at things, and no command is
+         // named for "two" or "all of them".
+         "IKI", "UC", "TUM", "HER", "BUTUN", "SECILI", "SECILEN", "ILGILI", "THE", "AN", "TO",
+         "AND", "FOR", "HOW", "DO", "WANT", "WITH", "MAKE", "OF"});
+    return word.size() < 2 || std::ranges::find(kFiller, word) != kFiller.end();
+}
+
+/// A consonant that softens between a stem and a vowel ending: KİTAP becomes KİTABI,
+/// UZUNLUK becomes UZUNLUĞU. Folded, so Ğ is G and Ç stays C.
+bool softens(char stem_last, char before_vowel)
+{
+    return (stem_last == 'K' && before_vowel == 'G') || (stem_last == 'P' && before_vowel == 'B') ||
+           (stem_last == 'T' && before_vowel == 'D');
+}
+
+/// How well a typed `word` is the same word as one a command declares: 3 the same; 2 the
+/// start of it, or it with endings on (`ALANI` is ALAN); 1 only inside a longer one; 0 not
+/// at all. A stem has to be three letters at least, and four letters to take a long run
+/// of endings: SİL is not the stem of SİLİNDİR, and OF is an abbreviation, not a stem.
+int word_match(const std::string& typed, const std::string& declared)
+{
+    if (typed == declared) return 3;
+    const std::size_t tl = typed.size();
+    const std::size_t dl = declared.size();
+
+    if (tl >= 3 && dl > tl && declared.compare(0, tl, typed) == 0) return 2;
+
+    const std::size_t room = dl >= 4 ? 6 : 4;
+    if (dl >= 3 && tl > dl && tl - dl <= room && typed.compare(0, dl, declared) == 0) return 2;
+
+    if (dl >= 4 && tl >= dl && tl - dl <= room + 1 &&
+        typed.compare(0, dl - 1, declared, 0, dl - 1) == 0 &&
+        softens(declared.back(), typed[dl - 1]))
+        return 2;
+
+    if (tl >= 4 && declared.find(typed) != std::string::npos) return 1;
+
+    // The same stem under different endings (`NESNEYİ`, NESNELERİ), or a stem that begins a
+    // compound name (`alanı` is ALAN-ÖLÇ, `yazıyı` is YAZI-DÜZENLE): a run of four letters or
+    // more at the front that is most of the shorter word.
+    std::size_t same = 0;
+    while (same < tl && same < dl && typed[same] == declared[same])
+        ++same;
+    if (same >= 4 && same * 100 >= std::min(tl, dl) * 60) return 1;
+    return 0;
+}
+
+} // namespace
+
+SearchMatch search_query(const CommandSpec& spec, std::string_view query)
+{
+    if (SearchMatch whole = search_match(spec, query); whole.tier != SearchMatch::kNone)
+        return whole;
+
+    std::vector<std::string> typed;
+    for (std::string& word : words_of(core::turkish_fold_key(query)))
+        if (!is_filler(word)) typed.push_back(std::move(word));
+    if (typed.empty()) return {};
+
+    // Where a command says what it is, nearest first: its names and the names other
+    // programs know it by (0), its title and summary (1), its parameters' names (2).
+    struct Field
+    {
+        std::vector<std::string> words;
+        int tier;
+        const KnownName* known;
+    };
+
+    std::vector<Field> fields;
+    for (const std::string& name : spec.names)
+        fields.push_back({words_of(core::turkish_fold_key(name)), 0, nullptr});
+    for (const KnownName& known : spec.known_as)
+        fields.push_back({words_of(core::turkish_fold_key(known.name)), 0, &known});
+    fields.push_back(
+        {words_of(core::turkish_fold_key(spec.title + " " + spec.summary)), 1, nullptr});
+    for (const Param& p : spec.params)
+        fields.push_back({words_of(core::turkish_fold_key(p.name)), 2, nullptr});
+
+    // WHAT A WORD COSTS. Where it was found counts three a step (a name, then the title
+    // and summary, then a parameter's name); HOW it was found counts under that: spelled
+    // exactly 0, with endings or only begun 1, inside a longer word 2. The second is
+    // Turkish doing the sorting: a command is asked for in the bare imperative (`birleştir`,
+    // `yuvarla`, `kaydır`) and the thing it works on takes an ending (`çizgiyi`, `köşeyi`,
+    // `alanı`) — so of "iki çizgiyi birleştir", BİRLEŞTİR is named exactly and ÇİZGİ is only
+    // the object, and the sentence is answered by the first. A word nothing answers costs
+    // more than any word that was found.
+    constexpr int kUnanswered = 12;
+    int cost                  = 0;
+    std::size_t found         = 0;
+    const KnownName* source   = nullptr;
+    for (const std::string& word : typed) {
+        int best                   = -1;
+        const KnownName* best_from = nullptr;
+        for (const Field& field : fields)
+            for (const std::string& declared : field.words) {
+                const int strength = word_match(word, declared);
+                if (strength == 0) continue;
+                const int price = field.tier * 3 + (3 - strength);
+                if (best < 0 || price < best) {
+                    best      = price;
+                    best_from = field.known;
+                }
+            }
+        if (best < 0) {
+            cost += kUnanswered;
+            continue;
+        }
+        ++found;
+        cost += best;
+        if (best_from != nullptr && source == nullptr) source = best_from;
+    }
+
+    // Half of what was asked, rounded up: "çizgiyi paralel çiz" is answered by the command
+    // that is PARALEL even though nothing is named ÇİZ; one word of five is not an answer.
+    if (found < (typed.size() + 1) / 2) return {};
+
+    SearchMatch out;
+    out.tier  = 7 + cost;
+    out.known = source;
     return out;
 }
 

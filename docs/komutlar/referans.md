@@ -53,7 +53,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.boundary`](boundary.md) | Sınır Bul | `SINIR`, `BOUNDARY`, `SNR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir. |
 | [`core.cleanup`](cleanup.md) | Temizle | `TEMİZLE`, `TEMIZLE`, `OVERKILL`, `TMZ` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Yinelenen, boş ve tekrarlanan köşeli nesneleri bulur; istenirse tek adımda onarır ve değişen alanları önce/sonra raporlar. |
 | [`core.move`](move.md) | Taşı | `TAŞI`, `TASI`, `MOVE`, `TŞ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
-| [`core.copy`](copy.md) | Kopyala | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
+| [`core.copy`](copy.md) | Kopyala | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri çoğaltır: kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`core.array`](array.md) | Dizi | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır. |
 | [`core.combine`](combine.md) | Birleştir | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
 | [`core.area_union`](area_union.md) | Birleşim | `BİRLEŞİM`, `BIRLESIM`, `UNION`, `ABR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli, uzun iş | Kapalı alanların bütününü OpenCASCADE ile birleştirir; ayrı parçaları korur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
@@ -72,7 +72,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.scale`](scale.md) | Ölçekle | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek. |
 | [`core.mirror`](mirror.md) | Aynala | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
 | [`core.measure`](measure.md) | Ölç | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir. |
-| [`core.measure_area`](measure_area.md) | Alan Ölç | `ALANÖLÇ`, `ALANOLC`, `ALANSOR`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
+| [`core.measure_area`](measure_area.md) | Alan Ölç | `ALANÖLÇ`, `ALANOLC`, `ALANSOR`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini hesaplar ve yazar. |
 | [`core.coordinate`](coordinate.md) | Koordinat Oku | `KOORDİNAT`, `KOORDINAT`, `XYZSOR`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`core.extent_check`](extent_check.md) | Kapsam Denetimi | `KAPSAMDENETİM`, `KAPSAMDENETIM`, `EXTENTCHECK`, `KPD` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
 | [`core.station_offset`](station_offset.md) | Prizma (Dik Ayak ve Dik Boy) | `PRİZMA`, `PRIZMA`, `STATIONOFFSET`, `PRZ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir. |
@@ -777,7 +777,7 @@ Ayrıntılı kullanım: [TAŞI](move.md)
 
 ### `core.copy` — KOPYALA (Kopyala)
 
-Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
+Seçilen nesneleri çoğaltır: kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -1061,7 +1061,7 @@ Ayrıntılı kullanım: [ÖLÇ](measure.md)
 
 ### `core.measure_area` — ALANÖLÇ (Alan Ölç)
 
-Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
+Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini hesaplar ve yazar.
 
 Uygulandığı nesneler: alan, eğri, tarama.
 
@@ -3423,11 +3423,11 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "satir_aralik": {
           "type": "number",
-          "description": "Satır aralığı, metre; kuzeye artı (sayı)"
+          "description": "Satır aralığı, metre; kuzeye artı [m] (sayı)"
         },
         "sutun_aralik": {
           "type": "number",
-          "description": "Sütun aralığı, metre; doğuya artı (sayı)"
+          "description": "Sütun aralığı, metre; doğuya artı [m] (sayı)"
         },
         "merkez": {
           "anyOf": [
@@ -3510,7 +3510,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "aralik": {
           "type": "number",
-          "description": "mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi (sayı)"
+          "description": "mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi [m] (sayı)"
         },
         "hizala": {
           "type": "boolean",
@@ -4176,7 +4176,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "mesafe": {
           "type": "number",
-          "description": "Köşeden her iki kenar boyunca kesilecek mesafe, metre (sayı)"
+          "description": "Köşeden her iki kenar boyunca kesilecek mesafe, metre [m] (sayı)"
         },
         "ikinci_nokta": {
           "anyOf": [
@@ -4818,7 +4818,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
       "properties": {
         "aralik": {
           "type": "integer",
-          "description": "Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) (tam sayı)"
+          "description": "Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) [mm] (tam sayı)"
         },
         "katman": {
           "type": "string",
@@ -4935,7 +4935,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
   {
     "name": "core_copy",
     "title": "Kopyala",
-    "description": "Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.\nKomut: KOPYALA (COPY, KP)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Seçilen nesneleri çoğaltır: kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.\nKomut: KOPYALA (COPY, KP)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -6278,7 +6278,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
       "properties": {
         "kot": {
           "type": "integer",
-          "description": "Karşılaştırma kotu, milimetre (845 m = 845000) (tam sayı)"
+          "description": "Karşılaştırma kotu, milimetre (845 m = 845000) [mm] (tam sayı)"
         },
         "varsayimlar": {
           "type": "array",
@@ -6452,7 +6452,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "yukseklik": {
           "type": "integer",
-          "description": "Yeni yükseklik, zeminde milimetre; verilmezse değişmez (tam sayı)"
+          "description": "Yeni yükseklik, zeminde milimetre; verilmezse değişmez [mm] (tam sayı)"
         },
         "hizalama": {
           "type": "string",
@@ -7100,7 +7100,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "yaricap": {
           "type": "number",
-          "description": "Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe (sayı)"
+          "description": "Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe [m] (sayı)"
         },
         "ikinci_nokta": {
           "anyOf": [
@@ -7448,7 +7448,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "deger": {
           "type": "integer",
-          "description": "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa (tam sayı)"
+          "description": "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa [mm] (tam sayı)"
         },
         "nokta": {
           "anyOf": [
@@ -7719,7 +7719,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "bosluk": {
           "type": "integer",
-          "description": "yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç (tam sayı)"
+          "description": "yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç [mm] (tam sayı)"
         },
         "disarida": {
           "type": "string",
@@ -8006,11 +8006,11 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "sutun_aralik": {
           "type": "integer",
-          "description": "Sütunlar arası, milimetre, döndürülmüş eksende (tam sayı)"
+          "description": "Sütunlar arası, milimetre, döndürülmüş eksende [mm] (tam sayı)"
         },
         "satir_aralik": {
           "type": "integer",
-          "description": "Satırlar arası, milimetre, döndürülmüş eksende (tam sayı)"
+          "description": "Satırlar arası, milimetre, döndürülmüş eksende [mm] (tam sayı)"
         },
         "deger": {
           "type": "array",
@@ -8257,11 +8257,11 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "birinci_mesafe": {
           "type": "number",
-          "description": "Birinci noktadan ölçülen uzaklık (m) (sayı)"
+          "description": "Birinci noktadan ölçülen uzaklık (m) [m] (sayı)"
         },
         "ikinci_mesafe": {
           "type": "number",
-          "description": "İkinci noktadan ölçülen uzaklık (m) (sayı)"
+          "description": "İkinci noktadan ölçülen uzaklık (m) [m] (sayı)"
         },
         "yon": {
           "type": "string",
@@ -8519,11 +8519,11 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "yukseklik": {
           "type": "integer",
-          "description": "Yazı yüksekliği, zemin milimetresi (tam sayı)"
+          "description": "Yazı yüksekliği, zemin milimetresi [mm] (tam sayı)"
         },
         "kaydirma": {
           "type": "integer",
-          "description": "Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı (tam sayı)"
+          "description": "Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı [mm] (tam sayı)"
         },
         "bagla": {
           "type": "boolean",
@@ -8941,7 +8941,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "type": "integer",
           "minimum": 0,
           "maximum": 1000000000,
-          "description": "Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir (tam sayı)"
+          "description": "Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir [mm] (tam sayı)"
         },
         "kilit": {
           "type": "boolean",
@@ -10006,7 +10006,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
   {
     "name": "core_measure_area",
     "title": "Alan Ölç",
-    "description": "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.\nKomut: ALANÖLÇ (ALANOLC, ALANSOR, AREAOF, AÖ)\nUygulandığı nesneler: alan, eğri, tarama.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini hesaplar ve yazar.\nKomut: ALANÖLÇ (ALANOLC, ALANSOR, AREAOF, AÖ)\nUygulandığı nesneler: alan, eğri, tarama.\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -10109,7 +10109,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "bosluk": {
           "type": "integer",
-          "description": "yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç (tam sayı)"
+          "description": "yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç [mm] (tam sayı)"
         },
         "varsayimlar": {
           "type": "array",
@@ -10423,7 +10423,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "mesafe": {
           "type": "integer",
-          "description": "Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri (tam sayı)"
+          "description": "Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri [mm] (tam sayı)"
         },
         "kose": {
           "type": "string",
@@ -10863,11 +10863,11 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "ayak": {
           "type": "number",
-          "description": "A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir (sayı)"
+          "description": "A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir [m] (sayı)"
         },
         "boy": {
           "type": "number",
-          "description": "Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir (sayı)"
+          "description": "Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir [m] (sayı)"
         },
         "cizgi": {
           "type": "boolean",
@@ -11581,11 +11581,11 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "genislik": {
           "type": "integer",
-          "description": "ozel kâğıdın eni, milimetre (dikey duruşta) (tam sayı)"
+          "description": "ozel kâğıdın eni, milimetre (dikey duruşta) [kâğıt mm] (tam sayı)"
         },
         "yukseklik": {
           "type": "integer",
-          "description": "ozel kâğıdın boyu, milimetre (dikey duruşta) (tam sayı)"
+          "description": "ozel kâğıdın boyu, milimetre (dikey duruşta) [kâğıt mm] (tam sayı)"
         },
         "yon": {
           "type": "string",
@@ -11597,7 +11597,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "kenar": {
           "type": "integer",
-          "description": "Dört yandaki kenar boşluğu, milimetre (tam sayı)"
+          "description": "Dört yandaki kenar boşluğu, milimetre [kâğıt mm] (tam sayı)"
         },
         "baslik": {
           "type": "string",
@@ -12149,11 +12149,11 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "referans": {
           "type": "number",
-          "description": "Referans uzunluk, metre; yeni onun olacağı uzunluktur (sayı)"
+          "description": "Referans uzunluk, metre; yeni onun olacağı uzunluktur [m] (sayı)"
         },
         "yeni": {
           "type": "number",
-          "description": "Referans uzunluğun yeni değeri, metre (sayı)"
+          "description": "Referans uzunluğun yeni değeri, metre [m] (sayı)"
         },
         "referans_nokta": {
           "anyOf": [
@@ -13743,7 +13743,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "yukseklik": {
           "type": "integer",
-          "description": "Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı (tam sayı)"
+          "description": "Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı [mm] (tam sayı)"
         },
         "bitis": {
           "anyOf": [
@@ -15352,7 +15352,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "bosluk": {
           "type": "number",
-          "description": "Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 (sayı)"
+          "description": "Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 [m] (sayı)"
         },
         "varsayimlar": {
           "type": "array",
@@ -15768,13 +15768,13 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "type": "integer",
           "minimum": 0,
           "maximum": 100000000,
-          "description": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 (tam sayı)"
+          "description": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 [mm] (tam sayı)"
         },
         "bosluk": {
           "type": "integer",
           "minimum": 0,
           "maximum": 100000000,
-          "description": "Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 (tam sayı)"
+          "description": "Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 [mm] (tam sayı)"
         },
         "bagla": {
           "type": "boolean",
@@ -15879,7 +15879,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         },
         "mesafe": {
           "type": "number",
-          "description": "Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır (sayı)"
+          "description": "Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır [m] (sayı)"
         },
         "birlestir": {
           "type": "boolean",
@@ -16042,19 +16042,19 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "type": "integer",
           "minimum": 0,
           "maximum": 100000000,
-          "description": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 (tam sayı)"
+          "description": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 [mm] (tam sayı)"
         },
         "bosluk": {
           "type": "integer",
           "minimum": 0,
           "maximum": 100000000,
-          "description": "Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 (tam sayı)"
+          "description": "Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 [mm] (tam sayı)"
         },
         "enaz": {
           "type": "integer",
           "minimum": 0,
           "maximum": 1000000000,
-          "description": "Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 (tam sayı)"
+          "description": "Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 [mm] (tam sayı)"
         },
         "bagla": {
           "type": "boolean",

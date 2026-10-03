@@ -703,6 +703,7 @@ PIRICAD_COMMAND(hatch)
                 Param::integer("bosluk", Arity::optional(),
                                "yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 "
                                "hiç")
+                    .measured_in("mm")
                     .en("gap"),
                 Param{"disarida", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler "

@@ -16,11 +16,13 @@
 // and never turns an out-of-range angle into undefined behaviour in the
 // micro-degree conversion. Under ASan and UBSan any violation is a crash.
 //
-// FOUR ENTRY POINTS, because the grammar has four: a line (`parse_line`, then
+// SIX ENTRY POINTS, because the grammar has six: a line (`parse_line`, then
 // every coordinate token resolved under all six angle conventions and chained the
 // way `bind_tokens` chains them), a bare expression (`evaluate_expression`), a
-// filter predicate (`evaluate_predicate`) and a single coordinate written as text
-// (`parse_point`, the script path).
+// filter predicate (`evaluate_predicate`), a single coordinate written as text
+// (`parse_point`, the script path), and — TODOS U-02 — a quantity with a length
+// unit in each of the units a parameter is declared in (`evaluate_quantity`) and
+// the answer typed at a number prompt (`evaluate_answer`, with its decimal comma).
 //
 // POINT FUNCTIONS go through the same four (TODOS-CAD P1a): `orta(…)`,
 // `kes(…)` and the rest are read by `classify` and resolved by `resolve_point`,
@@ -120,6 +122,15 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
 
     // ---- 2. the expression grammar on the whole input ----
     (void)piricad::command::evaluate_expression(text);
+
+    // ---- 2b. the same grammar with length units, in metres and in millimetres, and the
+    //          answer typed at a prompt in all three of its situations (a length in
+    //          metres, one in millimetres, a parameter that is no length) ----
+    (void)piricad::command::evaluate_quantity(text, 0);
+    (void)piricad::command::evaluate_quantity(text, -3);
+    (void)piricad::command::evaluate_answer(text, 0);
+    (void)piricad::command::evaluate_answer(text, -3);
+    (void)piricad::command::evaluate_answer(text, std::nullopt);
 
     // ---- 3. the predicate grammar, against a row that has one NULL cell ----
     const piricad::command::FieldReader row =

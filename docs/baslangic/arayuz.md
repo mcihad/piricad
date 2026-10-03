@@ -355,7 +355,7 @@ geçici olarak açar. Aynı düğme (⌄) ya da bir sekmeye yeniden çift tıkla
 | **Tab** / **Shift+Tab** | Şeritteki düğmeler arasında gezer |
 | **Boşluk** ya da **Enter** | Odaktaki düğmeye basar — farenin yaptığının aynısı |
 | **↓** ya da **F4** | Bölünmüş bir düğmenin listesini açar; liste ok tuşlarıyla gezilir, **Enter** seçer, **Esc** kapatır |
-| **Ctrl+K** | Komut listesini açar |
+| **Ctrl+K** | Komut listesini açar; listedeyken **Ctrl+D** komutu favorilere ekler ya da çıkarır |
 
 Fareyle bir düğmeye basmak klavye odağını tuvalden almaz, çünkü komut çalışırken Esc'in ve
 ok tuşlarının yeri tuvaldir. Her düğmenin kısayolu — **Ctrl+H** (macOS'ta
@@ -413,12 +413,68 @@ aldığı parametreler.
 | Bölüm | Ne gösterir |
 |---|---|
 | Süzgeç | Yazdıkça süzer ve sıralar; ad, kısaltma, başka programdaki adı, komut kimliği ve açıklama aranır |
-| Sol liste | Çizim · Düzenleme · Görünüm · Katman · Dosya · Sorgu · İşlem · Betik · Sistem başlıkları altında komut adı, tek satır açıklaması ve sağ kenarda kısaltmaları |
+| Sol liste | Üstte **Favoriler** ve **Son kullanılanlar** (varsa), altında Çizim · Düzenleme · Görünüm · Katman · Dosya · Sorgu · İşlem · Betik · Sistem başlıkları altında komut adı, tek satır açıklaması ve sağ kenarda kısaltmaları |
 | Sağ bölme | Komutun kategorisi, kimliği, kabul ettiği bütün yazımlar, açıklaması ve parametreleri — her parametrenin tipi, gerekliliği, aralığı, birimi ve varsa sözcük listesi |
 | Alt satır | Komut sayısı ve tuşlar |
 
 Liste `Registry`'den üretilir; yani bugün var olan her komut oradadır ve yarın eklenen
 komut da hiçbir liste güncellenmeden orada olur.
+
+#### Favoriler ve son kullanılanlar
+
+Bir şey yazmadan açtığınızda liste, kategorilerden önce **sizin** komutlarınızla başlar:
+
+- **Favoriler** — yıldızladığınız komutlar, yıldızladığınız sırayla. Bir komutu yıldızlamak
+  için imleci üzerine getirip **Ctrl+D**'ye basın (imleç süzgeçte kalır) ya da satırın solundaki
+  yıldıza tıklayın. Aynı tuş yıldızı kaldırır. İmleç yıldızladığınız komutun üzerinde kalır,
+  böylece art arda on komutu yıldızlamak listenin başına dönmek demek değildir.
+- **Son kullanılanlar** — en son kendi elinizle başlattığınız en çok sekiz komut, en yenisi
+  üstte; yıldızlıysa Favoriler'de olduğundan burada tekrar yazılmaz. Komut satırına yazdığınız,
+  şerit düğmesine bastığınız ve bu listeden seçtiğiniz komutlar sayılır. **Sayılmayanlar:**
+  görünüm değiştirenler (`YAKINLAŞ`, `KAYDIR`), `GERİAL` ve `YİNELE`, bir **betiğin** ya da
+  yapay zekânın çalıştırdığı komutlar ve programın kendi kurulum işleri — kısa bir listenin
+  işi, sizin ne aradığınızı göstermektir.
+
+Altındaki kategori listesi eskisi gibi eksiksizdir: bir komut hem Favoriler'de hem kendi
+kategorisinde görünür. Bir şey yazmaya başlayınca bu iki bölüm kalkar ve liste, aşağıdaki
+gibi, en iyi eşleşen üstte olacak biçimde sıralanır.
+
+#### Komutun adını bilmiyorsanız: cümle yazın
+
+Süzgeç yalnız komut adı aramaz; **ne yapmak istediğinizi** yazabilirsiniz. Türkçe ekler,
+fiil ve edat ayıklanır, kalan sözcükler komutların adında, başka programdaki adında,
+açıklamasında ve parametre adlarında aranır:
+
+| Yazdığınız | Üstte çıkan |
+|---|---|
+| `çizgiyi paralel kaydır` | OFSET |
+| `köşeyi yuvarla` | YUVARLA |
+| `iki çizgiyi birleştir` | BİRLEŞTİR |
+| `nesneyi çoğalt` | KOPYALA, DİZİ |
+| `alanı hesapla` | ALANÖLÇ |
+| `parseli ifraz et` | İFRAZ |
+
+Kurallar:
+
+- **Önce tam eşleşme.** Yazdığınız metin bir komut adının, kısaltmasının ya da başka
+  programdaki adının içindeyse sıralama eskisi gibidir: `kaydır` hâlâ önce KAYDIR'ı, hemen
+  altında TAŞI'yı (Netcad'in adıyla) gösterir. Cümle yalnız hiçbir komut adında geçmediği
+  zaman sözcüklerine ayrılır.
+- **Ad, nesneden önce gelir.** `iki çizgiyi birleştir` içinde BİRLEŞTİR adın kendisidir;
+  `çizgiyi` ise ek almış, yani üzerinde çalışılan şeydir. Komutlar yalın emir kipinde
+  (`birleştir`, `yuvarla`) aranır, bu yüzden adın kendisiyle eşleşen sözcük ek almış
+  sözcükten önce sayılır.
+- **Yarısı yeter.** Sözcüklerin en az yarısı bir komutta karşılık bulmalıdır; `çiz` gibi hiçbir
+  komutun adı olmayan fiiller sonucu bozmaz. Hiçbir komut karşılık vermiyorsa liste boştur ve
+  alt satır bunu söyler; tahmin yürütülmez. (Örneğin `arazi kesiti çıkar`: kesit aracı henüz
+  yok.)
+- Yazım Türkçe katlanır: `cizgiyi` ile `çizgiyi` aynıdır.
+
+Eşleşme bir komutun açıklamasına dayanıyorsa komutun kendisini değil, açıklamasını
+düzeltmek gerekir: arama, komutun kayıtta bildirdiğinden başkasını bilmez.
+
+İki liste de **bu bilgisayara** aittir ve çizime yazılmaz: çizimi bir başka büroya
+gönderdiğinizde sizin sık kullandığınız araçlar onunla gitmez.
 
 Arama Türkçe katlamayla çalışır: `cizgi` yazınca `ÇİZGİ`, `olcek` yazınca `ÖLÇEK`
 bulunur. `↑` `↓` gezinir, `Enter` seçili komutu komut satırına yazıp imleci sonuna
@@ -465,6 +521,14 @@ klavyenin nerede olacağı değişir:
 Bir **sayı** isteyen öteki istemlerde tuvale tıklamak bir cevap değildir: komut
 "… bir sayı bekliyor; tıklamak yerine komut satırına yazın." der ve soruyu açık
 tutar. (Tıklamanın sessizce sıfır sayıldığı eski davranış yoktur.)
+
+Uzunluk soran bir istemde sayıyı **birimiyle** yazabilirsiniz: `12.5 m`, `1250 cm` ve
+`12500mm` aynı cevaptır; sorunun parantez içinde söylediği birime (çoğunlukla metre) kendisi
+çevrilir. Bir tek sayı soran istemde ondalık ayırıcı **virgül** de olabilir (`12,5`, `1.250,5`);
+tuvale tıklayarak da cevaplanan mesafe istemlerinde tek başına yazılan `5,5` ise bir koordinattır,
+orada `5.5` ya da `5,5 m` yazın. Uzunluk sormayan bir istemde (adet, açı, ölçek) birim yazarsanız
+komut bunu söyler ve soruyu açık tutar.
+Ayrıntı: [Birimli sayılar](../komutlar/komut-satiri.md#birimli-sayılar).
 
 Nesneyle çalışan bir araca **hiçbir şey seçmeden** basmak da bir hata değildir:
 araç hangi nesneleri istediğini sorar. Tek nesneyle çalışan bir araca birden çok
@@ -1146,7 +1210,7 @@ yapabilecekleriniz:
 
 | Tuş | İşlev |
 |---|---|
-| **Ctrl+K** | Komut listesi — kategorilere ayrılmış, yazdıkça süzülen sayfa |
+| **Ctrl+K** | Komut listesi — favorileriniz ve son kullandıklarınız üstte, altında kategorilere ayrılmış, yazdıkça süzülen sayfa |
 | **Ctrl+9** | Komut satırını açar veya kapatır |
 | Komut satırına yazmak | Komut girmek |
 | **Yukarı / Aşağı** | Komut geçmişi |

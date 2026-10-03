@@ -655,4 +655,27 @@
         <translation>Aralık ile aynı</translation>
     </message>
 </context>
+<context>
+    <name>piricad::app::CommandPalette</name>
+    <message>
+        <source>Favoriler</source>
+        <translation>Favoriler</translation>
+    </message>
+    <message>
+        <source>Son kullanılanlar</source>
+        <translation>Son kullanılanlar</translation>
+    </message>
+    <message>
+        <source>%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın (“köşeyi yuvarla”); ↑ ↓ ile gezin, Enter komut satırına yazar; Ctrl+D ya da soldaki yıldız komutu favoriye ekler.</source>
+        <translation>%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın (“köşeyi yuvarla”); ↑ ↓ ile gezin, Enter komut satırına yazar; Ctrl+D ya da soldaki yıldız komutu favoriye ekler.</translation>
+    </message>
+    <message>
+        <source>Eşleşen komut yok. Başka sözcüklerle deneyin ya da aramayı temizleyin — arama adı, kısaltmayı ve ne yaptığını birlikte tarar.</source>
+        <translation>Eşleşen komut yok. Başka sözcüklerle deneyin ya da aramayı temizleyin — arama adı, kısaltmayı ve ne yaptığını birlikte tarar.</translation>
+    </message>
+    <message>
+        <source>%1 / %2 komut eşleşti; en iyi eşleşen üstte.</source>
+        <translation>%1 / %2 komut eşleşti; en iyi eşleşen üstte.</translation>
+    </message>
+</context>
 </TS>

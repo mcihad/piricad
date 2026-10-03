@@ -27,15 +27,23 @@ class Registry;
 
 namespace piricad::app {
 
+/// The starred and recent command lists the shell keeps, which the palette opens on.
+class CommandUsage;
+
 /// A centred overlay listing every command, filtered as the user types.
+///
+/// Before anything is typed it opens on what a person reaches for: the commands they
+/// starred (`Ctrl+D`, or the star at a row's left edge), then the ones they ran last,
+/// then every command under its category as it always was (TODOS U-01).
 class CommandPalette : public QWidget, public Themed
 {
     Q_OBJECT
     Q_INTERFACES(piricad::app::Themed)
 
 public:
-    /// Builds the palette over a registry, which outlives it.
-    CommandPalette(const command::Registry& registry, QWidget* parent);
+    /// Builds the palette over a registry, which outlives it. `usage` is the starred
+    /// and recent lists the shell keeps; null opens on the categories alone.
+    CommandPalette(const command::Registry& registry, CommandUsage* usage, QWidget* parent);
 
     /// Clears the query and shows the palette centred over its parent.
     ///
@@ -54,13 +62,17 @@ public:
     /// it. `/tests` links no Qt, so nothing but a probe can see either.
     struct Shown
     {
-        int commands{0};   ///< rows that are a command
-        int headings{0};   ///< category headings between them
+        int commands{0}; ///< rows that are a command
+        int top{0};      ///< of those, the rows in Favoriler and Son kullanılanlar above the groups
+        int headings{0}; ///< category headings between them
         int scroll_max{0}; ///< the list's scrollbar range; 0 means nothing to scroll
         int height{0};     ///< the page's own height in pixels
         QString selected;  ///< the row the cursor is on
         QString detail;    ///< the right-hand pane's title
         QStringList first; ///< the first five command rows, top down: the ranking
+        QStringList
+            headingNames;    ///< every heading, top down: Favoriler, Son kullanılanlar, the groups
+        QStringList starred; ///< the command rows that carry a star, top down
     };
 
     /// What the page is showing right now.
@@ -103,11 +115,16 @@ private:
     void refilter();
     void accept();
 
+    /// Stars or un-stars the row under the cursor, keeping the cursor on it.
+    void toggleFavourite();
+
     /// The row the cursor should land on when the list is refilled: the first
     /// command, never a heading.
     void selectFirstCommand();
 
     const command::Registry& registry_;
+    CommandUsage* usage_ = nullptr;
+    int topRows_         = 0; ///< command rows in the starred and recent sections just built
     std::vector<Row> rows_;
     QLineEdit* query_  = nullptr;
     QListWidget* list_ = nullptr;

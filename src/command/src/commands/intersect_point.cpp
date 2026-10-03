@@ -256,9 +256,11 @@ PIRICAD_COMMAND(intersect_point)
                     .en("second_angle"),
                 Param::number("birinci_mesafe", Arity::optional(),
                               "Birinci noktadan ölçülen uzaklık (m)")
+                    .measured_in("m")
                     .en("first_distance"),
                 Param::number("ikinci_mesafe", Arity::optional(),
                               "İkinci noktadan ölçülen uzaklık (m)")
+                    .measured_in("m")
                     .en("second_distance"),
                 Param::choice("yon", Arity::optional(), {"sol", "sag"},
                               "İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre")

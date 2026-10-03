@@ -9,6 +9,7 @@
 #include "piricad/app/chat_panel.hpp"
 #include "piricad/app/command_line.hpp"
 #include "piricad/app/command_palette.hpp"
+#include "piricad/app/command_usage.hpp"
 #include "piricad/app/controller.hpp"
 #include "piricad/app/data_root.hpp"
 #include "piricad/app/database_dialog.hpp"
@@ -23,6 +24,7 @@
 #include "piricad/app/panels.hpp"
 #include "piricad/app/print_dialog.hpp"
 #include "piricad/app/print_service.hpp"
+#include "piricad/app/probe_env.hpp"
 #include "piricad/app/provider_service.hpp"
 #include "piricad/app/python_editor.hpp"
 #include "piricad/app/ribbon.hpp"
@@ -204,19 +206,7 @@ constexpr int kLayoutVersion = 6;
 /// Named here because the shell is what must not write. See the save path.
 bool probe_run()
 {
-    for (const char* probe : {
-             "PIRICAD_PRINT_PROBE",    "PIRICAD_LAYOUT_PROBE",    "PIRICAD_SHOT_DIR",
-             "PIRICAD_DESIGNER_PROBE", "PIRICAD_WIDGETS_PROBE",   "PIRICAD_DIALOG_PROBE",
-             "PIRICAD_HAND_PROBE",     "PIRICAD_LAYER_PROBE",     "PIRICAD_PICK_PROBE",
-             "PIRICAD_TABLE_PROBE",    "PIRICAD_SCHEMA_PROBE",    "PIRICAD_CHAT_PROBE",
-             "PIRICAD_TOOL_PROBE",     "PIRICAD_NORMAL_PROBE",    "PIRICAD_FAMILY_PROBE",
-             "PIRICAD_BUDGET_PROBE",   "PIRICAD_PROBE_LINE",      "PIRICAD_FRAME_DUMP",
-             "PIRICAD_MCP_PROBE",      "PIRICAD_EDIT_PROBE",      "PIRICAD_MENU_PROBE",
-             "PIRICAD_FIT_PROBE",      "PIRICAD_REALMOUSE_PROBE", "PIRICAD_RIBBON_SHEET",
-             "PIRICAD_TOOL_DRIVE",     "PIRICAD_THEME_PROBE",
-         })
-        if (qEnvironmentVariableIsSet(probe)) return true;
-    return false;
+    return probe_environment();
 }
 
 QString format_metres(core::Mm v)
@@ -389,6 +379,13 @@ MainWindow::MainWindow(QWidget* parent)
     connect(controller_, &Controller::interactiveFinished, this,
             &MainWindow::onInteractiveFinished);
     connect(controller_, &Controller::commandFinished, this, &MainWindow::onCommandFinished);
+    // WHAT THE COMMAND SEARCH OPENS ON (TODOS U-01): the commands a person reached for
+    // last. Made here and not with the palette, which is built the first time it is
+    // opened — the commands run before that are the ones it has to show. Remembered per
+    // machine, and not written by a probe run.
+    usage_ = new CommandUsage(!isProbeRun(), this);
+    connect(controller_, &Controller::commandReached, this,
+            [this](const QString& id) { usage_->note(id.toStdString()); });
     connect(controller_, &Controller::remedyOffered, this, &MainWindow::offerRemedy);
     // An offer is about the refusal just made: the next command that finishes
     // — the offered one, or any other — has moved past it.
@@ -3911,7 +3908,8 @@ int MainWindow::probeHelpPage()
     (void)std::fprintf(stdout, "[yardim] %d komut, %d başlık, kaydırma %d, yükseklik %d\n",
                        page.commands, page.headings, page.scroll_max, page.height);
 
-    check(page.commands == static_cast<int>(controller_->registry().size()),
+    // The rows above the groups are a second look at commands the groups list again.
+    check(page.commands - page.top == static_cast<int>(controller_->registry().size()),
           QStringLiteral("her komut listede (%1)").arg(controller_->registry().size()));
     check(page.headings > 1, QStringLiteral("kategori başlıkları var"));
     // The two complaints, in order: it scrolls, and it does not grow past a
@@ -3963,6 +3961,99 @@ int MainWindow::probeHelpPage()
     check(on_one.selected == QStringLiteral("ÖLÇÜ"),
           QStringLiteral("YARDIM komut=ÖLÇÜ ÖLÇÜ'yü seçti (%1)").arg(on_one.selected));
     check(on_one.detail == QStringLiteral("ÖLÇÜ"), QStringLiteral("sağ bölme ÖLÇÜ'yü anlatıyor"));
+
+    // ---- WHAT IT OPENS ON (TODOS U-01) ------------------------------------------
+    // Run by hand, so they count: a command typed or pressed is what a person reached
+    // for. A view change and an undo are not tools, and a script's lines are not by
+    // hand — the three things the list has to leave out.
+    const QString shots = qgetenv("PIRICAD_HELP_PROBE").size() > 1
+                              ? QString::fromLocal8Bit(qgetenv("PIRICAD_HELP_PROBE"))
+                              : QString();
+    if (!shots.isEmpty()) QDir().mkpath(shots);
+    const auto picture = [this, &shots](const char* name) {
+        if (!shots.isEmpty())
+            (void)palette_->grab().save(shots + QLatin1Char('/') + QLatin1String(name) +
+                                        QStringLiteral(".png"));
+    };
+
+    controller_->runLine(QStringLiteral("ÇİZGİ 0,0 10,0"), command::Origin::Gui);
+    controller_->runLine(QStringLiteral("DİKDÖRTGEN 20,0 30,10"), command::Origin::Gui);
+    controller_->runLine(QStringLiteral("YAKINLAŞ"), command::Origin::Gui);
+    controller_->runLine(QStringLiteral("GERİAL"), command::Origin::Gui);
+    controller_->runLines({QStringLiteral("DAİRE 50,0 5"), QStringLiteral("DAİRE 60,0 5")},
+                          QStringLiteral("betik"), command::Origin::Gui);
+    QCoreApplication::processEvents();
+
+    palette_->reveal();
+    const CommandPalette::Shown opened = palette_->shown();
+    (void)std::fprintf(stdout, "[yardim] açılış: başlıklar %s; ilk satırlar %s\n",
+                       opened.headingNames.join(QStringLiteral(" | ")).toUtf8().constData(),
+                       opened.first.join(QStringLiteral(", ")).toUtf8().constData());
+    check(!opened.headingNames.isEmpty() &&
+              opened.headingNames.front() == QStringLiteral("Son kullanılanlar"),
+          QStringLiteral("hiçbir şey yıldızlı değilken ilk başlık Son kullanılanlar"));
+    check(opened.first.size() >= 2 && opened.first.at(0) == QStringLiteral("DİKDÖRTGEN") &&
+              opened.first.at(1) == QStringLiteral("ÇİZGİ"),
+          QStringLiteral("en son çalıştırılan en üstte (%1)")
+              .arg(opened.first.join(QStringLiteral(", "))));
+    // DİKDÖRTGEN and ÇİZGİ from above, and YARDIM, which this probe ran by hand to open the
+    // page. Not YAKINLAŞ, GERİAL (not tools), not the batch's DAİRE (not by hand) and not
+    // SEMBOL, which the shell ran itself at start-up.
+    check(opened.top == 3 && !opened.first.contains(QStringLiteral("SEMBOL")),
+          QStringLiteral("yalnız elle başlatılan üç araç var (%1 satır: %2)")
+              .arg(opened.top)
+              .arg(opened.first.join(QStringLiteral(", "))));
+    {
+        QStringList ids;
+        for (const std::string& id : usage_->recents())
+            ids << QString::fromStdString(id);
+        (void)std::fprintf(stdout, "[yardim] son kullanılanlar (kimlik): %s\n",
+                           ids.join(QStringLiteral(", ")).toUtf8().constData());
+    }
+    picture("komut-paleti-son-kullanilan");
+
+    // Ctrl+D stars the row under the cursor; the caret stays in the field.
+    auto* field       = palette_->findChild<QLineEdit*>(QStringLiteral("paletteQuery"));
+    const auto ctrl_d = [field] {
+        QKeyEvent down(QEvent::KeyPress, Qt::Key_D, Qt::ControlModifier, QStringLiteral("d"));
+        QCoreApplication::sendEvent(field, &down);
+        QCoreApplication::processEvents();
+    };
+    check(field != nullptr, QStringLiteral("arama kutusu bulundu (yıldız için)"));
+    if (field != nullptr) {
+        ctrl_d();
+        const CommandPalette::Shown starred = palette_->shown();
+        check(!starred.headingNames.isEmpty() &&
+                  starred.headingNames.front() == QStringLiteral("Favoriler") &&
+                  starred.headingNames.contains(QStringLiteral("Son kullanılanlar")),
+              QStringLiteral("yıldızlayınca Favoriler üste çıktı, Son kullanılanlar altında (%1)")
+                  .arg(starred.headingNames.join(QStringLiteral(" | "))));
+        check(starred.starred.contains(QStringLiteral("DİKDÖRTGEN")),
+              QStringLiteral("yıldız DİKDÖRTGEN'de (%1)")
+                  .arg(starred.starred.join(QStringLiteral(", "))));
+        check(starred.selected == QStringLiteral("DİKDÖRTGEN"),
+              QStringLiteral("imleç yıldızlanan komutta kaldı (%1)").arg(starred.selected));
+        // `Favoriler` holds DİKDÖRTGEN and `Son kullanılanlar` holds ÇİZGİ and YARDIM: the
+        // starred command is not shown twice in the top part.
+        check(starred.top == 3, QStringLiteral("favori son kullanılanlarda iki kez listelenmedi "
+                                               "(%1 satır)")
+                                    .arg(starred.top));
+        picture("komut-paleti-favori");
+
+        // Typing a word is searching: the top part gives way to the ranked answers.
+        field->setText(QStringLiteral("çizgi"));
+        QCoreApplication::processEvents();
+        check(palette_->shown().top == 0 && palette_->shown().headings == 0,
+              QStringLiteral("arama sırasında Favoriler ve Son kullanılanlar yok"));
+        field->clear();
+        QCoreApplication::processEvents();
+
+        ctrl_d();
+        const CommandPalette::Shown cleared = palette_->shown();
+        check(cleared.starred.isEmpty() &&
+                  !cleared.headingNames.contains(QStringLiteral("Favoriler")),
+              QStringLiteral("ikinci Ctrl+D yıldızı kaldırdı"));
+    }
 
     palette_->hide();
     return failures;
@@ -10345,6 +10436,82 @@ int MainWindow::probeAnswerable()
         QCoreApplication::processEvents();
     }
 
+    // ---- A LENGTH TYPED WITH ITS UNIT AT A PROMPT (TODOS U-02) ---------------
+    //
+    // The unit tests prove the parser; this proves the SHELL uses it. The shell used to turn
+    // a typed answer into a number with its own `toDouble`, which knew no unit, no
+    // expression and — because `12,5` was taken for a coordinate first — no decimal comma.
+    // OFSET's PROMPT asks metres (its argument is millimetres, and the body multiplies what the
+    // prompt gives), so `5 m`, `500 cm`, `5000mm`, `(4m+100cm)` and `5,5 m` must arrive as 5 and
+    // 5.5 in the run's record — NOT as 5000, which the body would multiply again into five
+    // kilometres — and a unit that is no unit must leave the prompt open on the same question
+    // with the reason on the transcript.
+    {
+        struct Typed
+        {
+            const char* text;
+            double metres; ///< what the run must hold afterwards
+            bool accepted;
+        };
+        const Typed typed[] = {
+            {"5", 5.0, true},          {"5 m", 5.0, true},        {"500 cm", 5.0, true},
+            {"5000mm", 5.0, true},     {"(4m+100cm)", 5.0, true}, {"5,5 m", 5.5, true},
+            {"5xyz", 0.0, false},      {"(2m+50)", 0.0, false},
+        };
+        QAction* offset = nullptr;
+        for (QAction* candidate : findChildren<QAction*>())
+            if (candidate->property(kToolCommand).toString() == QStringLiteral("OFSET"))
+                offset = candidate;
+        check(offset != nullptr, QStringLiteral("OFSET için bir eylem var (birimli cevap)"));
+        for (const Typed& t : typed) {
+            if (offset == nullptr) break;
+            controller_->cancelInteractive();
+            runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-1,-1 41,31"));
+            QCoreApplication::processEvents();
+            offset->trigger();
+            QCoreApplication::processEvents();
+            const command::Session* live = controller_->session();
+            if (live == nullptr || !live->waiting()) {
+                check(false, QStringLiteral("OFSET mesafeyi sordu (%1)").arg(QString::fromUtf8(t.text)));
+                continue;
+            }
+            const QString asked = QString::fromStdString(live->prompt().message);
+
+            const qsizetype transcript_before = transcript_->toPlainText().size();
+            commandLine_->setText(QString::fromUtf8(t.text));
+            QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QCoreApplication::sendEvent(commandLine_, &enter);
+            QCoreApplication::processEvents();
+
+            const command::Session* after = controller_->session();
+            const bool still_asking =
+                after != nullptr && after->waiting() &&
+                QString::fromStdString(after->prompt().message) == asked;
+            if (t.accepted) {
+                const command::Value held =
+                    after != nullptr ? after->resolved().get("mesafe") : command::Value{};
+                const double value = held.kind() == command::Value::Kind::Int
+                                         ? static_cast<double>(held.as_int())
+                                         : held.as_number();
+                // The run's record holds OFSET's distance as a whole number (the parameter is an
+                // integer), so a fraction is only seen to within one: `5,5 m` read as the
+                // coordinate (5,5) would be 7 — the distance to that point — and fails here.
+                check(!still_asking && std::abs(value - t.metres) <= 0.5,
+                      QStringLiteral("OFSET mesafesine \"%1\" yazıldı: %2 m bekleniyordu, %3")
+                          .arg(QString::fromUtf8(t.text))
+                          .arg(t.metres)
+                          .arg(value));
+            } else {
+                check(still_asking &&
+                          transcript_->toPlainText().size() > transcript_before,
+                      QStringLiteral("OFSET mesafesine \"%1\" reddedildi, soru açık, sebep yazıldı")
+                          .arg(QString::fromUtf8(t.text)));
+            }
+        }
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+    }
+
     // ---- AND THE ROWS THAT DO NOT RUN A COMMAND AT ALL --------------------
     //
     // Two kinds looked dead for two different reasons, and a user reported both
@@ -10935,7 +11102,7 @@ void MainWindow::probeDialogs()
 void MainWindow::openCommandSearch(const QString& focus_on)
 {
     if (!palette_) {
-        palette_ = new CommandPalette(controller_->registry(), this);
+        palette_ = new CommandPalette(controller_->registry(), usage_, this);
         palette_->applyTheme(theme_);
         connect(palette_, &CommandPalette::chosen, this, [this](const QString& name) {
             // Straight to the prompt rather than straight to the bus: a command

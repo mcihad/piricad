@@ -1,0 +1,9 @@
+YANIT m
+YANIT 5 M
+YANIT 5 KM 5 Km 5 kM
+YANIT 5m5 5m.5 5.m 5 m .5 5 .m
+YANIT (5m 5m) ((5)m) (5)m 5(m) m5
+YANIT 5      m
+YANIT 5	cm
+YANIT @5m<5m @<5m @5m,5cm,5mm
+YANIT 5\ m

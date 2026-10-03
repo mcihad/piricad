@@ -312,6 +312,7 @@ PIRICAD_COMMAND(offset)
                 Param::integer("mesafe", Arity::optional(),
                                "Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse "
                                "işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri")
+                    .measured_in("mm")
                     .en("distance"),
                 Param::choice("kose", Arity::optional(),
                               {"kose", "keskin", "yuvarlak", "pah", "uc"},

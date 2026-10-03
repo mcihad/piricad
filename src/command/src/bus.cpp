@@ -275,23 +275,56 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         // The number is read by `evaluate_expression`, which is the one grammar
         // this project has (CLAUDE.md 5.11) — not a second numeric parse that
         // could disagree with it about what `1e3` means.
-        const auto numeric = [&t]() -> core::Result<double> {
-            if (t.kind == Token::Kind::Number) return t.a;
-            if (t.kind == Token::Kind::Text) return evaluate_expression(t.text);
+        //
+        // A LENGTH WITH ITS UNIT (`1250cm`, `12.5 m`, TODOS U-02) is worked out in the unit the
+        // PARAMETER is declared in — 12.5 for a distance in metres, 12500 for one in
+        // millimetres — and refused, by parameter, where it is declared in none: `sayi=5m`
+        // must not become 5. A quoted number takes the same road, so a script's "12.5 m" and a
+        // typed 12.5 m cannot read differently.
+        const auto numeric = [&t, &p, &spec]() -> core::Result<double> {
+            const std::optional<int> exponent = p.length_exponent();
+            const auto not_a_length            = [&](const std::string& typed) {
+                return core::err(ErrorCode::InvalidArgument,
+                                 "'" + spec.id + "': '" + p.name +
+                                     "' bir uzunluk değil" +
+                                     (p.unit.empty() ? std::string{} : " (birimi: " + p.unit + ")") +
+                                     "; '" + typed + "' yerine sayıyı birimsiz yazın.");
+            };
+            if (t.kind == Token::Kind::Number) {
+                if (!t.is_length) return t.a;
+                if (!exponent) return not_a_length(t.text);
+                auto q = evaluate_quantity(t.text, *exponent);
+                if (!q) return q.error();
+                return q.value().value;
+            }
+            if (t.kind == Token::Kind::Text) {
+                auto q = evaluate_quantity(t.text, exponent.value_or(0));
+                if (!q) return q.error();
+                if (q.value().is_length && !exponent) return not_a_length(t.text);
+                return q.value().value;
+            }
             return core::err(ErrorCode::ParseError, "sayı değil");
         };
 
         switch (p.kind) {
-        case ParamKind::Number:
-            if (auto n = numeric(); n) return Value::number(n.value());
+        case ParamKind::Number: {
+            auto n = numeric();
+            if (n) return Value::number(n.value());
+            // A unit written where none fits says so, by parameter; any other failure is the
+            // generic "expected a number" below.
+            if (n.error().code == ErrorCode::InvalidArgument) return n.error();
             break;
-        case ParamKind::Integer:
+        }
+        case ParamKind::Integer: {
             // Rounded by THE helper (core.md R20), which saturates rather than
             // leaving a huge typed number undefined.
-            if (auto n = numeric(); n) return Value::integer(core::mm_round(n.value()));
+            auto n = numeric();
+            if (n) return Value::integer(core::mm_round(n.value()));
+            if (n.error().code == ErrorCode::InvalidArgument) return n.error();
             break;
+        }
         case ParamKind::Bool: {
-            if (t.kind == Token::Kind::Number) return Value::boolean(t.a != 0.0);
+            if (t.kind == Token::Kind::Number && !t.is_length) return Value::boolean(t.a != 0.0);
             if (t.kind == Token::Kind::Word || t.kind == Token::Kind::Text) {
                 // A declared keyword, so it folds like one: `hayır` and its ASCII
                 // spelling `hayir` are the same word to a user and were not the
@@ -308,6 +341,9 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         case ParamKind::Text:
             if (t.kind == Token::Kind::Text) return Value::text(t.text);
             if (t.kind == Token::Kind::Word) return Value::text(t.word);
+            // `10m` or `5cm` handed to a text parameter is a name or a caption, not a length:
+            // a layer called `10m` keeps its letters.
+            if (t.kind == Token::Kind::Number && t.is_length) return Value::text(t.text);
             if (t.kind == Token::Kind::Number) {
                 // `ÖZNİTELİK ada_no 1 1234` must put "1234" in the cell, not
                 // "1234.000000". std::to_string on a double formats six decimals
@@ -326,7 +362,8 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
             }
             break;
         case ParamKind::Selection:
-            if (t.kind == Token::Kind::Number) return Value::ids({static_cast<std::int64_t>(t.a)});
+            if (t.kind == Token::Kind::Number && !t.is_length)
+                return Value::ids({static_cast<std::int64_t>(t.a)});
             break;
         case ParamKind::Point:
         case ParamKind::PointList: break;

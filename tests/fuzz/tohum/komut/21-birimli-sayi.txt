@@ -1,0 +1,9 @@
+OFSET 12.5 m
+OFSET mesafe=1250 cm nesneler=1
+OFSET mesafe=1250cm
+YANIT 1250cm,3000cm @50cm,2m @1250cm<45
+YANIT (2m+50cm) (2m+50) (2m*3m) (2/3m) (2m^2) (10m/50cm) (10m/4) -5cm
+YANIT 5xyz 5mm2 5 mm cm 5 m m 5.5.5m 1.2.3 2026.10.03 101A
+YANIT 99999999999999999999999km 0.0000000000000000001mm 1e3m
+YANIT (2^1000)km (0-(2^1000))mm 0.5m*(2^1000)
+YANIT 12,5 m 1.250,5 1,250.5 1,2,3 ,5 5, 1.250.000,5 m

@@ -135,6 +135,17 @@ Session::Session(Bus& bus, const CommandSpec& spec, std::unique_ptr<InputSource>
     if (const Args* preset = input_->preset()) resolved_ = *preset;
 }
 
+std::optional<int> prompt_length_exponent(const CommandSpec& spec, const Prompt& prompt)
+{
+    const auto param = std::ranges::find_if(
+        spec.params, [&prompt](const Param& q) { return q.name == prompt.param; });
+    if (param == spec.params.end()) return std::nullopt;
+    const std::optional<int> declared = param->length_exponent();
+    if (!declared) return std::nullopt;
+    if (param->kind == ParamKind::Integer && prompt.kind == ParamKind::Number) return 0;
+    return declared;
+}
+
 core::Status Session::amend(const std::string& name, Value v)
 {
     const auto p =

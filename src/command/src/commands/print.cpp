@@ -420,14 +420,17 @@ PIRICAD_COMMAND(print)
                     .en("paper"),
                 Param::integer("genislik", Arity::optional(),
                                "ozel kâğıdın eni, milimetre (dikey duruşta)")
+                    .measured_in("kâğıt mm")
                     .en("width"),
                 Param::integer("yukseklik", Arity::optional(),
                                "ozel kâğıdın boyu, milimetre (dikey duruşta)")
+                    .measured_in("kâğıt mm")
                     .en("height"),
                 Param::text("yon", Arity::optional(), "dikey ya da yatay").en("orientation"),
                 Param::integer("dpi", Arity::optional(), "Çözünürlük, inç başına nokta (72–4800)")
                     .en("dpi"),
                 Param::integer("kenar", Arity::optional(), "Dört yandaki kenar boşluğu, milimetre")
+                    .measured_in("kâğıt mm")
                     .en("margin"),
                 Param::text("baslik", Arity::optional(), "PDF belge başlığı").en("title"),
                 Param::text("yazar", Arity::optional(), "PDF yazar alanı").en("author"),
@@ -480,14 +483,17 @@ PIRICAD_COMMAND(print_profile)
                             "Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel; ekle için, varsayılan A4")
                     .en("paper"),
                 Param::integer("genislik", Arity::optional(), "ozel kâğıdın eni, milimetre")
+                    .measured_in("kâğıt mm")
                     .en("width"),
                 Param::integer("yukseklik", Arity::optional(), "ozel kâğıdın boyu, milimetre")
+                    .measured_in("kâğıt mm")
                     .en("height"),
                 Param::text("yon", Arity::optional(), "dikey ya da yatay; varsayılan dikey")
                     .en("orientation"),
                 Param::integer("dpi", Arity::optional(), "Çözünürlük; varsayılan 300").en("dpi"),
                 Param::integer("kenar", Arity::optional(),
                                "Kenar boşluğu, milimetre; varsayılan 10")
+                    .measured_in("kâğıt mm")
                     .en("margin"),
             },
         .undo    = UndoPolicy::None,

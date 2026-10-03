@@ -159,13 +159,16 @@ private:
                 ToolParam::integer("yukseklik",
                                    "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm",
                                    0, 0, 100000000)
+                    .measured_in("mm")
                     .en("height"),
                 ToolParam::integer("bosluk",
                                    "Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı", 0, 0,
                                    100000000)
+                    .measured_in("mm")
                     .en("gap"),
                 ToolParam::integer("enaz", "Bundan kısa kenarlara yazı yazılmaz, milimetre", 0, 0,
                                    1000000000)
+                    .measured_in("mm")
                     .en("min_length"),
                 ToolParam::boolean("bagla",
                                    "Yazıyı kenarına bağla: kenar taşınınca yazı izler, uzunluk "

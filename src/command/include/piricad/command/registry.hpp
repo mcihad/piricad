@@ -107,6 +107,58 @@ struct SearchMatch
 /// `Kaydır`, comes right under it and says so.
 SearchMatch search_match(const CommandSpec& spec, std::string_view word);
 
+/// THE SEARCH A PERSON TYPES A SENTENCE INTO (TODOS U-01, "doğal dil araması").
+///
+/// `search_match` answers a WORD, as the prompt does: the whole text has to sit inside
+/// one name. A person who has not learned the names types what they want instead —
+/// `çizgiyi paralel kaydır`, `alanı hesapla`, `köşeyi yuvarla` — and the whole sentence
+/// is inside nothing, so the palette answered "no match" at the one moment it is the
+/// only help they have.
+///
+/// ORDER: the whole text first, exactly as `search_match` ranks it (tiers 0–6), so
+/// nothing that a word found yesterday is found lower today. Only when the text as a
+/// whole matches nothing is it taken apart:
+///
+///  - into words, folded as every name is (CLAUDE.md 5.6), without the particles and
+///    verbs that every request carries and no command is named for (`ve`, `için`,
+///    `yap`, `et`, `the`, `want`…);
+///  - each word is looked for among the command's names, the names other programs know
+///    it by, its title and summary, and its parameters' names — a Turkish word with its
+///    case and plural endings (`çizgiyi`, `alanlarını`), a word begun (`paral`), a stem
+///    whose last consonant softened (`uzunluğu` is UZUNLUK), or a name inside a longer
+///    one (`alan` in ALANİFRAZ);
+///  - a command answers when at least half the words found something, and the more of
+///    them and the nearer to its name, the better. Tiers 7 and up; `known` is set when a
+///    word was found only through another program's name, so the row can say whose.
+///
+/// There is no synonym table to keep in step with the registry (CLAUDE.md 5.10): what a
+/// command answers to is what it declares.
+SearchMatch search_query(const CommandSpec& spec, std::string_view query);
+
+/// THE LISTS THE COMMAND SEARCH OPENS ON, before a word is typed (TODOS U-01).
+///
+/// A palette that opens on ninety-eight commands in category order answers "what is
+/// there" and makes the reader find, every time, the four they use all day. It opens
+/// on those instead: the ones they starred, then the ones they ran last, and then
+/// the whole reference as before. The lists are plain ids — never a name, which a
+/// translation or an alias may change — and they are USER STATE, not document state:
+/// like the window layout they are kept per machine by the shell, not in the
+/// drawing, and no command reads them.
+///
+/// `recent` is most-recent-first and holds each id once. `note_use` moves `id` to
+/// the front and cuts the list to `limit`.
+void note_use(std::vector<std::string>& recent, std::string_view id, std::size_t limit);
+
+/// Adds `id` to `set` when it is not there and removes it when it is; true when it is
+/// a member afterwards. Order is the order of adding.
+bool toggle_member(std::vector<std::string>& set, std::string_view id);
+
+/// Whether a finished command is one a person would look for again. A view change
+/// (ZOOM, PAN — the `Transparent` commands) is typed or pressed a hundred times a
+/// session and is never what is being looked for, and undoing is not a tool; either
+/// would push the commands that are out of a short list.
+bool worth_remembering(const CommandSpec& spec);
+
 /// The process-wide registry, populated once by register_builtin_commands().
 Registry& registry();
 

@@ -80,6 +80,7 @@ class LayerPanel;
 class XrefPanel;
 class MapCanvas;
 class CommandPalette;
+class CommandUsage;
 class AttributePanel;
 class Banner;
 class Button;
@@ -1020,6 +1021,7 @@ private:
     /// answer; empty when none is (`ScenePicker`, tools_panel.hpp).
     std::function<void(std::optional<QString>)> pendingPick_;
     CommandPalette* palette_ = nullptr;
+    CommandUsage* usage_     = nullptr; ///< starred and recent commands, behind the palette
     CommandLine* commandLine_{nullptr};
 
     /// The right end of the tab row: the command search and the user chip.

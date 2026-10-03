@@ -311,6 +311,69 @@ sağdan birleşir: `(2^3^2)` sonucu `512`.
 
 Ondalık ayırıcı her zaman noktadır ve makinenin bölge ayarından etkilenmez.
 
+### Birimli sayılar
+
+Uzunluk isteyen her yere sayıyı birimiyle yazabilirsiniz: `mm`, `cm`, `dm`, `m`, `km`.
+Birim sayıya bitişik ya da bir boşlukla ayrı yazılır, büyük küçük harf fark etmez. Aşağıdaki
+yedi satır aynı komuttur; `mesafe` milimetredir, yani hepsi `mesafe=1000` yazar:
+
+```text
+OFSET nesneler=1 mesafe=1000
+OFSET nesneler=1 mesafe=1m
+OFSET nesneler=1 mesafe=1 m
+OFSET nesneler=1 mesafe=100cm
+OFSET nesneler=1 mesafe=1000mm
+OFSET nesneler=1 mesafe=(50cm+500mm)
+OFSET nesneler=1 mesafe="1 m"
+```
+
+Değer, parametrenin **bildirdiği birime** çevrilir: metre isteyen bir parametrede `1250cm`
+12.5, milimetre isteyen birinde 12500 olur. Çevrilen değer günlüğe ve betiğe düz sayı olarak
+yazılır; yani bir komutun kaydı hangi yazımla verildiğinden bağımsızdır ve tekrar oynatmak
+için birim bilmek gerekmez. Aynı büyüklüğün farklı yazımları **bire bir aynı sayıdır**
+(`125.3mm` ile `0.1253 m` aynı sayıdır): birim, yazdığınız ondalık sayının üssünü kaydırır,
+bir sabitle çarpmaz.
+
+| Yazdığınız | Sonuç |
+|---|---|
+| `12.5 m`, `1250 cm`, `12500mm`, `0.0125km` | aynı uzunluk |
+| `(2m+50cm)` | 2.5 m |
+| `(3m*2)`, `(10m/4)` | 6 m, 2.5 m |
+| `(10m/50cm)` | 20 (iki uzunluğun oranı birimsizdir) |
+| `1250cm,3000cm`, `@50cm,2m`, `@1250cm<45` | koordinat bileşenleri; her zaman metre |
+| `(2m+50)` | **hata**: uzunluğa birimsiz sayı eklenmez, birimi her sayıya yazın |
+| `(2m*3m)` | **hata**: alan birimi desteklenmez |
+| `5xyz` | **hata**: bilinmeyen birim `xyz` |
+| `sayi=5m` | **hata**: `sayi` bir uzunluk değil, birimsiz yazın |
+
+Açılar birim almaz (`@100<45g`'deki `g` grad'dır, uzunluk değil). Bir komutun hangi parametresinin
+uzunluk olduğu, [komut referansında](referans.md) parametrenin yanındaki `[m]` ya da `[mm]`
+işaretidir; işareti olmayan parametre bir uzunluk değildir ya da birimini henüz bildirmemiştir
+ve birimli sayıyı adıyla reddeder. Metin isteyen bir parametre yazdığınızı olduğu gibi tutar:
+`KATMAN ad=10m` adı `10m` olan bir katman açar.
+
+Bir sayı **sorulduğunda** (komut size `Paralel mesafesi (metre)` ya da `Yarıçap (m)` sorarken)
+aynı yazımlar geçerlidir ve **sorunun parantez içinde söylediği birime** çevrilir: `5 m`,
+`500 cm`, `5000mm` ve `(4m+100cm)` aynı cevaptır. Bu, aynı parametrenin satırdaki birimiyle aynı
+olmak zorunda değildir: `OFSET`'in satırdaki `mesafe=` milimetredir ama istemi metre sorar, ve
+her ikisinde de `1 m` bir metredir. Uzunluk sormayan bir istemde (adet, açı, ölçek) birim
+yazarsanız komut "bu istem birimli sayı almıyor" der ve soruyu açık tutar.
+
+Tek bir sayı soran istemde ondalık ayırıcı **virgül** de olabilir: `12,5` 12.5'tur, `1.250,5` ve
+`1,250.5` 1250.5'tur (sonda olan ayraç ondalıktır). İki sınır var:
+
+- Komut satırında `12,5` hâlâ bir koordinattır.
+- Tuvale tıklayarak da cevaplanan mesafe istemlerinde (Ofset mesafesi, yarıçap…) **tek başına**
+  yazılan `a,b` hâlâ bir koordinattır: cevap, o noktaya olan uzaklıktır. Orada ondalık için nokta
+  kullanın ya da birim ekleyin (`5,5 m` bir koordinat değil, beş buçuk metredir).
+
+Boşluklu birimde (`12.5 m`) birim bir önceki sayıya aittir; koordinatın içinde bitişik yazın:
+`12.5m,30`.
+
+Ondalık nokta kuralı değişmedi, ama bir sayı artık sessizce kesilmez: `1.2.3` eskiden 1.2
+okunup gerisi atılıyordu, şimdi sayı değildir ve bir ad ya da tarih olarak kalır
+(`ÖZNİTELİK tarih 2026.10.03`).
+
 ## Anahtar=değer argümanları
 
 Parametreleri adıyla verebilirsiniz; sıra önemli değildir:

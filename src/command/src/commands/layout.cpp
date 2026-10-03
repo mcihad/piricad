@@ -1834,6 +1834,7 @@ PIRICAD_COMMAND(layout_item)
                     .en("grid"),
                 Param::integer_range("izgara_aralik", Arity::optional(), 0, 1000000000,
                                      "Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir")
+                    .measured_in("mm")
                     .en("grid_spacing"),
                 Param::boolean("kilit", Arity::optional(), "Öğeyi taşımaya kapatır").en("locked"),
                 Param::boolean("cerceve", Arity::optional(), "Öğenin çevresine çerçeve çizer")

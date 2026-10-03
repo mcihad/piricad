@@ -145,6 +145,20 @@ Param Param::integer(std::string name, Arity a, std::string help)
     return Param{std::move(name), ParamKind::Integer, a, std::move(help)};
 }
 
+std::optional<int> Param::length_exponent() const
+{
+    if (kind != ParamKind::Number && kind != ParamKind::Integer) return std::nullopt;
+    // The words the declarations use: `m`, `mm`, and `kâğıt mm` for a size on the sheet.
+    // Folded, so `KAĞIT MM` and `kağıt mm` are the same declaration.
+    const std::string folded = core::turkish_fold_key(unit);
+    if (folded == "M") return 0;
+    if (folded == "MM") return -3;
+    // `kâğıt mm`: a size on the sheet, whichever way the first word is spelled (the circumflex
+    // is not one of the letters the fold maps).
+    if (folded.size() > 3 && folded.front() == 'K' && folded.ends_with(" MM")) return -3;
+    return std::nullopt;
+}
+
 Param Param::text(std::string name, Arity a, std::string help)
 {
     return Param{std::move(name), ParamKind::Text, a, std::move(help)};

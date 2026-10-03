@@ -240,6 +240,7 @@ PIRICAD_COMMAND(contour)
             {
                 Param::integer("aralik", Arity::optional(),
                                "Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m)")
+                    .measured_in("mm")
                     .en("interval"),
                 Param::text("katman", Arity::optional(),
                             "Eğrilerin çizileceği katman; varsayılan ESYUKSELTI")

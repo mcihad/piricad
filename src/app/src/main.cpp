@@ -11,6 +11,7 @@
 #include "piricad/app/map_canvas.hpp"
 #include "piricad/app/panels.hpp"
 #include "piricad/app/print_dialog.hpp"
+#include "piricad/app/probe_env.hpp"
 #include "piricad/app/provider_dialog.hpp"
 #include "piricad/app/ribbon.hpp"
 #include "piricad/app/settings_dialog.hpp"
@@ -366,25 +367,17 @@ int main(int argc, char** argv)
     //
     // Set BEFORE the window is built: the print service resolves its path once,
     // in its constructor.
-    for (const char* probe : {
-             "PIRICAD_PRINT_PROBE",     "PIRICAD_LAYOUT_PROBE",  "PIRICAD_SHOT_DIR",
-             "PIRICAD_DESIGNER_PROBE",  "PIRICAD_HELP_PROBE",    "PIRICAD_MENU_PROBE",
-             "PIRICAD_REACH_PROBE",     "PIRICAD_ANSWER_PROBE",  "PIRICAD_FLYOUT_PROBE",
-             "PIRICAD_REALMOUSE_PROBE", "PIRICAD_STRIP_PROBE",   "PIRICAD_WIDGETS_PROBE",
-             "PIRICAD_DIALOG_PROBE",    "PIRICAD_HAND_PROBE",    "PIRICAD_LAYER_PROBE",
-             "PIRICAD_PICK_PROBE",      "PIRICAD_TABLE_PROBE",   "PIRICAD_SCHEMA_PROBE",
-             "PIRICAD_CHAT_PROBE",      "PIRICAD_TOOL_PROBE",    "PIRICAD_NORMAL_PROBE",
-             "PIRICAD_FAMILY_PROBE",    "PIRICAD_BUDGET_PROBE",  "PIRICAD_CLIP_PROBE",
-             "PIRICAD_PROBE_LINE",      "PIRICAD_OSCLICK_PROBE", "PIRICAD_ACCESS_PROBE",
-             "PIRICAD_PYTHON_PROBE",    "PIRICAD_FIT_PROBE",     "PIRICAD_RIBBON_SHEET",
-             "PIRICAD_TOOL_DRIVE",      "PIRICAD_REPEAT_PROBE",  "PIRICAD_VIEW_PROBE",
-             "PIRICAD_OFFER_PROBE",     "PIRICAD_PROMPT_PROBE",  "PIRICAD_WINDOW_SHOT",
-             "PIRICAD_THEME_PROBE",
-         })
-        if (qEnvironmentVariableIsSet(probe)) {
-            QStandardPaths::setTestModeEnabled(true);
-            break;
-        }
+    if (piricad::app::probe_environment()) {
+        QStandardPaths::setTestModeEnabled(true);
+        // AND THE SETTINGS FILE, WHICH TEST MODE DOES NOT MOVE ON LINUX. Qt resolves
+        // `QSettings`' directory from `XDG_CONFIG_HOME` on its own, so every probe
+        // wrote its window geometry — an 800 px offscreen window — and its dock
+        // layout over the person's real `~/.config/PiriCAD/PiriCAD.conf`, and the
+        // next ordinary start opened a postage stamp. Pointed at the test-mode config
+        // directory, which is where the rest of a probe's state already goes.
+        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope,
+                           QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation));
+    }
 
     piricad::app::MainWindow window;
     window.show();
@@ -4483,6 +4476,18 @@ int main(int argc, char** argv)
                     window.canvas()->zoomBy(times);
                     QCoreApplication::processEvents();
                 }
+            }
+
+            // PIRICAD_FRAME_PENCERE="x1,y1 x2,y2" frames a window of the drawing, in
+            // the drawing's own units, the way the YAKINLAŞ command does. A script run
+            // at start-up cannot do it: the view is fitted to the drawing once the
+            // script ends, and a large drawing whose interesting part is a corner
+            // cannot be reached by a magnification around its centre. Same category
+            // as the hooks around it — developer tooling, not a feature.
+            if (const QByteArray frame = qgetenv("PIRICAD_FRAME_PENCERE"); !frame.isEmpty()) {
+                window.runScriptLine(QStringLiteral("YAKINLAŞ PENCERE pencere=") +
+                                     QString::fromLocal8Bit(frame));
+                QCoreApplication::processEvents();
             }
 
             // PIRICAD_ARM presses one tool-column button before the shot, so a

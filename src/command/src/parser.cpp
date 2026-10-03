@@ -5,6 +5,7 @@
 
 #include "piricad/core/text.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -62,6 +63,28 @@ struct ExprParser
     bool failed{false};
     std::string why;
 
+    /// LENGTH UNITS ARE OPT-IN (TODOS U-02). The command line's numbers and coordinates ask for
+    /// them; the filter predicate does not, because a column's number has no unit to be
+    /// converted to and `ada > 5m` would otherwise mean something the table never said.
+    bool allow_units{false};
+
+    /// The power of ten, in metres, of the unit the answer is wanted in: 0 metres, -3
+    /// millimetres. A literal's unit shifts its DECIMAL exponent by the difference, so the
+    /// same quantity written two ways reads as the same double (`1250 cm` and `12.5 m` are
+    /// both 12.5e0), which a multiplication by 0.01 does not promise.
+    int target_exp{0};
+
+    /// What the last value computed IS: 0 a plain number, 1 a length. Tracked so that `2m+50`
+    /// and `2m*3m` are refused instead of computed in a unit nobody named.
+    int dim{0};
+    bool used_unit{false}; ///< some literal carried a unit
+
+    void fail(std::string reason)
+    {
+        failed = true;
+        why    = std::move(reason);
+    }
+
     void skip()
     {
         while (i < s.size() && is_space(s[i]))
@@ -83,60 +106,88 @@ struct ExprParser
     double additive()
     {
         double v = multiplicative();
+        const int d = dim;
         while (!failed) {
             skip();
-            if (i < s.size() && s[i] == '+') {
-                ++i;
-                v += multiplicative();
-            } else if (i < s.size() && s[i] == '-') {
-                ++i;
-                v -= multiplicative();
-            } else
-                break;
+            const char op = i < s.size() ? s[i] : '\0';
+            if (op != '+' && op != '-') break;
+            ++i;
+            const double w = multiplicative();
+            if (failed) return 0.0;
+            if (dim != d) {
+                fail("uzunluk ile birimsiz sayı toplanamaz; birimi her sayıya yazın, örneğin "
+                     "(2m+50cm)");
+                return 0.0;
+            }
+            v = op == '+' ? v + w : v - w;
         }
+        dim = d;
         return v;
     }
 
     double multiplicative()
     {
         double v = power();
+        int d    = dim;
         while (!failed) {
             skip();
-            if (i < s.size() && s[i] == '*') {
-                ++i;
-                v *= power();
-            } else if (i < s.size() && s[i] == '/') {
-                ++i;
-                const double d = power();
-                if (d == 0.0) {
-                    failed = true;
-                    why    = "sıfıra bölme";
+            const char op = i < s.size() ? s[i] : '\0';
+            if (op != '*' && op != '/' && op != '%') break;
+            ++i;
+            const double w = power();
+            if (failed) return 0.0;
+            if (op == '*') {
+                if (d == 1 && dim == 1) {
+                    fail("uzunluk ile uzunluk çarpılamaz; alan birimi desteklenmez");
                     return 0.0;
                 }
-                v /= d;
-            } else if (i < s.size() && s[i] == '%') {
-                ++i;
-                const double d = power();
-                if (d == 0.0) {
-                    failed = true;
-                    why    = "sıfıra göre mod";
+                d += dim;
+                v *= w;
+            } else if (op == '/') {
+                if (w == 0.0) {
+                    fail("sıfıra bölme");
                     return 0.0;
                 }
-                v = std::fmod(v, d);
-            } else
-                break;
+                if (dim == 1) {
+                    if (d != 1) {
+                        fail("birimsiz sayı uzunluğa bölünemez");
+                        return 0.0;
+                    }
+                    d = 0; // a length over a length is a ratio: the unit cancels
+                }
+                v /= w;
+            } else {
+                if (w == 0.0) {
+                    fail("sıfıra göre mod");
+                    return 0.0;
+                }
+                if (dim != d) {
+                    fail("uzunluk ile birimsiz sayının kalanı alınamaz");
+                    return 0.0;
+                }
+                v = std::fmod(v, w);
+            }
         }
+        dim = d;
         return v;
     }
 
     double power()
     {
         const double base = unary();
+        const int db      = dim;
         skip();
         if (!failed && i < s.size() && s[i] == '^') {
             ++i;
-            return std::pow(base, power()); // right-associative
+            const double exponent = power(); // right-associative
+            if (!failed && (db == 1 || dim == 1)) {
+                fail("uzunluk bir üsse yükseltilemez ve üs olamaz");
+                return 0.0;
+            }
+            dim = 0;
+            return std::pow(base, exponent);
         }
+        dim = db;
         return base;
     }
 
@@ -154,9 +205,44 @@ struct ExprParser
         return primary();
     }
 
+    /// The unit word after a number — `m`, `cm` — as the power of ten it stands for, and the
+    /// position after it. Spaces before it are allowed (`12.5 m`); letters stuck to a digit or
+    /// to another letter are not a unit and are refused by name.
+    bool unit_after_number(int& exponent)
+    {
+        std::size_t j = i;
+        while (j < s.size() && is_space(s[j]))
+            ++j;
+        std::size_t w = j;
+        while (w < s.size() && ((s[w] >= 'a' && s[w] <= 'z') || (s[w] >= 'A' && s[w] <= 'Z')))
+            ++w;
+        if (w == j) return false;
+
+        std::string word;
+        for (std::size_t k = j; k < w; ++k)
+            word += static_cast<char>(s[k] | 0x20); // ASCII letters only: lower-cased, no locale
+        if (word == "mm")
+            exponent = -3;
+        else if (word == "cm")
+            exponent = -2;
+        else if (word == "dm")
+            exponent = -1;
+        else if (word == "m")
+            exponent = 0;
+        else if (word == "km")
+            exponent = 3;
+        else {
+            fail("bilinmeyen birim '" + word + "' (mm, cm, dm, m ya da km yazın)");
+            return false;
+        }
+        i = w;
+        return true;
+    }
+
     double primary()
     {
         skip();
+        dim = 0;
         if (i >= s.size()) {
             failed = true;
             why    = "ifade beklenmedik yerde bitti";
@@ -225,7 +311,25 @@ struct ExprParser
             why    = "sayı bekleniyordu (konum " + std::to_string(i) + ")";
             return 0.0;
         }
-        return std::strtod(std::string(s.substr(start, i - start)).c_str(), nullptr);
+        const std::string literal(s.substr(start, i - start));
+
+        // `1.2.3` used to be read as 1.2 and the rest dropped without a word — a date, a
+        // version or a sheet number typed as a value became a different number. It is not a
+        // number, and the caller that falls back to a word now gets to.
+        if (std::ranges::count(literal, '.') > 1) {
+            fail("geçersiz sayı '" + literal + "' (birden çok ondalık nokta)");
+            return 0.0;
+        }
+
+        int unit_exp = 0;
+        if (allow_units && unit_after_number(unit_exp)) {
+            used_unit = true;
+            dim       = 1;
+            return std::strtod((literal + "e" + std::to_string(unit_exp - target_exp)).c_str(),
+                               nullptr);
+        }
+        if (failed) return 0.0;
+        return std::strtod(literal.c_str(), nullptr);
     }
 };
 
@@ -325,6 +429,7 @@ core::Result<Token> detail::classify(std::string_view raw, int depth)
             }
 
             ExprParser pa(a);
+            pa.allow_units = true; // the distance is a length: `@12.5m<45`
             const double d = pa.parse();
             ExprParser pb(b);
             const double ang = pb.parse();
@@ -339,8 +444,9 @@ core::Result<Token> detail::classify(std::string_view raw, int depth)
 
         if (split_pair(body, a, b)) {
             ExprParser pa(a);
-            const double dx = pa.parse();
             ExprParser pb(b);
+            pa.allow_units = pb.allow_units = true; // `@1250cm,30`: metres, whatever was written
+            const double dx = pa.parse();
             const double dy = pb.parse();
             if (pa.failed) return err(ErrorCode::ParseError, "Göreli dx: " + pa.why);
             if (pb.failed) return err(ErrorCode::ParseError, "Göreli dy: " + pb.why);
@@ -359,8 +465,9 @@ core::Result<Token> detail::classify(std::string_view raw, int depth)
         std::string_view a, b;
         if (split_pair(raw, a, b)) {
             ExprParser pa(a);
-            const double x = pa.parse();
             ExprParser pb(b);
+            pa.allow_units = pb.allow_units = true;
+            const double x = pa.parse();
             const double y = pb.parse();
             if (pa.failed) return err(ErrorCode::ParseError, "X koordinatı: " + pa.why);
             if (pb.failed) return err(ErrorCode::ParseError, "Y koordinatı: " + pb.why);
@@ -378,10 +485,15 @@ core::Result<Token> detail::classify(std::string_view raw, int depth)
             (c >= '0' && c <= '9') || c == '-' || c == '+' || c == '.' || c == '(';
         if (numeric_start) {
             ExprParser p(raw);
+            p.allow_units  = true;
             const double v = p.parse();
             if (!p.failed) {
                 t.kind = Token::Kind::Number;
-                t.a    = v;
+                t.a    = v; // metres when a unit was written, as typed when not
+                if (p.used_unit && p.dim == 1) {
+                    t.is_length = true;
+                    t.text      = std::string(raw); // worked out again in the parameter's unit
+                }
                 return t;
             }
         }
@@ -698,6 +810,56 @@ core::Result<double> evaluate_expression(std::string_view expr)
     return v;
 }
 
+core::Result<Quantity> evaluate_quantity(std::string_view expr, int target_exp)
+{
+    ExprParser p(expr);
+    p.allow_units = true;
+    p.target_exp  = target_exp;
+    const double v = p.parse();
+    if (p.failed)
+        return err(ErrorCode::ParseError, "'" + std::string(expr) + "' ifadesi: " + p.why);
+    return Quantity{v, p.used_unit && p.dim == 1};
+}
+
+core::Result<double> evaluate_answer(std::string_view text, std::optional<int> length_exp)
+{
+    std::string t(text);
+    while (!t.empty() && is_space(t.back()))
+        t.pop_back();
+    while (!t.empty() && is_space(t.front()))
+        t.erase(t.begin());
+
+    // THE DECIMAL COMMA, which a Turkish keyboard types and which only a prompt can take
+    // (the line's grammar needs the comma for coordinates). When both separators are there
+    // the one that comes LAST is the decimal one and the other groups thousands: `1.250,5`
+    // and `1,250.5` are both 1250.5. Several commas and no dot is not a number.
+    const std::size_t dot   = t.rfind('.');
+    const std::size_t comma = t.rfind(',');
+    if (comma != std::string::npos) {
+        if (dot != std::string::npos && dot > comma) {
+            std::erase(t, ',');
+        } else if (dot != std::string::npos) {
+            std::erase(t, '.');
+            std::ranges::replace(t, ',', '.');
+        } else if (std::ranges::count(t, ',') > 1) {
+            return err(ErrorCode::ParseError, "'" + t + "' sayısında birden çok virgül var.");
+        } else {
+            std::ranges::replace(t, ',', '.');
+        }
+    }
+
+    ExprParser p(t);
+    p.allow_units = true;
+    p.target_exp  = length_exp.value_or(0);
+    const double v = p.parse();
+    if (p.failed) return err(ErrorCode::ParseError, "'" + std::string(text) + "' okunamadı: " + p.why);
+    if (p.used_unit && p.dim == 1 && !length_exp)
+        return err(ErrorCode::InvalidArgument,
+                   "Bu istem birimli sayı almıyor; '" + std::string(text) +
+                       "' yerine sayıyı birimsiz yazın.");
+    return v;
+}
+
 core::Result<ParsedLine> parse_line(std::string_view line)
 {
     ParsedLine out;
@@ -779,6 +941,41 @@ core::Result<ParsedLine> parse_line(std::string_view line)
     }
 
     if (raw.empty()) return err(ErrorCode::ParseError, "Boş komut satırı.");
+
+    // A UNIT WRITTEN AFTER A SPACE belongs to the number before it: `12.5 m` is `12.5m` and
+    // `mesafe=1250 cm` is `mesafe=1250cm` (TODOS U-02). Only an unquoted number followed by an
+    // unquoted unit word, and never the command word itself, so a name or a value that merely
+    // is "m" keeps being one.
+    for (std::size_t k = 1; k + 1 < raw.size();) {
+        const auto ends_in_number = [](const std::string& text) {
+            const std::size_t eq = text.rfind('=');
+            const std::string_view tail =
+                std::string_view(text).substr(eq == std::string::npos ? 0 : eq + 1);
+            if (tail.empty() || !(tail.back() >= '0' && tail.back() <= '9')) return false;
+            std::size_t dots = 0, digits = 0;
+            for (std::size_t n = (tail.front() == '-' || tail.front() == '+') ? 1 : 0;
+                 n < tail.size(); ++n) {
+                if (tail[n] == '.') ++dots;
+                else if (tail[n] >= '0' && tail[n] <= '9') ++digits;
+                else return false;
+            }
+            return dots <= 1 && digits > 0;
+        };
+        const auto is_unit = [](const std::string& text) {
+            std::string low;
+            for (const char c : text)
+                low += static_cast<char>(c | 0x20);
+            return text.size() <= 2 && (low == "mm" || low == "cm" || low == "dm" || low == "m" ||
+                                        low == "km");
+        };
+        if (raw[k].quote_at == std::string::npos && raw[k + 1].quote_at == std::string::npos &&
+            ends_in_number(raw[k].text) && is_unit(raw[k + 1].text)) {
+            raw[k].text += raw[k + 1].text;
+            raw.erase(raw.begin() + static_cast<std::ptrdiff_t>(k) + 1);
+            continue;
+        }
+        ++k;
+    }
 
     out.command = raw.front().text;
     out.tokens.reserve(raw.size() - 1);

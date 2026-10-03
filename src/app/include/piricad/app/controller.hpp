@@ -399,6 +399,13 @@ signals:
     /// without a prompt cannot re-arm itself into a loop.
     void interactiveFinished(const QString& id, bool mutated, bool dismissed);
 
+    /// A person asked for a command — typed it, pressed its button, chose it in the
+    /// search — and it is a tool (`command::worth_remembering`). The id, before the
+    /// command has run: a command that parks on a prompt or is cancelled was still
+    /// the one reached for. Never emitted for a batch, a script, an agent or the shell's
+    /// own set-up commands, which go to the bus without passing this door.
+    void commandReached(const QString& id);
+
     /// A command FINISHED — typed, pressed, run by a script or by an agent —
     /// with its id and its structured report as JSON text (`Context::report`;
     /// `null` when it has none). How the shell follows an edit that spans

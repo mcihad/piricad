@@ -381,10 +381,12 @@ PIRICAD_COMMAND(label)
                             "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'")
                     .en("target_layer"),
                 Param::integer("yukseklik", Arity::optional(), "Yazı yüksekliği, zemin milimetresi")
+                    .measured_in("mm")
                     .en("height"),
                 Param::integer("kaydirma", Arity::optional(),
                                "Nesnenin ortasından dikey kaydırma, zemin milimetresi; "
                                "artı yukarı")
+                    .measured_in("mm")
                     .en("offset"),
                 Param::boolean("bagla", Arity::optional(),
                                "Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu "

@@ -679,6 +679,7 @@ PIRICAD_COMMAND(text)
                 Param::text("yazi", Arity::exactly(1), "Yazılacak metin").en("text"),
                 Param::integer("yukseklik", Arity::optional(),
                                "Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı")
+                    .measured_in("mm")
                     .en("height"),
                 // A point list with optional arity, because Param::point takes no
                 // Arity and is therefore always required — and a mandatory end
@@ -741,6 +742,7 @@ PIRICAD_COMMAND(edittext)
                     .en("text"),
                 Param::integer("yukseklik", Arity::optional(),
                                "Yeni yükseklik, zeminde milimetre; verilmezse değişmez")
+                    .measured_in("mm")
                     .en("height"),
                 Param::choice("hizalama", Arity::optional(), anchor_words(),
                               "Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez")

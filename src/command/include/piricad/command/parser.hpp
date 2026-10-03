@@ -94,6 +94,13 @@ struct Token
     /// argument becomes (`semt(S,45g,100)`), because they are the same angle
     /// written in the same two ways and must not acquire two readings.
     std::optional<core::AngleUnit> angle_unit;
+
+    /// A NUMBER THAT WAS WRITTEN WITH A LENGTH UNIT — `1250cm`, `12.5 m`, `(2m+50cm)` — and
+    /// so is not a bare number any more (TODOS U-02). `a` holds it in METRES, which is what
+    /// every coordinate and every client that ignores units wants; `text` holds the
+    /// expression as typed, because the unit a PARAMETER is declared in is only known at
+    /// binding and the value is worked out again, exactly, in that unit (`Param::length_exponent`).
+    bool is_length{false};
 };
 
 struct ParsedLine
@@ -109,6 +116,43 @@ core::Result<ParsedLine> parse_line(std::string_view line);
 /// Evaluates an arithmetic expression: + - * / % ^, parentheses, unary minus.
 /// Locale-independent. Backs the CLI's `@(100*3),0` form (§3).
 core::Result<double> evaluate_expression(std::string_view expr);
+
+/// WHAT AN EXPRESSION WITH LENGTH UNITS CAME OUT AS (TODOS U-02): the number, and whether a unit
+/// was written in it — so a caller can refuse a unit where its parameter is no length.
+struct Quantity
+{
+    double value{0.0}; ///< in the unit the caller asked `evaluate_quantity` for
+    bool is_length{
+        false}; ///< a unit was written and did not cancel (a ratio of two lengths has none)
+};
+
+/// A NUMBER WITH A LENGTH UNIT, in the unit the caller wants it in (TODOS U-02).
+///
+/// `12.5 m`, `1250 cm`, `12500mm` and `0.0125 km` are one quantity and come out as one
+/// double, BIT FOR BIT: the unit is applied as a shift of the decimal exponent of the
+/// literal that was typed (`125.3 mm` is read as `125.3e-3`), never as a multiplication
+/// that could land one ulp from what `0.1253` reads as. Units are `mm cm dm m km`, with or
+/// without a space, and may be mixed inside an expression (`(2m+50cm)`), where they are
+/// checked as quantities and not as numbers: a length plus a bare number, a length times a
+/// length, and a length to a power are refused with a sentence rather than computed.
+///
+/// `target_exp` is the power of ten, in metres, of the unit the answer is wanted in — 0
+/// for metres, -3 for millimetres (`Param::length_exponent`). A number written with no unit
+/// is returned as typed, in whatever unit the caller reads, exactly as before: this changes
+/// nothing for the numbers that were already valid.
+core::Result<Quantity> evaluate_quantity(std::string_view expr, int target_exp = 0);
+
+/// What a person typed at a prompt that asks for a number, as that number, in the unit the
+/// parameter is declared in (`Param::length_exponent`; nothing for a parameter that is no
+/// length). The one road a typed answer takes, so that the prompt and the first line of a
+/// command read `1250 cm` alike (CLAUDE.md 5.11) — before this the shell converted the
+/// answer with its own `toDouble`, which knew neither units nor an expression.
+///
+/// What a prompt adds to the line's grammar is the DECIMAL COMMA, because a prompt that asks
+/// for one number has no coordinate for a comma to be mistaken for: `12,5` is 12.5, and
+/// `1.250,5` is 1250.5 (the separator that comes last is the decimal one). A unit written
+/// where the parameter is no length is an error that says so.
+core::Result<double> evaluate_answer(std::string_view text, std::optional<int> length_exp);
 
 /// One row of whatever is being filtered, as the predicate sees it.
 ///

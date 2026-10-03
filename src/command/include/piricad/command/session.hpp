@@ -51,6 +51,24 @@ class Registry;
 /// whole of it back, which is the one thing the user did not mean.
 bool asks_retract(const Registry& registry, std::string_view line);
 
+/// THE UNIT A LENGTH TYPED AT `prompt` IS IN, as a power of ten in metres — 0 metres, -3
+/// millimetres — or nothing when the prompt asks for no length (TODOS U-02, `evaluate_answer`).
+///
+/// A PROMPT AND THE ARGUMENT FORM OF THE SAME PARAMETER MAY NOT SHARE A UNIT, and reading
+/// the parameter's unit for the prompt too is how `5 m` would have reached OFSET as 5000:
+/// `OFSET mesafe=` is an INTEGER IN MILLIMETRES, while its prompt is a NUMBER ASKED IN METRES
+/// and multiplied by the body — "asked in metres, recorded in millimetres like every other
+/// measure". So:
+///  - a number prompt of a `Number` parameter is in the parameter's unit (`m`);
+///  - a number prompt of an `Integer` parameter declared in a length is in METRES, whatever
+///    the recorded unit is (the convention above, which `offset.cpp` and `earthwork_command.cpp`
+///    are written to);
+///  - an integer prompt of an `Integer` parameter is in the parameter's own unit.
+/// A parameter that declares no length unit, or a prompt with no parameter behind it, takes no
+/// unit: the answer is refused, by name, rather than guessed (`test_command.cpp`, the prompts
+/// of OFSET and YUVARLA).
+std::optional<int> prompt_length_exponent(const CommandSpec& spec, const Prompt& prompt);
+
 /// The line that starts a typed tool AGAIN when its run ends: the command's
 /// primary name and every keyword argument of `line` that is not a place — the
 /// method and its settings travel, the points and the objects do not.

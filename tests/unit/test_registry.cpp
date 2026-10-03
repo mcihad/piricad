@@ -18,6 +18,7 @@
 #include "piricad/domain/surface/commands.hpp"
 #include "piricad/processing/registry.hpp"
 
+#include <algorithm>
 #include <set>
 #include <string>
 #include <vector>
@@ -155,4 +156,139 @@ TEST_CASE("KAYIT: son komut yalnız çizimde çalışan ve soru soran komut içi
     CHECK(repeat_line(program, "YAKINLAŞ KAPSAM").empty());
     CHECK(repeat_line(program, "GERİAL").empty());
     CHECK(repeat_line(program, "yokboyle").empty());
+}
+
+TEST_CASE("ARAMA: cümle yazan kişi doğru komuta ulaşır (TODOS U-01, doğal dil)")
+{
+    Registry program;
+    for (const Register add : kApplicationOrder)
+        add(program);
+
+    // THE ORDER THE PALETTE LISTS ITS ANSWERS IN: best tier first, ties in the order the
+    // registry declared them (a stable sort, as `CommandPalette` does).
+    const auto answers = [&program](const char* query) {
+        std::vector<std::pair<int, const CommandSpec*>> hits;
+        for (const CommandSpec& spec : program.all())
+            if (const SearchMatch m = search_query(spec, query); m.tier != SearchMatch::kNone)
+                hits.emplace_back(m.tier, &spec);
+        std::stable_sort(hits.begin(), hits.end(),
+                         [](const auto& a, const auto& b) { return a.first < b.first; });
+        std::vector<std::string> ids;
+        for (const auto& hit : hits)
+            ids.push_back(hit.second->id);
+        return ids;
+    };
+    const auto rank_of = [&answers](const char* query, const char* id) -> std::size_t {
+        const std::vector<std::string> ids = answers(query);
+        const auto at                      = std::ranges::find(ids, id);
+        return at == ids.end() ? std::string::npos : static_cast<std::size_t>(at - ids.begin());
+    };
+
+    // The acceptance sentence of U-01: three spellings, one real tool, first in all three.
+    for (const char* word : {"paralel", "ofset", "offset"})
+        CHECK_MESSAGE(rank_of(word, "core.offset") == 0, word);
+
+    // A sentence, with the endings Turkish puts on what is worked on and the verbs of
+    // asking. (rank 0 is first.) `ifraz` and `alan` are in the domain modules, which is
+    // why this runs on the assembled registry and not on the built-ins alone.
+    struct Ask
+    {
+        const char* query;
+        const char* id;
+        std::size_t within; ///< the command is among the first `within` answers
+    };
+
+    for (const Ask& ask : {
+             Ask{"çizgiyi paralel kaydır", "core.offset", 1},
+             Ask{"bir çizgiyi paralel çizmek istiyorum", "core.offset", 1},
+             Ask{"köşeyi yuvarla", "core.fillet", 1},
+             Ask{"iki çizgiyi birleştir", "core.combine", 1},
+             Ask{"metni değiştir", "core.edittext", 2},
+             Ask{"nesneyi çoğalt", "core.copy", 2},
+             Ask{"nesneyi çoğalt", "core.array", 2},
+             Ask{"alanı hesapla", "core.measure_area", 2},
+             Ask{"parseli ifraz et", "core.split_parcel", 1},
+             Ask{"daire çiz", "core.circle_draw", 1},
+             Ask{"offset a line", "core.offset", 3},
+         })
+        CHECK_MESSAGE(rank_of(ask.query, ask.id) < ask.within, ask.query << " -> " << ask.id);
+
+    // A word still ranks as it always did: the name itself first, another program's word
+    // under it, and nothing a sentence matcher does can put another command above them.
+    CHECK(answers("kaydır").front() == "core.pan");
+    CHECK(search_query(*program.by_id("core.pan"), "kaydır").tier == 0);
+    CHECK(search_query(*program.by_id("core.rectangle"), "kutu").tier == 1);
+    CHECK(search_query(*program.by_id("core.move"), "kaydır").tier == 1);
+
+    // Another program's word found only through a sentence says whose word it was.
+    const SearchMatch via = search_query(*program.by_id("core.move"), "nesneyi kaydır");
+    CHECK(via.tier >= 7);
+    REQUIRE(via.known != nullptr);
+    CHECK(via.known->name == "KAYDIR");
+
+    // A stem is not a prefix of anything (SİL is not what `silindir` asks for), a request of
+    // nothing but particles asks for nothing, and a sentence no command answers is empty.
+    {
+        const std::vector<std::string> cylinder = answers("silindir");
+        CHECK(std::ranges::find(cylinder, "core.erase") == cylinder.end());
+    }
+    CHECK(answers("ve için bir").empty());
+    CHECK(answers("").empty());
+    CHECK(answers("xqzwv yokboyle").empty());
+    CHECK(answers("arazi kesiti çıkar").empty()); ///< no such tool yet: says so rather than guess
+}
+
+TEST_CASE("BİRİM: yardımı metre ya da milimetre diyen her uzunluk parametresi birimini bildirir (U-02)")
+{
+    Registry program;
+    for (const Register add : kApplicationOrder)
+        add(program);
+
+    // A length is typed with its unit only where its parameter DECLARES one
+    // (`Param::length_exponent`, command.md R29): `12.5 m` reaching a distance in millimetres as
+    // 12500 depends on nothing but that declaration. The help text is where a person wrote the
+    // unit down before there was a field for it, so the walk reads it: a parameter whose help
+    // names metres or millimetres as its unit, and whose `unit` is empty, can never take
+    // `1250 cm` and would say "bir uzunluk değil" to a person who typed a length.
+    //
+    // THE EXCEPTIONS ARE NAMED, each for a reason that is not a forgotten declaration: a
+    // tolerance that is metres on a length and degrees on an angle, a value that is a ratio OR a
+    // distance, and the areas and micrometres that merely contain the word.
+    const std::set<std::string> kExempt{
+        "core.dimension.tolerans",     "core.dimension.tolerans_ust", "core.dimension.tolerans_alt",
+        "core.dimension_edit.tolerans", "core.dimension_edit.tolerans_ust",
+        "core.dimension_edit.tolerans_alt",
+        "core.point_along.deger", ///< a ratio or a distance, by the method
+    };
+    const auto says_length_unit = [](std::string help) {
+        for (char& c : help)
+            c = static_cast<char>(c >= 'A' && c <= 'Z' ? c | 0x20 : c);
+        // Areas and micrometres contain the word without being a length in it.
+        const bool areas = help.find("metrekare") != std::string::npos ||
+                           help.find("mikrometre") != std::string::npos ||
+                           help.find("mm²") != std::string::npos ||
+                           help.find("m²") != std::string::npos;
+        if (areas) return false;
+        return help.find("milimetre") != std::string::npos || help.find(", metre") != std::string::npos ||
+               help.find("(m)") != std::string::npos;
+    };
+
+    std::string missing;
+    for (const CommandSpec& spec : program.all())
+        for (const Param& p : spec.params) {
+            if (p.kind != ParamKind::Number && p.kind != ParamKind::Integer) continue;
+            if (!p.unit.empty() || kExempt.contains(spec.id + "." + p.name)) continue;
+            if (says_length_unit(p.help)) missing += "\n  " + spec.id + "." + p.name + ": " + p.help;
+        }
+    INFO("birimi bildirilmemiş uzunluklar:" << missing);
+    CHECK(missing.empty());
+
+    // And what a declared unit means: metres and millimetres are lengths, a paper size is too, an
+    // angle's unit or a missing one is not.
+    CHECK(Param::number("a", Arity::optional()).measured_in("m").length_exponent() == 0);
+    CHECK(Param::integer("a", Arity::optional()).measured_in("mm").length_exponent() == -3);
+    CHECK(Param::integer("a", Arity::optional()).measured_in("kâğıt mm").length_exponent() == -3);
+    CHECK_FALSE(Param::number("a", Arity::optional()).measured_in("derece").length_exponent());
+    CHECK_FALSE(Param::number("a", Arity::optional()).length_exponent());
+    CHECK_FALSE(Param::text("a", Arity::optional()).measured_in("m").length_exponent());
 }

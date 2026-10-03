@@ -133,7 +133,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.boundary`](#cadboundary) | `core.boundary` | `SINIR` | İçine tıklanan kapalı bölgenin sınırını yeni bir alan olarak çıkarır; içerideki adalar delik olur, açık uçlar gösterilir. |
 | [`cad.cleanup`](#cadcleanup) | `core.cleanup` | `TEMİZLE` | Yinelenen, boş ve tekrarlanan köşeli nesneleri bulur; istenirse tek adımda onarır ve değişen alanları önce/sonra raporlar. |
 | [`cad.move`](#cadmove) | `core.move` | `TAŞI` | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
-| [`cad.copy`](#cadcopy) | `core.copy` | `KOPYALA` | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
+| [`cad.copy`](#cadcopy) | `core.copy` | `KOPYALA` | Seçilen nesneleri çoğaltır: kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`cad.array`](#cadarray) | `core.array` | `DİZİ` | Seçilen nesneleri satır/sütun, bir merkez etrafında ya da bir yol boyunca çoğaltır. |
 | [`cad.combine`](#cadcombine) | `core.combine` | `BİRLEŞTİR` | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
 | [`cad.area_union`](#cadarea_union) | `core.area_union` | `BİRLEŞİM` | Kapalı alanların bütününü OpenCASCADE ile birleştirir; ayrı parçaları korur. Doğru/yay sınırları korunur; sonuç ilk kaynağın katmanında oluşturulur. Kaydedilemeyen eğri/delik birleşimleri çizimi değiştirmeden reddedilir. |
@@ -152,7 +152,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.scale`](#cadscale) | `core.scale` | `ÖLÇEKLE` | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür; iki çarpanla eşit olmayan ölçek, referans uzunlukla ölçek. |
 | [`cad.mirror`](#cadmirror) | `core.mirror` | `AYNALA` | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
 | [`cad.measure`](#cadmeasure) | `core.measure` | `ÖLÇ` | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir. |
-| [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar. |
+| [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini hesaplar ve yazar. |
 | [`cad.coordinate`](#cadcoordinate) | `core.coordinate` | `KOORDİNAT` | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`cad.extent_check`](#cadextent_check) | `core.extent_check` | `KAPSAMDENETİM` | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
 | [`cad.station_offset`](#cadstation_offset) | `core.station_offset` | `PRİZMA` | Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir. |
@@ -355,8 +355,8 @@ cad.perp_offset(
 |---|---|---|---|
 | `start` | `Coord` | `baslangic` | Taban çizgisinin ilk noktası (A) [mm, Sağa (Y) önce] |
 | `end` | `Coord` | `bitis` | Taban çizgisinin ikinci noktası (B) [mm, Sağa (Y) önce] |
-| `chainage` | `list[float]` | `ayak` | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir |
-| `offset` | `list[float]` | `boy` | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir |
+| `chainage` | `list[float]` | `ayak` | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir [m] |
+| `offset` | `list[float]` | `boy` | Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir [m] |
 | `connect` | `bool` | `cizgi` | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir |
 | `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
 
@@ -423,8 +423,8 @@ cad.intersect_point(
 | `fourth` | `Coord` | `dorduncu` | İkinci doğrunun ikinci noktası [mm, Sağa (Y) önce] |
 | `first_angle` | `float` | `birinci_aci` | Birinci noktadan okunan doğrultu |
 | `second_angle` | `float` | `ikinci_aci` | İkinci noktadan okunan doğrultu |
-| `first_distance` | `float` | `birinci_mesafe` | Birinci noktadan ölçülen uzaklık (m) |
-| `second_distance` | `float` | `ikinci_mesafe` | İkinci noktadan ölçülen uzaklık (m) |
+| `first_distance` | `float` | `birinci_mesafe` | Birinci noktadan ölçülen uzaklık (m) [m] |
+| `second_distance` | `float` | `ikinci_mesafe` | İkinci noktadan ölçülen uzaklık (m) [m] |
 | `side` | `str` | `yon` | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre |
 | `side_point` | `Coord` | `yon_nokta` | mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce] |
 | `intersection` | `Coord` | `kesisim` | Bulunan nokta; günlüğe yazılır [mm, Sağa (Y) önce] |
@@ -903,7 +903,7 @@ cad.text(
 |---|---|---|---|
 | `points` | `Coord` | `noktalar` | Yazının başlangıç noktası [mm, Sağa (Y) önce] |
 | `text` | `str` | `yazi` | Yazılacak metin |
-| `height` | `int` | `yukseklik` | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı |
+| `height` | `int` | `yukseklik` | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı [mm] |
 | `end` | `Coord` | `bitis` | Yazının döneceği yöndeki bir nokta; taban çizgisi yazının genişliği kadardır. Yoksa yatay [mm, Sağa (Y) önce] |
 | `alignment` | `str` | `hizalama` | Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde) |
 | `line_spacing` | `float` | `satir_araligi` | Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü |
@@ -933,7 +933,7 @@ cad.edittext(
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Düzenlenecek yazılar; verilmezse seçim [kalıcı nesne anahtarı] |
 | `text` | `str` | `yazi` | Yeni metin; verilmezse değişmez |
-| `height` | `int` | `yukseklik` | Yeni yükseklik, zeminde milimetre; verilmezse değişmez |
+| `height` | `int` | `yukseklik` | Yeni yükseklik, zeminde milimetre; verilmezse değişmez [mm] |
 | `alignment` | `str` | `hizalama` | Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez |
 | `line_spacing` | `float` | `satir_araligi` | Yeni satır aralığı, tek aralığın katı (0,25–4); verilmezse değişmez |
 | `width` | `float` | `genislik` | Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez [m] |
@@ -1330,7 +1330,7 @@ cad.move(
 
 ### `cad.copy`
 
-Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
+Seçilen nesneleri çoğaltır: kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
 
 Komut: `core.copy` — `KOPYALA`
 
@@ -1381,14 +1381,14 @@ cad.array(
 | `mode` | `str` | `mod` | KUTUPSAL için kutupsal dizi, YOL için yol boyunca dizi; verilmezse satır/sütun dizisi |
 | `rows` | `int` | `satir` | Satır sayısı (dikdörtgen dizi) |
 | `columns` | `int` | `sutun` | Sütun sayısı (dikdörtgen dizi) |
-| `row_spacing` | `float` | `satir_aralik` | Satır aralığı, metre; kuzeye artı |
-| `column_spacing` | `float` | `sutun_aralik` | Sütun aralığı, metre; doğuya artı |
+| `row_spacing` | `float` | `satir_aralik` | Satır aralığı, metre; kuzeye artı [m] |
+| `column_spacing` | `float` | `sutun_aralik` | Sütun aralığı, metre; doğuya artı [m] |
 | `center` | `Coord` | `merkez` | Dizinin merkezi (kutupsal dizi) [mm, Sağa (Y) önce] |
 | `count` | `int` | `sayi` | Toplam kopya sayısı, özgün dahil (kutupsal ve yol boyunca dizi) |
 | `angle` | `float` | `aci` | Süpürülecek toplam açı, derece; verilmezse tam tur |
 | `path` | `list[int]` | `yol` | mod=yol için dizinin izleyeceği yol: çizgi, yay, daire ya da yaylı çoklu çizgi [kalıcı nesne anahtarı] |
 | `path_point` | `Coord` | `yol_nokta` | Yolu gösteren nokta; yol verilmişse sorulmaz [mm, Sağa (Y) önce] |
-| `spacing` | `float` | `aralik` | mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi |
+| `spacing` | `float` | `aralik` | mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi [m] |
 | `follow` | `bool` | `hizala` | mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; varsayılan evet |
 | `base_point` | `Coord` | `taban` | mod=yol için nesnelerin yola taşınan taban noktası; varsayılan yolun başı [mm, Sağa (Y) önce] |
 
@@ -1606,7 +1606,7 @@ cad.chamfer(
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Köşesi kesilecek nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne [kalıcı nesne anahtarı] |
 | `point` | `Coord` | `nokta` | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez [mm, Sağa (Y) önce] |
-| `distance` | `float` | `mesafe` | Köşeden her iki kenar boyunca kesilecek mesafe, metre |
+| `distance` | `float` | `mesafe` | Köşeden her iki kenar boyunca kesilecek mesafe, metre [m] |
 | `second_point` | `Coord` | `ikinci_nokta` | İki nesnede ikincinin kalacak parçası [mm, Sağa (Y) önce] |
 | `second_distance` | `float` | `ikinci_mesafe` | İki çizgi arasında ikinci çizgi boyunca kesilecek mesafe, metre; verilmezse mesafe [m] |
 | `trim` | `bool` | `budama` | İki nesnede nesneler köşeye kadar kısaltılıp uzatılsın mı; varsayılan evet |
@@ -1635,7 +1635,7 @@ cad.fillet(
 |---|---|---|---|
 | `object` | `list[int]` | `nesne` | Köşesi yuvarlatılacak nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne [kalıcı nesne anahtarı] |
 | `point` | `Coord` | `nokta` | Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez [mm, Sağa (Y) önce] |
-| `radius` | `float` | `yaricap` | Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe |
+| `radius` | `float` | `yaricap` | Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe [m] |
 | `second_point` | `Coord` | `ikinci_nokta` | İki nesnede ikincinin kalacak parçası [mm, Sağa (Y) önce] |
 | `trim` | `bool` | `budama` | İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan evet |
 | `every_corner` | `bool` | `hepsi` | Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır |
@@ -1767,8 +1767,8 @@ cad.scale(
 | `factor_point` | `Coord` | `carpan_nokta` | Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz [mm, Sağa (Y) önce] |
 | `factor_y` | `float` | `carpan_y` | Yukarı yöndeki çarpan; verilirse carpan yalnız sağa yöndeki çarpandır ve daire elips olur |
 | `method` | `str` | `yontem` | referans: bir uzunluk yenisine ölçeklenir; referans uzunluk iki noktayla gösterilir |
-| `reference` | `float` | `referans` | Referans uzunluk, metre; yeni onun olacağı uzunluktur |
-| `new_length` | `float` | `yeni` | Referans uzunluğun yeni değeri, metre |
+| `reference` | `float` | `referans` | Referans uzunluk, metre; yeni onun olacağı uzunluktur [m] |
+| `new_length` | `float` | `yeni` | Referans uzunluğun yeni değeri, metre [m] |
 | `reference_point` | `Coords` | `referans_nokta` | Referans uzunluğu gösteren iki nokta [mm, Sağa (Y) önce] |
 | `copy` | `bool` | `kopya` | evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır |
 
@@ -1824,7 +1824,7 @@ cad.measure(
 
 ### `cad.measure_area`
 
-Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
+Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini hesaplar ve yazar.
 
 Komut: `core.measure_area` — `ALANÖLÇ`
 
@@ -1846,7 +1846,7 @@ cad.measure_area(
 | `points` | `Coords` | `noktalar` | yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur [mm, Sağa (Y) önce] |
 | `point` | `Coord` | `nokta` | yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur [mm, Sağa (Y) önce] |
 | `islands` | `bool` | `ada` | yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak düşülür (öntanımlı evet) |
-| `gap` | `int` | `bosluk` | yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç |
+| `gap` | `int` | `bosluk` | yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç [mm] |
 
 [Komut sayfası](../komutlar/measure_area.md)
 
@@ -1944,7 +1944,7 @@ cad.offset(
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `objects` | `list[int]` | `nesneler` | Ofseti alınacak nesneler; yoksa etkin seçim [kalıcı nesne anahtarı] |
-| `distance` | `int` | `mesafe` | Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri |
+| `distance` | `int` | `mesafe` | Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri [mm] |
 | `corner` | `str` | `kose` | Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz |
 | `side` | `str` | `taraf` | Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan |
 | `through` | `Coord` | `nokta` | Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer [mm, Sağa (Y) önce] |
@@ -2101,7 +2101,7 @@ cad.hatch(
 | `method` | `str` | `yontem` | nesne: seçilen kapalı nesneler (öntanımlı); nokta: köşeleri gösterilen sınır; ic: içine tıklanan bölge |
 | `point` | `Coord` | `nokta` | yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur [mm, Sağa (Y) önce] |
 | `islands` | `bool` | `ada` | yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak taranmaz (öntanımlı evet) |
-| `gap` | `int` | `bosluk` | yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç |
+| `gap` | `int` | `bosluk` | yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç [mm] |
 | `exclude` | `list[int]` | `disarida` | Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler (Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler [kalıcı nesne anahtarı] |
 | `margin` | `float` | `pay` | disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 [m] |
 | `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
@@ -2228,8 +2228,8 @@ cad.insert(
 | `angle` | `float` | `aci` | Dönme açısı, derece; varsayılan 0 |
 | `columns` | `int` | `sutun` | Dizi sütun sayısı; varsayılan 1 |
 | `rows` | `int` | `satir` | Dizi satır sayısı; varsayılan 1 |
-| `column_spacing` | `int` | `sutun_aralik` | Sütunlar arası, milimetre, döndürülmüş eksende |
-| `row_spacing` | `int` | `satir_aralik` | Satırlar arası, milimetre, döndürülmüş eksende |
+| `column_spacing` | `int` | `sutun_aralik` | Sütunlar arası, milimetre, döndürülmüş eksende [mm] |
+| `row_spacing` | `int` | `satir_aralik` | Satırlar arası, milimetre, döndürülmüş eksende [mm] |
 | `values` | `list[str]` | `deger` | Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur |
 | `file` | `str` | `dosya` | Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur |
 | `layer` | `str` | `katman` | Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir |
@@ -2551,7 +2551,7 @@ cad.guide(
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `direction` | `str` | `yon` | yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir |
-| `value` | `int` | `deger` | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa |
+| `value` | `int` | `deger` | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa [mm] |
 | `point` | `Coord` | `nokta` | Kılavuzun geçtiği nokta: açılı kılavuzda ve `deger` verilmemiş cetvel kılavuzunda; verilmezse sorulur [mm, Sağa (Y) önce] |
 | `type` | `str` | `tur` | doğru: iki yöne sonsuz · ışın: noktadan ileriye |
 | `delete` | `bool` | `sil` | Verilen yerdeki kılavuzu siler |
@@ -2659,7 +2659,7 @@ cad.select(
 | `objects` | `list[int]` | `nesneler` | NESNE modunda nesne kimlikleri [kalıcı nesne anahtarı] |
 | `layer` | `str` | `katman` | KATMAN modunda katman adı |
 | `action` | `str` | `islem` | DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE |
-| `tolerance` | `float` | `tolerans` | NOKTA ve GEÇEN modlarında arama yarıçapı, metre; yoksa seçim toleransı |
+| `tolerance` | `float` | `tolerans` | NOKTA ve GEÇEN modlarında arama yarıçapı, metre; yoksa seçim toleransı [m] |
 | `order` | `float` | `sira` | Kaçıncı nesne: NOKTA'da 1 en yakını, 2 altındaki; İÇEREN'de 1 en küçük alan, 2 onu içeren |
 
 [Komut sayfası](../komutlar/select.md)
@@ -2686,8 +2686,8 @@ cad.label(
 | `layer` | `str` | `katman` | Etiketlenecek katmanın adı |
 | `format` | `str` | `bicim` | Etiket biçimi; {sutun} o sütunun değeriyle, {#alan} alanla, {#cevre} çevreyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez |
 | `target_layer` | `str` | `hedef` | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' |
-| `height` | `int` | `yukseklik` | Yazı yüksekliği, zemin milimetresi |
-| `offset` | `int` | `kaydirma` | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı |
+| `height` | `int` | `yukseklik` | Yazı yüksekliği, zemin milimetresi [mm] |
+| `offset` | `int` | `kaydirma` | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı [mm] |
 | `follow` | `bool` | `bagla` | Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu değişince yeniden yazılır, komut yeniden çalışınca yenilenir; varsayılan evet |
 
 [Komut sayfası](../komutlar/label.md)
@@ -2872,7 +2872,7 @@ cad.layout_item(
 | `scale` | `int` | `olcek` | Harita öğesinin ölçeği 1:N; 0 kapsama uyar |
 | `window` | `Coords` | `pencere` | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil] |
 | `grid` | `str` | `izgara` | Harita öğesinin koordinat ızgarası |
-| `grid_spacing` | `int` | `izgara_aralik` | Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir |
+| `grid_spacing` | `int` | `izgara_aralik` | Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir [mm] |
 | `locked` | `bool` | `kilit` | Öğeyi taşımaya kapatır |
 | `frame` | `bool` | `cerceve` | Öğenin çevresine çerçeve çizer |
 | `page` | `int` | `sayfa` | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir |
@@ -3315,11 +3315,11 @@ cad.print(
 | `printer` | `str` | `yazici` | Yazıcının adı; "" sistem varsayılanı. dosya ile birlikte verilmez |
 | `profile` | `str` | `profil` | Yazdırma profili; verilmezse varsayılan profil |
 | `paper` | `str` | `kagit` | Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel (genislik ve yukseklik ile) |
-| `width` | `int` | `genislik` | ozel kâğıdın eni, milimetre (dikey duruşta) |
-| `height` | `int` | `yukseklik` | ozel kâğıdın boyu, milimetre (dikey duruşta) |
+| `width` | `int` | `genislik` | ozel kâğıdın eni, milimetre (dikey duruşta) [kâğıt mm] |
+| `height` | `int` | `yukseklik` | ozel kâğıdın boyu, milimetre (dikey duruşta) [kâğıt mm] |
 | `orientation` | `str` | `yon` | dikey ya da yatay |
 | `dpi` | `int` | `dpi` | Çözünürlük, inç başına nokta (72–4800) |
-| `margin` | `int` | `kenar` | Dört yandaki kenar boşluğu, milimetre |
+| `margin` | `int` | `kenar` | Dört yandaki kenar boşluğu, milimetre [kâğıt mm] |
 | `title` | `str` | `baslik` | PDF belge başlığı |
 | `author` | `str` | `yazar` | PDF yazar alanı |
 | `password` | `str` | `sifre` | PDF açma şifresi (kullanıcı şifresi); günlüğe yazılmaz |
@@ -3354,11 +3354,11 @@ cad.print_profile(
 | `action` | `str` | `islem` | listele, ekle, sil ya da varsayilan |
 | `name` | `str` | `ad` | Profilin adı (ekle, sil, varsayilan) |
 | `paper` | `str` | `kagit` | Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel; ekle için, varsayılan A4 |
-| `width` | `int` | `genislik` | ozel kâğıdın eni, milimetre |
-| `height` | `int` | `yukseklik` | ozel kâğıdın boyu, milimetre |
+| `width` | `int` | `genislik` | ozel kâğıdın eni, milimetre [kâğıt mm] |
+| `height` | `int` | `yukseklik` | ozel kâğıdın boyu, milimetre [kâğıt mm] |
 | `orientation` | `str` | `yon` | dikey ya da yatay; varsayılan dikey |
 | `dpi` | `int` | `dpi` | Çözünürlük; varsayılan 300 |
-| `margin` | `int` | `kenar` | Kenar boşluğu, milimetre; varsayılan 10 |
+| `margin` | `int` | `kenar` | Kenar boşluğu, milimetre; varsayılan 10 [kâğıt mm] |
 
 [Komut sayfası](../komutlar/print_profile.md)
 
@@ -3465,7 +3465,7 @@ cad.buffer(
 | `scope` | `str` | `kapsam` | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
 | `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
 | `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
-| `distance` | `float` | `mesafe` | Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır |
+| `distance` | `float` | `mesafe` | Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır [m] |
 | `dissolve` | `bool` | `birlestir` | Üst üste binen tamponları tek alanda birleştir; kapalıysa her nesnenin tamponu ayrı alan olur; varsayılan evet |
 | `corner` | `str` | `kose` | Dış köşelerin biçimi (yuvarlak / koseli / pah); varsayılan yuvarlak |
 | `end` | `str` | `uc` | Çizgi uçlarının biçimi (yuvarlak / duz / kare); varsayılan yuvarlak |
@@ -3541,9 +3541,9 @@ cad.label_length(
 | `format` | `str` | `bicim` | Yazının kalıbı; {} sayının yerini tutar (örnek: "{} m", "L={}") |
 | `decimal_separator` | `str` | `ayrac` | Ondalık ayracı (virgul / nokta); varsayılan virgul |
 | `side` | `str` | `taraf` | Yazının kenarın hangi yanına düşeceği (otomatik / sol / sag / dis / ic); varsayılan otomatik |
-| `height` | `int` | `yukseklik` | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 |
-| `gap` | `int` | `bosluk` | Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 |
-| `min_length` | `int` | `enaz` | Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 |
+| `height` | `int` | `yukseklik` | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 [mm] |
+| `gap` | `int` | `bosluk` | Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 [mm] |
+| `min_length` | `int` | `enaz` | Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 [mm] |
 | `attach` | `bool` | `bagla` | Yazıyı kenarına bağla: kenar taşınınca yazı izler, uzunluk yeniden yazılır; varsayılan evet |
 
 [Komut sayfası](../komutlar/uzunluk_yaz.md)
@@ -3586,8 +3586,8 @@ cad.number_vertices(
 | `pad` | `str` | `dolgu` | Basamak dolgusu; varsayılan 0 |
 | `first_number` | `int` | `ilk` | İlk köşenin numarası; varsayılan 1 |
 | `suffix` | `str` | `sonek` | Numaranın arkasına gelen yazı |
-| `height` | `int` | `yukseklik` | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 |
-| `gap` | `int` | `bosluk` | Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 |
+| `height` | `int` | `yukseklik` | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 [mm] |
+| `gap` | `int` | `bosluk` | Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 [mm] |
 | `attach` | `bool` | `bagla` | Numarayı köşesine bağla: köşe taşınınca numara izler; varsayılan evet |
 
 [Komut sayfası](../komutlar/kose_numarala.md)
@@ -3678,7 +3678,7 @@ cad.polygonize(
 | `window` | `Coords` | `pencere` | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce] |
 | `layer` | `str` | `katman` | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
 | `islands` | `bool` | `ada` | Bir gözün içindeki kapalı çizgiler o alanın deliği olsun; kapalıysa göz dış sınırıyla dolu çizilir; varsayılan evet |
-| `gap` | `float` | `bosluk` | Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 |
+| `gap` | `float` | `bosluk` | Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 [m] |
 
 [Komut sayfası](../komutlar/alan_uret.md)
 
@@ -3880,7 +3880,7 @@ cad.contour(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `interval` | `int` | `aralik` | Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) |
+| `interval` | `int` | `aralik` | Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) [mm] |
 | `layer` | `str` | `katman` | Eğrilerin çizileceği katman; varsayılan ESYUKSELTI |
 | `objects` | `list[int]` | `nesneler` | Kotlu noktalar; verilmezse seçim, o da boşsa çizimdeki bütün noktalar [kalıcı nesne anahtarı] |
 
@@ -3900,7 +3900,7 @@ cad.earthwork(
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
-| `elevation` | `int` | `kot` | Karşılaştırma kotu, milimetre (845 m = 845000) |
+| `elevation` | `int` | `kot` | Karşılaştırma kotu, milimetre (845 m = 845000) [mm] |
 
 [Komut sayfası](../komutlar/earthwork.md)
 

@@ -165,8 +165,8 @@ def perp_offset(
     Komut: core.perp_offset (DİKAYAK)
         start — Taban çizgisinin ilk noktası (A) [mm, Sağa (Y) önce]
         end — Taban çizgisinin ikinci noktası (B) [mm, Sağa (Y) önce]
-        chainage — A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir
-        offset — Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir
+        chainage — A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir [m]
+        offset — Tabana dik uzaklık (m); A→B yönünde SAĞ pozitif, sol negatiftir [m]
         connect — Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir
         layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
     """
@@ -217,8 +217,8 @@ def intersect_point(
         fourth — İkinci doğrunun ikinci noktası [mm, Sağa (Y) önce]
         first_angle — Birinci noktadan okunan doğrultu
         second_angle — İkinci noktadan okunan doğrultu
-        first_distance — Birinci noktadan ölçülen uzaklık (m)
-        second_distance — İkinci noktadan ölçülen uzaklık (m)
+        first_distance — Birinci noktadan ölçülen uzaklık (m) [m]
+        second_distance — İkinci noktadan ölçülen uzaklık (m) [m]
         side — İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre
         side_point — mesafe: iki çözümden istenenin gösterildiği nokta; yon verilmişse sorulmaz [mm, Sağa (Y) önce]
         intersection — Bulunan nokta; günlüğe yazılır [mm, Sağa (Y) önce]
@@ -537,7 +537,7 @@ def text(
     Komut: core.text (METİN)
         points — Yazının başlangıç noktası [mm, Sağa (Y) önce]
         text — Yazılacak metin
-        height — Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı
+        height — Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı [mm]
         end — Yazının döneceği yöndeki bir nokta; taban çizgisi yazının genişliği kadardır. Yoksa yatay [mm, Sağa (Y) önce]
         alignment — Noktanın yazının neresinde durduğu: sol, orta, sag (son satırın tabanında), orta_sol, merkez, orta_sag (ortasında), ust_sol, ust_orta, ust_sag (ilk satırın üstünde)
         line_spacing — Satırlar arası, tek aralığın katı (0,25–4); tek aralık yüksekliğin 5/3'ü
@@ -559,7 +559,7 @@ def edittext(
     Komut: core.edittext (YAZIDÜZENLE)
         objects — Düzenlenecek yazılar; verilmezse seçim [kalıcı nesne anahtarı]
         text — Yeni metin; verilmezse değişmez
-        height — Yeni yükseklik, zeminde milimetre; verilmezse değişmez
+        height — Yeni yükseklik, zeminde milimetre; verilmezse değişmez [mm]
         alignment — Yeni hizalama (METİN'deki dokuz sözcük); verilmezse değişmez
         line_spacing — Yeni satır aralığı, tek aralığın katı (0,25–4); verilmezse değişmez
         width — Satırların kırılacağı genişlik; 0 kırmayı kapatır, verilmezse değişmez [m]
@@ -839,7 +839,7 @@ def copy(
     start: Coord = ...,
     end: Coords = ...,
 ) -> int:
-    """Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
+    """Seçilen nesneleri çoğaltır: kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
 
     Komut: core.copy (KOPYALA)
         objects — Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı]
@@ -871,14 +871,14 @@ def array(
         mode — KUTUPSAL için kutupsal dizi, YOL için yol boyunca dizi; verilmezse satır/sütun dizisi
         rows — Satır sayısı (dikdörtgen dizi)
         columns — Sütun sayısı (dikdörtgen dizi)
-        row_spacing — Satır aralığı, metre; kuzeye artı
-        column_spacing — Sütun aralığı, metre; doğuya artı
+        row_spacing — Satır aralığı, metre; kuzeye artı [m]
+        column_spacing — Sütun aralığı, metre; doğuya artı [m]
         center — Dizinin merkezi (kutupsal dizi) [mm, Sağa (Y) önce]
         count — Toplam kopya sayısı, özgün dahil (kutupsal ve yol boyunca dizi)
         angle — Süpürülecek toplam açı, derece; verilmezse tam tur
         path — mod=yol için dizinin izleyeceği yol: çizgi, yay, daire ya da yaylı çoklu çizgi [kalıcı nesne anahtarı]
         path_point — Yolu gösteren nokta; yol verilmişse sorulmaz [mm, Sağa (Y) önce]
-        spacing — mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi
+        spacing — mod=yol için kopyalar arası uzaklık, metre; verilmezse sayi [m]
         follow — mod=yol için kopyalar yolun doğrultusuna döndürülsün mü; varsayılan evet
         base_point — mod=yol için nesnelerin yola taşınan taban noktası; varsayılan yolun başı [mm, Sağa (Y) önce]
     """
@@ -1024,7 +1024,7 @@ def chamfer(
     Komut: core.chamfer (PAH)
         object — Köşesi kesilecek nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne [kalıcı nesne anahtarı]
         point — Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez [mm, Sağa (Y) önce]
-        distance — Köşeden her iki kenar boyunca kesilecek mesafe, metre
+        distance — Köşeden her iki kenar boyunca kesilecek mesafe, metre [m]
         second_point — İki nesnede ikincinin kalacak parçası [mm, Sağa (Y) önce]
         second_distance — İki çizgi arasında ikinci çizgi boyunca kesilecek mesafe, metre; verilmezse mesafe [m]
         trim — İki nesnede nesneler köşeye kadar kısaltılıp uzatılsın mı; varsayılan evet
@@ -1045,7 +1045,7 @@ def fillet(
     Komut: core.fillet (YUVARLA)
         object — Köşesi yuvarlatılacak nesne; iki nesne verilirse aralarındaki köşe; hepsi=evet ile bir ya da daha çok nesne [kalıcı nesne anahtarı]
         point — Tek nesnede işlem yapılacak köşe; iki nesnede birincinin kalacak parçası; hepsi=evet ise verilmez [mm, Sağa (Y) önce]
-        radius — Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe
+        radius — Yuvarlatma yarıçapı, metre; iki nesnede 0 keskin köşe [m]
         second_point — İki nesnede ikincinin kalacak parçası [mm, Sağa (Y) önce]
         trim — İki nesnede nesneler teğet noktalarına kadar kısaltılıp uzatılsın mı; varsayılan evet
         every_corner — Verilen nesnelerin bütün köşeleri aynı değerle; sığmayan köşe atlanır
@@ -1137,8 +1137,8 @@ def scale(
         factor_point — Çarpanın gösterildiği nokta; carpan verilmişse sorulmaz [mm, Sağa (Y) önce]
         factor_y — Yukarı yöndeki çarpan; verilirse carpan yalnız sağa yöndeki çarpandır ve daire elips olur
         method — referans: bir uzunluk yenisine ölçeklenir; referans uzunluk iki noktayla gösterilir
-        reference — Referans uzunluk, metre; yeni onun olacağı uzunluktur
-        new_length — Referans uzunluğun yeni değeri, metre
+        reference — Referans uzunluk, metre; yeni onun olacağı uzunluktur [m]
+        new_length — Referans uzunluğun yeni değeri, metre [m]
         reference_point — Referans uzunluğu gösteren iki nokta [mm, Sağa (Y) önce]
         copy — evet: nesnelerin kendisi değil kopyası dönüştürülür; özgün yerinde kalır
     """
@@ -1184,7 +1184,7 @@ def measure_area(
     islands: bool = ...,
     gap: int = ...,
 ) -> int:
-    """Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini yazar.
+    """Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini hesaplar ve yazar.
 
     Komut: core.measure_area (ALANÖLÇ)
         objects — Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim [kalıcı nesne anahtarı]
@@ -1192,7 +1192,7 @@ def measure_area(
         points — yontem=nokta için alanın köşeleri; verilirse yöntem kendiliğinden nokta olur [mm, Sağa (Y) önce]
         point — yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur [mm, Sağa (Y) önce]
         islands — yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak düşülür (öntanımlı evet)
-        gap — yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç
+        gap — yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; 0 hiç [mm]
     """
 
 def coordinate(
@@ -1254,7 +1254,7 @@ def offset(
 
     Komut: core.offset (OFSET)
         objects — Ofseti alınacak nesneler; yoksa etkin seçim [kalıcı nesne anahtarı]
-        distance — Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri
+        distance — Paralel mesafesi, milimetre. Taraf verilmez ve gösterilmezse işaret anlam taşır: kapalı şekilde artı dışarı, eksi içeri [mm]
         corner — Köşenin biçimi: KÖŞE ya da keskin (öntanımlı) kesişimde birleşir, YUVARLAK gerçek yay, PAH düz kesik; UC (ucuna bağla) kenar uzunluklarını korur, kenarların uçlarını çizgiyle bağlar, hiçbir şeyi uzatmaz ya da kırpmaz
         side — Paralelin tarafı: açık çizgide sol ya da sag (çizim yönüne göre), kapalı şekilde dis ya da ic, iki her iki yan
         through — Tarafı gösteren nokta: her nesnenin paraleli bu noktanın olduğu yana düşer [mm, Sağa (Y) önce]
@@ -1371,7 +1371,7 @@ def hatch(
         method — nesne: seçilen kapalı nesneler (öntanımlı); nokta: köşeleri gösterilen sınır; ic: içine tıklanan bölge
         point — yontem=ic için bölgenin içindeki nokta; verilirse yöntem kendiliğinden ic olur [mm, Sağa (Y) önce]
         islands — yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak taranmaz (öntanımlı evet)
-        gap — yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç
+        gap — yontem=ic: bu kadar milimetreye kadar açık uçlar köprülenir; 0 hiç [mm]
         exclude — Taramadan boş kalacak yazılar, bloklar, noktalar ya da öteki nesneler (Netcad'in Diğer Objeler Seç'i); yalnız gösterilenler [kalıcı nesne anahtarı]
         margin — disarida= nesnelerinin çevresinde bırakılan boşluk, metre; varsayılan 0 [m]
         layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
@@ -1466,8 +1466,8 @@ def insert(
         angle — Dönme açısı, derece; varsayılan 0
         columns — Dizi sütun sayısı; varsayılan 1
         rows — Dizi satır sayısı; varsayılan 1
-        column_spacing — Sütunlar arası, milimetre, döndürülmüş eksende
-        row_spacing — Satırlar arası, milimetre, döndürülmüş eksende
+        column_spacing — Sütunlar arası, milimetre, döndürülmüş eksende [mm]
+        row_spacing — Satırlar arası, milimetre, döndürülmüş eksende [mm]
         values — Bloğun alanlarının değerleri, sutun:değer; verilmezse elle yerleştirmede her alan sorulur
         file — Blok kitaplığı: bloğun alınacağı proje, DXF ya da DWG dosyası; ad= dosyadaki bloğu seçer, blok yoksa bütün çizim dosyanın adıyla blok olur
         layer — Çizilenlerin katmanı, adıyla; verilmezse etkin katman. Etkin katmanı değiştirmez; komut soru sorarken de yazılabilir
@@ -1701,7 +1701,7 @@ def guide(
 
     Komut: core.guide (KILAVUZ)
         direction — yatay | düşey | bir açı (45, 45g, 30d); yoksa kılavuzlar listelenir
-        value — Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa
+        value — Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa [mm]
         point — Kılavuzun geçtiği nokta: açılı kılavuzda ve `deger` verilmemiş cetvel kılavuzunda; verilmezse sorulur [mm, Sağa (Y) önce]
         type — doğru: iki yöne sonsuz · ışın: noktadan ileriye
         delete — Verilen yerdeki kılavuzu siler
@@ -1777,7 +1777,7 @@ def select(
         objects — NESNE modunda nesne kimlikleri [kalıcı nesne anahtarı]
         layer — KATMAN modunda katman adı
         action — DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE
-        tolerance — NOKTA ve GEÇEN modlarında arama yarıçapı, metre; yoksa seçim toleransı
+        tolerance — NOKTA ve GEÇEN modlarında arama yarıçapı, metre; yoksa seçim toleransı [m]
         order — Kaçıncı nesne: NOKTA'da 1 en yakını, 2 altındaki; İÇEREN'de 1 en küçük alan, 2 onu içeren
     """
 
@@ -1796,8 +1796,8 @@ def label(
         layer — Etiketlenecek katmanın adı
         format — Etiket biçimi; {sutun} o sütunun değeriyle, {#alan} alanla, {#cevre} çevreyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez
         target_layer — Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'
-        height — Yazı yüksekliği, zemin milimetresi
-        offset — Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı
+        height — Yazı yüksekliği, zemin milimetresi [mm]
+        offset — Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı [mm]
         follow — Etiket nesnesine bağlansın mı: bağlı etiket nesne ya da sütunu değişince yeniden yazılır, komut yeniden çalışınca yenilenir; varsayılan evet
     """
 
@@ -1950,7 +1950,7 @@ def layout_item(
         scale — Harita öğesinin ölçeği 1:N; 0 kapsama uyar
         window — Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil]
         grid — Harita öğesinin koordinat ızgarası
-        grid_spacing — Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir
+        grid_spacing — Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir [mm]
         locked — Öğeyi taşımaya kapatır
         frame — Öğenin çevresine çerçeve çizer
         page — Öğenin duracağı sayfa (1'den başlar); tasi ile verilir
@@ -2277,11 +2277,11 @@ def print(
         printer — Yazıcının adı; "" sistem varsayılanı. dosya ile birlikte verilmez
         profile — Yazdırma profili; verilmezse varsayılan profil
         paper — Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel (genislik ve yukseklik ile)
-        width — ozel kâğıdın eni, milimetre (dikey duruşta)
-        height — ozel kâğıdın boyu, milimetre (dikey duruşta)
+        width — ozel kâğıdın eni, milimetre (dikey duruşta) [kâğıt mm]
+        height — ozel kâğıdın boyu, milimetre (dikey duruşta) [kâğıt mm]
         orientation — dikey ya da yatay
         dpi — Çözünürlük, inç başına nokta (72–4800)
-        margin — Dört yandaki kenar boşluğu, milimetre
+        margin — Dört yandaki kenar boşluğu, milimetre [kâğıt mm]
         title — PDF belge başlığı
         author — PDF yazar alanı
         password — PDF açma şifresi (kullanıcı şifresi); günlüğe yazılmaz
@@ -2308,11 +2308,11 @@ def print_profile(
         action — listele, ekle, sil ya da varsayilan
         name — Profilin adı (ekle, sil, varsayilan)
         paper — Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel; ekle için, varsayılan A4
-        width — ozel kâğıdın eni, milimetre
-        height — ozel kâğıdın boyu, milimetre
+        width — ozel kâğıdın eni, milimetre [kâğıt mm]
+        height — ozel kâğıdın boyu, milimetre [kâğıt mm]
         orientation — dikey ya da yatay; varsayılan dikey
         dpi — Çözünürlük; varsayılan 300
-        margin — Kenar boşluğu, milimetre; varsayılan 10
+        margin — Kenar boşluğu, milimetre; varsayılan 10 [kâğıt mm]
     """
 
 def setting(
@@ -2379,7 +2379,7 @@ def buffer(
         scope — secili (varsayılan), gorunum ya da proje: nesneler nereden alınır
         window — gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce]
         layer — Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman
-        distance — Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır
+        distance — Tampon mesafesi, metre; eksi değer yalnız alanları içeri aşındırır [m]
         dissolve — Üst üste binen tamponları tek alanda birleştir; kapalıysa her nesnenin tamponu ayrı alan olur; varsayılan evet
         corner — Dış köşelerin biçimi (yuvarlak / koseli / pah); varsayılan yuvarlak
         end — Çizgi uçlarının biçimi (yuvarlak / duz / kare); varsayılan yuvarlak
@@ -2439,9 +2439,9 @@ def label_length(
         format — Yazının kalıbı; {} sayının yerini tutar (örnek: "{} m", "L={}")
         decimal_separator — Ondalık ayracı (virgul / nokta); varsayılan virgul
         side — Yazının kenarın hangi yanına düşeceği (otomatik / sol / sag / dis / ic); varsayılan otomatik
-        height — Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0
-        gap — Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0
-        min_length — Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0
+        height — Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 [mm]
+        gap — Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 [mm]
+        min_length — Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 [mm]
         attach — Yazıyı kenarına bağla: kenar taşınınca yazı izler, uzunluk yeniden yazılır; varsayılan evet
     """
 
@@ -2476,8 +2476,8 @@ def number_vertices(
         pad — Basamak dolgusu; varsayılan 0
         first_number — İlk köşenin numarası; varsayılan 1
         suffix — Numaranın arkasına gelen yazı
-        height — Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0
-        gap — Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0
+        height — Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 [mm]
+        gap — Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 [mm]
         attach — Numarayı köşesine bağla: köşe taşınınca numara izler; varsayılan evet
     """
 
@@ -2544,7 +2544,7 @@ def polygonize(
         window — gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir [mm, Sağa (Y) önce]
         layer — Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman
         islands — Bir gözün içindeki kapalı çizgiler o alanın deliği olsun; kapalıysa göz dış sınırıyla dolu çizilir; varsayılan evet
-        gap — Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0
+        gap — Bu genişliğe kadar açık uçları köprüle, metre; 0: hiçbir boşluk kendiliğinden kapanmaz; varsayılan 0 [m]
     """
 
 def fit(
@@ -2674,7 +2674,7 @@ def contour(
     """Kotlu noktalardan eş yükselti eğrileri çizer.
 
     Komut: core.contour (EŞYÜKSELTİ)
-        interval — Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m)
+        interval — Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) [mm]
         layer — Eğrilerin çizileceği katman; varsayılan ESYUKSELTI
         objects — Kotlu noktalar; verilmezse seçim, o da boşsa çizimdeki bütün noktalar [kalıcı nesne anahtarı]
     """
@@ -2686,7 +2686,7 @@ def earthwork(
     """Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.
 
     Komut: core.earthwork (HACİM)
-        elevation — Karşılaştırma kotu, milimetre (845 m = 845000)
+        elevation — Karşılaştırma kotu, milimetre (845 m = 845000) [mm]
     """
 
 def layers(

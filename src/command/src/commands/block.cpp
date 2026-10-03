@@ -1102,9 +1102,11 @@ PIRICAD_COMMAND(insert)
                     .en("rows"),
                 Param::integer("sutun_aralik", Arity::optional(),
                                "Sütunlar arası, milimetre, döndürülmüş eksende")
+                    .measured_in("mm")
                     .en("column_spacing"),
                 Param::integer("satir_aralik", Arity::optional(),
                                "Satırlar arası, milimetre, döndürülmüş eksende")
+                    .measured_in("mm")
                     .en("row_spacing"),
                 Param::text("deger", Arity{0, 0xFFFFFFFFu},
                             "Bloğun alanlarının değerleri, sutun:değer; verilmezse elle "

@@ -6,6 +6,93 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — birimli sayı: `12.5 m` = `1250 cm` (U-02)
+
+- Uzunluk isteyen her yere sayı **birimiyle** yazılabiliyor: `mm cm dm m km`, bitişik ya da
+  boşluklu, büyük küçük harf fark etmez; ifade içinde birleşir (`(2m+50cm)`), koordinat
+  bileşenlerinde de çalışır (`@1250cm,30`, `@12.5m<45`). `OFSET mesafe=1m`, `mesafe=1 m`,
+  `mesafe=100cm`, `mesafe=1000mm`, `mesafe="1 m"` ve `mesafe=1000` aynı belgeyi ve aynı günlüğü
+  veriyor (`test_command.cpp`).
+- Değer, parametrenin **bildirdiği birime** çevriliyor (metre isteyen parametrede 12.5,
+  milimetre isteyende 12500) ve bire bir aynı sayı oluyor: birim, yazılan ondalığın üssünü
+  kaydırıyor, bir sabitle çarpmıyor (`125.3mm` ile `0.1253 m` aynı double). Günlüğe çevrilmiş sayı
+  yazılıyor; yeniden oynatma bir birim bilmek zorunda değil.
+- Boyut denetimi: `(2m+50)`, `(2m*3m)`, `(2/3m)`, `(2m^2)` cümleyle reddediliyor; iki uzunluğun
+  oranı birimsiz sayı oluyor (`(10m/50cm)` = 20). Uzunluk olmayan parametreye birim yazmak adıyla
+  reddediliyor (`bolum=5m`: "'bolum' bir uzunluk değil"); metin parametresi yazılanı olduğu gibi
+  tutuyor (`KATMAN ad=10m`).
+- **Gerçek bir kusur çıktı ve kapandı:** bir sayı istemine yazılan cevabı kabuk kendi
+  `toDouble`'ıyla çeviriyordu (CLAUDE.md 5.11'e aykırı ikinci ayrıştırıcı); birimi de ifadeyi de
+  bilmiyordu. Artık ayrıştırıcının tek yolundan geçiyor (`command::evaluate_answer`) ve ondalık
+  virgülü (`12,5`) ve `1.250,5` yazımını da okuyor; eskiden `12,5` bir sayı isteminde
+  koordinat sayılıp reddediliyordu.
+- **Üçüncü, yakalanmasaydı ciddi olan kusur (prob buldu):** OFSET'in satırdaki `mesafe=` parametresi
+  **milimetre**, istemi ise **metre** soruyor ve gövde onu 1000 ile çarpıyor. İstemde parametrenin
+  birimini kullansaydım `5 m` → 5000 olur, gövde bir daha çarpıp beş kilometrelik paralel çizerdi.
+  İstemin birimi artık ayrı ve tek yerde söyleniyor (`command::prompt_length_exponent`:
+  `Integer` uzunluk parametresinin sayı istemi metre sorar); OFSET isteminde `5`, `5 m`, `500 cm`,
+  `5000mm`, `(4m+100cm)` ve `5,5 m` doğru okunuyor, `5xyz` ve `(2m+50)` reddedilip soru açık
+  kalıyor (`PIRICAD_ANSWER_PROBE`). Mesafe isteminde `5,5 m` ayrıca, `m`'yi sessizce atıp `5,5`'i
+  koordinat sayan bir yoldan da geçiyordu; artık satırın bütünü koordinat değilse koordinat sayılmıyor.
+- **İkinci kusur:** `1.2.3` sessizce 1.2 okunup gerisi atılıyordu (`2026.10.03` bir özniteliğe
+  `2026.1` olarak yazılırdı); artık sayı değil, ad ya da tarih olarak kalıyor.
+- 38 uzunluk parametresinin birimi yalnız yardım metninde yazılıydı (`OFSET mesafe` milimetre,
+  `PAH mesafe` metre…); `measured_in` ile yapısal olarak bildirildi, işlem araçları (`ToolParam`)
+  da artık birim taşıyor. Üretilmiş altı belge yenilendi (parametre açıklamasının sonunda `[m]` ya da
+  `[mm]`; yapay zekâ araç şeması da birimi söylüyor).
+- Kanıt: `test_command.cpp` "birimli sayı" (5 vaka), `test_registry.cpp` "BİRİM" (yardımı
+  uzunluk diyen her parametrenin birimi bildirilmiş; istisnalar adıyla), `prompt_length_exponent` testi, fuzz tohumu
+  `21-birimli-sayi.txt`, `22-birim-kenar.txt` ve `fuzz_komut` iki yeni giriş noktası (1,77 milyon
+  koşu, çökme yok). Belge: `docs/komutlar/komut-satiri.md` "Birimli sayılar".
+
+### Eklendi — komut araması cümleyle çalışıyor (U-01)
+
+- `Ctrl+K` süzgecine komutun adı yerine **ne yapmak istediğinizi** yazabilirsiniz:
+  `çizgiyi paralel kaydır` → OFSET, `köşeyi yuvarla` → YUVARLA, `iki çizgiyi birleştir` →
+  BİRLEŞTİR, `nesneyi çoğalt` → KOPYALA ve DİZİ, `alanı hesapla` → ALANÖLÇ, `parseli ifraz et` →
+  İFRAZ. Önceki arama aynen sürüyor: yazılan metin bir komut adının içindeyse sıralama eskisi
+  gibi (`kaydır` önce KAYDIR, altında TAŞI); yalnız hiçbir adda geçmeyen metin sözcüklerine
+  ayrılıyor (`command::search_query`, `registry.hpp`).
+- Sözcükler Türkçe katlanıp ek, edat ve fiilden arındırılıyor (`ve`, `için`, `yap`, `iki`, `tüm`);
+  komutun adında, başka programdaki adında, başlık ve açıklamasında, parametre adlarında aranıyor:
+  ekli sözcük (`çizgiyi`), yarım sözcük (`paral`), yumuşayan ünsüz (`uzunluğu` → UZUNLUK), aynı
+  gövde (`nesneyi`/NESNELERİ) ve bileşik adın başı (`alanı` → ALAN-ÖLÇ). Sözcüklerin en az yarısı
+  karşılık bulmalı. Puan fiili nesneden ayırıyor: komutlar yalın emirle aranır, üzerinde
+  çalışılan şey ek alır; adın kendisiyle eşleşen sözcük ek almış olandan önce sayılır. Hiçbir komut
+  karşılık vermiyorsa liste boş kalıp bunu söylüyor (örneğin henüz olmayan kesit aracı için tahmin
+  yürütülmüyor). Yeni kayıt tablosu yok: arama komutun bildirdiğinden başkasını bilmez.
+- İki açıklama eksik bir fiil yüzünden bulunamıyordu, düzeltildi: KOPYALA artık "çoğaltır",
+  ALANÖLÇ "hesaplar ve yazar" diyor. Altı üretilmiş belge (`make reference`) aynı işte yenilendi.
+- Kanıt: `test_registry.cpp` "ARAMA: cümle yazan kişi doğru komuta ulaşır" (altı modülün birlikte
+  kurulduğu kayıtta 11 cümle, sıra korunumu, başka programın adı, `silindir` ≠ SİL, boş ve bilinmeyen
+  sorgu). Belge: `docs/baslangic/arayuz.md` "Komutun adını bilmiyorsanız: cümle yazın".
+
+### Eklendi — komut araması favoriler ve son kullanılanlarla açılıyor (U-01)
+
+- `Ctrl+K` bir şey yazmadan açıldığında artık önce **Favoriler** (**Ctrl+D** ya da satırın
+  solundaki yıldız; imleç yıldızlanan komutta kalır), sonra **Son kullanılanlar** (en son elle
+  başlattığınız sekiz komut), sonra eskisi gibi bütün komutlar kategorileriyle geliyor. Bir şey
+  yazınca iki bölüm kalkıp sıralı sonuçlar geliyor. Görünüm komutları (YAKINLAŞ, KAYDIR),
+  GERİAL/YİNELE, betik ve yapay zekânın komutları ve programın kendi kurulum işleri
+  (başlangıçtaki SEMBOL) listeye girmiyor. İki liste bu bilgisayara aittir, çizime yazılmaz.
+- Kayıt, komutun başladığı kapıda (`Controller::runLineResult`) tutuluyor, bitişinde değil:
+  soru soran ya da iptal edilen komut da "elinin gittiği" komuttur. Kurallar komut katmanında
+  Qt'siz (`note_use`, `toggle_member`, `worth_remembering`) ve birim testli.
+- Liste, başlıkların üstte görünmesi için ilk seçimden sonra en üste alınıyor (önceden ilk
+  satır seçilince başlık yukarı kayıyordu). Çeviriler tr/en, kılavuz
+  [Arayüz](docs/baslangic/arayuz.md#favoriler-ve-son-kullanılanlar), `scripts/ci-gate-komut-paleti.sh`.
+
+### Düzeldi — geliştirici koşuları kişinin kendi profilini ezebiliyordu
+
+- Sonda ve kare dökümü koşuları gerçek kabuğu çalıştırır ve kabuk çıkarken pencere
+  geometrisini, dock düzenini ve tercihleri yazar. Sonda değişkenleri iki dosyada iki ayrı
+  listede tutuluyordu (`main.cpp`, `main_window.cpp`), listeler birbirinden sapmıştı ve
+  Linux'ta Qt'nin test modu `QSettings` dosyasını taşımıyor: bir sonda 800 piksellik ekransız
+  bir pencereyi `~/.config/PiriCAD/PiriCAD.conf` üstüne yazıyor, bir sonraki normal açılış
+  pul büyüklüğünde bir pencere açıyordu. Liste tek yere toplandı (`probe_environment()`),
+  sonda koşusunda `QSettings` test dizinine yönlendiriliyor ve kapı dosyanın koşudan önce ve
+  sonra aynı kaldığını denetliyor.
+
 ### Düzeldi — bir DXF'in tek bir çokgeni bütün dosyayı reddettiriyordu (İLBANK içmesuyu)
 
 - Gerçek bir altyapı çizimi (İLBANK içmesuyu projesi, 1,2 MB, 396 LWPOLYLINE) hiç içe

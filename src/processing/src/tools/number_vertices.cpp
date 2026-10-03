@@ -175,10 +175,12 @@ private:
                 ToolParam::integer("yukseklik",
                                    "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm",
                                    0, 0, 100000000)
+                    .measured_in("mm")
                     .en("height"),
                 ToolParam::integer("bosluk",
                                    "Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı", 0, 0,
                                    100000000)
+                    .measured_in("mm")
                     .en("gap"),
                 ToolParam::boolean("bagla", "Numarayı köşesine bağla: köşe taşınınca numara izler",
                                    true)

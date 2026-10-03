@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/app/controller.hpp"
 
+#include <algorithm>
+#include <optional>
+
 #include "piricad/app/data_root.hpp"
 
 #include "piricad/core/text.hpp"
@@ -415,8 +418,53 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
             // The line tokenised as VALUES: the parser takes the first word as a
             // command, so a stand-in word goes in front and every token that
             // follows is the answer.
+            // A NUMBER TYPED AT A NUMBER PROMPT is read by the parser's own road
+            // (`command::evaluate_answer`, CLAUDE.md 5.11), in the unit the parameter is
+            // declared in — `12,5`, `1.250,5`, `1250 cm`, `(2m+50cm)` — before the line
+            // is taken for a coordinate: `12,5` at a prompt that asks for ONE number is
+            // twelve and a half, and has no coordinate to be. A prompt that is answered by
+            // pointing at a distance (`pick_distance`) keeps the coordinate reading, which
+            // is its feature: a typed point is a distance to it.
+            const auto answerNumber = [&]() -> std::optional<core::Status> {
+                if (asking.kind != command::ParamKind::Number &&
+                    asking.kind != command::ParamKind::Integer)
+                    return std::nullopt;
+                // The unit THE PROMPT asks in, which is not always the argument's
+                // (`command::prompt_length_exponent`): OFSET's prompt is metres, its
+                // argument millimetres.
+                auto value = command::evaluate_answer(
+                    trimmed.toStdString(),
+                    command::prompt_length_exponent(session_->spec(), asking));
+                if (value) {
+                    supplyNumber(value.value());
+                    return core::ok();
+                }
+                // Something that begins like a number and is not one is told what is wrong
+                // with it; anything else may still be a command or a word.
+                const QChar first = trimmed.isEmpty() ? QChar() : trimmed.front();
+                if (first.isDigit() || first == QLatin1Char('-') || first == QLatin1Char('+') ||
+                    first == QLatin1Char('.') || first == QLatin1Char('('))
+                    return core::Status(value.error());
+                return std::nullopt;
+            };
+            if (!asking.pick_distance && !asking.pick_sweep) {
+                if (const auto done = answerNumber(); done) {
+                    if (!*done) {
+                        refused(done->error());
+                        return done->error();
+                    }
+                    return command::DispatchResult{};
+                }
+            }
+
             auto answer = command::parse_line("YANIT " + trimmed.toStdString());
-            if (answer && !answer.value().tokens.empty() &&
+            // A COORDINATE IS THE WHOLE ANSWER or it is not one: `5,5 m` at a distance prompt is
+            // five and a half metres, and taking its first token for a point dropped the `m`
+            // without a word. (A prompt that asks for a point keeps reading only the first.)
+            const bool wholeLine = answer && (answer.value().tokens.size() == 1 ||
+                                              (asking.kind != command::ParamKind::Number &&
+                                               asking.kind != command::ParamKind::Integer));
+            if (answer && wholeLine && !answer.value().tokens.empty() &&
                 command::is_coordinate(answer.value().tokens.front())) {
                 auto pt = command::resolve_point(answer.value().tokens.front(),
                                                  asking.rubber_origin, bus_.resolve_context());
@@ -429,13 +477,13 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
             switch (asking.kind) {
             case command::ParamKind::Number:
             case command::ParamKind::Integer: {
-                // The Turkish decimal comma is what a Turkish keyboard produces
-                // and what every other number in this program is written with.
-                bool ok          = false;
-                QString number   = trimmed;
-                const double val = number.replace(QLatin1Char(','), QLatin1Char('.')).toDouble(&ok);
-                if (ok) {
-                    supplyNumber(val);
+                // The prompts that point at a distance or a sweep arrive here for a typed
+                // number: the same road, the same units.
+                if (const auto done = answerNumber(); done) {
+                    if (!*done) {
+                        refused(done->error());
+                        return done->error();
+                    }
                     return command::DispatchResult{};
                 }
                 break;
@@ -451,6 +499,18 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
             case command::ParamKind::Selection: break;
             }
         }
+    }
+
+    // WHAT A PERSON REACHED FOR (TODOS U-01), noted at the door they all use: a typed
+    // line, a ribbon button and the command search come through here, and the shell's
+    // own set-up commands (the symbol shelf at start-up) go straight to the bus and
+    // never do. Before the command runs, so one that parks on a prompt counts.
+    if ((origin == command::Origin::Gui || origin == command::Origin::CommandLine) &&
+        !bus_.in_batch()) {
+        if (auto parsed = command::parse_line(trimmed.toStdString()); parsed)
+            if (const command::CommandSpec* spec = registry_.resolve(parsed.value().command);
+                spec != nullptr && command::worth_remembering(*spec))
+                emit commandReached(QString::fromStdString(spec->id));
     }
 
     // A TYPED INTERACTIVE COMMAND STARTS THE WAY A BUTTON STARTS IT. `execute_line`
