@@ -187,6 +187,7 @@ std::uint64_t LayerTable::fold(std::uint64_t seed) const
         // that never asked keeps the fingerprint it had (model.md: a field may be added, never
         // reinterpreted).
         if (!l.selectable) h = fnv1a_int(2, h);
+        if (l.viewonly) h = fnv1a_int(3, h); // a view of a source is content too (TODOS G-02)
         h = fold_appearance(l.appearance, h);
         // The zero sentinel predates full layer symbols. Leaving it out preserves
         // every legacy document fingerprint; a real layer symbol is content and

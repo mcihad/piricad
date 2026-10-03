@@ -187,6 +187,12 @@ void AttributePanel::rebuild()
             shows.rows.push_back({tr("secilebilir"), l->selectable ? tr("evet") : tr("hayır"),
                                   QString(), false, tr("KATMAN ad=\"%1\" secilebilir=%2").arg(name),
                                   field_of(FieldKind::Bool)});
+            // VIEW OR WORKING COPY (TODOS G-02): the row is the command, and `hayır` is the act
+            // that takes a view into the edit buffer (it unlocks in the same step).
+            shows.rows.push_back({tr("salt"), l->viewonly ? tr("evet") : tr("hayır"),
+                                  l->viewonly ? tr("kaynağından salt görüntü") : QString(), false,
+                                  tr("KATMAN ad=\"%1\" salt=%2").arg(name),
+                                  field_of(FieldKind::Bool)});
             const auto scale_text = [](core::ScaleDenominator n) {
                 return n == 0 ? QStringLiteral("0") : QString::number(n);
             };
@@ -582,9 +588,9 @@ void AttributePanel::rebuild()
                 // written and changed at the prompt.
                 const bool symmetric = def.tolerance == core::DimTolerance::None ||
                                        def.tolerance == core::DimTolerance::Symmetric;
-                const bool angle     = def.type == core::DimensionType::Angular ||
-                                       def.type == core::DimensionType::Angular3P;
-                QString tolerance    = QStringLiteral("—");
+                const bool angle = def.type == core::DimensionType::Angular ||
+                                   def.type == core::DimensionType::Angular3P;
+                QString tolerance = QStringLiteral("—");
                 if (def.tolerance == core::DimTolerance::Symmetric)
                     tolerance =
                         angle ? QString::number(

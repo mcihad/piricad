@@ -203,7 +203,7 @@ private:
     command::Task<core::Result<std::string>>
     import_into(command::Transaction* tx, command::Session* session, std::string path,
                 std::string format, std::vector<std::string> only, std::vector<std::string> fields,
-                bool reproject = false, bool allow_rough = false);
+                bool reproject = false, bool allow_rough = false, bool view_only = false);
     /// `version` is the DXF year (`surum=2013`), 0 for the default; refused for
     /// any other format. The write is a job of `session` when there is one
     /// (command/job.hpp): off the UI thread, counted, and stopped with the

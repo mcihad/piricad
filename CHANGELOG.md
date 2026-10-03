@@ -6,6 +6,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — veri kaynağı bilgisi, salt görüntü ve gerçek eğrilerin içe alınması (G-02)
+
+- **`KAYNAK <dosya> [katman=]`** (`core.source`): bir veri kaynağını içe almadan, salt okunur açıp anlatır —
+  sürücü, katman kimliği (satır kimliği ve geometri sütunu), koordinat sistemi ve neyi saydığı, satır tahmini
+  (kesin mi tahmin mi), alanlar ve kısıtları (boş olamaz, benzersiz, varsayılan, alan kuralı) ve GDAL'ın
+  bildirdiği yetenekler (rastgele okuma, dizinli konum süzgeci, hızlı sayım, işlem, eğri, Z, M). Yanında
+  PiriCAD'in kendi tarafı: okur/yazar (izin listesi), **kaynağa geri yazmaz**, içe alırken neyi atar ya da
+  taşımaz. Her şey GDAL'dan; sürücünün yapabildiği ile ürünün desteklediği ayrı satırlarda. Yapılandırılmış
+  sonuç betiğe/istemciye de döner. İçe Aktar penceresinde katman satırlarının ipucu aynı metni gösterir.
+- **`İÇEAKTAR salt=evet`**: katmanlar kaynağından **salt görüntü** olarak alınır — kilitli, açıklamada kaynak dosya
+  adı ve sürücü (klasör yolu değil), kilidi `KATMAN kilitli=hayır` ile açılamaz. **`KATMAN ad=X salt=hayır`**
+  düzenlenebilir kopyaya çevirir ve aynı adımda kilidi açar (tek geri alma adımı). Kayıtlı katman durumu
+  uygulanınca da görüntü kilitli kalır. Bayrak dosyaya yazılır (katman kaydının bayt bayrağında 2. bit) ve
+  belge parmak izine girer. Çizimde zaten olan katman görüntüye dönmez. Özellik panelinde `salt` satırı.
+- **Düzeltme — gerçek eğri taşıyan kaynak hiçbir şey vermiyordu.** GeoPackage/GML/PostGIS'in `CIRCULARSTRING`,
+  `COMPOUNDCURVE`, `CURVEPOLYGON` geometrileri okuyucunun bildiği türlerde olmadığı için "desteklenmeyen"
+  sayılıyor, eğrilerden oluşan bir dosya "okunabilir çizgi ya da alan içermiyor" diye boş dönüyordu. Artık GDAL
+  eğriyi 0,25°'lik parçalara çevirerek veriyor ve transkript kaç eğrinin çizgi parçalarına dönüştüğünü ve
+  sapmasını (yarıçapın milyonda 2,4'ü) uyarı olarak söylüyor. Yay olarak alma henüz yok.
+- Belgeler: `komutlar/source.md` (yeni), `import.md` (`salt`, kaynak raporu, eğri uyarısı), `layer.md` (`salt`).
+  Kanıt: `test_io.cpp` (altı yeni vaka: GeoPackage/Shapefile raporu, `NOT NULL`/`UNIQUE`/varsayılan kısıtlı tablo,
+  tanınmayan biçim, eğri içe alma ve yay üzerinde kalma, komut satırı = betik, salt görüntü kilit kuralı + kaydet/aç +
+  dönüştürme geri alınır + durum uygulaması), `PIRICAD_LAYERPROPS_PROBE` (panel `salt` satırı), `PIRICAD_REALMOUSE_PROBE`
+  (pencerede katman ipucu).
+
 ### Eklendi — dönüşümün doğruluğu söyleniyor, kaba işlem izinsiz yapılmıyor, dosya çizimin sistemine taşınıyor (G-01)
 
 - **PROJ'un gerçekten kullandığı işlem raporlanıyor.** `DÖNÜŞTÜR` artık işlemin adını, PROJ'un bildirdiği

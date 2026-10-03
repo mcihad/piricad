@@ -64,7 +64,9 @@ for gerekli in 'uzak görünümde INCE ölçek aralığıyla gizli' 'paftada ayr
                'boş ölçek aralığı panelden de reddediliyor' 'seçilemez katmandaki çizgi kutuyla seçilmedi' \
                'alt menü kayıtlı durumları ve kaydetme satırını sunuyor' \
                'menüden Uygula — TUMU: katmanlar kayıttaki gibi geri geldi' 'durumu uygulamak tek geri alma adımı' \
-               '1000 katmanda liste ve arama akıcı' '1000 katmanda toplu işlemler akıcı'; do
+               '1000 katmanda liste ve arama akıcı' '1000 katmanda toplu işlemler akıcı' \
+               'panel KAYNAKLI katmanının salt görüntü ve kilitli olduğunu söylüyor' 'salt görüntünün kilidi doğrudan açılamadı' \
+               'panelden salt=hayır düzenlenebilir kopyaya çevirdi'; do
     if ! grep -qF "$gerekli" <<<"$cikti"; then
         echo "katman-ozellik: sondanın şu denetimi hiç yazılmadı: $gerekli" >&2
         exit 1

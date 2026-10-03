@@ -395,11 +395,12 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         r.catalog_ref_string = pool.intern(l.catalog_ref);
         r.visible            = l.visible ? 1u : 0u;
         r.locked             = l.locked ? 1u : 0u;
-        r.plottable = static_cast<std::uint8_t>((l.plottable ? 1u : 0u) | (l.selectable ? 0u : 2u));
-        r.opacity            = l.opacity;
-        r.min_scale          = l.min_scale;
-        r.max_scale          = l.max_scale;
-        r.appearance         = to_record(l.appearance);
+        r.plottable = static_cast<std::uint8_t>((l.plottable ? 1u : 0u) | (l.selectable ? 0u : 2u) |
+                                                (l.viewonly ? 4u : 0u));
+        r.opacity   = l.opacity;
+        r.min_scale = l.min_scale;
+        r.max_scale = l.max_scale;
+        r.appearance = to_record(l.appearance);
         layers.push_back(r);
     }
 

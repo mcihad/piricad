@@ -743,7 +743,10 @@ void LayerPanel::refresh()
             marks |= 8;
             says << tr("ekranda %%1 opak").arg(qRound(l.opacity * 100.0 / 255.0));
         }
-        if (l.locked) says << tr("kilitli (düzenlenemez)");
+        if (l.viewonly)
+            says << tr("kaynağından salt görüntü (düzenlemek için KATMAN salt=hayır)");
+        else if (l.locked)
+            says << tr("kilitli (düzenlenemez)");
         item->setData(0, Qt::UserRole + 7, marks);
         QString tip = static_cast<core::LayerId>(i) == active
                           ? tr("Aktif katman — %1").arg(QString::fromStdString(l.name))

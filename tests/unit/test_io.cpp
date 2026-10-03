@@ -3662,8 +3662,9 @@ TEST_CASE("DXF: kapalı ve iki köşeli çokgen daire ya da yaylı şekil olur, 
     // A REAL INFRASTRUCTURE DRAWING (an İLBANK water-supply project, 1.2 MB, 396
     // LWPOLYLINEs) was REFUSED WHOLE with the error "Yay kenar 1 yok" (arc edge 1
     // does not exist) because ONE of them was closed, had two vertices and a bulge
-    // of 1 on each: two half circles, the way a great many programs draw a circle. The reader built an arc for each of its two edges and stored the ring
-    // as open — one edge — so the validation found the second arc without an edge.
+    // of 1 on each: two half circles, the way a great many programs draw a circle. The reader built
+    // an arc for each of its two edges and stored the ring as open — one edge — so the validation
+    // found the second arc without an edge.
     //
     // Seed 30 holds the shapes that can be written that way, in the order below:
     //   0  two half circles                      -> a CIRCLE, radius 2200 mm
@@ -7880,4 +7881,333 @@ TEST_CASE("IO: blokları olan bir çizime yapıştırılan referans kendi bloğu
         CHECK_EQ(box.max_x - box.min_x, 2'000);
     }
     CHECK_EQ(found, std::size_t{1});
+}
+
+// ---------------------------------------------------------------------------------------------
+// G-02: a source says what it is and what it can do before anything is imported.
+// ---------------------------------------------------------------------------------------------
+
+namespace {
+
+/// Whether `text` holds `part`.
+bool has(const std::string& text, const char* part)
+{
+    return text.find(part) != std::string::npos;
+}
+
+/// Runs a GDAL command-line tool quietly; true when it exited 0.
+bool gdal_tool(const std::string& line)
+{
+    return std::system((line + " >/dev/null 2>&1").c_str()) == 0;
+}
+
+} // namespace
+
+TEST_CASE("KAYNAK: GeoPackage'in kimliğini, sistemini, satır sayısını ve yeteneklerini içe almadan "
+          "söyler (G-02)")
+{
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    TempDir tmp("kaynak-gpkg");
+    const std::string gpkg = tm30_parcels(tmp, "parsel.gpkg");
+    REQUIRE(!gpkg.empty());
+
+    Rig r;
+    const auto before = r.doc.content_hash();
+    const auto depth  = r.undo.undo_depth();
+    auto ran          = r.bus.execute_line("KAYNAK \"" + gpkg + "\"", Origin::Test);
+    REQUIRE_MESSAGE(ran.ok(), (ran.ok() ? std::string() : ran.error().message));
+    const std::string& said = r.transcript;
+
+    // THE SOURCE: its driver, and what PiriCAD itself permits (a different question from the
+    // driver's).
+    CHECK(has(said, "Sürücü: GPKG"));
+    CHECK(has(said, "PiriCAD okur (İÇEAKTAR): var"));
+    CHECK(has(said, "yazar (DIŞAAKTAR): var"));
+    CHECK(has(said, "katman ekleyebilir: var"));
+    // THE ONE THING A READER MUST NOT ASSUME.
+    CHECK(has(said, "PiriCAD kaynağa GERİ YAZMAZ"));
+    // THE LAYER: identity, system and unit, the row count (exact where the source answers it
+    // cheaply).
+    CHECK(has(said, "[1] PARSEL"));
+    CHECK(has(said, "Sistem: EPSG:5254 (metre sayar)"));
+    CHECK(has(said, "Satır: 1 (kesin)"));
+    CHECK(has(said, "Kimlik: fid (satır kimliği)"));
+    CHECK(has(said, "geometri sütunu: geom"));
+    // WHAT THE FORMAT CAN DO, from GDAL.
+    CHECK(has(said, "rastgele okuma var"));
+    CHECK(has(said, "dizinli konum süzgeci var"));
+    CHECK(has(said, "işlem (transaction) var"));
+
+    // A QUERY: nothing changed, nothing to undo, and the source is untouched.
+    CHECK_EQ(r.doc.content_hash(), before);
+    CHECK_EQ(r.undo.undo_depth(), depth);
+    CHECK(r.journal.entries().empty()); // a ReadOnly command leaves no journal line
+
+    // THE STRUCTURED FORM carries the same facts.
+    auto got = r.bus.dispatch(Invocation{"core.source",
+                                         [&] {
+                                             Args a;
+                                             a.set("dosya", Value::text(gpkg));
+                                             return a;
+                                         }(),
+                                         Origin::Script});
+    REQUIRE(got.ok());
+    const core::Json& report = got.value().report;
+    REQUIRE(report.is_object());
+    CHECK_EQ(report.find("surucu")->as_string(), std::string("GPKG"));
+    CHECK_FALSE(report.find("kaynaga_geri_yazma")->as_bool());
+    const core::Json& layer = report.find("katmanlar")->as_array().at(0);
+    CHECK_EQ(layer.find("ad")->as_string(), std::string("PARSEL"));
+    CHECK_EQ(layer.find("sistem")->as_string(), std::string("EPSG:5254"));
+    CHECK_EQ(layer.find("satir")->as_int(), std::int64_t{1});
+    CHECK(layer.find("satir_kesin")->as_bool());
+    CHECK(layer.find("yetenekler")->find("dizinli_konum_suzgeci")->as_bool());
+}
+
+TEST_CASE("KAYNAK: Shapefile'ın yetenekleri GeoPackage'inkinden farklı söylenir; eğri alan kısıtı "
+          "da görünür (G-02)")
+{
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    TempDir tmp("kaynak-shp");
+    const std::string gpkg = tm30_parcels(tmp, "parsel.gpkg");
+    REQUIRE(!gpkg.empty());
+    const std::string shp = tmp.file("parsel.shp");
+    if (!ogr2ogr("-f \"ESRI Shapefile\" \"" + shp + "\" \"" + gpkg + "\"") || !fs::exists(shp))
+        PENDING("ogr2ogr yok; Shapefile örneği üretilemedi.");
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KAYNAK \"" + shp + "\"", Origin::Test).ok());
+    const std::string& said = r.transcript;
+    CHECK(has(said, "Sürücü: ESRI Shapefile"));
+    // THE DIFFERENCE A USER HAS TO KNOW: PiriCAD reads a Shapefile and writes none (the
+    // allow-list), and the format has no transactions and no spatial index in the file.
+    CHECK(has(said, "yazar (DIŞAAKTAR): yok"));
+    CHECK(has(said, "dizinli konum süzgeci yok"));
+    CHECK(has(said, "işlem (transaction) yok"));
+    CHECK(has(said, "Kimlik: kaynak satır kimliği vermiyor"));
+    // The truncated field name the format forced is visible as it is.
+    CHECK(has(said, "yukseklik_ Integer64"));
+    // Z and M: the format can hold both, and PiriCAD says what it does with a layer that has them.
+    CHECK(has(said, "Z var"));
+}
+
+TEST_CASE("KAYNAK: alan kısıtları (boş olamaz, benzersiz, varsayılan) söylenir ve içe alırken "
+          "taşınmadığı açıkça yazılır (G-02)")
+{
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    TempDir tmp("kaynak-kisit");
+    const std::string seed = tm30_parcels(tmp, "tohum.gpkg");
+    REQUIRE(!seed.empty());
+    const std::string gpkg = tmp.file("ada.gpkg");
+    if (!ogr2ogr("-f GPKG \"" + gpkg + "\" \"" + seed + "\"")) PENDING("ogr2ogr yok.");
+    // A TABLE WITH CONSTRAINTS the way a municipality's database has them, registered as a feature
+    // table of the GeoPackage so GDAL exposes it as a layer.
+    const bool made =
+        gdal_tool("ogrinfo -q \"" + gpkg +
+                  "\" -sql \"CREATE TABLE ada (fid INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                  "geom POLYGON, "
+                  "no INTEGER NOT NULL, kod TEXT UNIQUE, ad TEXT DEFAULT 'bilinmiyor')\"") &&
+        gdal_tool("ogrinfo -q \"" + gpkg +
+                  "\" -sql \"INSERT INTO gpkg_contents (table_name, data_type, "
+                  "identifier, srs_id) VALUES ('ada', 'features', 'ada', 5254)\"") &&
+        gdal_tool("ogrinfo -q \"" + gpkg +
+                  "\" -sql \"INSERT INTO gpkg_geometry_columns (table_name, "
+                  "column_name, geometry_type_name, srs_id, z, m) VALUES ('ada', "
+                  "'geom', 'POLYGON', 5254, 0, 0)\"");
+    if (!made) PENDING("ogrinfo ile kısıtlı tablo kurulamadı.");
+
+    Rig r;
+    auto ran = r.bus.execute_line("KAYNAK \"" + gpkg + "\" katman=ada", Origin::Test);
+    REQUIRE_MESSAGE(ran.ok(), (ran.ok() ? std::string() : ran.error().message));
+    const std::string& said = r.transcript;
+    CHECK(has(said, "[1] ada"));
+    CHECK(has(said, "no Integer"));
+    CHECK(has(said, "boş olamaz"));
+    CHECK(has(said, "kod String"));
+    CHECK(has(said, "benzersiz"));
+    CHECK(has(said, "varsayılan 'bilinmiyor'"));
+    // AND THE HONEST HALF: the constraints do not travel into the drawing's columns.
+    CHECK(has(said, "Alan kısıtları"));
+    CHECK(has(said, "içe alırken taşınmaz"));
+    // `katman=` narrows the report: the other layer of the file is not described.
+    CHECK_FALSE(has(said, "[2]"));
+}
+
+TEST_CASE("KAYNAK: tanınmayan biçim reddedilir ve PiriCAD'in okuduğu biçimleri sayar (G-02)")
+{
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    TempDir tmp("kaynak-bilinmeyen");
+    const std::string path = tmp.file("veri.xyz");
+    std::ofstream(path) << "bu bir CBS dosyası değil\n";
+    Rig r;
+    auto ran = r.bus.execute_line("KAYNAK \"" + path + "\"", Origin::Test);
+    REQUIRE_FALSE(ran.ok());
+    CHECK(has(ran.error().message, "açılamadı"));
+    CHECK(has(ran.error().message, "PiriCAD'in okuduğu biçimler"));
+    CHECK(has(ran.error().message, "GPKG"));
+}
+
+TEST_CASE("İÇEAKTAR: gerçek eğri (CURVEPOLYGON) kaynaktan yok olmaz, çizgi parçalarına çevrilip "
+          "söylenir (G-02)")
+{
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    TempDir tmp("egri-icealma");
+    // A circular arc polygon, the way a GeoPackage, GML or PostGIS holds a round parcel corner. The
+    // file used to import as NOTHING: the curve type was not in the reader's switch, so every
+    // feature was "unsupported" and a file made of arcs reported "okunabilir çizgi ya da alan
+    // içermiyor".
+    const std::string csv = tmp.file("egri.csv");
+    std::ofstream(csv) << "id,wkt\n1,\"CURVEPOLYGON(CIRCULARSTRING(485300 4310200,485310 4310210,"
+                          "485320 4310200,485310 4310190,485300 4310200))\"\n";
+    const std::string gpkg = tmp.file("egri.gpkg");
+    if (!ogr2ogr(
+            "-f GPKG -oo GEOM_POSSIBLE_NAMES=wkt -oo KEEP_GEOM_COLUMNS=NO -a_srs EPSG:5254 \"" +
+            gpkg + "\" \"" + csv + "\"") ||
+        !fs::exists(gpkg))
+        PENDING("ogr2ogr yok; eğrili örnek üretilemedi.");
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    auto ran = r.bus.execute_line("İÇEAKTAR \"" + gpkg + "\"", Origin::Test);
+    REQUIRE_MESSAGE(ran.ok(), (ran.ok() ? std::string() : ran.error().message));
+    CHECK_EQ(r.doc.live_entity_count(), std::size_t{1});
+    // ONE LINE OF THE TRANSCRIPT SAYS WHAT HAPPENED to the arcs, in the words of the file's own
+    // types.
+    CHECK(has(r.transcript, "1 eğri"));
+    CHECK(has(r.transcript, "çizgi parçalarına çevrilerek okundu"));
+    CHECK(has(r.transcript, "yay olarak alınmadı"));
+
+    // AND THE CHORDS FOLLOW THE ARC: the parcel is a 10 m radius circle, so its vertices all lie on
+    // it to within the stated tolerance (2,4 millionths of the radius = 0,024 mm; a millimetre is
+    // generous).
+    const core::RingSpan span = r.doc.geometry().rings_of(r.doc.entities().slot[0]);
+    const auto xs             = r.doc.geometry().ring_xs(span.first);
+    const auto ys             = r.doc.geometry().ring_ys(span.first);
+    CHECK(xs.size() > 100);
+    for (std::size_t v = 0; v < xs.size(); ++v) {
+        const double dx = static_cast<double>(xs[v] - 485'310'000);
+        const double dy = static_cast<double>(ys[v] - 4'310'200'000);
+        CHECK(std::abs(std::hypot(dx, dy) - 10'000.0) < 1.0);
+    }
+}
+
+TEST_CASE("KAYNAK: komut satırı ve betik aynı raporu verir (G-02)")
+{
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    TempDir tmp("kaynak-esit");
+    const std::string gpkg = tm30_parcels(tmp, "parsel.gpkg");
+    REQUIRE(!gpkg.empty());
+
+    Rig typed, scripted;
+    REQUIRE(typed.bus.execute_line("KAYNAK \"" + gpkg + "\"", Origin::CommandLine).ok());
+    script::JsonRunner runner(scripted.bus, script::Sandbox::Project);
+    auto ran = runner.run_text(
+        R"({"ad": "Kaynak", "komutlar": [{"cmd": "core.source", "args": {"dosya": ")" + gpkg +
+        R"("}}]})");
+    REQUIRE_MESSAGE(ran.ok(), (ran.ok() ? std::string() : ran.error().message));
+    CHECK_EQ(typed.transcript, scripted.transcript);
+    CHECK_EQ(typed.doc.content_hash(), scripted.doc.content_hash());
+}
+
+TEST_CASE("İÇEAKTAR salt=evet: kaynak salt görüntü olarak alınır; düzenlenebilir kopyaya çevirmek "
+          "ayrı bir eylemdir (G-02)")
+{
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    TempDir tmp("salt-goruntu");
+    const std::string gpkg = tm30_parcels(tmp, "parsel.gpkg");
+    REQUIRE(!gpkg.empty());
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    const std::size_t depth = r.undo.undo_depth();
+    auto imported = r.bus.execute_line("İÇEAKTAR \"" + gpkg + "\" salt=evet", Origin::Test);
+    REQUIRE_MESSAGE(imported.ok(), (imported.ok() ? std::string() : imported.error().message));
+    CHECK_EQ(r.undo.undo_depth() - depth, std::size_t{1});
+
+    // THE LAYER SAYS WHAT IT IS: a view, locked, with its source in the words of its description.
+    const core::LayerId slot = r.doc.find_layer("PARSEL");
+    REQUIRE(slot != core::kNoLayer);
+    const core::Layer* layer = r.doc.layer(slot);
+    CHECK(layer->viewonly);
+    CHECK(layer->locked);
+    CHECK(has(layer->description, "Kaynak: parsel.gpkg"));
+    CHECK(has(layer->description, "GPKG"));
+    CHECK(has(layer->description, "salt=hayır"));
+    // The path is not in the drawing, only the file's name: a document that is sent on is not a map
+    // of the sender's folders.
+    CHECK_FALSE(has(layer->description, tmp.file("").c_str()));
+
+    // A LOCK THE USER PUT ON, THEY TAKE OFF; A VIEW'S LOCK IS NOT THEIRS TO TAKE OFF DIRECTLY.
+    r.transcript.clear();
+    auto unlocked = r.bus.execute_line("KATMAN ad=PARSEL kilitli=hayır", Origin::Test);
+    REQUIRE_FALSE(unlocked.ok());
+    CHECK(has(unlocked.error().message, "salt görüntü olarak alındı"));
+    CHECK(has(unlocked.error().message, "KATMAN ad=PARSEL salt=hayır"));
+    CHECK(r.doc.layer(slot)->locked);
+
+    // AND NOTHING EDITS IT: the entity is on a locked layer, so the edit is refused and the drawing
+    // is as it was.
+    const auto hash = r.doc.content_hash();
+    CHECK_FALSE(r.bus.execute_line("SİL nesneler=1", Origin::Test).ok());
+    CHECK_EQ(r.doc.content_hash(), hash);
+
+    // THE SAVED STATE of the layers cannot open it either: the state applies, the view stays.
+    REQUIRE(r.bus.execute_line("KATMANDURUM islem=kaydet ad=ACIK", Origin::Test).ok());
+    CHECK(r.bus.execute_line("KATMANDURUM islem=uygula ad=ACIK", Origin::Test).ok());
+    CHECK(r.doc.layer(slot)->locked);
+
+    // THE FILE KEEPS IT: save, open again, still a view.
+    const std::string project = tmp.file("proje.pcad");
+    REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + project + "\"", Origin::Test).ok());
+    const auto saved_hash = r.doc.content_hash();
+    Rig again;
+    auto reopened = again.bus.execute_line("AÇ \"" + project + "\"", Origin::Test);
+    REQUIRE_MESSAGE(reopened.ok(), (reopened.ok() ? std::string() : reopened.error().message));
+    REQUIRE(again.doc.find_layer("PARSEL") != core::kNoLayer);
+    CHECK(again.doc.layer(again.doc.find_layer("PARSEL"))->viewonly);
+    CHECK(again.doc.layer(again.doc.find_layer("PARSEL"))->locked);
+    CHECK_EQ(again.doc.content_hash(), saved_hash);
+
+    // TAKING IT INTO THE EDIT BUFFER is its own act, one undo step, and it unlocks.
+    const std::size_t before_convert = r.undo.undo_depth();
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL salt=hayır", Origin::Test).ok());
+    CHECK_FALSE(r.doc.layer(slot)->viewonly);
+    CHECK_FALSE(r.doc.layer(slot)->locked);
+    CHECK_EQ(r.undo.undo_depth() - before_convert, std::size_t{1});
+    REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK(r.doc.layer(slot)->viewonly);
+    CHECK(r.doc.layer(slot)->locked);
+    REQUIRE(r.bus.execute_line("YİNELE", Origin::Test).ok());
+    CHECK(r.bus.execute_line("SİL nesneler=1", Origin::Test).ok()); // now editable
+}
+
+TEST_CASE("İÇEAKTAR salt=evet: çizimde zaten olan katman salt görüntüye dönmez; komut satırı ve "
+          "betik eşittir (G-02)")
+{
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    TempDir tmp("salt-mevcut");
+    const std::string gpkg = tm30_parcels(tmp, "parsel.gpkg");
+    REQUIRE(!gpkg.empty());
+
+    // A WORKING LAYER THE DRAWING ALREADY HAS keeps what it is.
+    Rig working;
+    REQUIRE(working.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(working.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(working.bus.execute_line("İÇEAKTAR \"" + gpkg + "\" salt=evet", Origin::Test).ok());
+    const core::Layer* kept = working.doc.layer(working.doc.find_layer("PARSEL"));
+    CHECK_FALSE(kept->viewonly);
+    CHECK_FALSE(kept->locked);
+
+    // THE THREE CLIENTS leave one drawing.
+    Rig typed, scripted;
+    for (Rig* r : {&typed, &scripted})
+        REQUIRE(r->bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(
+        typed.bus.execute_line("İÇEAKTAR \"" + gpkg + "\" salt=evet", Origin::CommandLine).ok());
+    script::JsonRunner runner(scripted.bus, script::Sandbox::Project);
+    auto ran = runner.run_text(
+        R"({"ad": "Salt", "komutlar": [{"cmd": "core.import", "args": {"dosya": ")" + gpkg +
+        R"(", "salt": true}}]})");
+    REQUIRE_MESSAGE(ran.ok(), (ran.ok() ? std::string() : ran.error().message));
+    CHECK_EQ(typed.doc.content_hash(), scripted.doc.content_hash());
 }

@@ -424,6 +424,8 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
     }
 
     std::vector<bool> locked(static_cast<std::size_t>(dr.layer_count), false);
+    std::vector<bool> viewonly(static_cast<std::size_t>(dr.layer_count),
+                               false); ///< applied with the locks
 
     for (std::uint64_t i = 0; i < dr.layer_count; ++i) {
         const LayerRecord& r = layer_rows.value()[static_cast<std::size_t>(i)];
@@ -493,12 +495,15 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         // with a warning and the value dropped; it is restored now, and the document fingerprint
         // is the one the writer had.
         core::LayerProps props;
-        props.plottable   = (r.plottable & 1u) != 0;
-        props.selectable  = (r.plottable & 2u) == 0;
-        props.min_scale   = r.min_scale;
-        props.max_scale   = r.max_scale;
-        props.opacity     = r.opacity;
-        props.description = description.value();
+        props.plottable  = (r.plottable & 1u) != 0;
+        props.selectable = (r.plottable & 2u) == 0;
+        // A VIEW OF A SOURCE is locked, and a locked layer refuses new geometry, so it is restored
+        // with the locks below, after the entities are in (TODOS G-02).
+        viewonly[static_cast<std::size_t>(i)] = (r.plottable & 4u) != 0;
+        props.min_scale                       = r.min_scale;
+        props.max_scale                       = r.max_scale;
+        props.opacity                         = r.opacity;
+        props.description                     = description.value();
         if (!(props == live->props()))
             if (auto st = tx.set_layer_props(slot, props); !st) return st.error();
     }
@@ -1430,6 +1435,15 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
 
     // ---- deferred layer locks ----
     for (std::uint64_t i = 0; i < dr.layer_count; ++i) {
+        if (viewonly[static_cast<std::size_t>(i)]) {
+            // The flag implies the lock: one step does both, and the lock rule of the document sees
+            // the view as a view.
+            const auto slot        = static_cast<core::LayerId>(i);
+            core::LayerProps props = tx.document().layer(slot)->props();
+            props.viewonly         = true;
+            if (auto st = tx.set_layer_props(slot, props); !st) return st.error();
+            continue;
+        }
         if (!locked[static_cast<std::size_t>(i)]) continue;
         if (auto st = tx.set_layer_locked(static_cast<core::LayerId>(i), true); !st)
             return st.error();

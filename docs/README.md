@@ -30,6 +30,7 @@ Tek tek komutlar:
 |---|---|
 | `YENİ` | [Boş çizim başlatma](komutlar/new.md) |
 | `ÖRNEKPROJE` | [Hazır bir örnekle başlayın](komutlar/sample.md) |
+| `KAYNAK` | [Veri kaynağı bilgisi](komutlar/source.md) |
 | `AÇ` | [Proje dosyası açma](komutlar/open.md) |
 | `KAYDET` | [Çizimi kaydetme](komutlar/save.md) |
 | `FARKLIKAYDET` | [Yeni ada kaydetme](komutlar/saveas.md) |

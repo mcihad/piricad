@@ -31,6 +31,7 @@
 #include "piricad/core/document.hpp"
 #include "piricad/core/settings.hpp"
 #include "piricad/io/service.hpp"
+#include "piricad/io/source_info.hpp"
 #include "piricad/render/drawlist.hpp"
 #include "piricad/render/scene.hpp"
 #include "piricad/render/view.hpp"
@@ -88,6 +89,11 @@ public:
     /// Valid only after `finished()`.
     const core::Result<io::ImportProbe>& outcome() const noexcept { return outcome_; }
 
+    /// What the source is and can do (`io::inspect_source`), read beside the import so each layer
+    /// can say its identity, system, row estimate and constraints. Empty when it could not be
+    /// inspected — the import itself does not depend on it. Valid only after `finished()`.
+    const io::SourceInfo& source() const noexcept { return source_; }
+
 protected:
     /// The read itself, on this thread.
     void run() override;
@@ -98,6 +104,7 @@ private:
     io::ImportOptions options_;
     std::stop_source stop_;
     core::Result<io::ImportProbe> outcome_;
+    io::SourceInfo source_;
 };
 
 /// The window's stage once a file has been read: the file's own geometry, drawn
@@ -304,6 +311,9 @@ private:
     /// `cevir=evet` on the line: carry the file into the drawing's coordinate system with PROJ
     /// instead of reading its numbers as the drawing's own (TODOS G-01).
     CheckBox* reproject_ = nullptr;
+
+    /// The source's capability report, kept for the layers' tips.
+    io::SourceInfo source_;
 
     QLabel* command_ = nullptr; ///< the line the import button will run
     Button* go_      = nullptr;

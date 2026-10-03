@@ -79,7 +79,8 @@ Task<void> submit(Context& ctx, Bus& bus, const FileRequest& request)
     case FileRequest::Verb::BlockLibrary:
     case FileRequest::Verb::XrefAttach:
     case FileRequest::Verb::XrefLoad:
-    case FileRequest::Verb::XrefRepath: break;
+    case FileRequest::Verb::XrefRepath:
+    case FileRequest::Verb::Inspect: break;
     }
     ctx.echo(result.value());
 }
@@ -250,6 +251,14 @@ Task<void> run_import(Context& ctx)
         ctx.record("alanlar", wanted);
     }
 
+    // A VIEW OF THE SOURCE, or a working copy of it (TODOS G-02). Nothing PiriCAD does writes back
+    // into a source, so the choice is only whether what arrives is locked for looking or open for
+    // editing; either way the layers say where they came from.
+    if (ctx.argument("salt").as_bool()) {
+        request.view_only = true;
+        ctx.record("salt", Value::boolean(true));
+    }
+
     // CARRY THE FILE INTO THE DRAWING'S SYSTEM (TODOS G-01), asked for by name. Without it a layer
     // in another zone, another datum or in degrees is read as the drawing's own numbers and the
     // mismatch is said; with it PROJ moves every position and says which operation it used and how
@@ -333,7 +342,59 @@ Task<void> run_export_style(Context& ctx)
     co_await submit(ctx, bus, request);
 }
 
+/// KAYNAK — what a data source is and what it can do, before any of it is imported (TODOS G-02).
+///
+/// A QUERY, AND A SEPARATE ONE from İÇEAKTAR on purpose: the question "what is in this file and
+/// what will you do with it" is asked before the answer is acted on, and the import wizard shows
+/// the same report. It reads metadata only — and a row count where the source answers it without a
+/// scan — so a large GeoPackage is inspected in a moment, and it changes nothing.
+Task<void> run_source(Context& ctx)
+{
+    auto path = co_await ctx.text("dosya", "İncelenecek kaynak dosya");
+    if (!path || path->empty()) co_return;
+
+    Bus& bus = ctx.session().bus();
+    if (engine_missing(ctx, bus)) co_return;
+
+    FileRequest request;
+    request.verb = FileRequest::Verb::Inspect;
+    request.path = *path;
+    if (const Value layer = ctx.argument("katman"); !layer.empty()) {
+        request.layer = layer.as_text();
+        ctx.record("katman", layer);
+    }
+    core::Json report;
+    request.report = &report;
+    co_await submit(ctx, bus, request);
+    if (ctx.session().state() == SessionState::Failed) co_return;
+    ctx.report(std::move(report));
+}
+
 } // namespace
+
+PIRICAD_COMMAND(source)
+{
+    return CommandSpec{
+        .id       = "core.source",
+        .names    = {"KAYNAK", "KAYNAKBİLGİ", "KAYNAKBILGI", "SOURCE", "KYN"},
+        .title    = "Kaynak Bilgisi",
+        .category = Category::Query,
+        .params =
+            {
+                Param::text("dosya", Arity::exactly(1), "İncelenecek veri kaynağının yolu")
+                    .en("file"),
+                Param::text("katman", Arity::optional(),
+                            "Yalnız bu katmanı anlat; verilmezse kaynağın bütün katmanları")
+                    .en("layer"),
+            },
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
+        .summary = "Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır "
+                   "tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır.",
+        .run     = &run_source,
+        .effect  = Effect::Query | Effect::FileRead,
+    };
+}
 
 PIRICAD_COMMAND(exportstyle)
 {
@@ -489,6 +550,12 @@ PIRICAD_COMMAND(import)
                             "Sütun olarak okunacak öznitelik alanları, virgülle; "
                             "* hepsi; verilmezse alan okunmaz")
                     .en("fields"),
+                Param::boolean(
+                    "salt", Arity::optional(),
+                    "evet: katmanlar kaynağından salt görüntü olarak alınır (kilitli, "
+                    "kaynağı açıklamada yazar, kilidi doğrudan açılamaz); varsayılan hayır "
+                    "(düzenlenebilir kopya)")
+                    .en("view_only"),
                 Param::boolean("cevir", Arity::optional(),
                                "Dosyanın koordinat sistemi çizimin sisteminden farklıysa PROJ ile "
                                "çizimin sistemine dönüştür; varsayılan hayır (sayılar olduğu gibi "

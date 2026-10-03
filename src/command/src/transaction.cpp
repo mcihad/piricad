@@ -234,10 +234,19 @@ Status Transaction::set_layer_locked(LayerId l, bool locked)
 
 Status Transaction::set_layer_props(LayerId l, const LayerProps& props)
 {
+    const bool was_view = doc_.layer(l) != nullptr && doc_.layer(l)->viewonly;
     core::Op undo;
     auto st = doc_.set_layer_props(l, props, undo);
     if (!st) return st;
     inverse_.push_back(std::move(undo));
+
+    // A VIEW IS LOCKED, and a view converted to a working copy is unlocked in the same step: both
+    // are one act ("take this into the edit buffer" / "keep it as a view"), so they are one undo
+    // step too. The props go in first, so the lock rule of `Document::set_layer_locked` sees the
+    // new state.
+    const core::Layer* now = doc_.layer(l);
+    if (now != nullptr && props.viewonly != was_view && now->locked != props.viewonly)
+        return set_layer_locked(l, props.viewonly);
     return core::ok();
 }
 
@@ -754,10 +763,10 @@ Transaction::SettleReport Transaction::settle_attachments()
                     const auto should       = core::caption_follow(doc_, d, a);
                     const core::RingSpan rs = geom.rings_of(ents.slot[d]);
                     const bool standing     = should && rs.count == 1 &&
-                                              geom.ring_count[rs.first] == 2 &&
-                                              geom.vertex(rs.first, 0) == should->base[0] &&
-                                              geom.vertex(rs.first, 1) == should->base[1] &&
-                                              should->text == texts.text(ents.slot[d]);
+                                          geom.ring_count[rs.first] == 2 &&
+                                          geom.vertex(rs.first, 0) == should->base[0] &&
+                                          geom.vertex(rs.first, 1) == should->base[1] &&
+                                          should->text == texts.text(ents.slot[d]);
                     if (!standing && !contains(stuck, d)) {
                         stuck.push_back(d);
                         ++rep.left;
@@ -787,11 +796,11 @@ bool Transaction::place_caption(EntityId d, const core::Attachment& stored,
     // an identical slot would be an edit that changed nothing but the file.
     const core::RingSpan rs = geom.rings_of(dslot);
     const bool same_place   = rs.count == 1 && geom.ring_count[rs.first] == 2 &&
-                              geom.ring_role[rs.first] == core::RingRole::Open &&
-                              geom.vertex(rs.first, 0) == should->base[0] &&
-                              geom.vertex(rs.first, 1) == should->base[1];
-    const bool same_text    = should->text == texts.text(dslot);
-    const bool same_anchor  = should->anchor == texts.anchor(dslot);
+                            geom.ring_role[rs.first] == core::RingRole::Open &&
+                            geom.vertex(rs.first, 0) == should->base[0] &&
+                            geom.vertex(rs.first, 1) == should->base[1];
+    const bool same_text   = should->text == texts.text(dslot);
+    const bool same_anchor = should->anchor == texts.anchor(dslot);
 
     if (a != stored && !set_attachment(d, a)) return false;
     if (!same_text || !same_anchor) {
@@ -1241,7 +1250,7 @@ Transaction::SettleReport Transaction::settle_hatches()
             if (s.broken) continue;
             const EntityId src = doc_.slot_of(s.source);
             touched            = touched || src == core::kNoEntity || !doc_.alive(src) ||
-                                 contains(moved, src) || contains(erased, src);
+                      contains(moved, src) || contains(erased, src);
         }
         if (!touched) {
             // THE HATCH MOVED ON ITS OWN: it no longer fills its boundary, which
@@ -1759,8 +1768,8 @@ core::Result<Transaction::AdoptSummary> Transaction::adopt_from(const core::Docu
         if (b >= fate.size() || fate[b] != kUntouched) return;
         const core::BlockId have = doc_.blocks().find(named(scratch.blocks().at(b).name));
         const bool refill        = external && have != core::kNoBlock &&
-                                   (doc_.blocks().at(have).flags & core::kBlockDependent) != 0;
-        fate[b]                  = have == core::kNoBlock ? kCreate : refill ? kRefill : kTheirs;
+                            (doc_.blocks().at(have).flags & core::kBlockDependent) != 0;
+        fate[b] = have == core::kNoBlock ? kCreate : refill ? kRefill : kTheirs;
         if (fate[b] != kTheirs) pending.push_back(b);
     };
     const auto referenced = [&scratch](core::EntityId e) -> core::BlockId {

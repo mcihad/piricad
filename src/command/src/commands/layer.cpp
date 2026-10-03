@@ -96,6 +96,11 @@ Task<void> run(Context& ctx)
             props.description = v.as_text();
             given             = true;
         }
+        // VIEW OR WORKING COPY (TODOS G-02): one switch, and the lock follows it in the same step.
+        if (const Value v = ctx.argument("salt"); !v.empty()) {
+            props.viewonly = v.as_bool();
+            given          = true;
+        }
         if (given) {
             auto st = ctx.transaction().set_layer_props(id, props);
             if (!st) {
@@ -103,7 +108,7 @@ Task<void> run(Context& ctx)
                 co_return;
             }
             for (const char* named : {"basilir", "secilebilir", "en_kucuk_olcek", "en_buyuk_olcek",
-                                      "opaklik", "aciklama"})
+                                      "opaklik", "aciklama", "salt"})
                 if (const Value v = ctx.argument(named); !v.empty()) ctx.record(named, v);
         }
     }
@@ -154,6 +159,12 @@ PIRICAD_COMMAND(layer)
                     .en("opacity"),
                 Param::text("aciklama", Arity::optional(), "Katmanın açıklaması, serbest metin")
                     .en("description"),
+                Param::boolean(
+                    "salt", Arity::optional(),
+                    "evet = kaynağından salt görüntü olarak alınmış (kilitlenir, kilidi "
+                    "doğrudan açılamaz); hayır = düzenlenebilir kopyaya çevirir ve kilidi "
+                    "açar")
+                    .en("view_only"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/io/service.hpp"
+#include "piricad/io/source_info.hpp"
 
 #include "piricad/command/external_ref.hpp"
 
@@ -29,6 +30,7 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -290,7 +292,7 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
         co_return co_await import_into(request.tx, request.session, std::move(request.path),
                                        std::move(request.format), std::move(request.layers),
                                        std::move(request.fields), request.reproject,
-                                       request.allow_rough);
+                                       request.allow_rough, request.view_only);
 
     case command::FileRequest::Verb::Export:
         co_return co_await export_out(request.session, std::move(request.path),
@@ -298,6 +300,15 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
 
     case command::FileRequest::Verb::ExportStyle:
         co_return export_style(std::move(request.path), std::move(request.layer));
+
+    case command::FileRequest::Verb::Inspect: {
+        // THE REPORT FIRST, the action after (TODOS G-02): metadata only, nothing read into the
+        // drawing.
+        auto info = inspect_source(request.path);
+        if (!info) co_return info.error();
+        if (request.report != nullptr) *request.report = to_json(info.value());
+        co_return describe(info.value(), request.layer);
+    }
 
     case command::FileRequest::Verb::ImportPoints:
         co_return co_await import_points(request.tx, std::move(request.path), request.swapped_axes);
@@ -919,7 +930,8 @@ core::Result<std::string> FileService::save(const std::string& path, bool save_a
 command::Task<core::Result<std::string>>
 FileService::import_into(command::Transaction* tx, command::Session* session, std::string path,
                          std::string format, std::vector<std::string> only,
-                         std::vector<std::string> fields, bool reproject, bool allow_rough)
+                         std::vector<std::string> fields, bool reproject, bool allow_rough,
+                         bool view_only)
 {
     if (!tx)
         co_return err(ErrorCode::Internal,
@@ -985,8 +997,31 @@ FileService::import_into(command::Transaction* tx, command::Session* session, st
 
     // PHASE TWO: into the real document, on this thread, inside the command's one
     // transaction (io.md R17). A failure here rolls the whole import back.
+    std::set<std::string> had_layers; // the layers the drawing held before this import
+    for (const core::Layer& l : tx->document().layers())
+        had_layers.insert(l.name);
     auto adopted = tx->adopt_from(*scratch);
     if (!adopted) co_return adopted.error();
+
+    // A VIEW OF THE SOURCE (TODOS G-02): the layers THIS import made are marked as taken from the
+    // file, which locks them, and say where they came from in their description. A layer the
+    // drawing already had keeps what it was: importing into a working layer does not turn it into a
+    // view.
+    if (view_only) {
+        const ImportOutcome& read = outcome.value();
+        const std::string file    = std::filesystem::path(path).filename().string();
+        for (core::LayerId slot = 0; slot < tx->document().layer_table().size(); ++slot) {
+            const core::Layer* l = tx->document().layer(slot);
+            if (l == nullptr || had_layers.contains(l->name)) continue;
+            core::LayerProps props = l->props();
+            props.viewonly         = true;
+            if (props.description.empty())
+                props.description = "Kaynak: " + file + " · " + read.driver + " · " + read.crs +
+                                    " · salt görüntü (düzenlemek için KATMAN ad=" + l->name +
+                                    " salt=hayır)";
+            if (auto st = tx->set_layer_props(slot, props); !st) co_return st.error();
+        }
+    }
 
     // WHAT WAS LEFT BEHIND, IN FRONT OF THE USER. A skipped feature that only
     // reached a counter is a silent loss, which io.md P11 forbids; the transcript

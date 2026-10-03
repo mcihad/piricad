@@ -1820,6 +1820,7 @@ def layer(
     max_scale: int = ...,
     opacity: int = ...,
     description: str = ...,
+    view_only: bool = ...,
 ) -> int:
     """Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
 
@@ -1835,6 +1836,7 @@ def layer(
         max_scale — Görünür olduğu en büyük ölçeğin 1:N paydası (en yakın görünüm); bundan yakından bakınca gizlenir. 0 = sınırsız
         opacity — Ekranda opaklık, 0 saydam – 255 opak; paftada her zaman opak
         description — Katmanın açıklaması, serbest metin
+        view_only — evet = kaynağından salt görüntü olarak alınmış (kilitlenir, kilidi doğrudan açılamaz); hayır = düzenlenebilir kopyaya çevirir ve kilidi açar
     """
 
 def layer_visibility(
@@ -1869,6 +1871,18 @@ def sample(
 
     Komut: core.sample (ÖRNEKPROJE)
         name — Açılacak örnek projenin kimliği ya da başlığı; verilmezse liste gösterilir ve sorulur
+    """
+
+def source(
+    *,
+    file: str = ...,
+    layer: str = ...,
+) -> int:
+    """Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır.
+
+    Komut: core.source (KAYNAK)
+        file — İncelenecek veri kaynağının yolu
+        layer — Yalnız bu katmanı anlat; verilmezse kaynağın bütün katmanları
     """
 
 def layout(
@@ -2223,6 +2237,7 @@ def import(
     format: str = ...,
     layers: str = ...,
     fields: str = ...,
+    view_only: bool = ...,
     reproject: bool = ...,
     rough: bool = ...,
 ) -> int:
@@ -2233,6 +2248,7 @@ def import(
         format — Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur
         layers — Yalnızca bu katmanlar okunur, virgülle ayrılır; verilmezse tümü
         fields — Sütun olarak okunacak öznitelik alanları, virgülle; * hepsi; verilmezse alan okunmaz
+        view_only — evet: katmanlar kaynağından salt görüntü olarak alınır (kilitli, kaynağı açıklamada yazar, kilidi doğrudan açılamaz); varsayılan hayır (düzenlenebilir kopya)
         reproject — Dosyanın koordinat sistemi çizimin sisteminden farklıysa PROJ ile çizimin sistemine dönüştür; varsayılan hayır (sayılar olduğu gibi okunur, fark uyarılır)
         rough — cevir=evet ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır
     """

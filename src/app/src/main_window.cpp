@@ -3823,6 +3823,34 @@ int MainWindow::probeLayerProps()
     check(controller_->document().content_hash() == before,
           QStringLiteral("boş ölçek aralığı panelden de reddediliyor"));
 
+    // ---- 3b. VIEW OR WORKING COPY (TODOS G-02): the row is the command, and `hayır` is the act
+    // that takes a view into the edit buffer — it unlocks in the same step, as one undo step ----
+    runScriptLine(QStringLiteral("KATMAN ad=KAYNAKLI aciklama=\"Kaynak: ornek.gpkg\" salt=evet"));
+    attributePanel_->setLayer(controller_->document().find_layer("KAYNAKLI"));
+    QCoreApplication::processEvents();
+    attributePanel_->openGroupForProbe(QStringLiteral("GÖSTERİM VE ÇIKTI"));
+    check(attributePanel_->probeRowValue(QStringLiteral("salt")) == QStringLiteral("evet") &&
+              controller_->document().layer(controller_->document().find_layer("KAYNAKLI"))->locked,
+          QStringLiteral("panel KAYNAKLI katmanının salt görüntü ve kilitli olduğunu söylüyor"));
+    layerPanel_->selectLayer(controller_->document().find_layer("KAYNAKLI"));
+    QCoreApplication::processEvents();
+    picture("katman-salt-goruntu");
+    runScriptLine(QStringLiteral("KATMAN ad=KAYNAKLI kilitli=hayır"));
+    check(controller_->document().layer(controller_->document().find_layer("KAYNAKLI"))->locked,
+          QStringLiteral("salt görüntünün kilidi doğrudan açılamadı"));
+    const std::size_t view_depth = controller_->undoStack().undo_depth();
+    check(attributePanel_->editRowForProbe(QStringLiteral("salt"), QStringLiteral("hayır")) &&
+              !controller_->document()
+                   .layer(controller_->document().find_layer("KAYNAKLI"))
+                   ->viewonly &&
+              !controller_->document()
+                   .layer(controller_->document().find_layer("KAYNAKLI"))
+                   ->locked &&
+              controller_->undoStack().undo_depth() - view_depth == 1,
+          QStringLiteral("panelden salt=hayır düzenlenebilir kopyaya çevirdi ve kilidi açtı (tek "
+                         "adım)"));
+    attributePanel_->setLayer(controller_->document().find_layer("KILAVUZ"));
+
     // ---- 4. a layer the pick passes over ----
     runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
     runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-20,55 80,65"));
@@ -9233,6 +9261,21 @@ int MainWindow::probeRealMouse()
                                      "okudu"));
                 if (read) {
                     QCoreApplication::processEvents();
+                    // THE SOURCE'S REPORT on the layer row (TODOS G-02): identity, system, row
+                    // count.
+                    // Both the layer list and the field list carry this object name; the layer
+                    // rows are the ones whose tips hold the report.
+                    QString tip;
+                    for (QListWidget* rows :
+                         wizard->findChildren<QListWidget*>(QStringLiteral("importLayerList")))
+                        for (int i = 0; i < rows->count() && tip.isEmpty(); ++i)
+                            tip = rows->item(i)->toolTip();
+                    check(tip.contains(QStringLiteral("Sistem: EPSG:4326")) &&
+                              tip.contains(QStringLiteral("Satır:")) &&
+                              tip.contains(QStringLiteral("GERİ YAZMAZ")),
+                          QStringLiteral(
+                              "katman satırının ipucu kaynağın sistemini, satır sayısını ve "
+                              "geri yazmadığını söylüyor"));
                     if (shooting)
                         (void)wizard->grab().save(into +
                                                   QStringLiteral("/ice-aktar-cevir-kutusu.png"));

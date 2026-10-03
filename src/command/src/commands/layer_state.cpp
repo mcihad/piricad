@@ -152,7 +152,10 @@ Task<void> run(Context& ctx)
             }
             touched = true;
         }
-        if (now->locked != row.locked) {
+        // A VIEW OF A SOURCE STAYS LOCKED (TODOS G-02): a saved state that has it open cannot open
+        // it, and the rest of the state still applies. Converting it to a working copy is its own
+        // act.
+        if (now->locked != row.locked && !(now->viewonly && !row.locked)) {
             if (auto st = ctx.transaction().set_layer_locked(slot, row.locked); !st) {
                 ctx.refuse(st.error());
                 co_return;

@@ -270,6 +270,11 @@ void ImportProbeThread::cancel()
 void ImportProbeThread::run()
 {
     outcome_ = io::probe_import(into_, path_.toStdString(), options_, stop_.get_token());
+    // BESIDE THE READ, the report of what the source is and can do (TODOS G-02): metadata only, so
+    // it costs nothing next to the read, and a source that cannot be inspected loses only its tips.
+    if (outcome_.ok())
+        if (auto info = io::inspect_source(path_.toStdString()); info)
+            source_ = std::move(info.value());
 }
 
 // ----------------------------------------------------------- ImportPreview --
@@ -1228,6 +1233,7 @@ void ImportWizard::probeFinished()
     ticker_->stop();
 
     const core::Result<io::ImportProbe>& outcome = probe_->outcome();
+    source_                                      = probe_->source();
     probe_->deleteLater();
     probe_ = nullptr;
 
@@ -1269,6 +1275,11 @@ void ImportWizard::probeFinished()
     for (const auto& [name, count] : found_.layers) {
         auto* row = new QListWidgetItem(QString::fromStdString(name), layers_);
         row->setData(Qt::UserRole + 1, grouped(count));
+        // THE LAYER'S IDENTITY, SYSTEM, ROW ESTIMATE, CONSTRAINTS AND CAPABILITIES, on hover: the
+        // same words `KAYNAK` prints, from the same function, so the window and the command cannot
+        // differ.
+        if (!source_.layers.empty())
+            row->setToolTip(QString::fromStdString(io::describe(source_, name)));
         // EVERYTHING TICKED TO BEGIN WITH: the user asked to import this file,
         // and a checklist that starts empty makes them do the work twice.
         row->setCheckState(Qt::Checked);

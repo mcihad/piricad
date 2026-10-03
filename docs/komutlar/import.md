@@ -41,6 +41,7 @@ Hangi biçimlerin okunduğu ve neyin taşındığı:
 İÇEAKTAR dosya=<dosya-yolu> katmanlar="<ad>,<ad>,<ad>" alanlar="<alan>,<alan>"
 İÇEAKTAR dosya=<dosya-yolu> alanlar=*
 İÇEAKTAR dosya=<dosya-yolu> cevir=evet [kaba=evet]
+İÇEAKTAR dosya=<dosya-yolu> salt=evet
 ```
 
 Biçim verilmezse uzantıdan bulunur. İçinde boşluk olan yol tırnak içine alınır.
@@ -53,6 +54,7 @@ Biçim verilmezse uzantıdan bulunur. İçinde boşluk olan yol tırnak içine a
 | `bicim` | Sürücü adı: `DXF`, `DWG`, `GPKG` ya da `NCZ`. Verilmezse uzantıdan bulunur |
 | `katmanlar` | Yalnızca bu katmanlar okunur, virgülle ayrılır. Verilmezse dosyadaki bütün katmanlar okunur |
 | `alanlar` | Sütun olarak okunacak öznitelik alanları, virgülle; `*` hepsini okur. Verilmezse hiçbir alan okunmaz, yalnız geometri gelir |
+| `salt` | `evet`: katmanlar kaynağından **salt görüntü** olarak alınır — kilitli gelir, açıklamasında kaynak dosya adı ve sürücü yazar, kilidi doğrudan açılamaz. Varsayılan `hayır` (düzenlenebilir kopya). Çizimde zaten olan bir katman salt görüntüye dönmez |
 | `cevir` | `evet`: dosyanın koordinat sistemi çizimin sisteminden farklıysa **PROJ** her köşeyi çizimin sistemine taşır (derece, ayak, başka dilim, başka datum). Varsayılan `hayır`: sayılar olduğu gibi okunur, fark uyarılır |
 | `kaba` | `cevir=evet` ile: kaba (*ballpark*) ya da eksik grid yüzünden düşük doğruluklu bir işleme izin verir. Varsayılan `hayır` |
 
@@ -90,6 +92,20 @@ sisteminin sayılarıymış gibi okunur — bu, bir sistemi **atamaktır**, dön
          doğruysa GERİAL ile geri alıp İÇEAKTAR cevir=evet ile yeniden aktarın …
   not: Okunan türler: Polygon 96, Line String 32
 ```
+
+### Önce ne olduğuna bakın
+
+Bilmediğiniz bir dosyayı içeri almadan önce [`KAYNAK`](source.md) ile sürücüsünü, katmanlarını, sistemini,
+satır tahminini, alan kısıtlarını ve yeteneklerini okuyun. İçe aktarma penceresi aynı bilgiyi katman
+satırlarının ipucunda gösterir.
+
+### Salt görüntü ya da düzenlenebilir kopya
+
+`salt=evet` ile alınan katmanlar **kilitli** gelir ve kaynakları açıklamalarında yazar (yalnız dosyanın
+adı; klasör yolu çizime girmez). Bu bir görüntüleme kopyasıdır: kilit `KATMAN kilitli=hayır` ile
+açılamaz, çünkü "bakmak" ile "düzenlemek" birbirine karışmasın. Düzenlemek isterseniz
+`KATMAN ad=<katman> salt=hayır` katmanı düzenlenebilir kopyaya çevirir ve aynı adımda kilidini açar.
+PiriCAD **hiçbir durumda kaynak dosyaya geri yazmaz**; ikisi de çizimin içindeki kopyadır.
 
 ### Başka bir sistemdeki dosyayı çizimin sistemine taşımak
 
@@ -398,9 +414,11 @@ satırından, betikten ya da yapay zekâ önerisinden gelmiş olması fark etmez
 | `'...' dosyasının '...' katmanı içe alınmadı. '...' coğrafi bir koordinat sistemi …` | Katman koordinatlarını derece (ya da metre dışında bir birimle) sayıyor | `cevir=evet` ekleyin: PROJ dosyayı çizimin sistemine taşır. Ya da dosyayı önce metre sayan bir sisteme dönüştürün: `ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg`. Ayrıntı: [Koordinat sisteminin birimi](../veri/koordinat-sistemleri.md#koordinat-sisteminin-birimi-yalnız-metre) |
 | `'...' katmanı çizimin sistemine (...) dönüştürülemedi: ... dönüşümü kurulamadı: PROJ bu ikili için doğruluğu bilinen … işlem bulamadı …` | `cevir=evet` ile PROJ iki sistemi yalnız kaba bir kaydırmayla ya da bu makinede olmayan bir grid ile bağlayabiliyor | Mesaj eksik gridi söylüyorsa dosyayı PROJ veri dizinine koyun; sonucun metrelerce kayabileceğini bilerek isterseniz `kaba=evet` ekleyin |
 | `N köşe, iki koordinat sisteminin geçerli alanının dışında kaldığı için dönüştürülemedi; çizime hiçbir şey eklenmedi.` | `cevir=evet` ile bazı köşeler dönüşümün geçerli alanı dışında (çoğunlukla yanlış dilim) | Dosyanın ve çizimin sistemlerini denetleyin |
+| `'...' katmanı kaynağından salt görüntü olarak alındı; kilidi doğrudan açılamaz. …` | Salt görüntü katmanının kilidi `KATMAN kilitli=hayır` ile açılmak istendi | `KATMAN ad=<katman> salt=hayır` ile düzenlenebilir kopyaya çevirin |
 | `kaba=evet yalnız cevir=evet ile anlamlıdır …` | `kaba=evet` tek başına verildi | Dönüştürmek istiyorsanız `cevir=evet` de yazın |
 | `'...' okunabilir çizgi ya da alan içermiyor; … büyük olasılıkla boylam ve enlem (derece) …` | Sistem bildirmeyen dosyanın derece sayıları metre okunup ezildi | Dosyanın sistemini bulup dönüştürün ve yeniden aktarın |
 | `'...' katmanı hiçbir koordinat sistemi bildirmiyor.` | Veri kümesi etiketsiz | Yanına aynı adlı bir `.prj` dosyası koyun |
+| `N eğri (kaynakta gerçek yay: …) çizgi parçalarına çevrilerek okundu; yay olarak alınmadı. …` (uyarı) | GeoPackage/GML/PostGIS kaynağı gerçek eğri (daire yayı, bileşik eğri, eğrili alan) taşıyor | Bilgilendirme: eğri 0,25°'lik parçalara çevrilir, sapma yarıçapın milyonda 2,4'ü kadardır; yaylı alma henüz yok |
 | `'...' içindeki katmanlar farklı koordinat sistemleri bildiriyor` | Karışık veri kümesi | Tek bir sisteme dönüştürüp yeniden deneyin |
 | `'...' okunabilir çizgi ya da alan içermiyor` | Dosyada çizgi, alan, nokta ya da yazı yok; ya da hepsi kâğıt alanında | Dosyayı bir CAD programında açıp model alanında ne olduğuna bakın |
 | `'...' içindeki N. öğe okunamadı: ...` | Geometri doğrulamayı geçemedi | Mesajın devamı sebebi söyler; kaynak veriyi düzeltin |

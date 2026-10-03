@@ -123,6 +123,12 @@ struct FileRequest
 
         /// Point external reference `block` at the file at `path` and load it.
         XrefRepath,
+
+        /// REPORT WHAT A DATA SOURCE IS AND CAN DO (TODOS G-02): open the file at `path` read-only
+        /// and say its driver, its layers (`layer` narrows to one), each layer's identity, system,
+        /// row estimate, constraints and capabilities, and what PiriCAD does with each. Changes
+        /// nothing; the structured form goes to `report` when it is set.
+        Inspect,
     };
 
     Verb verb{Verb::Open}; ///< which operation to carry out
@@ -138,6 +144,15 @@ struct FileRequest
     /// Import: carry every layer whose own coordinate system differs from the drawing's into it
     /// (`İÇEAKTAR cevir=evet`) rather than reading its numbers as the drawing's own. PROJ's work.
     bool reproject{false};
+
+    /// Inspect: where the structured report is written, when the caller wants one. Null: only the
+    /// sentence the result carries.
+    core::Json* report{nullptr};
+
+    /// Import: take the layers as a VIEW of the source (`İÇEAKTAR salt=evet`) — locked, marked as
+    /// taken from a source, and kept locked until converted to a working copy (`KATMAN
+    /// salt=hayır`).
+    bool view_only{false};
 
     /// Import with `reproject`: accept a ballpark shift or a lower-accuracy operation
     /// (`kaba=evet`); off by default, because such a result lands metres away and looks right.

@@ -215,6 +215,17 @@ struct DatasetHandle
     DatasetHandle& operator=(const DatasetHandle&) = delete;
 };
 
+/// A number written with the manual's decimal comma.
+std::string comma_decimal(std::string text)
+{
+    std::replace(text.begin(), text.end(), '.', ',');
+    return text;
+}
+
+/// The angle, in degrees, GDAL strokes a true curve at on the way in (`getLinearGeometry`): fine
+/// enough that the chord stands off its arc by 2,4 millionths of the radius.
+constexpr double kCurveStepDegrees = 0.25;
+
 /// How one layer's coordinates reach the store: the unit they are read in, and — when the layer is
 /// being CARRIED into the drawing's own system (`İÇEAKTAR cevir=evet`) — the mapping PROJ made for
 /// it.
@@ -857,7 +868,8 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
 
     // The losses this path cannot avoid, counted here and said once at the end.
     std::uint64_t hatch_faces = 0, ellipses_stroked = 0, splines_stroked = 0,
-                  dimensions_exploded = 0, heights_dropped = 0, styles_ignored = 0;
+                  dimensions_exploded = 0, heights_dropped = 0, styles_ignored = 0,
+                  curves_linearized = 0;
 
     // Read once, before the layer loop: a DXF carries no CRS of its own and every
     // layer in it would otherwise re-read the same sidecar.
@@ -1310,6 +1322,20 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             const OGRGeometry* geometry = feature->GetGeometryRef();
             if (!geometry) continue;
 
+            // A TRUE CURVE (GeoPackage, GML, PostGIS can hold circular strings, compound curves and
+            // curved polygons) is a type the switch below does not know, so such a feature used to
+            // fall to "unsupported" and a file made of arcs imported as nothing (TODOS G-02). GDAL
+            // turns it into the chords of its own curve, at a fine fixed angle; the number of those
+            // is counted and said, because the file held arcs and the drawing now holds chords.
+            std::unique_ptr<OGRGeometry> chorded;
+            if (OGR_GT_IsNonLinear(geometry->getGeometryType()) != 0) {
+                chorded.reset(geometry->getLinearGeometry(kCurveStepDegrees));
+                if (chorded != nullptr) {
+                    geometry = chorded.get();
+                    ++curves_linearized;
+                }
+            }
+
             // WHAT THE FILE CALLS IT, for the census and for the losses named at
             // the end. The class chain is the DXF's own; a geodetic format has
             // none and is counted by its geometry type.
@@ -1743,6 +1769,14 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     // colours, line types and heights are not read into the model yet. None of
     // this may stay silent (io.md P11/P13), and the wording says what the next
     // reader will do about it (docs.md R13: future tense, phase named).
+    if (curves_linearized != 0)
+        diag.note(Severity::Warning,
+                  std::to_string(curves_linearized) +
+                      " eğri (kaynakta gerçek yay: daire yayı, bileşik eğri, eğrili alan) çizgi "
+                      "parçalarına çevrilerek okundu; yay olarak alınmadı. Parça açısı " +
+                      comma_decimal(core::format_general(kCurveStepDegrees, 3)) +
+                      "°: sapma yarıçapın milyonda 2,4'ü kadardır (10 m'lik yayda 0,024 mm). "
+                      "Yaylı alma henüz yok.");
     if (hatch_faces != 0)
         diag.note(Severity::Info, std::to_string(hatch_faces) +
                                       " tarama (HATCH) sınırı alan olarak okundu; dolgu deseni "

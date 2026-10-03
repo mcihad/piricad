@@ -189,6 +189,10 @@ bool is_out_of_scope(const CommandSpec& spec)
 {
     if (spec.id == "core.script") return true;
 
+    // KAYNAK is a query, but about a FILE: it needs the file engine this rig deliberately lacks,
+    // and test_io.cpp runs it against real GeoPackages and Shapefiles (TODOS G-02).
+    if (spec.id == "core.source") return true;
+
     // SINIR and ALANÜRET need the planar arrangement (core/planar.hpp), which a build
     // without CGAL does not have; it refuses and says so, which is the truth
     // about that build and says nothing about the manual. test_planar.cpp

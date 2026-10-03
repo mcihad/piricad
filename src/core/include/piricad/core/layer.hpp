@@ -41,6 +41,11 @@ struct LayerProps
     std::uint8_t opacity{255};     ///< screen only; a pafta is plotted opaque
     std::string description;       ///< free text, shown in the property panel
 
+    /// A VIEW OF A SOURCE, not a working copy of it (TODOS G-02). Implies `locked`, and a view
+    /// cannot be unlocked until it is converted to a working copy (`viewonly` off), which unlocks
+    /// it. NOT the same thing as a lock the user put on: that one the user takes off.
+    bool viewonly{false};
+
     friend bool operator==(const LayerProps&, const LayerProps&) = default;
 };
 
@@ -77,6 +82,12 @@ struct Layer
     /// picked and editable are four answers, and a layer gives each its own (TODOS U-05).
     bool selectable{true};
 
+    /// Taken from a source as a view (`LayerProps::viewonly`): locked, and the lock stays until the
+    /// layer is converted to a working copy. PiriCAD never writes back into a source, so "view" and
+    /// "working copy" are the whole of the difference between looking at data and editing a copy of
+    /// it.
+    bool viewonly{false};
+
     Appearance appearance{}; ///< the ByLayer source for this layer's entities
 
     /// The full ByLayer symbol. `appearance` remains the fixed-width cascade
@@ -110,7 +121,8 @@ struct Layer
     /// The plain properties as one value (`LayerProps`).
     LayerProps props() const
     {
-        return LayerProps{plottable, selectable, min_scale, max_scale, opacity, description};
+        return LayerProps{plottable, selectable,  min_scale, max_scale,
+                          opacity,   description, viewonly};
     }
 };
 

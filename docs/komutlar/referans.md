@@ -107,6 +107,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.layer_visibility`](layer_visibility.md) | Katman Görünümü | `KATMANGÖRÜNÜM`, `KATMANGORUNUM`, `LAYERVIEW`, `KGÖ`, `KGO` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
 | [`core.layer_state`](layer_state.md) | Katman Durumu | `KATMANDURUM`, `KATMANDURUMU`, `LAYERSTATE`, `KDR` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler. |
 | [`core.sample`](sample.md) | Örnek Proje | `ÖRNEKPROJE`, `ORNEKPROJE`, `SAMPLE`, `ÖRNEK`, `ORNEK` | Dosya | komuta özel | etkileşimli, betiklenebilir, salt okunur | Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, aplikasyon) boş bir çizim olarak açar ve ne deneyeceğinizi söyler. |
+| [`core.source`](source.md) | Kaynak Bilgisi | `KAYNAK`, `KAYNAKBİLGİ`, `KAYNAKBILGI`, `SOURCE`, `KYN` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır. |
 | [`core.layout`](layout.md) | Çıktı Yerleşimi | `ÇIKTIYERLEŞİMİ`, `CIKTIYERLESIMI`, `LAYOUT`, `ÇYR`, `CYR` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`core.layout_item`](layout_item.md) | Çıktı Öğesi | `ÇIKTIÖĞE`, `CIKTIOGE`, `LAYOUTITEM`, `ÇÖĞ`, `COG` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`core.layout_template`](layout_template.md) | Çıktı Şablonu | `ÇIKTIŞABLON`, `CIKTISABLON`, `LAYOUTTEMPLATE`, `ÇŞB`, `CSB` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
@@ -1562,6 +1563,7 @@ Bilinen adı: `TABAKA` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına ya
 | `en_buyuk_olcek` | integer | isteğe bağlı | Görünür olduğu en büyük ölçeğin 1:N paydası (en yakın görünüm); bundan yakından bakınca gizlenir. 0 = sınırsız |
 | `opaklik` | integer | isteğe bağlı | Ekranda opaklık, 0 saydam – 255 opak; paftada her zaman opak |
 | `aciklama` | text | isteğe bağlı | Katmanın açıklaması, serbest metin |
+| `salt` | bool | isteğe bağlı | evet = kaynağından salt görüntü olarak alınmış (kilitlenir, kilidi doğrudan açılamaz); hayır = düzenlenebilir kopyaya çevirir ve kilidi açar |
 
 Ayrıntılı kullanım: [KATMAN](layer.md)
 
@@ -1596,6 +1598,17 @@ Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, apli
 | `ad` | text | isteğe bağlı | Açılacak örnek projenin kimliği ya da başlığı; verilmezse liste gösterilir ve sorulur |
 
 Ayrıntılı kullanım: [ÖRNEKPROJE](sample.md)
+
+### `core.source` — KAYNAK (Kaynak Bilgisi)
+
+Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `dosya` | text | 1 | İncelenecek veri kaynağının yolu |
+| `katman` | text | isteğe bağlı | Yalnız bu katmanı anlat; verilmezse kaynağın bütün katmanları |
+
+Ayrıntılı kullanım: [KAYNAK](source.md)
 
 ### `core.layout` — ÇIKTIYERLEŞİMİ (Çıktı Yerleşimi)
 
@@ -1837,6 +1850,7 @@ Dış bir veri dosyasını çizime ekler.
 | `bicim` | text | isteğe bağlı | Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur |
 | `katmanlar` | text | isteğe bağlı | Yalnızca bu katmanlar okunur, virgülle ayrılır; verilmezse tümü |
 | `alanlar` | text | isteğe bağlı | Sütun olarak okunacak öznitelik alanları, virgülle; * hepsi; verilmezse alan okunmaz |
+| `salt` | bool | isteğe bağlı | evet: katmanlar kaynağından salt görüntü olarak alınır (kilitli, kaynağı açıklamada yazar, kilidi doğrudan açılamaz); varsayılan hayır (düzenlenebilir kopya) |
 | `cevir` | bool | isteğe bağlı | Dosyanın koordinat sistemi çizimin sisteminden farklıysa PROJ ile çizimin sistemine dönüştür; varsayılan hayır (sayılar olduğu gibi okunur, fark uyarılır) |
 | `kaba` | bool | isteğe bağlı | cevir=evet ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır |
 
@@ -8665,6 +8679,10 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "aciklama": {
           "type": "string",
           "description": "Katmanın açıklaması, serbest metin (metin)"
+        },
+        "salt": {
+          "type": "boolean",
+          "description": "evet = kaynağından salt görüntü olarak alınmış (kilitlenir, kilidi doğrudan açılamaz); hayır = düzenlenebilir kopyaya çevirir ve kilidi açar (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",

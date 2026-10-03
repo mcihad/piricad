@@ -187,6 +187,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.layer_visibility`](#cadlayer_visibility) | `core.layer_visibility` | `KATMANGÖRÜNÜM` | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
 | [`cad.layer_state`](#cadlayer_state) | `core.layer_state` | `KATMANDURUM` | Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler. |
 | [`cad.sample`](#cadsample) | `core.sample` | `ÖRNEKPROJE` | Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, aplikasyon) boş bir çizim olarak açar ve ne deneyeceğinizi söyler. |
+| [`cad.source`](#cadsource) | `core.source` | `KAYNAK` | Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır. |
 | [`cad.layout`](#cadlayout) | `core.layout` | `ÇIKTIYERLEŞİMİ` | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`cad.layout_item`](#cadlayout_item) | `core.layout_item` | `ÇIKTIÖĞE` | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`cad.layout_template`](#cadlayout_template) | `core.layout_template` | `ÇIKTIŞABLON` | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
@@ -2719,6 +2720,7 @@ cad.layer(
     max_scale: int,
     opacity: int,
     description: str,
+    view_only: bool,
 ) -> int
 ```
 
@@ -2735,6 +2737,7 @@ cad.layer(
 | `max_scale` | `int` | `en_buyuk_olcek` | Görünür olduğu en büyük ölçeğin 1:N paydası (en yakın görünüm); bundan yakından bakınca gizlenir. 0 = sınırsız |
 | `opacity` | `int` | `opaklik` | Ekranda opaklık, 0 saydam – 255 opak; paftada her zaman opak |
 | `description` | `str` | `aciklama` | Katmanın açıklaması, serbest metin |
+| `view_only` | `bool` | `salt` | evet = kaynağından salt görüntü olarak alınmış (kilitlenir, kilidi doğrudan açılamaz); hayır = düzenlenebilir kopyaya çevirir ve kilidi açar |
 
 [Komut sayfası](../komutlar/layer.md)
 
@@ -2795,6 +2798,26 @@ cad.sample(
 | `name` | `str` | `ad` | Açılacak örnek projenin kimliği ya da başlığı; verilmezse liste gösterilir ve sorulur |
 
 [Komut sayfası](../komutlar/sample.md)
+
+### `cad.source`
+
+Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır.
+
+Komut: `core.source` — `KAYNAK`
+
+```python
+cad.source(
+    file: str,
+    layer: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `file` | `str` | `dosya` | İncelenecek veri kaynağının yolu |
+| `layer` | `str` | `katman` | Yalnız bu katmanı anlat; verilmezse kaynağın bütün katmanları |
+
+[Komut sayfası](../komutlar/source.md)
 
 ### `cad.layout`
 
@@ -3238,6 +3261,7 @@ cad.import(
     format: str,
     layers: str,
     fields: str,
+    view_only: bool,
     reproject: bool,
     rough: bool,
 ) -> int
@@ -3249,6 +3273,7 @@ cad.import(
 | `format` | `str` | `bicim` | Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur |
 | `layers` | `str` | `katmanlar` | Yalnızca bu katmanlar okunur, virgülle ayrılır; verilmezse tümü |
 | `fields` | `str` | `alanlar` | Sütun olarak okunacak öznitelik alanları, virgülle; * hepsi; verilmezse alan okunmaz |
+| `view_only` | `bool` | `salt` | evet: katmanlar kaynağından salt görüntü olarak alınır (kilitli, kaynağı açıklamada yazar, kilidi doğrudan açılamaz); varsayılan hayır (düzenlenebilir kopya) |
 | `reproject` | `bool` | `cevir` | Dosyanın koordinat sistemi çizimin sisteminden farklıysa PROJ ile çizimin sistemine dönüştür; varsayılan hayır (sayılar olduğu gibi okunur, fark uyarılır) |
 | `rough` | `bool` | `kaba` | cevir=evet ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır |
 

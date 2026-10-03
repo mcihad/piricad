@@ -604,14 +604,15 @@ struct LayerRecord
     std::uint8_t locked;              ///< editable
     /// FLAGS, not a bool: bit 0 is "printed" (a guide layer is visible and not plotted) exactly as
     /// it always was — a file that never set the other bits reads the same — and bit 1 is "NOT
-    /// selectable" (`Layer::selectable`, TODOS U-05), set only when the pick passes over the layer.
+    /// selectable" (`Layer::selectable`, TODOS U-05), set only when the pick passes over the layer,
+    /// and bit 2 is "a view of a source" (`Layer::viewonly`, TODOS G-02), which implies `locked`.
     /// A reader that knows only bit 0 sees a non-zero byte and takes the layer as printed, which is
     /// right for every layer that is not also unprinted.
     std::uint8_t plottable;
-    std::uint8_t opacity;             ///< 0 transparent to 255 opaque
-    std::uint32_t min_scale;          ///< 1:N denominator; 0 = unbounded
-    std::uint32_t max_scale;          ///< 1:N denominator; 0 = unbounded
-    AppearanceRecord appearance;      ///< the layer default the ByLayer cascade resolves to
+    std::uint8_t opacity;        ///< 0 transparent to 255 opaque
+    std::uint32_t min_scale;     ///< 1:N denominator; 0 = unbounded
+    std::uint32_t max_scale;     ///< 1:N denominator; 0 = unbounded
+    AppearanceRecord appearance; ///< the layer default the ByLayer cascade resolves to
 };
 
 static_assert(sizeof(LayerRecord) == 64, "wire record");

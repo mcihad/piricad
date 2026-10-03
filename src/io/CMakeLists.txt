@@ -31,6 +31,7 @@ add_library(piricad_io STATIC
     src/pdf_encrypt.cpp
     src/print_profiles.cpp
     src/prj_sidecar.cpp
+    src/source_info.cpp
     src/staging.cpp
     src/qgis_style.cpp
     src/service.cpp

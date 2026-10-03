@@ -30,7 +30,7 @@ KATMAN
 KATMAN <ad>
 KATMAN ad=<ad> [gorunur=<evet|hayır>] [kilitli=<evet|hayır>] [renk=<tamsayı>]
 KATMAN ad=<ad> [basilir=<evet|hayır>] [secilebilir=<evet|hayır>] [en_kucuk_olcek=<N>]
-               [en_buyuk_olcek=<N>] [opaklik=<0-255>] [aciklama="<metin>"]
+               [en_buyuk_olcek=<N>] [opaklik=<0-255>] [aciklama="<metin>"] [salt=<evet|hayır>]
 ```
 
 Argümansız çağırırsanız komut katman adını sorar.
@@ -49,6 +49,7 @@ Argümansız çağırırsanız komut katman adını sorar.
 | `en_buyuk_olcek` | Görünür kaldığı en büyük ölçeğin `1:N` paydası (en yakın görünüm): bundan yakından bakınca gizlenir. `0` sınırsız |
 | `opaklik` | Ekranda opaklık, `0` saydam – `255` opak. Paftada katman her zaman opak basılır |
 | `aciklama` | Katmanın açıklaması, serbest metin |
+| `salt` | `evet`: katman kaynağından **salt görüntü** olarak alınmıştır — kilitlenir ve kilidi `kilitli=hayır` ile açılamaz. `hayır`: **düzenlenebilir kopyaya çevirir** ve kilidi aynı adımda açar. Bir dosyadan `İÇEAKTAR salt=evet` ile gelen katmanlar böyle işaretlidir ([KAYNAK](source.md)) |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -310,6 +311,7 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 | `'core.layer': bilinmeyen parametre 'renkler'. Tanımlı parametreler: ad, gorunur, kilitli, renk` | Parametre adı yanlış yazılmış | Doğru adı kullanın |
 | `'core.layer': 'gorunur' parametresi evet/hayır bekliyor. Girilen: 'belki'` | Geçersiz evet/hayır değeri | `evet` veya `hayır` yazın |
 | `Bilinmeyen katman kimliği: 7` | Var olmayan katmana işlem yapılmaya çalışılmış | Katman adını denetleyin |
+| `'X' katmanı kaynağından salt görüntü olarak alındı; kilidi doğrudan açılamaz. …` | `salt=evet` ile alınmış bir katmanın kilidi `kilitli=hayır` ile açılmak istendi | `KATMAN ad=X salt=hayır`: düzenlenebilir kopyaya çevirir ve kilidi aynı adımda açar |
 
 Ad vermeden **Esc**'e basarsanız hata olmaz; komut hiç çalışmamış sayılır ve transkriptte
 `İptal edildi` yazar.

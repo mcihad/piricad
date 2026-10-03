@@ -1874,6 +1874,17 @@ Status Document::set_layer_locked(LayerId l, bool locked, Op& undo_out)
     Layer* layer = layers_.at(l);
     if (!layer) return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(l));
 
+    // A VIEW STAYS LOCKED until it is converted to a working copy (`LayerProps::viewonly`):
+    // unlocking it directly would make "look at the source" and "edit a copy of it" the same thing,
+    // and the refusal says which command separates them (TODOS G-02).
+    if (!locked && layer->viewonly)
+        return err(
+            ErrorCode::ValidationFailed,
+            "'" + layer->name +
+                "' katmanı kaynağından salt görüntü olarak alındı; kilidi doğrudan açılamaz. "
+                "Düzenlemek için önce düzenlenebilir kopyaya çevirin: KATMAN ad=" +
+                layer->name + " salt=hayır");
+
     const bool was = layer->locked;
     layer->locked  = locked;
     bump_revision();
@@ -1906,6 +1917,7 @@ Status Document::set_layer_props(LayerId l, const LayerProps& props, Op& undo_ou
     layer->max_scale     = props.max_scale;
     layer->opacity       = props.opacity;
     layer->description   = props.description;
+    layer->viewonly      = props.viewonly;
     bump_revision();
 
     undo_out           = Op{};

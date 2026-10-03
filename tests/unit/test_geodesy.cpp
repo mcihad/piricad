@@ -36,6 +36,7 @@
 
 #include <cmath>
 #include <filesystem>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <vector>
