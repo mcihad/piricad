@@ -3803,6 +3803,80 @@ int MainWindow::probeLayerProps()
         picture("katman-durumlari-uygulandi");
     }
 
+
+    // ---- 6. A THOUSAND LAYERS (TODOS U-05): the list, the search and a bulk change stay fluid ----
+    //
+    // Measured in the real shell, with the layer list showing: the acceptance is "akıcı", and a
+    // number is the only form of that which can be held. The bounds are generous on purpose — this
+    // machine is shared and builds run beside it — and the measured figures are printed so a
+    // regression has something to be compared to.
+    {
+        runScriptLine(QStringLiteral("YENİ"));
+        QStringList lines;
+        lines.reserve(1000);
+        for (int i = 0; i < 1000; ++i)
+            lines << QStringLiteral("KATMAN ad=K%1").arg(i, 4, 10, QLatin1Char('0'));
+        QElapsedTimer clock;
+        clock.start();
+        controller_->runLines(lines, QStringLiteral("bin katman"));
+        QCoreApplication::processEvents();
+        const qint64 made = clock.restart();
+        check(controller_->document().layers().size() >= 1000,
+              QStringLiteral("bin katman oluştu (%1)").arg(controller_->document().layers().size()));
+
+        layerPanel_->refresh();
+        QCoreApplication::processEvents();
+        const qint64 listed = clock.restart();
+
+        // The search box, typed into: one narrowing of a thousand rows.
+        QLineEdit* filter = layerPanel_->findChild<QLineEdit*>(QStringLiteral("layerFilter"));
+        qint64 searched   = -1;
+        if (filter != nullptr) {
+            filter->setVisible(true);
+            clock.restart();
+            filter->setText(QStringLiteral("K09"));
+            QCoreApplication::processEvents();
+            searched = clock.restart();
+            picture("katman-bin-arama");
+            filter->clear();
+            filter->setVisible(false);
+            QCoreApplication::processEvents();
+        }
+
+        // Bulk changes through the commands: flip every layer's visibility, save a state of all
+        // thousand, hide them all, bring the state back.
+        clock.restart();
+        runScriptLine(QStringLiteral("KATMANGÖRÜNÜM islem=tersine"));
+        const qint64 flipped = clock.restart();
+        runScriptLine(QStringLiteral("KATMANGÖRÜNÜM islem=tersine"));
+        runScriptLine(QStringLiteral("KATMANDURUM islem=kaydet ad=BIN"));
+        const qint64 saved = clock.restart();
+        runScriptLine(QStringLiteral("KATMANGÖRÜNÜM islem=tersine"));
+        clock.restart();
+        runScriptLine(QStringLiteral("KATMANDURUM islem=uygula ad=BIN"));
+        const qint64 applied = clock.restart();
+
+        (void)std::fprintf(stdout,
+                           "[katmanözellik] ölçüm (1000 katman): oluşturma %lld ms, liste %lld ms, "
+                           "arama %lld ms, ters çevir %lld ms, durum kaydet %lld ms, uygula %lld ms\n",
+                           static_cast<long long>(made), static_cast<long long>(listed),
+                           static_cast<long long>(searched), static_cast<long long>(flipped),
+                           static_cast<long long>(saved), static_cast<long long>(applied));
+        check(listed < 1500 && searched >= 0 && searched < 1000,
+              QStringLiteral("1000 katmanda liste ve arama akıcı (liste %1 ms, arama %2 ms)")
+                  .arg(listed)
+                  .arg(searched));
+        check(flipped < 3000 && saved < 3000 && applied < 3000,
+              QStringLiteral("1000 katmanda toplu işlemler akıcı (ters çevir %1, kaydet %2, uygula %3 ms)")
+                  .arg(flipped)
+                  .arg(saved)
+                  .arg(applied));
+        bool back = true;
+        for (const core::Layer& l : controller_->document().layers())
+            back = back && l.visible;
+        check(back, QStringLiteral("durum uygulanınca bin katman da kayıttaki gibi (hepsi görünür)"));
+    }
+
     controller_->cancelAll();
     return failures;
 }

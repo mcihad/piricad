@@ -14,6 +14,9 @@
 #   * THE PROPERTY PANEL speaks for the layer: its rows are the commands that write them (one undo
 #     step each), and an empty scale window is refused there too.
 #   * A LAYER THE PICK PASSES OVER is not taken by a box.
+#   * A THOUSAND LAYERS stay fluid (U-05's acceptance): the list, the search box and the bulk
+#     commands (flip every visibility, save and apply a state of all of them) are timed in the real
+#     shell and held to generous bounds; the figures are printed.
 #   * SAVED LAYER STATES (`KATMANDURUM`) are in the layer list's own menu, each entry is the command
 #     that applies it, and applying one is a single undo step that brings every layer back as saved.
 #
@@ -60,7 +63,8 @@ for gerekli in 'uzak görünümde INCE ölçek aralığıyla gizli' 'paftada ayr
                'panelden yazılan basilir=evet katmanda' 'tek geri alma adımı' \
                'boş ölçek aralığı panelden de reddediliyor' 'seçilemez katmandaki çizgi kutuyla seçilmedi' \
                'alt menü kayıtlı durumları ve kaydetme satırını sunuyor' \
-               'menüden Uygula — TUMU: katmanlar kayıttaki gibi geri geldi' 'durumu uygulamak tek geri alma adımı'; do
+               'menüden Uygula — TUMU: katmanlar kayıttaki gibi geri geldi' 'durumu uygulamak tek geri alma adımı' \
+               '1000 katmanda liste ve arama akıcı' '1000 katmanda toplu işlemler akıcı'; do
     if ! grep -qF "$gerekli" <<<"$cikti"; then
         echo "katman-ozellik: sondanın şu denetimi hiç yazılmadı: $gerekli" >&2
         exit 1

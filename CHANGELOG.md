@@ -6,6 +6,13 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — 1000 katmanda akıcılık ölçüldü (U-05)
+
+- Gerçek kabukta bin katmanlı çizim: oluşturma 110 ms, liste 5 ms, arama kutusu 6 ms, görünürlüğü
+  ters çevirme 62 ms, durum kaydetme 116 ms, durum uygulama 58 ms (paylaşılan makine; sınırlar
+  geniş tutuldu: liste/arama 1,5 s, toplu işlem 3 s). Sınırlar `ci-gate-katman-ozellik` içinde,
+  ölçülen değerler sondanın çıktısında. Kare: `katman-bin-arama` (1001 katman, "K09" aranıyor).
+
 ### Eklendi — kayıtlı katman durumları: `KATMANDURUM` (U-05)
 
 - Hangi katmanların **görünür, kilitli, basılır ve seçilir** olduğunu ad altında çizimin içine
