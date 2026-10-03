@@ -190,6 +190,23 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     out.pass_first.assign(stride * std::max<std::size_t>(1, layers.size()), 0);
     out.pass_count.assign(stride * std::max<std::size_t>(1, layers.size()), 0);
 
+    // WHICH LAYERS ARE DRAWN THIS FRAME, once per layer rather than once per entity: the caller's
+    // mask, the layer's own scale window at this view's denominator, and on a sheet whether it
+    // prints (TODOS U-05). The per-entity test is then a single byte, which is less than the mask
+    // test it replaces and keeps the five-million-parcel frame inside its budget (§10.1).
+    {
+        const double view_denominator               = view.scale_denominator();
+        const std::span<const std::uint8_t> allowed = options.layer_allowed;
+        out.layer_on.assign(layers.size(), 0);
+        for (std::size_t lid = 0; lid < layers.size(); ++lid) {
+            const core::Layer& layer = layers[lid];
+            const bool masked_in = allowed.empty() || (lid < allowed.size() && allowed[lid] != 0);
+            out.layer_on[lid] =
+                static_cast<std::uint8_t>(masked_in && layer.drawn_at(view_denominator) &&
+                                          (!options.for_sheet || layer.plottable));
+        }
+    }
+
     out.passes.clear();
     out.z_keys.clear();
     out.solid_of.clear();
@@ -264,10 +281,25 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         fill.ys.clear();
         fill.runs.clear();
         fill.is_hole.clear();
-        stroke.rgba = sl.look.rgba;
+        // THE LAYER'S OPACITY, on the screen only: multiplied into every colour the pass carries. A
+        // sheet is plotted opaque. 255 — nearly every layer — changes nothing and costs a compare.
+        const std::uint8_t layer_opacity = options.for_sheet || building >= layers.size()
+                                               ? std::uint8_t{255}
+                                               : layers[building].opacity;
+        const auto faded = [layer_opacity](std::uint32_t argb) noexcept -> std::uint32_t {
+            if (layer_opacity == 255 || (argb >> 24) == 0) return argb;
+            const std::uint32_t alpha = ((argb >> 24) * layer_opacity + 127u) / 255u;
+            return (alpha << 24) | (argb & 0x00FFFFFFu);
+        };
+        if (layer_opacity != 255) {
+            PassStyle& made = out.passes.back();
+            made.line_rgba  = faded(made.line_rgba);
+            made.fill_rgba  = faded(made.fill_rgba);
+        }
+        stroke.rgba = faded(sl.look.rgba);
         stroke.width_px =
             options.line_weights ? stroke_width_px(sl, options.pixels_per_paper_mm) : 1.0f;
-        fill.rgba  = sl.look.fill_rgba;
+        fill.rgba  = faded(sl.look.fill_rgba);
         fill.hatch = sl.look.hatch;
 
         out.z_keys.push_back(
@@ -490,13 +522,11 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         const core::LayerId lid = entities.layer[e];
         if (lid >= layers.size()) return;
 
-        // THE CALLER'S LAYER FILTER, one array index. A layout's map frame names
-        // the layers it draws so that two frames on one sheet can show different
-        // themes of the same ground; the canvas passes nothing and every visible
-        // layer is drawn.
-        if (!options.layer_allowed.empty() &&
-            (lid >= options.layer_allowed.size() || options.layer_allowed[lid] == 0))
-            return;
+        // THE CALLER'S LAYER FILTER, the layer's own scale window and, on a sheet, whether it
+        // prints — one byte, decided per layer above (`DrawList::layer_on`). A layout's map frame
+        // names the layers it draws so that two frames on one sheet can show different themes of
+        // the same ground; the canvas passes nothing and every visible layer is drawn.
+        if (out.layer_on[lid] == 0) return;
 
         // The style column decides, and falls back to the layer only when it
         // carries the ByLayer sentinel. This is the one lookup the frame path

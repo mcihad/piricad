@@ -132,6 +132,7 @@ struct Op
         SetLayerAppearance, ///< layer,  appearance_arg
         SetLayerStyle,      ///< layer,  style_arg
         SetLayerGroup,      ///< layer,  str_arg
+        SetLayerProps,      ///< layer,  props_arg — the plain properties it had before
         SetCrs,             ///< crs_arg
         SetAttribute,       ///< attr_col, entity (as the row), attr_arg, str_arg (the column's id)
         SetText,            ///< entity, str_arg, text_height, text_anchor
@@ -177,6 +178,7 @@ struct Op
     bool bool_arg{false};
     StyleId style_arg{kByLayerStyle};
     Appearance appearance_arg{};
+    LayerProps props_arg{};
     std::string str_arg;
 
     // R28 is why there is ONE attribute variant and not one per type: an
@@ -612,6 +614,11 @@ public:
 
     Status set_layer_visible(LayerId l, bool visible, Op& undo_out);
     Status set_layer_locked(LayerId l, bool locked, Op& undo_out);
+
+    /// Writes the plain properties of a layer (`LayerProps`) as one edit. Refused, with the reason,
+    /// when the scale window is empty: `min_scale` bounds the denominator from above (zoomed out)
+    /// and `max_scale` from below, so a window with both set needs `max_scale <= min_scale`.
+    Status set_layer_props(LayerId l, const LayerProps& props, Op& undo_out);
     Status set_layer_appearance(LayerId l, const Appearance& a, Op& undo_out);
     Status set_layer_style(LayerId l, StyleId style, Op& undo_out);
 

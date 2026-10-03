@@ -141,6 +141,8 @@ void paint_map(QPainter& painter, const QRectF& box, const core::Document& docum
         view.fit(window, 0.0);
 
         render::SceneOptions options;
+        options.for_sheet =
+            true; ///< a sheet: layers that do not print stay out, opacity is ignored
         options.pixels_per_paper_mm = px_per_paper_mm;
         options.cull                = true;
         options.lod                 = true;

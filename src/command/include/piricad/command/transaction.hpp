@@ -23,6 +23,7 @@ using core::Appearance;
 using core::Document;
 using core::EntityId;
 using core::LayerId;
+using core::LayerProps;
 using core::Op;
 using core::Point2;
 using core::Result;
@@ -261,6 +262,10 @@ public:
     Status refresh_reference_bounds(EntityId e);
     Status set_layer_visible(LayerId l, bool visible);
     Status set_layer_locked(LayerId l, bool locked);
+
+    /// The plain properties of a layer as one edit and one undo record
+    /// (`Document::set_layer_props`).
+    Status set_layer_props(LayerId l, const LayerProps& props);
     Status set_layer_appearance(LayerId l, const Appearance& a);
     Status set_layer_style(LayerId l, StyleId style);
 

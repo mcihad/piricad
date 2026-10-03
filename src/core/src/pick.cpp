@@ -1032,4 +1032,15 @@ void drop_locked_layers(const Document& doc, std::vector<EntityId>& ids)
     });
 }
 
+void drop_unpickable(const Document& doc, std::vector<EntityId>& ids, bool locked_too)
+{
+    const EntityTable& entities = doc.entities();
+    const auto& layers          = doc.layers();
+    std::erase_if(ids, [&](EntityId e) {
+        const LayerId layer = entities.layer[e];
+        if (layer >= layers.size()) return false;
+        return !layers[layer].selectable || (locked_too && layers[layer].locked);
+    });
+}
+
 } // namespace piricad::core

@@ -65,6 +65,49 @@ Task<void> run(Context& ctx)
         ctx.record("renk", v);
     }
 
+    // THE PLAIN PROPERTIES, together: printed or not, picked or not, the scale window, opacity and
+    // the description (TODOS U-05). One write and one undo record whichever of them were named, and
+    // only the named ones change — the rest of the layer's values are read and written back as they
+    // are.
+    {
+        core::LayerProps props = bus.document().layer(id)->props();
+        bool given             = false;
+        if (const Value v = ctx.argument("basilir"); !v.empty()) {
+            props.plottable = v.as_bool();
+            given           = true;
+        }
+        if (const Value v = ctx.argument("secilebilir"); !v.empty()) {
+            props.selectable = v.as_bool();
+            given            = true;
+        }
+        if (const Value v = ctx.argument("en_kucuk_olcek"); !v.empty()) {
+            props.min_scale = static_cast<core::ScaleDenominator>(v.as_int());
+            given           = true;
+        }
+        if (const Value v = ctx.argument("en_buyuk_olcek"); !v.empty()) {
+            props.max_scale = static_cast<core::ScaleDenominator>(v.as_int());
+            given           = true;
+        }
+        if (const Value v = ctx.argument("opaklik"); !v.empty()) {
+            props.opacity = static_cast<std::uint8_t>(v.as_int());
+            given         = true;
+        }
+        if (const Value v = ctx.argument("aciklama"); !v.empty()) {
+            props.description = v.as_text();
+            given             = true;
+        }
+        if (given) {
+            auto st = ctx.transaction().set_layer_props(id, props);
+            if (!st) {
+                ctx.refuse(st.error());
+                co_return;
+            }
+            for (const char* named : {"basilir", "secilebilir", "en_kucuk_olcek", "en_buyuk_olcek",
+                                      "opaklik", "aciklama"})
+                if (const Value v = ctx.argument(named); !v.empty()) ctx.record(named, v);
+        }
+    }
+
     bus.set_active_layer(id);
     ctx.echo("Aktif katman: " + *name);
 }
@@ -90,6 +133,27 @@ PIRICAD_COMMAND(layer)
                 Param::boolean("gorunur", Arity::optional(), "Katmanın görünürlüğü").en("visible"),
                 Param::boolean("kilitli", Arity::optional(), "Katmanın kilit durumu").en("locked"),
                 Param::integer("renk", Arity::optional(), "Çizim rengi, 0xAARRGGBB").en("color"),
+                Param::boolean("basilir", Arity::optional(),
+                               "Paftaya basılsın mı; hayır = ekranda çizilir, çıktıda yoktur")
+                    .en("plottable"),
+                Param::boolean(
+                    "secilebilir", Arity::optional(),
+                    "Seçim bu katmanın nesnelerini alsın mı; hayır = çizilir ve "
+                    "yakalanır ama seçilmez (kilitten ayrıdır: kilit düzenlemeyi engeller)")
+                    .en("selectable"),
+                Param::integer_range("en_kucuk_olcek", Arity::optional(), 0, 100'000'000,
+                                     "Görünür olduğu en küçük ölçeğin 1:N paydası (en uzak "
+                                     "görünüm); bundan uzaktan bakınca gizlenir. 0 = sınırsız")
+                    .en("min_scale"),
+                Param::integer_range("en_buyuk_olcek", Arity::optional(), 0, 100'000'000,
+                                     "Görünür olduğu en büyük ölçeğin 1:N paydası (en yakın "
+                                     "görünüm); bundan yakından bakınca gizlenir. 0 = sınırsız")
+                    .en("max_scale"),
+                Param::integer_range("opaklik", Arity::optional(), 0, 255,
+                                     "Ekranda opaklık, 0 saydam – 255 opak; paftada her zaman opak")
+                    .en("opacity"),
+                Param::text("aciklama", Arity::optional(), "Katmanın açıklaması, serbest metin")
+                    .en("description"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

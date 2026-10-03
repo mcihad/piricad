@@ -79,7 +79,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 126 (110 tanesi onay ister)
-- Katalog parmak izi: `13010462362561130721`
+- Katalog parmak izi: `18187551457092420418`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -1088,6 +1088,12 @@ Onay ister.
 | `gorunur` | boolean | hayır | Katmanın görünürlüğü (evet/hayır) |
 | `kilitli` | boolean | hayır | Katmanın kilit durumu (evet/hayır) |
 | `renk` | integer | hayır | Çizim rengi, 0xAARRGGBB (tam sayı) |
+| `basilir` | boolean | hayır | Paftaya basılsın mı; hayır = ekranda çizilir, çıktıda yoktur (evet/hayır) |
+| `secilebilir` | boolean | hayır | Seçim bu katmanın nesnelerini alsın mı; hayır = çizilir ve yakalanır ama seçilmez (kilitten ayrıdır: kilit düzenlemeyi engeller) (evet/hayır) |
+| `en_kucuk_olcek` | integer | hayır | Görünür olduğu en küçük ölçeğin 1:N paydası (en uzak görünüm); bundan uzaktan bakınca gizlenir. 0 = sınırsız (tam sayı) |
+| `en_buyuk_olcek` | integer | hayır | Görünür olduğu en büyük ölçeğin 1:N paydası (en yakın görünüm); bundan yakından bakınca gizlenir. 0 = sınırsız (tam sayı) |
+| `opaklik` | integer | hayır | Ekranda opaklık, 0 saydam – 255 opak; paftada her zaman opak (tam sayı) |
+| `aciklama` | string | hayır | Katmanın açıklaması, serbest metin (metin) |
 | `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_layer_visibility` — Katman Görünümü

@@ -72,6 +72,12 @@ struct SceneOptions
     /// It NARROWS, never widens: a layer the document hides stays hidden whatever
     /// this says, because `EntityTable::visible` has already spoken (model.md R7).
     std::span<const std::uint8_t> layer_allowed;
+
+    /// THIS SCENE IS A SHEET (a layout's map frame, a plot), not the screen (TODOS U-05). Two
+    /// things follow, and they are the two properties a layer declares for exactly this difference:
+    /// a layer that is not `plottable` is left out, and a layer's `opacity` — "screen only; a pafta
+    /// is plotted opaque" — is not applied. The canvas leaves it false.
+    bool for_sheet{false};
 };
 
 /// Rebuilds `out` for the current view. Allocation is reused between frames:

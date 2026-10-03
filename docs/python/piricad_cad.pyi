@@ -1810,6 +1810,12 @@ def layer(
     visible: bool = ...,
     locked: bool = ...,
     color: int = ...,
+    plottable: bool = ...,
+    selectable: bool = ...,
+    min_scale: int = ...,
+    max_scale: int = ...,
+    opacity: int = ...,
+    description: str = ...,
 ) -> int:
     """Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
 
@@ -1819,6 +1825,12 @@ def layer(
         visible — Katmanın görünürlüğü
         locked — Katmanın kilit durumu
         color — Çizim rengi, 0xAARRGGBB
+        plottable — Paftaya basılsın mı; hayır = ekranda çizilir, çıktıda yoktur
+        selectable — Seçim bu katmanın nesnelerini alsın mı; hayır = çizilir ve yakalanır ama seçilmez (kilitten ayrıdır: kilit düzenlemeyi engeller)
+        min_scale — Görünür olduğu en küçük ölçeğin 1:N paydası (en uzak görünüm); bundan uzaktan bakınca gizlenir. 0 = sınırsız
+        max_scale — Görünür olduğu en büyük ölçeğin 1:N paydası (en yakın görünüm); bundan yakından bakınca gizlenir. 0 = sınırsız
+        opacity — Ekranda opaklık, 0 saydam – 255 opak; paftada her zaman opak
+        description — Katmanın açıklaması, serbest metin
     """
 
 def layer_visibility(

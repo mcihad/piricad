@@ -164,9 +164,7 @@ bool LayerTable::visible_at(LayerId slot, ScaleDenominator scale) const
     //
     // Both limits are INCLUSIVE: a layer with min_scale 25000 is still drawn at
     // exactly 1:25000 and disappears at 1:25001.
-    if (l->min_scale != 0 && scale > l->min_scale) return false;
-    if (l->max_scale != 0 && scale < l->max_scale) return false;
-    return true;
+    return l->drawn_at(static_cast<double>(scale));
 }
 
 std::uint64_t LayerTable::fold(std::uint64_t seed) const
@@ -185,6 +183,10 @@ std::uint64_t LayerTable::fold(std::uint64_t seed) const
         h = fnv1a_int(l.visible ? 1 : 0, h);
         h = fnv1a_int(l.locked ? 1 : 0, h);
         h = fnv1a_int(l.plottable ? 1 : 0, h);
+        // A layer the pick passes over is content; the default is not folded, so every document
+        // that never asked keeps the fingerprint it had (model.md: a field may be added, never
+        // reinterpreted).
+        if (!l.selectable) h = fnv1a_int(2, h);
         h = fold_appearance(l.appearance, h);
         // The zero sentinel predates full layer symbols. Leaving it out preserves
         // every legacy document fingerprint; a real layer symbol is content and

@@ -51,6 +51,7 @@ void paint_window(QPaintDevice& target, int width_px, int height_px, double dpi,
     view.fit(window, 0.0);
 
     render::SceneOptions options;
+    options.for_sheet = true; ///< a sheet: layers that do not print stay out, opacity is ignored
     options.pixels_per_paper_mm = dpi / kMmPerInch;
     options.cull                = true;
     options.lod                 = true;

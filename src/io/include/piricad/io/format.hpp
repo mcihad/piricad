@@ -595,7 +595,12 @@ struct LayerRecord
     std::uint32_t catalog_ref_string; ///< which catalogue row this layer follows (R34)
     std::uint8_t visible;             ///< drawn at all
     std::uint8_t locked;              ///< editable
-    std::uint8_t plottable;           ///< printed; a guide layer is visible and not plotted
+    /// FLAGS, not a bool: bit 0 is "printed" (a guide layer is visible and not plotted) exactly as
+    /// it always was — a file that never set the other bits reads the same — and bit 1 is "NOT
+    /// selectable" (`Layer::selectable`, TODOS U-05), set only when the pick passes over the layer.
+    /// A reader that knows only bit 0 sees a non-zero byte and takes the layer as printed, which is
+    /// right for every layer that is not also unprinted.
+    std::uint8_t plottable;
     std::uint8_t opacity;             ///< 0 transparent to 255 opaque
     std::uint32_t min_scale;          ///< 1:N denominator; 0 = unbounded
     std::uint32_t max_scale;          ///< 1:N denominator; 0 = unbounded

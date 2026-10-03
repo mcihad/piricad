@@ -3392,6 +3392,13 @@ int main(int argc, char** argv)
                            [&window] { QApplication::exit(window.probeHelpPage() == 0 ? 0 : 1); });
     }
 
+    // A LAYER'S SCALE WINDOW, PRINTING, PICKING AND OPACITY on the real canvas and panels.
+    if (qEnvironmentVariableIsSet("PIRICAD_LAYERPROPS_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            QApplication::exit(window.probeLayerProps() == 0 ? 0 : 1);
+        });
+    }
+
     // THE TABLE AND THE MAP ON ONE SELECTION, and the panel over several objects.
     if (qEnvironmentVariableIsSet("PIRICAD_LINK_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {

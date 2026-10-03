@@ -3602,6 +3602,129 @@ void MainWindow::probeSchemaPage()
         say(QStringLiteral("kare: sutun-formu.png"));
 }
 
+int MainWindow::probeLayerProps()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[katmanözellik] %s: %s\n",
+                           ok ? "tamam" : "BAŞARISIZ", what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+    const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_LAYERPROPS_PROBE"));
+    const auto picture = [this, &into](const char* name) {
+        if (into.size() <= 1) return;
+        QDir().mkpath(into);
+        QCoreApplication::processEvents();
+        QScreen* screen = windowHandle() != nullptr ? windowHandle()->screen() : nullptr;
+        QPixmap frame   = screen != nullptr ? screen->grabWindow(winId()) : QPixmap();
+        if (frame.isNull()) frame = grab();
+        (void)frame.save(into + QLatin1Char('/') + QLatin1String(name) + QStringLiteral(".png"));
+    };
+
+    // ---- a drawing: five layers, each with something to draw and something to say ----
+    runScriptLine(QStringLiteral("YENİ"));
+    for (const char* line :
+         {"KATMAN ad=PARSEL", "ALAN 0,0 60,0 60,40 0,40", "KATMAN ad=GENEL", "ÇİZGİ -10,50 70,50",
+          "KATMAN ad=INCE", "DAİRE merkez=30,20 cevre=36,20", "KATMAN ad=KILAVUZ",
+          "ÇİZGİ -10,-10 70,50", "KATMAN ad=KORUMA", "ÇİZGİ -10,60 70,60"}) {
+        runScriptLine(QString::fromUtf8(line));
+        endCommand();
+    }
+    controller_->cancelAll();
+    canvas_->resize(canvas_->size()); ///< keep the layout settled
+    canvas_->zoomToExtents();
+    QCoreApplication::processEvents();
+    const double far_view = canvas_->view().scale_denominator();
+
+    // The windows are set against the denominator the view actually has, so the case does not
+    // depend on the size of the machine's screen: GENEL is a layer for the farthest views (hidden
+    // once the view has zoomed in past half of this scale), INCE for the nearest (hidden at this
+    // scale and shown after zooming in by four).
+    const auto lo = static_cast<long long>(far_view / 2.0);
+    const auto hi = static_cast<long long>(far_view * 2.0) + 1;
+    runScriptLine(
+        QStringLiteral("KATMAN ad=GENEL en_buyuk_olcek=%1 en_kucuk_olcek=%2").arg(lo).arg(hi * 10));
+    runScriptLine(QStringLiteral("KATMAN ad=INCE en_kucuk_olcek=%1").arg(lo));
+    runScriptLine(QStringLiteral("KATMAN ad=KILAVUZ basilir=hayır opaklik=110 "
+                                 "aciklama=\"aplikasyon kılavuzu; paftaya basılmaz\""));
+    runScriptLine(QStringLiteral("KATMAN ad=KORUMA secilebilir=hayır kilitli=evet"));
+    runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+    QCoreApplication::processEvents();
+
+    // What the frame draws, asked of the same builder the canvas uses, at the canvas's own view.
+    const auto drawn = [this](bool sheet) {
+        render::SceneOptions options;
+        options.cull      = false;
+        options.for_sheet = sheet;
+        render::DrawList list;
+        render::build_scene(controller_->document(), canvas_->view(), options, list);
+        return list.entity_count;
+    };
+
+    // ---- 1. the far view: INCE is hidden by its window, GENEL shows ----
+    check(
+        drawn(false) == 4,
+        QStringLiteral("uzak görünümde INCE ölçek aralığıyla gizli, ötekiler çiziliyor (%1 nesne)")
+            .arg(drawn(false)));
+    check(drawn(true) == 3,
+          QStringLiteral("paftada ayrıca KILAVUZ yok: basılmayan katman çıktıda değil (%1 nesne)")
+              .arg(drawn(true)));
+    picture("katman-ozellik-uzak");
+
+    // ---- 2. zoomed in by four: INCE appears, GENEL is hidden by ITS window ----
+    canvas_->zoomBy(4.0);
+    QCoreApplication::processEvents();
+    check(canvas_->view().scale_denominator() < far_view / 2.0,
+          QStringLiteral("görünüm dört kat yakınlaştı (1:%1 → 1:%2)")
+              .arg(far_view, 0, 'f', 0)
+              .arg(canvas_->view().scale_denominator(), 0, 'f', 0));
+    check(drawn(false) == 4,
+          QStringLiteral("yakın görünümde GENEL kayboldu, INCE göründü (%1 nesne)")
+              .arg(drawn(false)));
+    picture("katman-ozellik-yakin");
+    canvas_->zoomToExtents();
+    QCoreApplication::processEvents();
+
+    // ---- 3. the property panel, in layer mode: every row is the command that writes it ----
+    attributePanel_->setLayer(controller_->document().find_layer("KILAVUZ"));
+    QCoreApplication::processEvents();
+    check(attributePanel_->probeRowValue(QStringLiteral("basilir")) == QStringLiteral("hayır") &&
+              attributePanel_->probeRowValue(QStringLiteral("opaklik")) == QStringLiteral("110"),
+          QStringLiteral("panel KILAVUZ'un basılmadığını ve opaklığını söylüyor"));
+    attributePanel_->openGroupForProbe(QStringLiteral("GÖSTERİM VE ÇIKTI"));
+    layerPanel_->selectLayer(controller_->document().find_layer("KILAVUZ"));
+    QCoreApplication::processEvents();
+    picture("katman-ozellik-panel");
+
+    const std::size_t depth = controller_->undoStack().undo_depth();
+    check(attributePanel_->editRowForProbe(QStringLiteral("basilir"), QStringLiteral("evet")),
+          QStringLiteral("basilir satırı düzenlenebilir"));
+    check(controller_->document().layer(controller_->document().find_layer("KILAVUZ"))->plottable,
+          QStringLiteral("panelden yazılan basilir=evet katmanda"));
+    check(controller_->undoStack().undo_depth() - depth == 1,
+          QStringLiteral("tek geri alma adımı"));
+    check(attributePanel_->editRowForProbe(QStringLiteral("en_kucuk_olcek"),
+                                           QStringLiteral("5000")) &&
+              controller_->document()
+                      .layer(controller_->document().find_layer("KILAVUZ"))
+                      ->min_scale == 5000,
+          QStringLiteral("ölçek satırı panelden yazılıyor"));
+    // An empty window is refused with the sentence, and nothing moves.
+    const auto before = controller_->document().content_hash();
+    attributePanel_->editRowForProbe(QStringLiteral("en_buyuk_olcek"), QStringLiteral("90000"));
+    check(controller_->document().content_hash() == before,
+          QStringLiteral("boş ölçek aralığı panelden de reddediliyor"));
+
+    // ---- 4. a layer the pick passes over ----
+    runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+    runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-20,55 80,65"));
+    check(controller_->bus().selection().keys().empty(),
+          QStringLiteral("seçilemez katmandaki çizgi kutuyla seçilmedi"));
+    controller_->cancelAll();
+    return failures;
+}
+
 int MainWindow::probeLinkedSelection()
 {
     int failures     = 0;

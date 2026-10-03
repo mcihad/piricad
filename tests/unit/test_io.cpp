@@ -216,6 +216,50 @@ std::string key_fingerprint(const core::Document& doc)
 // The round trip
 // ===========================================================================
 
+TEST_CASE("IO: katmanın basılabilirliği, seçilebilirliği, ölçek aralığı, opaklığı ve açıklaması "
+          "dosyadan döner")
+{
+    // TODOS U-05. These five were stored, hashed and saved and no command could reach them, so a
+    // file that carried one opened with a warning and the value dropped. They come back now, to the
+    // bit: the fingerprint of the reopened document is the one the writer had.
+    TempDir tmp("katman-ozellikleri");
+    const std::string path = tmp.file("katman.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("KATMAN ad=KILAVUZ", Origin::Test).ok());
+    REQUIRE(written.bus
+                .execute_line("KATMAN ad=KILAVUZ basilir=hayır secilebilir=hayır "
+                              "en_kucuk_olcek=25000 en_buyuk_olcek=500 opaklik=128 "
+                              "aciklama=\"Aplikasyon kılavuzu; paftaya basılmaz\"",
+                              Origin::Test)
+                .ok());
+    REQUIRE(written.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+    const std::uint64_t hash = written.doc.content_hash();
+
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    REQUIRE(opened.ok());
+
+    const core::LayerId id = reloaded.doc.find_layer("KILAVUZ");
+    REQUIRE(id != core::kNoLayer);
+    const core::Layer* back = reloaded.doc.layer(id);
+    REQUIRE(back != nullptr);
+    CHECK_FALSE(back->plottable);
+    CHECK_FALSE(back->selectable);
+    CHECK_EQ(back->min_scale, 25000u);
+    CHECK_EQ(back->max_scale, 500u);
+    CHECK_EQ(back->opacity, std::uint8_t{128});
+    CHECK_EQ(back->description, std::string("Aplikasyon kılavuzu; paftaya basılmaz"));
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+
+    // No warning about a field dropped: the five are no longer unsupported.
+    CHECK(reloaded.transcript.find("geri\n yüklenemiyor") == std::string::npos);
+    CHECK(reloaded.transcript.find("katmanının") == std::string::npos);
+}
+
 TEST_CASE("IO: belge -> dosya -> belge, içerik parmak izi birebir aynı")
 {
     TempDir tmp("roundtrip");

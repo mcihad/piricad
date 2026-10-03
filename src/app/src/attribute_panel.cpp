@@ -176,6 +176,39 @@ void AttributePanel::rebuild()
                  {}});
             groups_.push_back(group);
 
+            // THE FOUR QUESTIONS A LAYER ANSWERS, one each (TODOS U-05): drawn (`gorunur`, above),
+            // printed, picked and edited (`kilitli`, above), then the scale window, the opacity and
+            // the words. Every row is the command that writes it, so a click here and the line at
+            // the prompt are one write and one undo step.
+            AttributeGroup shows{tr("GÖSTERİM VE ÇIKTI"), {}, true};
+            shows.rows.push_back({tr("basilir"), l->plottable ? tr("evet") : tr("hayır"), QString(),
+                                  false, tr("KATMAN ad=\"%1\" basilir=%2").arg(name),
+                                  field_of(FieldKind::Bool)});
+            shows.rows.push_back({tr("secilebilir"), l->selectable ? tr("evet") : tr("hayır"),
+                                  QString(), false, tr("KATMAN ad=\"%1\" secilebilir=%2").arg(name),
+                                  field_of(FieldKind::Bool)});
+            const auto scale_text = [](core::ScaleDenominator n) {
+                return n == 0 ? QStringLiteral("0") : QString::number(n);
+            };
+            shows.rows.push_back({tr("en_kucuk_olcek"), scale_text(l->min_scale),
+                                  l->min_scale == 0 ? QStringLiteral("∞") : QString(), false,
+                                  tr("KATMAN ad=\"%1\" en_kucuk_olcek=%2").arg(name),
+                                  number_of(0, 100'000'000, QStringLiteral("1:N"))});
+            shows.rows.push_back({tr("en_buyuk_olcek"), scale_text(l->max_scale),
+                                  l->max_scale == 0 ? QStringLiteral("∞") : QString(), false,
+                                  tr("KATMAN ad=\"%1\" en_buyuk_olcek=%2").arg(name),
+                                  number_of(0, 100'000'000, QStringLiteral("1:N"))});
+            shows.rows.push_back({tr("opaklik"), QString::number(l->opacity), QString(), false,
+                                  tr("KATMAN ad=\"%1\" opaklik=%2").arg(name), number_of(0, 255)});
+            shows.rows.push_back({tr("aciklama"),
+                                  l->description.empty() ? QStringLiteral("—")
+                                                         : QString::fromStdString(l->description),
+                                  l->description.empty() ? tr("BOŞ") : QString(),
+                                  false,
+                                  tr("KATMAN ad=\"%1\" aciklama=\"%2\"").arg(name),
+                                  {}});
+            groups_.push_back(shows);
+
             update();
             return;
         }

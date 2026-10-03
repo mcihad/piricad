@@ -1552,6 +1552,12 @@ Bilinen adı: `TABAKA` (Netcad). Komut Ara (`Ctrl+K`) bulur; komut satırına ya
 | `gorunur` | bool | isteğe bağlı | Katmanın görünürlüğü |
 | `kilitli` | bool | isteğe bağlı | Katmanın kilit durumu |
 | `renk` | integer | isteğe bağlı | Çizim rengi, 0xAARRGGBB |
+| `basilir` | bool | isteğe bağlı | Paftaya basılsın mı; hayır = ekranda çizilir, çıktıda yoktur |
+| `secilebilir` | bool | isteğe bağlı | Seçim bu katmanın nesnelerini alsın mı; hayır = çizilir ve yakalanır ama seçilmez (kilitten ayrıdır: kilit düzenlemeyi engeller) |
+| `en_kucuk_olcek` | integer | isteğe bağlı | Görünür olduğu en küçük ölçeğin 1:N paydası (en uzak görünüm); bundan uzaktan bakınca gizlenir. 0 = sınırsız |
+| `en_buyuk_olcek` | integer | isteğe bağlı | Görünür olduğu en büyük ölçeğin 1:N paydası (en yakın görünüm); bundan yakından bakınca gizlenir. 0 = sınırsız |
+| `opaklik` | integer | isteğe bağlı | Ekranda opaklık, 0 saydam – 255 opak; paftada her zaman opak |
+| `aciklama` | text | isteğe bağlı | Katmanın açıklaması, serbest metin |
 
 Ayrıntılı kullanım: [KATMAN](layer.md)
 
@@ -8593,6 +8599,36 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "renk": {
           "type": "integer",
           "description": "Çizim rengi, 0xAARRGGBB (tam sayı)"
+        },
+        "basilir": {
+          "type": "boolean",
+          "description": "Paftaya basılsın mı; hayır = ekranda çizilir, çıktıda yoktur (evet/hayır)"
+        },
+        "secilebilir": {
+          "type": "boolean",
+          "description": "Seçim bu katmanın nesnelerini alsın mı; hayır = çizilir ve yakalanır ama seçilmez (kilitten ayrıdır: kilit düzenlemeyi engeller) (evet/hayır)"
+        },
+        "en_kucuk_olcek": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000,
+          "description": "Görünür olduğu en küçük ölçeğin 1:N paydası (en uzak görünüm); bundan uzaktan bakınca gizlenir. 0 = sınırsız (tam sayı)"
+        },
+        "en_buyuk_olcek": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000,
+          "description": "Görünür olduğu en büyük ölçeğin 1:N paydası (en yakın görünüm); bundan yakından bakınca gizlenir. 0 = sınırsız (tam sayı)"
+        },
+        "opaklik": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Ekranda opaklık, 0 saydam – 255 opak; paftada her zaman opak (tam sayı)"
+        },
+        "aciklama": {
+          "type": "string",
+          "description": "Katmanın açıklaması, serbest metin (metin)"
         },
         "varsayimlar": {
           "type": "array",

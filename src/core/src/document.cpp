@@ -1859,6 +1859,36 @@ Status Document::set_layer_locked(LayerId l, bool locked, Op& undo_out)
     return ok();
 }
 
+Status Document::set_layer_props(LayerId l, const LayerProps& props, Op& undo_out)
+{
+    Layer* layer = layers_.at(l);
+    if (!layer) return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(l));
+
+    // A WINDOW THAT SHOWS NOTHING IS A MISTAKE, not a setting. 1:25000 as the smallest scale and
+    // 1:50000 as the largest would hide the layer at every zoom there is.
+    if (props.min_scale != 0 && props.max_scale != 0 && props.max_scale > props.min_scale)
+        return err(ErrorCode::InvalidArgument,
+                   "Ölçek aralığı boş: en büyük ölçek 1:" + std::to_string(props.max_scale) +
+                       ", en küçük ölçek 1:" + std::to_string(props.min_scale) +
+                       " — katman hiçbir yakınlaştırmada görünmezdi. En küçük ölçek (uzak görünüm) "
+                       "paydası en büyük ölçeğinkinden küçük olamaz.");
+
+    const LayerProps was = layer->props();
+    layer->plottable     = props.plottable;
+    layer->selectable    = props.selectable;
+    layer->min_scale     = props.min_scale;
+    layer->max_scale     = props.max_scale;
+    layer->opacity       = props.opacity;
+    layer->description   = props.description;
+    bump_revision();
+
+    undo_out           = Op{};
+    undo_out.kind      = Op::Kind::SetLayerProps;
+    undo_out.layer     = l;
+    undo_out.props_arg = was;
+    return ok();
+}
+
 Status Document::set_layer_appearance(LayerId l, const Appearance& a, Op& undo_out)
 {
     Layer* layer = layers_.at(l);
@@ -1982,6 +2012,7 @@ Status Document::apply(const Op& op, Op* undo_out)
         return set_layer_appearance(op.layer, op.appearance_arg, inverse);
     case Op::Kind::SetLayerStyle: return set_layer_style(op.layer, op.style_arg, inverse);
     case Op::Kind::SetLayerGroup: return set_layer_group(op.layer, op.str_arg, inverse);
+    case Op::Kind::SetLayerProps: return set_layer_props(op.layer, op.props_arg, inverse);
     case Op::Kind::SetCrs: return set_crs(op.crs_arg, inverse);
     case Op::Kind::SetGuides: {
         // The inverse of "restore this list" is "restore the list that is here

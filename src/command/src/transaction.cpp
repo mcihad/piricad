@@ -232,6 +232,15 @@ Status Transaction::set_layer_locked(LayerId l, bool locked)
     return core::ok();
 }
 
+Status Transaction::set_layer_props(LayerId l, const LayerProps& props)
+{
+    core::Op undo;
+    auto st = doc_.set_layer_props(l, props, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::set_layer_group(LayerId l, std::string group)
 {
     core::Op undo;

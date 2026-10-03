@@ -386,6 +386,10 @@ public:
     /// several as common-or-mixed values written in one step (`PIRICAD_LINK_PROBE`, TODOS U-04).
     int probeLinkedSelection();
 
+    /// A layer's scale window, printing, picking and opacity, on the real canvas, in the layer list
+    /// and in the property panel (`PIRICAD_LAYERPROPS_PROBE`, TODOS U-05).
+    int probeLayerProps();
+
     /// `PIRICAD_MENU_PROBE`: opens every menu in turn, photographs it and prints
     /// what it holds. Returns the failure count.
     ///

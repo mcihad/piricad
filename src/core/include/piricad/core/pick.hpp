@@ -285,6 +285,12 @@ void pick_outside_box(const Document& doc, const Box2& box, std::vector<EntityId
 /// they found. A hidden layer needs no filter: `visible` already leaves it out.
 void drop_locked_layers(const Document& doc, std::vector<EntityId>& ids);
 
+/// Takes out of `ids` what a SELECTION must pass over: every entity on a layer that is not
+/// selectable (`Layer::selectable`), and — when `locked_too` — every one on a locked layer
+/// (`core.secim.kilitli_katman`). The order of the rest is kept. Snap does not use it: a layer the
+/// pick passes over is still drawn and still snapped to.
+void drop_unpickable(const Document& doc, std::vector<EntityId>& ids, bool locked_too);
+
 /// EVERY visible entity whose LINE comes within `radius` of `cursor`, nearest
 /// first — `pick_all` without its face rule: a parcel is through a point only
 /// along its boundary, not for a point inside it. `SEÇ GEÇEN`, "what passes

@@ -6,6 +6,30 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — katman özellikleri gerçekten bir şey yapıyor: ölçek aralığı, basılabilirlik, seçilebilirlik, opaklık (U-05)
+
+- **Bulgu:** `Layer`ın beş alanı — basılabilirlik, en küçük/en büyük ölçek, opaklık, açıklama —
+  dosyaya yazılıyor, parmak izine giriyordu ama **hiçbir komut onları ayarlayamıyor, hiçbir çizim
+  onlara uymuyordu** (`LayerTable::visible_at` hiçbir yerden çağrılmıyor, `plottable` baskıda
+  okunmuyor, dosya okuyucusu "geri yüklenemiyor" uyarısı veriyordu).
+- **Yazma:** tek mutator `Transaction::set_layer_props` (tek geri alma kaydı), `KATMAN` komutuna
+  `basilir`, `secilebilir`, `en_kucuk_olcek`, `en_buyuk_olcek`, `opaklik`, `aciklama`; boş ölçek
+  aralığı gerekçesiyle reddedilir. Dosyaya geri döner (yeni `selectable` bayrağı
+  `LayerRecord::plottable` baytının 1. bitinde, eski dosyalar aynen okunur; varsayılan
+  parmak izini değiştirmez).
+- **Çizim:** tuval ve çıktı aynı tablodan (`DrawList::layer_on`, kare başına katman başına bir kez)
+  ölçek aralığına, paftada basılabilirliğe uyar; opaklık yalnız ekranda. Kare süresine etkisi ölçüldü:
+  önce/sonra 107,6 / 108,2 ms (5 M, tam kapsam) — fark ölçüm gürültüsü.
+- **Seçilebilirlik** kilitten ayrı: kilit düzenlemeyi engeller ve katmanı seçilebilir bırakır;
+  `secilebilir=hayır` katmanı çizer ve yakalar ama seçim üzerinden geçer.
+- **Arayüz:** katman listesinde yalnız varsayılandan farklı olanlar için işaret (basılmaz, seçilmez,
+  `1:` ölçek aralığı) ve ipucu; özellik panelinde katman kipinde **GÖSTERİM VE ÇIKTI** grubu, her
+  satır bir komut.
+- Kanıt: `test_hand.cpp` (komut, tek adım, geri alma, günlük, dosya gidiş-dönüşü `test_io.cpp`,
+  sahne testleri), yeni kapı `scripts/ci-gate-katman-ozellik.sh` (`PIRICAD_LAYERPROPS_PROBE`),
+  kareler `docs/baslangic/katman-olcek-penceresi.png`, `katman-ozellikleri-panel.png`; `make
+  reference` yenilendi; `ui.md` R59.
+
 ### Eklendi — panel birden çok nesne adına konuşuyor; toplu değişiklik tek adım (U-04)
 
 - **Öznitelikler paneli bir seçimde ortak/farklı değeri söylüyor.** Önceden birden çok nesne

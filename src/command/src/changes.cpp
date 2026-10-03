@@ -90,7 +90,8 @@ ChangeSummary summarize_changes(const core::Document& doc, std::span<const core:
         case Op::Kind::SetLayerLocked:
         case Op::Kind::SetLayerAppearance:
         case Op::Kind::SetLayerStyle:
-        case Op::Kind::SetLayerGroup: layers.push_back(op.layer); continue;
+        case Op::Kind::SetLayerGroup:
+        case Op::Kind::SetLayerProps: layers.push_back(op.layer); continue;
         case Op::Kind::SetCrs: out.crs = true; continue;
         case Op::Kind::SetGuides: out.guides = true; continue;
         case Op::Kind::SetLayouts: out.sheets = true; continue;

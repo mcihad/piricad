@@ -351,6 +351,12 @@ struct DrawList
     std::vector<std::uint32_t> pass_first;
     std::vector<std::uint32_t> pass_count;
 
+    /// Whether each layer is drawn in THIS frame, indexed by `LayerId` (TODOS U-05): the caller's
+    /// `layer_allowed`, the layer's own scale window at this view's denominator, and on a sheet
+    /// whether it prints — decided ONCE per layer per frame, so the per-entity test is one byte
+    /// read. Scratch, like the tables above: the capacity survives between frames.
+    std::vector<std::uint8_t> layer_on;
+
     /// One pass and the depth it draws at, for building `order`.
     struct ZKey
     {

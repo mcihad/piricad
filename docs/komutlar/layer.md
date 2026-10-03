@@ -29,6 +29,8 @@ Her çizim `0` adlı katmanla açılır.
 KATMAN
 KATMAN <ad>
 KATMAN ad=<ad> [gorunur=<evet|hayır>] [kilitli=<evet|hayır>] [renk=<tamsayı>]
+KATMAN ad=<ad> [basilir=<evet|hayır>] [secilebilir=<evet|hayır>] [en_kucuk_olcek=<N>]
+               [en_buyuk_olcek=<N>] [opaklik=<0-255>] [aciklama="<metin>"]
 ```
 
 Argümansız çağırırsanız komut katman adını sorar.
@@ -41,11 +43,52 @@ Argümansız çağırırsanız komut katman adını sorar.
 | `gorunur` | Katmanın görünürlüğü. `evet` / `hayır` |
 | `kilitli` | Katman kilidi. Kilitli katmana çizilemez, üzerindeki nesne düzenlenemez; seçilebilir ve nokta almak için yakalanabilir ([kilit ve imleç](#kilitli-ve-gizli-katman-imlecin-altında)) |
 | `renk` | Çizim rengi, `0xAARRGGBB` biçiminde tam sayı. Yeni katman **siyah** başlar |
+| `basilir` | Paftaya basılsın mı. `hayır`: ekranda çizilir, çıktıda yoktur (kılavuz, yardımcı katman) |
+| `secilebilir` | Seçim bu katmanın nesnelerini alsın mı. `hayır`: çizilir ve **yakalanır** ama pencere, tıklama ve `SEÇ mod=KATMAN` onu seçmez; `nesneler=` ile adıyla verilirse seçilir |
+| `en_kucuk_olcek` | Görünür kaldığı en küçük ölçeğin `1:N` paydası (en uzak görünüm): bundan uzaktan bakınca katman gizlenir. `0` sınırsız |
+| `en_buyuk_olcek` | Görünür kaldığı en büyük ölçeğin `1:N` paydası (en yakın görünüm): bundan yakından bakınca gizlenir. `0` sınırsız |
+| `opaklik` | Ekranda opaklık, `0` saydam – `255` opak. Paftada katman her zaman opak basılır |
+| `aciklama` | Katmanın açıklaması, serbest metin |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
 Evet/hayır değerleri için `evet`, `hayır`, `yes`, `no`, `true`, `false`, `1`, `0` kabul
 edilir.
+
+### Dört ayrı soru: görünür mü, basılır mı, seçilir mi, düzenlenir mi
+
+Bir katman bunların her birine ayrı cevap verir ve biri ötekini kendiliğinden değiştirmez:
+
+| Soru | Parametre | `hayır` olunca |
+|---|---|---|
+| Ekranda **görünür** mü | `gorunur` | Çizilmez, yakalanmaz, seçilmez |
+| Paftaya **basılır** mı | `basilir` | Ekranda durur, çıktıdan düşer |
+| **Seçilir** mi | `secilebilir` | Çizilir, yakalanır, düzenlenebilir; seçim üzerinden geçer |
+| **Düzenlenir** mi | `kilitli=evet` | Çizilir, yakalanır, seçilir; düzenleme reddedilir |
+
+Hepsi **tek geri alma adımıdır** ve dosyaya yazılıp geri okunur. `basilir`, `secilebilir`,
+ölçek aralığı, `opaklik` ve `aciklama` bir komutla tek satırda verilebilir; yalnız adı geçenler
+değişir. Boş bir ölçek aralığı (en küçük ölçek paydası en büyüğününkinden küçük) katmanı hiçbir
+yakınlaştırmada göstermeyeceği için reddedilir.
+
+### Ölçek aralığı, basılabilirlik ve opaklık ekranda ve çıktıda
+
+- **Ölçek aralığı** katmanı görünüm aralığın dışına çıkınca gizler — iki yandan: `en_kucuk_olcek`
+  (örneğin `25000`) bundan **uzaktan** bakınca, `en_buyuk_olcek` (örneğin `500`) bundan **yakından**
+  bakınca katmanı saklar; sınırlar dahildir (`1:25000` tam o ölçekte hâlâ çizer). Aynı kural
+  hem tuvalde hem çıktı yerleşiminin harita çerçevesinde geçerlidir.
+- **`basilir=hayır`** katman ekranda durur, **paftada ve çıktıda yoktur** (aplikasyon kılavuzu,
+  çalışma çizgisi).
+- **`opaklik`** yalnız ekranı etkiler; pafta her zaman opak basılır.
+
+![Aynı çizim iki yakınlaştırmada: solda uzak görünümde GENEL çizgileri, sağda dört kat yakında INCE dairesi](../baslangic/katman-olcek-penceresi.png)
+
+Katman listesinde varsayılandan farklı her özellik satırda küçük bir işaretle görünür (basılmaz,
+seçilmez, ölçek aralığı `1:`); fareyle üzerine gelince hepsi yazıyla açıklanır. **Öznitelikler**
+panelinde bir katman seçiliyken **GÖSTERİM VE ÇIKTI** grubunun her satırı onu yazan komuttur
+(düzenleyince tek geri alma adımı), boş bir ölçek aralığı burada da gerekçesiyle reddedilir:
+
+![Katman seçiliyken Öznitelikler paneli ve katman listesindeki işaretler](../baslangic/katman-ozellikleri-panel.png)
 
 ### Kilitli ve gizli katman imlecin altında
 

@@ -18,13 +18,12 @@
 // the dead rows would compact the sequence and hand parcel 47's retired key to
 // parcel 48 — and "which parcel was this?" is a legal question (§12).
 //
-// WHAT THIS BUILD CANNOT PUT BACK. Six `core::Layer` fields — description,
-// plottable, min_scale, max_scale, opacity and catalog_ref — have no primitive
-// mutator, so no command can set them and no `Transaction` can restore them. The
-// writer stores them all; the reader reports a warning when one is not at its
-// default rather than dropping it in silence. Nothing in the running build can
-// produce such a file today, so the warning is a tripwire for the day the
-// mutators land, not a routine event.
+// WHAT THIS BUILD CANNOT PUT BACK. One `core::Layer` field, catalog_ref, has no
+// primitive mutator, so no command can set it and no `Transaction` can restore
+// it; the reader reports a warning when it is not at its default rather than
+// dropping it in silence. The other five — description, plottable, min_scale,
+// max_scale and opacity — had the same warning until `Transaction::set_layer_props`
+// landed (TODOS U-05), and come back now. The tripwire did what a tripwire is for.
 #include "piricad/io/project.hpp"
 
 #include "piricad/core/text.hpp"
@@ -424,7 +423,6 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         layer_style_rows = rows.value();
     }
 
-    const core::Layer kDefaults{};
     std::vector<bool> locked(static_cast<std::size_t>(dr.layer_count), false);
 
     for (std::uint64_t i = 0; i < dr.layer_count; ++i) {
@@ -474,7 +472,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         // entities on it have not been created yet.
         locked[static_cast<std::size_t>(i)] = r.locked != 0;
 
-        // The six fields no mutator can reach. See the file header.
+        // The one field no mutator can reach. See the file header.
         const auto unsupported = [&](const char* field) {
             report.warnings.push_back(
                 Warning{"io.field_unsupported",
@@ -487,12 +485,22 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         auto catalog_ref = strings.at(r.catalog_ref_string, "katman katalog künyesi");
         if (!catalog_ref) return catalog_ref.error();
 
-        if (description.value() != kDefaults.description) unsupported("açıklama");
         if (!catalog_ref.value().empty()) unsupported("katalog künyesi");
-        if ((r.plottable != 0) != kDefaults.plottable) unsupported("çizdirilebilir");
-        if (r.min_scale != kDefaults.min_scale) unsupported("en küçük ölçek");
-        if (r.max_scale != kDefaults.max_scale) unsupported("en büyük ölçek");
-        if (r.opacity != kDefaults.opacity) unsupported("saydamlık");
+
+        // THE PLAIN PROPERTIES come back through their one mutator (TODOS U-05): printed or not,
+        // picked or not, the scale window, the opacity and the description. They were stored,
+        // hashed and saved and no command could reach them, so a file that carried one was opened
+        // with a warning and the value dropped; it is restored now, and the document fingerprint
+        // is the one the writer had.
+        core::LayerProps props;
+        props.plottable   = (r.plottable & 1u) != 0;
+        props.selectable  = (r.plottable & 2u) == 0;
+        props.min_scale   = r.min_scale;
+        props.max_scale   = r.max_scale;
+        props.opacity     = r.opacity;
+        props.description = description.value();
+        if (!(props == live->props()))
+            if (auto st = tx.set_layer_props(slot, props); !st) return st.error();
     }
 
     // ---- styles ----

@@ -54,6 +54,7 @@ constexpr int kLayerChip   = 11;
 constexpr int kLayerGap    = 9;
 constexpr int kLayerLock   = 14;
 constexpr int kLayerCountW = 52;
+constexpr int kLayerMark = 12;  ///< a mark between the name and the count (not printed, not picked)
 constexpr int kLayerAccent = 2; ///< the left edge of a selected row
 
 const Tokens& layerTokens(ThemeMode mode)
@@ -142,9 +143,40 @@ void LayerRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
     painter->setFont(face);
     painter->setPen(visible ? t.text : t.textFaint);
 
-    const int right = box.right() - kLayerPadX - kLayerLock - kLayerGap - kLayerCountW;
-    painter->drawText(QRect(x, box.top(), right - x, kLayerRow), Qt::AlignVCenter | Qt::AlignLeft,
-                      painter->fontMetrics().elidedText(name, Qt::ElideRight, right - x));
+    // THE MARKS, between the name and the count, only for what is not the default (`marks` bits: 1
+    // not printed, 2 not picked, 4 a scale window, 8 an opacity). Each is a small glyph with a
+    // strike through it where it means "not", so a layer that prints, picks and shows at every
+    // scale is a row with nothing on it.
+    const int marks = index.data(Qt::UserRole + 7).toInt();
+    int right       = box.right() - kLayerPadX - kLayerLock - kLayerGap - kLayerCountW;
+    const qreal dpr = option.widget ? option.widget->devicePixelRatioF() : 1.0;
+    const auto mark = [&](Glyph glyph, bool struck) {
+        right -= kLayerMark + 4;
+        const QRect at(right, box.top() + (kLayerRow - kLayerMark) / 2, kLayerMark, kLayerMark);
+        painter->drawPixmap(at, glyph_pixmap(glyph, t.textFaint, kLayerMark, dpr));
+        if (struck) {
+            painter->setPen(QPen(t.warn, 1.4));
+            painter->drawLine(at.bottomLeft() + QPoint(0, -1), at.topRight() + QPoint(0, 1));
+        }
+    };
+    if ((marks & 2) != 0) mark(Glyph::Select, true);
+    if ((marks & 1) != 0) mark(Glyph::Print, true);
+    if ((marks & 4) != 0) {
+        // A scale window is not a "not": the mark is the ruler glyph's stand-in, the letters `1:`.
+        right -= kLayerMark + 8;
+        QFont scale(QStringLiteral("IBM Plex Mono"));
+        scale.setPixelSize(10);
+        painter->setFont(scale);
+        painter->setPen(t.accent);
+        painter->drawText(QRect(right, box.top(), kLayerMark + 8, kLayerRow),
+                          Qt::AlignVCenter | Qt::AlignRight, QStringLiteral("1:"));
+    }
+    painter->setFont(face);
+    painter->setPen(visible ? t.text : t.textFaint);
+    painter->drawText(QRect(x, box.top(), right - x - 2, kLayerRow),
+                      Qt::AlignVCenter | Qt::AlignLeft,
+                      painter->fontMetrics().elidedText(name, Qt::ElideRight, right - x - 2));
+    right = box.right() - kLayerPadX - kLayerLock - kLayerGap - kLayerCountW;
 
     QFont digits(QStringLiteral("IBM Plex Mono"));
     digits.setPixelSize(11);
@@ -684,9 +716,40 @@ void LayerPanel::refresh()
         item->setData(0, Qt::UserRole + 5,
                       groupedCount(doc.layer_entity_count(static_cast<core::LayerId>(i))));
         item->setData(0, Qt::UserRole + 6, parent ? 1 : 0);
-        item->setToolTip(0, static_cast<core::LayerId>(i) == active
-                                ? tr("Aktif katman — %1").arg(QString::fromStdString(l.name))
-                                : QString::fromStdString(l.name));
+
+        // WHAT THE LAYER SAYS BESIDES VISIBLE AND LOCKED, only where it differs from the default
+        // (TODOS U-05): not printed, not picked, a scale window, an opacity. A row of defaults
+        // stays exactly as it was; a row with something to say says it in the tip as well as in the
+        // mark.
+        QStringList says;
+        int marks = 0;
+        if (!l.plottable) {
+            marks |= 1;
+            says << tr("paftaya basılmaz");
+        }
+        if (!l.selectable) {
+            marks |= 2;
+            says << tr("seçilmez (çizilir ve yakalanır)");
+        }
+        if (l.min_scale != 0 || l.max_scale != 0) {
+            marks |= 4;
+            says << tr("ölçek aralığı %1 – %2")
+                        .arg(l.max_scale == 0 ? tr("yakın sınırsız")
+                                              : QStringLiteral("1:%1").arg(l.max_scale))
+                        .arg(l.min_scale == 0 ? tr("uzak sınırsız")
+                                              : QStringLiteral("1:%1").arg(l.min_scale));
+        }
+        if (l.opacity != 255) {
+            marks |= 8;
+            says << tr("ekranda %%1 opak").arg(qRound(l.opacity * 100.0 / 255.0));
+        }
+        if (l.locked) says << tr("kilitli (düzenlenemez)");
+        item->setData(0, Qt::UserRole + 7, marks);
+        QString tip = static_cast<core::LayerId>(i) == active
+                          ? tr("Aktif katman — %1").arg(QString::fromStdString(l.name))
+                          : QString::fromStdString(l.name);
+        if (!says.isEmpty()) tip += QStringLiteral("\n") + says.join(QStringLiteral("\n"));
+        item->setToolTip(0, tip);
 
         if (static_cast<core::LayerId>(i) == keep) item->setSelected(true);
     }
