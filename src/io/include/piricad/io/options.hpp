@@ -8,6 +8,7 @@
 // that, and a call site that does not care about a member leaves it defaulted.
 #pragma once
 
+#include "piricad/command/crs_mapping.hpp"
 #include "piricad/core/units.hpp"
 
 #include <string>
@@ -32,6 +33,16 @@ struct ImportOptions
     /// a TM39 file read into a TM36 drawing is said rather than drawn 250 km
     /// off (model.md R36: the TM30/TM33 blunder made detectable).
     int project_meridian{0};
+
+    /// CARRY A LAYER INTO THE DRAWING'S SYSTEM (`İÇEAKTAR cevir=evet`, TODOS G-01). When set, a
+    /// layer whose own system differs from `project_crs` is read through the mapping this makes for
+    /// it — PROJ's work, datum shift and units included — instead of being taken as the drawing's
+    /// own numbers with a warning. Unset: the numbers are read as they stand, and a mismatch is
+    /// said. An io function cannot reach PROJ (Article 3.2); the caller hands in the seam.
+    command::CrsMappingHook mapper;
+
+    /// Whether the mapping may be a ballpark shift or a lower-accuracy operation (`kaba=evet`).
+    bool rough_mapping{false};
 
     /// The layers to read; empty means every layer. Matched Turkish-folded.
     std::vector<std::string> only;

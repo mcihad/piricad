@@ -21,6 +21,7 @@
 #include "piricad/domain/geodesy/crs_service.hpp"
 #include "piricad/domain/geodesy/helmert.hpp"
 #include "piricad/io/service.hpp"
+#include "piricad/io/vector.hpp"
 #include "piricad/script/json_runner.hpp"
 
 #include "piricad/core/arc.hpp"
@@ -35,6 +36,7 @@
 
 #include <cmath>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -1860,4 +1862,369 @@ TEST_CASE("F-03 KANIT: büyük koordinatta 1 mm her adımda korunur, ara hesap t
 
     std::error_code ec;
     std::filesystem::remove_all(dir, ec);
+}
+
+// ---------------------------------------------------------------------------------------------
+// G-01: the operation PROJ uses is reported, a ballpark one is refused unless consented to, and an
+// import can carry a layer into the drawing's own system (TODOS G-01).
+// ---------------------------------------------------------------------------------------------
+
+namespace {
+
+namespace fs = std::filesystem;
+
+/// A bus with the file engine and the CRS service, as the program has them.
+struct CarryRig
+{
+    core::Document doc;
+    command::Registry reg;
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Bus bus{doc, reg, journal, undo};
+    io::FileService files{bus};
+    std::optional<domain::geodesy::CrsService> service;
+    std::string said;
+
+    CarryRig()
+    {
+        command::register_builtin_commands(reg);
+        domain::geodesy::register_geodesy_commands(reg);
+        auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
+        if (catalogue) service.emplace(bus, std::move(catalogue.value()));
+        bus.on_echo = [this](std::string_view s) { said.append(s).append("\n"); };
+    }
+
+    bool run(const std::string& line)
+    {
+        auto r = bus.execute_line(line, command::Origin::Test);
+        if (!r) said += "[hata] " + r.error().message + "\n";
+        return r.ok();
+    }
+
+    /// The vertices of the first live entity, in millimetres.
+    std::vector<core::Point2> first_vertices() const
+    {
+        std::vector<core::Point2> out;
+        for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+            if (!doc.alive(e)) continue;
+            const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+            if (span.count == 0) continue;
+            const auto xs = doc.geometry().ring_xs(span.first);
+            const auto ys = doc.geometry().ring_ys(span.first);
+            for (std::size_t v = 0; v < xs.size(); ++v)
+                out.push_back(core::Point2{xs[v], ys[v]});
+            break;
+        }
+        return out;
+    }
+};
+
+bool ogr2ogr(const std::string& arguments)
+{
+    return std::system(("ogr2ogr " + arguments + " >/dev/null 2>&1").c_str()) == 0;
+}
+
+/// A TM30 parcel exported to a GeoPackage, the source the import cases convert with GDAL's own
+/// tool.
+std::string tm30_parcel_file(const fs::path& dir, const char* name)
+{
+    CarryRig source;
+    if (!source.run("AYAR core.crs.id EPSG:5254") || !source.run("KATMAN ad=PARSEL") ||
+        !source.run("ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245"))
+        return {};
+    const std::string path = (dir / name).string();
+    if (!source.run("DIŞAAKTAR \"" + path + "\"")) return {};
+    return fs::exists(path) ? path : std::string{};
+}
+
+/// The parcel's corners as the importer reads them back, in millimetres, in the order they were
+/// drawn.
+constexpr core::Point2 kParcel[4] = {{485'300'000, 4'310'200'000},
+                                     {485'360'000, 4'310'200'000},
+                                     {485'360'000, 4'310'245'000},
+                                     {485'300'000, 4'310'245'000}};
+
+/// Whether `got` is the four corners of `kParcel` within `tolerance_mm`, in any starting corner and
+/// either winding (the importer normalises both).
+bool is_the_parcel(const std::vector<core::Point2>& got, core::Mm tolerance_mm)
+{
+    if (got.size() != 4) return false;
+    for (const core::Point2& want : kParcel) {
+        bool found = false;
+        for (const core::Point2& g : got)
+            found = found || (std::llabs(g.x - want.x) <= tolerance_mm &&
+                              std::llabs(g.y - want.y) <= tolerance_mm);
+        if (!found) return false;
+    }
+    return true;
+}
+
+} // namespace
+
+TEST_CASE("PROJ işlem raporu: işlem, doğruluk ve kaba (ballpark) bayrağı PROJ'dan gelir (G-01)")
+{
+    if (!Transform::available()) PENDING("PROJ kapalı.");
+
+    // SAME DATUM: only the projection changes, so PROJ states an exact conversion.
+    {
+        auto t = Transform::between("EPSG:5254", "EPSG:5253");
+        REQUIRE(t.ok());
+        auto info = t.value().info_at(485'320.0, 4'310'220.0);
+        REQUIRE(info.ok());
+        CHECK(info.value().known());
+        CHECK_FALSE(info.value().ballpark);
+        CHECK_EQ(info.value().accuracy_m, 0.0);
+        CHECK(info.value().sentence().find("PROJ işlemi:") != std::string::npos);
+        CHECK(info.value().name.find("axis order") ==
+              std::string::npos); // plumbing is not reported
+
+        // THE FIXTURE: cs2cs (PROJ's own tool) at the parcel's first corner, TM30 -> TM27,
+        // northing 4313997.7021 and easting 745474.3014, to its four printed decimals.
+        double e = 485'300.0, n = 4'310'200.0;
+        REQUIRE(t.value().forward(e, n));
+        CHECK(std::abs(e - 745'474.3014) < 0.0005);
+        CHECK(std::abs(n - 4'313'997.7021) < 0.0005);
+    }
+
+    // A DATUM SHIFT is not exact, and the report says how inexact: a boundary carried from ED50 to
+    // TUREF by the best operation PROJ has is good to metres, not millimetres.
+    {
+        auto t = Transform::between("EPSG:5254", "EPSG:23035");
+        REQUIRE(t.ok());
+        auto info = t.value().info_at(485'320.0, 4'310'220.0);
+        REQUIRE(info.ok());
+        CHECK_FALSE(info.value().ballpark);
+        CHECK(info.value().accuracy_m > 0.0);
+        CHECK(info.value().accuracy_m < 10.0);
+        CHECK(info.value().sentence().find("Doğruluk: yaklaşık") != std::string::npos);
+    }
+
+    // A BALLPARK-ONLY PAIR is refused unless the caller consents, and the refusal names the way
+    // out.
+    {
+        auto strict = Transform::between("EPSG:5254", "EPSG:2227");
+        REQUIRE_FALSE(strict.ok());
+        CHECK(strict.error().message.find("kaba=evet") != std::string::npos);
+        CHECK(strict.error().message.find("ballpark") != std::string::npos);
+
+        auto loose =
+            Transform::between("EPSG:5254", "EPSG:2227", TransformOptions{.allow_ballpark = true});
+        REQUIRE(loose.ok());
+        auto info = loose.value().info_at(485'320.0, 4'310'220.0);
+        REQUIRE(info.ok());
+        CHECK(info.value().ballpark);
+        CHECK(info.value().sentence().find("KABA") != std::string::npos);
+    }
+
+    // AN UNKNOWN SYSTEM is not guessed at.
+    auto unknown = Transform::between("EPSG:5254", "EPSG:99999");
+    REQUIRE_FALSE(unknown.ok());
+    CHECK(unknown.error().message.find("'EPSG:99999'") != std::string::npos);
+}
+
+TEST_CASE(
+    "DÖNÜŞTÜR: PROJ'un kullandığı işlemi ve doğruluğunu söyler; kaba işleme izin istemez (G-01)")
+{
+    if (!Transform::available()) PENDING("PROJ kapalı.");
+    CarryRig r;
+    REQUIRE(r.run("AYAR core.crs.id EPSG:5254"));
+    REQUIRE(r.run("ÇİZGİ 485300,4310200 485360,4310245"));
+
+    // ED50 UTM 35: a datum shift. The transcript carries the operation and how accurate it is.
+    r.said.clear();
+    REQUIRE_MESSAGE(r.run("DÖNÜŞTÜR hedef=EPSG:23035"), r.said);
+    CHECK(r.said.find("PROJ işlemi:") != std::string::npos);
+    CHECK(r.said.find("Doğruluk: yaklaşık") != std::string::npos);
+
+    // A BALLPARK TARGET is refused whole and the drawing is untouched.
+    CarryRig q;
+    REQUIRE(q.run("AYAR core.crs.id EPSG:5254"));
+    REQUIRE(q.run("ÇİZGİ 485300,4310200 485360,4310245"));
+    const auto before = q.doc.content_hash();
+    q.said.clear();
+    CHECK_FALSE(q.run("DÖNÜŞTÜR hedef=EPSG:2227"));
+    CHECK(q.said.find("kaba=evet") != std::string::npos);
+    CHECK_EQ(q.doc.content_hash(), before);
+}
+
+TEST_CASE("İÇEAKTAR cevir=evet: başka dilimdeki katman çizimin dilimine PROJ ile taşınır (G-01)")
+{
+    if (!Transform::available()) PENDING("PROJ kapalı.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    const fs::path dir = fs::temp_directory_path() / "piricad-g01-cevir";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    const std::string tm30 = tm30_parcel_file(dir, "tm30.gpkg");
+    REQUIRE(!tm30.empty());
+    const std::string tm27 = (dir / "tm27.gpkg").string();
+    if (!ogr2ogr("-t_srs EPSG:5253 \"" + tm27 + "\" \"" + tm30 + "\""))
+        PENDING("ogr2ogr yok; TM27 örneği üretilemedi.");
+
+    // WITHOUT cevir: the numbers are read as the drawing's own, and the program says so. That is
+    // ASSIGNING a system, and the parcel lands 260 kilometres from where it was.
+    {
+        CarryRig target;
+        REQUIRE(target.run("AYAR core.crs.id EPSG:5254"));
+        REQUIRE_MESSAGE(target.run("İÇEAKTAR \"" + tm27 + "\""), target.said);
+        CHECK(target.said.find("dönüştürülmedi") != std::string::npos);
+        CHECK(target.said.find("cevir=evet") != std::string::npos);
+        CHECK_FALSE(is_the_parcel(target.first_vertices(), 1000));
+    }
+
+    // WITH cevir: PROJ carries it home, to the millimetre, and says what it did.
+    CarryRig target;
+    REQUIRE(target.run("AYAR core.crs.id EPSG:5254"));
+    const std::size_t depth = target.undo.undo_depth();
+    REQUIRE_MESSAGE(target.run("İÇEAKTAR \"" + tm27 + "\" cevir=evet"), target.said);
+    CHECK_MESSAGE(is_the_parcel(target.first_vertices(), 1), "kenarlar PROJ ile yerine oturmadı");
+    CHECK(target.said.find("EPSG:5253 -> EPSG:5254 dönüştürüldü") != std::string::npos);
+    CHECK(target.said.find("PROJ işlemi:") != std::string::npos);
+    CHECK(target.said.find("dönüştürülmedi") == std::string::npos);
+    CHECK_EQ(target.undo.undo_depth() - depth, std::size_t{1});
+    REQUIRE(target.run("GERİAL"));
+    CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
+
+    // THE EQUALITY PROOF (CLAUDE.md 6.4): the typed line, a JSON script, and a replay of the
+    // journal leave one drawing.
+    CarryRig typed, scripted, replayed;
+    for (CarryRig* r : {&typed, &scripted, &replayed})
+        REQUIRE(r->run("AYAR core.crs.id EPSG:5254"));
+    REQUIRE(typed.run("İÇEAKTAR \"" + tm27 + "\" cevir=evet"));
+    {
+        script::JsonRunner runner(scripted.bus, script::Sandbox::Project);
+        auto ran = runner.run_text(
+            R"({"ad": "Taşı", "komutlar": [{"cmd": "core.import", "args": {"dosya": ")" + tm27 +
+            R"(", "cevir": true}}]})");
+        REQUIRE_MESSAGE(ran.ok(), (ran.ok() ? std::string() : ran.error().message));
+    }
+    CHECK_EQ(typed.doc.content_hash(), scripted.doc.content_hash());
+    for (const auto& e : typed.journal.entries())
+        if (e.command_id == "core.import") {
+            auto replay = replayed.bus.dispatch(
+                command::Invocation{e.command_id, e.args, command::Origin::Batch});
+            CHECK_MESSAGE(replay.ok(), (replay.ok() ? std::string() : replay.error().message));
+        }
+    CHECK_EQ(replayed.doc.content_hash(), typed.doc.content_hash());
+    fs::remove_all(dir);
+}
+
+TEST_CASE("İÇEAKTAR cevir=evet: derece sayan katman da taşınır; kaba işlem açık izin ister (G-01)")
+{
+    if (!Transform::available()) PENDING("PROJ kapalı.");
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF.");
+    const fs::path dir = fs::temp_directory_path() / "piricad-g01-derece";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    const std::string tm30 = tm30_parcel_file(dir, "tm30.gpkg");
+    REQUIRE(!tm30.empty());
+    const std::string wgs = (dir / "wgs84.gpkg").string();
+    if (!ogr2ogr("-t_srs EPSG:4326 \"" + wgs + "\" \"" + tm30 + "\""))
+        PENDING("ogr2ogr yok; WGS 84 örneği üretilemedi.");
+
+    // A GLOBE IN DEGREES, carried into TM30 metres: the refusal of the plain import said
+    // "dönüştürün" and now the conversion exists.
+    {
+        CarryRig target;
+        REQUIRE(target.run("AYAR core.crs.id EPSG:5254"));
+        CHECK_FALSE(target.run("İÇEAKTAR \"" + wgs + "\""));
+        CHECK(target.said.find("cevir=evet") != std::string::npos);
+        CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
+    }
+    CarryRig target;
+    REQUIRE(target.run("AYAR core.crs.id EPSG:5254"));
+    REQUIRE_MESSAGE(target.run("İÇEAKTAR \"" + wgs + "\" cevir=evet"), target.said);
+    CHECK_MESSAGE(is_the_parcel(target.first_vertices(), 2), "derece katmanı yerine oturmadı");
+    CHECK(target.said.find("EPSG:4326 -> EPSG:5254 dönüştürüldü") != std::string::npos);
+
+    // A FOOT-COUNTING SYSTEM THE DATUM OF WHICH PROJ CANNOT RELATE TO TUREF: ballpark only.
+    const std::string feet = (dir / "ca-feet.gpkg").string();
+    if (!ogr2ogr("-t_srs EPSG:2227 \"" + feet + "\" \"" + tm30 + "\"")) return;
+    CarryRig rough;
+    REQUIRE(rough.run("AYAR core.crs.id EPSG:5254"));
+    CHECK_FALSE(rough.run("İÇEAKTAR \"" + feet + "\" cevir=evet"));
+    CHECK(rough.said.find("kaba=evet") != std::string::npos);
+    CHECK_EQ(rough.doc.live_entity_count(), std::size_t{0});
+    CHECK_FALSE(rough.run("İÇEAKTAR \"" + feet +
+                          "\" kaba=evet")); // consent without a conversion means nothing
+    rough.said.clear();
+    REQUIRE_MESSAGE(rough.run("İÇEAKTAR \"" + feet + "\" cevir=evet kaba=evet"), rough.said);
+    CHECK(rough.said.find("KABA (ballpark)") != std::string::npos);
+    // THE FOOT IS PROJ'S: the parcel is 60 m wide, and it is 60 m wide after, not 196.85.
+    const auto corners = rough.first_vertices();
+    REQUIRE_EQ(corners.size(), std::size_t{4});
+    core::Mm width = 0;
+    for (const core::Point2& c : corners)
+        width = std::max<core::Mm>(width, std::llabs(c.x - corners[0].x));
+    CHECK(std::llabs(width - 60'000) <= 2);
+    fs::remove_all(dir);
+}
+
+TEST_CASE("KOORDİNAT sistem=: aynı nokta başka bir sistemde okunur, çizim değişmez (G-01)")
+{
+    if (!Transform::available()) PENDING("PROJ kapalı.");
+    CarryRig r;
+    REQUIRE(r.run("AYAR core.crs.id EPSG:5254"));
+    REQUIRE(r.run("ÇİZGİ 485300,4310200 485360,4310245"));
+    const auto before = r.doc.content_hash();
+    const auto depth  = r.undo.undo_depth();
+
+    // DEGREES, for a phone's map. The fixture is cs2cs (PROJ's own tool): 29.830714669 E,
+    // 38.925256696 N for TM30 485320 / 4310220.
+    r.said.clear();
+    REQUIRE_MESSAGE(r.run("KOORDİNAT nokta=485320,4310220 sistem=EPSG:4326"), r.said);
+    CHECK(r.said.find("Sağa: 485320,000 m   Yukarı: 4310220,000 m") != std::string::npos);
+    CHECK(r.said.find("Boylam: 29,83071466") != std::string::npos);
+    CHECK(r.said.find("Enlem: 38,92525669") != std::string::npos);
+    CHECK(r.said.find("PROJ işlemi:") != std::string::npos);
+
+    // ANOTHER PROJECTED ZONE: TM27, northing 4314018.365, easting 745493.647 (cs2cs).
+    r.said.clear();
+    REQUIRE_MESSAGE(r.run("KOORDİNAT nokta=485320,4310220 sistem=EPSG:5253"), r.said);
+    CHECK(r.said.find("Sağa: 745493,647") != std::string::npos);
+    CHECK(r.said.find("Yukarı: 4314018,365") != std::string::npos);
+
+    // A FOOT-COUNTING SYSTEM names its unit — PROJ's name for it — and needs the explicit consent a
+    // ballpark shift needs.
+    r.said.clear();
+    CHECK_FALSE(r.run("KOORDİNAT nokta=485320,4310220 sistem=EPSG:2227"));
+    CHECK(r.said.find("kaba=evet") != std::string::npos);
+    r.said.clear();
+    REQUIRE_MESSAGE(r.run("KOORDİNAT nokta=485320,4310220 sistem=EPSG:2227 kaba=evet"), r.said);
+    CHECK(r.said.find("US survey foot") != std::string::npos);
+    CHECK(r.said.find("KABA (ballpark)") != std::string::npos);
+
+    // AN UNKNOWN SYSTEM is named, not guessed.
+    r.said.clear();
+    CHECK_FALSE(r.run("KOORDİNAT nokta=485320,4310220 sistem=EPSG:99999"));
+    CHECK(r.said.find("'EPSG:99999'") != std::string::npos);
+
+    // A READING IS NOT AN EDIT: nothing changed, nothing to undo.
+    CHECK_EQ(r.doc.content_hash(), before);
+    CHECK_EQ(r.undo.undo_depth(), depth);
+    CHECK(r.doc.crs().id() == "EPSG:5254");
+}
+
+TEST_CASE("YEREL çizim haritaya kendiliğinden bağlanmaz: dönüştürme, içe alma ve okuma OTURT ister "
+          "(G-01)")
+{
+    if (!Transform::available()) PENDING("PROJ kapalı.");
+    CarryRig r;
+    REQUIRE(r.run("AYAR core.crs.id YEREL"));
+    REQUIRE(r.run("ÇİZGİ 0,0 10,0"));
+    const auto before = r.doc.content_hash();
+
+    // THE SAME SENTENCE from the three doors.
+    for (const char* line : {"DÖNÜŞTÜR hedef=EPSG:5254", "KOORDİNAT nokta=1,1 sistem=EPSG:5254"}) {
+        r.said.clear();
+        CHECK_FALSE(r.run(line));
+        CHECK_MESSAGE(r.said.find("yerel bir sistem") != std::string::npos, line << ": " << r.said);
+        CHECK_MESSAGE(r.said.find("OTURT") != std::string::npos, line << ": " << r.said);
+    }
+    CHECK_EQ(r.doc.content_hash(), before);
+
+    // AND OTURT IS THE WAY: a similarity from two common points, with the real system named.
+    r.said.clear();
+    REQUIRE_MESSAGE(r.run("OTURT noktalar=0,0 485300,4310200 10,0 485310,4310200 sistem=EPSG:5254"),
+                    r.said);
+    CHECK(r.doc.crs().id() == "EPSG:5254");
 }

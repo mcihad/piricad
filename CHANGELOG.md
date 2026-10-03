@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — dönüşümün doğruluğu söyleniyor, kaba işlem izinsiz yapılmıyor, dosya çizimin sistemine taşınıyor (G-01)
+
+- **PROJ'un gerçekten kullandığı işlem raporlanıyor.** `DÖNÜŞTÜR` artık işlemin adını, PROJ'un bildirdiği
+  doğruluğu, kaba (*ballpark*) bayrağını ve okuduğu gridleri yazıyor ve yapılandırılmış olarak da veriyor
+  (`islem`, `dogruluk_m`, `kaba`, `gridler`). ED50 → TUREF için "yaklaşık 2,1 m" gibi: bir sınırı metrelerce
+  oynatabilecek bir işlem artık dipnot değil.
+- **Kaba işlem ve eksik grid sessizce varsayılmıyor.** PROJ'un varsayılanı, en iyi işlemin gridi yoksa bir
+  sonrakine, o da yoksa datum farkını yok sayan bir kaydırmaya düşmek; sonuç metrelerce kayıyor ve koordinat gibi
+  görünüyor. `Transform::between` artık en iyi işlem ya da hiçbiri (`ONLY_BEST`, `ALLOW_BALLPARK=NO`) ister; eksik
+  gridin adını ve PROJ'un gösterdiği adresi söyler; izin `kaba=evet` ile açıkça verilir.
+- **`İÇEAKTAR cevir=evet`**: dosyanın katmanı kendi sisteminden çizimin sistemine PROJ ile taşınır — derece, ayak,
+  başka dilim, başka datum; birim ve eksen sırası PROJ'dan, programda tablo yok. Katman başına işlem ve doğruluk
+  transkriptte; geçerli alan dışında kalan tek köşe içe aktarmayı bütünüyle geri alır. Varsayılan hâlâ "sayılar
+  olduğu gibi okunur, fark uyarılır" (**atamak** ile **dönüştürmek** ayrı işlemler); uyarı artık çıkış yolunu söylüyor.
+  İçe Aktar penceresinde **Çizimin sistemine dönüştür (PROJ)** kutusu (dosya okunmadan önce; işaretlemek yeniden okutur).
+- **`KOORDİNAT sistem=`**: aynı nokta başka bir sistemde (WGS 84 derecesi, yan dilim, ayak) okunur; çizim değişmez.
+- **Yerel (`YEREL`) çizim** dönüştürme, içe alma ve okumada aynı cümleyle reddedilir; çıkış yolu `OTURT sistem=`.
+- Belgeler: `reproject.md` (işlem/doğruluk, kaba izin), `import.md` (`cevir`, `kaba`, pencere kutusu),
+  `coordinate.md` (`sistem=`), `veri/koordinat-sistemleri.md` (kaynak / belge / okuma sistemi ayrımı).
+  Kanıt: `test_geodesy.cpp` (rapor, kaba red, cs2cs ile alınan sabit değerler, içe alma milimetrik, GUI=CLI=betik
+  eşitliği ve günlük oynatma, ayak birimi), `PIRICAD_REALMOUSE_PROBE` (pencerede kutu → derece dosyası milimetrik).
+
 ### Eklendi — işe dayalı başlangıç: `ÖRNEKPROJE` ve beş örnek proje (U-06)
 
 - **`ÖRNEKPROJE ad=<kimlik>`** (`core.sample`, `ÖRNEK`, `SAMPLE`): çizimin yerine hazır, küçük bir iş koyar —

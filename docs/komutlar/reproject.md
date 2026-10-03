@@ -23,6 +23,38 @@ kayar. Bu yüzden bir ucu coğrafi olan dönüşüm reddedilir:
 WGS84 okuması ya da dışa aktarma için coğrafi sistem gerekiyorsa dereceleri
 belgeden uzak tutun.
 
+## Hangi işlemle, ne doğrulukla
+
+İki sistem **aynı datumda** ise (TUREF'in üç derecelik dilimleri birbirine) dönüşüm bir
+izdüşüm değişimidir ve tamdır. Datum değişiyorsa (ED50 → TUREF) tek bir formül yoktur:
+PROJ'un veri tabanında birden çok aday işlem durur, her birinin kendi doğruluğu ve geçerli
+olduğu bölge vardır, PROJ **noktanın yerine göre** seçer. Komut seçilen işlemi ve PROJ'un
+bildirdiği doğruluğu dönüşümle birlikte yazar:
+
+```text
+1 nesne dönüştürüldü: EPSG:5254 -> EPSG:23035   (PROJ 9.7.1)
+PROJ işlemi: Inverse of 3-degree Gauss-Kruger CM 30E + TUREF to ETRS89 (1) + Inverse of ED50 to ETRS89 (9) + UTM zone 35N. Doğruluk: yaklaşık 2,1 m.
+```
+
+İşlemin adı, doğruluğu ve kullandığı grid dosyaları **çizimin ortasındaki noktada** sorulur ve yapılandırılmış
+olarak da döner (`islem`, `dogruluk_m`, `kaba`, `gridler`): betik ve yapay zekâ istemcileri aynı bilgiyi
+okur. ED50 → TUREF dönüşümü bir sınırı **metrelerce** oynatabilir; bu bir hata değil, o iki datum arasındaki
+en iyi bilinen bağıntının doğruluğudur. Kadastral bir iş için ortak (hem iki sistemde de ölçülmüş) noktalarla
+[`OTURT`](fit.md) gibi bir yerel uyum gerekir.
+
+### Kaba işlem açık izin ister
+
+PROJ bazen iki datumu ilişkilendirecek hiçbir bilinen işlem bulamaz ve **datum farkı yokmuş gibi**
+davranan kaba (*ballpark*) bir kaydırma önerir; ya da en iyi işlemin grid dosyası bu makinede yoktur ve
+bir sonrakine düşer. Sonuç metrelerce kayar ama sayılar hâlâ koordinat gibi görünür. Bu yüzden komut
+**varsayılan olarak bunları reddeder** ve nedenini söyler:
+
+> `'EPSG:5254' -> 'EPSG:2227' dönüşümü kurulamadı: PROJ bu ikili için doğruluğu bilinen, kullanılabilir bir
+> işlem bulamadı (yalnız kaba/ballpark: …). Yine de istiyorsanız kaba=evet ile açıkça izin verin.`
+
+Eksik bir grid ise adı ve PROJ'un gösterdiği indirme adresiyle birlikte söylenir. `kaba=evet` bilerek
+verilen bir izindir; sonuç satırı `KABA (ballpark) işlem` diye işaretler.
+
 ## Her nesne kendi biçimiyle taşınır
 
 | Nesne | Nasıl taşınır |
@@ -62,7 +94,7 @@ noktanın ayrı PROJ dönüşümüyle birebir aynı sonucu vaat etmez.
 ## Sözdizimi
 
 ```text
-DÖNÜŞTÜR hedef=<sistem> [kaynak=<sistem>]
+DÖNÜŞTÜR hedef=<sistem> [kaynak=<sistem>] [kaba=evet]
 ```
 
 ## Parametreler
@@ -71,6 +103,7 @@ DÖNÜŞTÜR hedef=<sistem> [kaynak=<sistem>]
 |---|---|
 | `hedef` | Hedef sistem: `EPSG:5256`, `TUREF/TM36`, bir PROJ dizesi ya da WKT |
 | `kaynak` | Kaynak sistem; verilmezse çizimin kendi koordinat sistemi |
+| `kaba` | `evet`: kaba (*ballpark*) bir işleme ya da eksik grid yüzünden düşük doğruluklu bir işleme izin verir. Varsayılan `hayır` |
 
 `kaynak` yalnız etiketi yanlış olan ve doğrusunu bildiğiniz bir çizim için
 gerekir.
@@ -106,7 +139,19 @@ DÖNÜŞTÜR hedef=EPSG:5254
 ```
 
 ```text
-1 nesne dönüştürüldü: EPSG:5256 -> EPSG:5254   (PROJ 9.8.1)
+1 nesne dönüştürüldü: EPSG:5256 -> EPSG:5254   (PROJ 9.7.1)
+PROJ işlemi: Inverse of 3-degree Gauss-Kruger CM 36E + 3-degree Gauss-Kruger CM 30E. Doğruluk: aynı datum içinde, dönüşüm tam (izdüşüm değişimi).
+```
+
+Bir datum değişiyorsa aynı satır doğruluğu söyler (ED50 UTM 35 için):
+
+<!-- örnek: yeni çizim -->
+
+```
+AYAR ad=koordinat_sistemi deger=EPSG:5254
+KATMAN ad=PARSEL
+ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 485300,4310245
+DÖNÜŞTÜR hedef=EPSG:23035
 ```
 
 ### Arayüz
@@ -155,6 +200,18 @@ Belgenin CRS'i yok ve `kaynak` da verilmedi.
 > `Kaynak ve hedef aynı sistem: <ad>. Yapılacak bir şey yok.`
 
 Dönüştürecek bir şey yok.
+
+> `'X' -> 'Y' dönüşümü kurulamadı: PROJ bu ikili için doğruluğu bilinen, kullanılabilir bir işlem bulamadı …`
+
+PROJ iki sistemi yalnız kaba (*ballpark*) bir kaydırmayla ya da bu makinede olmayan bir grid ile
+bağlayabiliyor. Mesaj eksik gridi ve nereden alınacağını söylüyorsa dosyayı PROJ veri dizinine koyun;
+söylemiyorsa iki datum arasında bilinen bir işlem yok demektir. Sonucun metrelerce kayabileceğini bilerek
+yine de isterseniz `kaba=evet` yazın.
+
+> `Koordinat sistemi tanınmıyor: 'X'.`
+
+`hedef` ya da `kaynak` PROJ'un tanımadığı bir ad. EPSG kodunu (`EPSG:5254`), katalogdaki bir adı
+(`TUREF/TM30`) ya da bir PROJ/WKT tanımını yazın.
 
 > `Bu dönüşümün bir ucu coğrafi (derece)…`
 

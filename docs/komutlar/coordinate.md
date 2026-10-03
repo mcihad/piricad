@@ -31,10 +31,28 @@ yazılır: yuvarlama tam sayılarla, yarımdan uzağa yapılır. Ayrıntı:
 ## Sözdizimi
 
 ```text
-KOORDİNAT [nokta=<sağa>,<yukarı>]
+KOORDİNAT [nokta=<sağa>,<yukarı>] [sistem=<sistem>] [kaba=evet]
 ```
 
 Nokta verilmezse komut sizden bir nokta tıklamanızı ister.
+
+## Aynı noktayı başka bir sistemde okumak
+
+`sistem=` noktayı ayrıca **başka bir koordinat sisteminde** de yazar: bir telefon haritası için
+WGS 84 (`EPSG:4326`), yan dilimin sayıları, bir yabancı kurumun ayak sayan sistemi. Dönüşümü
+**PROJ** yapar — birim ve datum kayması dahil — ve kullandığı işlemi ve doğruluğunu yazar:
+
+```text
+Sağa: 485320,000 m   Yukarı: 4310220,000 m   (EPSG:5254)
+Boylam: 29,830714669°   Enlem: 38,925256696°   (EPSG:4326)
+PROJ işlemi: Inverse of TUREF to WGS 84 (1) + 3-degree Gauss-Kruger CM 30E. Doğruluk: yaklaşık 1 m.
+```
+
+Bu bir **okumadır, dönüşüm değildir**: çizim kendi sisteminde kalır, hiçbir şey değişmez ve geri alınacak
+bir şey olmaz. Çizimin tamamını başka bir sisteme taşımak [`DÖNÜŞTÜR`](reproject.md) işidir. Ayak sayan
+bir sistemin birimi (`US survey foot` gibi) PROJ'un kendi adıyla yazılır. PROJ iki sistemi yalnız kaba
+(*ballpark*) bir kaydırmayla bağlayabiliyorsa okuma reddedilir ve `kaba=evet` ile açıkça izin vermeniz
+istenir.
 
 ## Parametreler
 
@@ -65,6 +83,13 @@ hiçbir komut çalışmıyorken Esc'e basınca silinir.
 Yakalama açıkken tıklamanız en yakın köşeye oturur, yani bir parsel köşesinin
 gerçek koordinatını okursunuz — göz kararı bir noktanınkini değil.
 
+Başka bir sistemde okumak için (nokta önce çizime konur, ardından okunur):
+
+```
+KATMAN ad=PARSEL
+KOORDİNAT nokta=485320,4310220 sistem=EPSG:5253
+```
+
 ### Betik
 
 ```json
@@ -94,6 +119,13 @@ günlüğündeki `echo` satırıdır.
 
 Nokta tıklanmadan `Esc`'e basarsanız komut sessizce biter — bu bir hata değildir,
 vazgeçmedir.
+
+| Mesaj | Neden | Çözüm |
+|---|---|---|
+| `Koordinat sistemi tanınmıyor: 'X'. …` | `sistem=` PROJ'un tanımadığı bir ad | EPSG kodu (`EPSG:4326`), katalogdaki bir ad ya da PROJ/WKT tanımı yazın |
+| `… dönüşümü kurulamadı: PROJ bu ikili için doğruluğu bilinen … işlem bulamadı …` | İki sistem yalnız kaba bir kaydırmayla ya da bu makinede olmayan bir grid ile bağlanıyor | Gridi PROJ veri dizinine koyun ya da sonucun metrelerce kayabileceğini bilerek `kaba=evet` yazın |
+| `'YEREL' yerel bir sistem; haritadaki yeri bilinmediği için …` | Çizim `YEREL` ve `sistem=` istendi | Önce [`OTURT`](fit.md) ile ortak noktalardan haritaya bağlayın; `OTURT sistem=` gerçek sistemi de söyler |
+| `Nokta … sistemlerinin geçerli alanının dışında; o sistemde okunamaz.` | Nokta iki sistemden birinin alanı dışında | Sistemleri denetleyin (yanlış dilim olağan nedendir) |
 
 Koordinat sistemi tanımsız bir belgede parantez içindeki sistem adı yazılmaz;
 sayılar yine de okunur. Çizimi bir sisteme oturtmak için `AYAR

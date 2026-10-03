@@ -9215,6 +9215,63 @@ int MainWindow::probeRealMouse()
                       QStringLiteral("derece sayan GeoPackage reddedildi, dönüştürme yolu "
                                      "söylendi"));
                 shoot("derece-geopackage-reddi");
+
+                // THE WAY IN, through the wizard (TODOS G-01): the box ticked, the line it builds
+                // says `cevir=evet`, and the globe in degrees comes home to the millimetre.
+                // The box comes BEFORE the read: without it the degree layer is refused, with it
+                // the read itself carries the layer home.
+                ImportWizard* wizard = openImportWizard();
+                CheckBox* carry      = wizard != nullptr ? wizard->findChild<CheckBox*>() : nullptr;
+                check(carry != nullptr &&
+                          carry->accessibleName().contains(QStringLiteral("dönüştür")),
+                      QStringLiteral("pencerede 'Çizimin sistemine dönüştür' kutusu var"));
+                if (carry != nullptr) carry->click();
+                if (wizard != nullptr) wizard->beginWith(wgs);
+                const bool read = wizard != nullptr && wizard->probeSettle(1);
+                check(read,
+                      QStringLiteral("kutu işaretliyken içe aktarma penceresi WGS 84 dosyasını "
+                                     "okudu"));
+                if (read) {
+                    QCoreApplication::processEvents();
+                    if (shooting)
+                        (void)wizard->grab().save(into +
+                                                  QStringLiteral("/ice-aktar-cevir-kutusu.png"));
+                    QAbstractButton* go = nullptr;
+                    for (QAbstractButton* b : wizard->findChildren<QAbstractButton*>())
+                        if (b->text() == QStringLiteral("İçe aktar") && b->isEnabled()) go = b;
+                    check(go != nullptr,
+                          QStringLiteral("pencerenin 'İçe aktar' düğmesi basılabilir"));
+                    transcript_->clear();
+                    if (go != nullptr) go->click();
+                    settled();
+                    const QString said_after = transcript_->toPlainText();
+                    // The parcel is back where TM36 put it, to two millimetres.
+                    const core::Document& now = controller_->document();
+                    bool home                 = now.live_entity_count() == 1;
+                    if (home) {
+                        for (core::EntityId e = 0; e < now.entities().size(); ++e) {
+                            if (!now.alive(e)) continue;
+                            const core::RingSpan span =
+                                now.geometry().rings_of(now.entities().slot[e]);
+                            const auto xs = now.geometry().ring_xs(span.first);
+                            const auto ys = now.geometry().ring_ys(span.first);
+                            home          = home && xs.size() == 4;
+                            for (std::size_t v = 0; home && v < xs.size(); ++v)
+                                home =
+                                    std::llabs(xs[v] - ((v == 0 || v == 3) ? 485'300'000
+                                                                           : 485'360'000)) <= 2 &&
+                                    std::llabs(ys[v] - (v < 2 ? 4'310'200'000 : 4'310'245'000)) <=
+                                        2;
+                        }
+                    }
+                    check(home &&
+                              said_after.contains(
+                                  QStringLiteral("EPSG:4326 -> EPSG:5256 dönüştürüldü")) &&
+                              said_after.contains(QStringLiteral("PROJ işlemi:")),
+                          QStringLiteral("kutu işaretliyken derece sayan dosya çizimin sistemine "
+                                         "milimetrik taşındı ve işlem söylendi"));
+                    shoot("derece-geopackage-tasindi");
+                }
             }
 
             // THE READING, to the project's decimals.

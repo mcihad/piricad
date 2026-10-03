@@ -46,6 +46,7 @@
 #include "piricad/core/block_reference.hpp"
 #include "piricad/core/geometry.hpp"
 #include "piricad/domain/geodesy/crs_catalog.hpp"
+#include "piricad/domain/geodesy/crs_service.hpp"
 #include "piricad/domain/geodesy/transform.hpp"
 
 #include <cmath>
@@ -154,7 +155,19 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    auto built = domain::geodesy::Transform::between(source, target);
+    // A LOCAL GRID has no place on the map to move from or to; OTURT is how it gets one.
+    for (const std::string& side : {source, target})
+        if (domain::geodesy::is_local_grid(side)) {
+            ctx.refuse(core::ErrorCode::InvalidArgument, domain::geodesy::local_grid_refusal(side));
+            co_return;
+        }
+
+    // THE OPERATION IS PROJ'S BEST OR NOTHING, unless the user consents to less (`kaba=evet`): a
+    // ballpark shift, or a lower-accuracy operation because the best one needs a grid this machine
+    // lacks, lands the drawing metres away and still reads as a coordinate (TODOS G-01).
+    const bool allow_rough = ctx.argument("kaba").as_bool();
+    auto built             = domain::geodesy::Transform::between(
+        source, target, domain::geodesy::TransformOptions{.allow_ballpark = allow_rough});
     if (!built) {
         ctx.refuse(built.error());
         co_return;
@@ -267,6 +280,35 @@ Task<void> run(Context& ctx)
 
     ctx.record("kaynak", Value::text(source));
     ctx.record("hedef", Value::text(target));
+    if (allow_rough) ctx.record("kaba", Value::boolean(true));
+
+    // WHAT PROJ DID, said with the result: the operation, how accurate it claims to be and which
+    // grids it read. The drawing's middle is where the operation is asked about, because PROJ
+    // chooses among its candidates by place. A boundary moved by an operation good to two metres
+    // is something its reader has to be told, not a detail.
+    std::string operation_said;
+    {
+        const core::Box2 extent = doc.extent();
+        const double centre_e =
+            extent.empty() ? 0.0 : core::mm_to_metres(extent.min_x / 2 + extent.max_x / 2);
+        const double centre_n =
+            extent.empty() ? 0.0 : core::mm_to_metres(extent.min_y / 2 + extent.max_y / 2);
+        if (auto info = transform.info_at(centre_e, centre_n); info && info.value().known()) {
+            operation_said = "\n" + info.value().sentence();
+            core::Json report;
+            report.set("kaynak", core::Json::string(source));
+            report.set("hedef", core::Json::string(target));
+            report.set("islem", core::Json::string(info.value().name));
+            if (info.value().accuracy_m >= 0.0)
+                report.set("dogruluk_m", core::Json::number(info.value().accuracy_m));
+            report.set("kaba", core::Json::boolean(info.value().ballpark));
+            core::Json grids = core::Json::array({});
+            for (const auto& g : info.value().grids)
+                grids.push(core::Json::string(g.name));
+            report.set("gridler", std::move(grids));
+            ctx.report(std::move(report));
+        }
+    }
 
     // THE EXTERNAL REFERENCES, read again from their files in the new system
     // — inside this command's transaction, so the drawing and its references
@@ -295,7 +337,8 @@ Task<void> run(Context& ctx)
     }
 
     ctx.echo(std::to_string(touched) + " nesne dönüştürüldü: " + source + " -> " + target +
-             "   (PROJ " + domain::geodesy::Transform::backend_version() + ")" + references);
+             "   (PROJ " + domain::geodesy::Transform::backend_version() + ")" + operation_said +
+             references);
 }
 
 } // namespace
@@ -315,6 +358,10 @@ PIRICAD_COMMAND(reproject)
                 Param::text("kaynak", Arity::optional(),
                             "Kaynak sistem; yoksa çizimin kendi koordinat sistemi")
                     .en("source"),
+                Param::boolean("kaba", Arity::optional(),
+                               "Kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme "
+                               "izin ver; varsayılan hayır")
+                    .en("rough"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

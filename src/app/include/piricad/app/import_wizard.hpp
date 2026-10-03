@@ -301,6 +301,10 @@ private:
     QListWidget* fields_    = nullptr;
     QLabel* fieldTally_     = nullptr;
 
+    /// `cevir=evet` on the line: carry the file into the drawing's coordinate system with PROJ
+    /// instead of reading its numbers as the drawing's own (TODOS G-01).
+    CheckBox* reproject_ = nullptr;
+
     QLabel* command_ = nullptr; ///< the line the import button will run
     Button* go_      = nullptr;
     Button* cancel_  = nullptr;

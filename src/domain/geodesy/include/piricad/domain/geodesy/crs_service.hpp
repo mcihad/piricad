@@ -22,9 +22,19 @@
 #include "piricad/command/bus.hpp"
 #include "piricad/core/crs.hpp"
 
+#include <memory>
 #include <string>
 
 namespace piricad::domain::geodesy {
+
+/// Whether `id` names a local site grid — `YEREL` or `LOCAL`: metres from wherever the surveyor put
+/// the origin, the one system no registry can place on the map.
+bool is_local_grid(std::string_view id);
+
+/// Why a local grid cannot be carried into a mapped system, and the one way out: an explicit
+/// placement from common points (`OTURT`). The same sentence for `DÖNÜŞTÜR`, `İÇEAKTAR cevir=evet`
+/// and `KOORDİNAT sistem=`, because it is one answer to one question.
+std::string local_grid_refusal(std::string_view id);
 
 /// Installs a CRS resolver on a bus for as long as it lives.
 ///
@@ -55,7 +65,17 @@ public:
     /// coordinate in the document by kilometres.
     core::Crs resolve(std::string_view id) const;
 
+    /// A mapping of coordinates from `request.from` into `request.to`, PROJ's own work
+    /// (`Bus::on_crs_mapping`); or why none can be built — an unknown system, a local grid, a pair
+    /// PROJ can only join with a ballpark shift while `allow_rough` is off.
+    core::Result<std::shared_ptr<command::CrsMapping>>
+    mapping(const command::CrsMappingRequest& request) const;
+
 private:
+    /// The text PROJ is given for `id`: its EPSG code when the catalogue places it, `id` as written
+    /// otherwise.
+    std::string proj_text(std::string_view id) const;
+
     command::Bus& bus_;
     CrsCatalog catalogue_;
 };

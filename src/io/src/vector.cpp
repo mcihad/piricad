@@ -215,6 +215,24 @@ struct DatasetHandle
     DatasetHandle& operator=(const DatasetHandle&) = delete;
 };
 
+/// How one layer's coordinates reach the store: the unit they are read in, and — when the layer is
+/// being CARRIED into the drawing's own system (`İÇEAKTAR cevir=evet`) — the mapping PROJ made for
+/// it.
+struct Carry
+{
+    core::DrawingUnit unit{core::DrawingUnit::Metre};
+
+    /// Null: the numbers are read as they stand (in `unit`). Set: every position goes through it
+    /// first, comes out in the drawing's system in metres, and `unit` is metres.
+    const command::CrsMapping* map{nullptr};
+
+    ImportDiagnostics* diag{nullptr};
+
+    /// Vertices PROJ refused because they lie outside the systems' area of validity. Counted, then
+    /// the import fails: a parcel with a corner left where it was is a different parcel.
+    std::uint64_t* refused{nullptr};
+};
+
 /// One OGR ring to `Mm`, dropping the repeated closing vertex the way core does.
 ///
 /// `mm_from_metres` is the ONE rounding helper (core.md R20). A raw
@@ -229,15 +247,28 @@ core::Mm value_to_mm(double v, core::DrawingUnit unit, ImportDiagnostics* diag)
     return core::mm_round(exact);
 }
 
-void ring_to_mm(const OGRLinearRing* ring, std::vector<core::Point2>& out, core::DrawingUnit unit,
-                ImportDiagnostics* diag = nullptr)
+/// One position of the file to a stored point. The mapping — PROJ's work, the units and the datum
+/// shift included — comes first when there is one; the rounding to the millimetre is always the
+/// last and the only one.
+core::Point2 carry_point(double x, double y, const Carry& carry)
+{
+    if (carry.map != nullptr) {
+        if (!carry.map->apply(x, y)) {
+            if (carry.refused != nullptr) ++*carry.refused;
+            return core::Point2{0, 0};
+        }
+    }
+    return core::Point2{value_to_mm(x, carry.unit, carry.diag),
+                        value_to_mm(y, carry.unit, carry.diag)};
+}
+
+void ring_to_mm(const OGRLinearRing* ring, std::vector<core::Point2>& out, const Carry& carry)
 {
     out.clear();
     const int n = ring->getNumPoints();
     out.reserve(static_cast<std::size_t>(n));
     for (int i = 0; i < n; ++i)
-        out.push_back(core::Point2{value_to_mm(ring->getX(i), unit, diag),
-                                   value_to_mm(ring->getY(i), unit, diag)});
+        out.push_back(carry_point(ring->getX(i), ring->getY(i), carry));
 
     // RingGeometry stores the corners and implies the closing segment, so the
     // duplicate OGR always writes is dropped here rather than argued about there.
@@ -245,15 +276,13 @@ void ring_to_mm(const OGRLinearRing* ring, std::vector<core::Point2>& out, core:
         out.pop_back();
 }
 
-void line_to_mm(const OGRLineString* line, std::vector<core::Point2>& out, core::DrawingUnit unit,
-                ImportDiagnostics* diag = nullptr)
+void line_to_mm(const OGRLineString* line, std::vector<core::Point2>& out, const Carry& carry)
 {
     out.clear();
     const int n = line->getNumPoints();
     out.reserve(static_cast<std::size_t>(n));
     for (int i = 0; i < n; ++i)
-        out.push_back(core::Point2{value_to_mm(line->getX(i), unit, diag),
-                                   value_to_mm(line->getY(i), unit, diag)});
+        out.push_back(carry_point(line->getX(i), line->getY(i), carry));
 }
 
 /// Whether any vertex of `g` sits off the ground plane. A DXF is three-
@@ -839,10 +868,11 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     std::vector<core::Point2> points;
     std::vector<core::RingGeometry::RingInput> rings;
     std::vector<std::vector<core::Point2>> ring_store;
-    std::set<std::string> seen_layers; // so report.layers counts names, not features
-    bool unlabelled       = false;     // the "no CRS in the file" note, said once
-    bool unit_clash_said  = false;     // the DXF-unit-against-.prj note, said once
-    bool degree_like_said = false;     // the "these look like degrees" note, said once
+    std::set<std::string> seen_layers;     // so report.layers counts names, not features
+    std::uint64_t refused_by_proj = 0;     // vertices a mapping could not carry, over every layer
+    bool unlabelled               = false; // the "no CRS in the file" note, said once
+    bool unit_clash_said          = false; // the DXF-unit-against-.prj note, said once
+    bool degree_like_said         = false; // the "these look like degrees" note, said once
 
     // The wizard's tick boxes, and nothing else in this file knows they exist:
     // an empty list is "everything", which is what a bare İÇEAKTAR sends. Folded
@@ -956,7 +986,39 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
         // other).
         const OGRSpatialReference* layer_srs = layer->GetSpatialRef();
         if (layer_srs == nullptr && !sidecar.empty()) layer_srs = &sidecar_srs;
-        if (layer_srs != nullptr) {
+
+        // CARRIED INTO THE DRAWING'S SYSTEM (TODOS G-01). A layer that declares its own system,
+        // when that is not the drawing's and the caller asked for a conversion, is read through
+        // PROJ's mapping: degrees, feet, another zone, another datum — all of them PROJ's, none of
+        // them a table here. A layer that declared nothing took the drawing's system above and has
+        // nothing to be carried from; saying otherwise would be inventing the source.
+        std::shared_ptr<command::CrsMapping> carried;
+        if (options.mapper && layer_srs != nullptr && !project_crs.empty() &&
+            crs.value() != project_crs) {
+            auto made = options.mapper(
+                command::CrsMappingRequest{crs.value(), project_crs, options.rough_mapping});
+            if (!made)
+                co_return err(made.error().code, "'" + layer_name +
+                                                     "' katmanı çizimin sistemine (" + project_crs +
+                                                     ") dönüştürülemedi: " + made.error().message);
+            carried = made.value();
+
+            // WHAT PROJ DID, at the middle of the layer, in front of the user: the operation, how
+            // accurate it claims to be, its grids. A boundary carried by an operation good to two
+            // metres is not a boundary carried exactly.
+            OGREnvelope extent;
+            const bool placed  = layer->GetExtent(&extent, TRUE) == OGRERR_NONE;
+            const double mid_x = placed ? (extent.MinX + extent.MaxX) / 2.0 : 0.0;
+            const double mid_y = placed ? (extent.MinY + extent.MaxY) / 2.0 : 0.0;
+            std::string said   = "'" + layer_name + "' katmanı " + crs.value() + " -> " +
+                               project_crs + " dönüştürüldü.";
+            if (carried->describe_at)
+                if (const std::string how = carried->describe_at(mid_x, mid_y); !how.empty())
+                    said += " " + how;
+            diag.note(Severity::Info, std::move(said));
+        }
+
+        if (layer_srs != nullptr && !carried) {
             const std::string where =
                 format->driver == "DXF" ? "'" + path + "'"
                                         : "'" + path + "' dosyasının '" + layer_name + "' katmanı";
@@ -978,15 +1040,24 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                               "çizim_birimi metre ile yeniden aktarın.");
             }
         }
+        // What the layer's numbers are IN once read: the drawing's system when they were carried
+        // into it, the file's own otherwise.
+        const std::string layer_crs = carried ? project_crs : crs.value();
         if (report.crs.empty())
-            report.crs = crs.value();
-        else if (report.crs != crs.value())
+            report.crs = layer_crs;
+        else if (report.crs != layer_crs)
             co_return err(ErrorCode::ValidationFailed,
                           "'" + path +
                               "' içindeki katmanlar farklı koordinat sistemleri "
                               "bildiriyor (" +
-                              report.crs + " ve " + crs.value() +
-                              "). Tek bir sisteme dönüştürüp yeniden deneyin.");
+                              report.crs + " ve " + layer_crs +
+                              "). Tek bir sisteme dönüştürüp yeniden deneyin ya da İÇEAKTAR "
+                              "cevir=evet ile hepsini çizimin sistemine taşıyın.");
+
+        // How this layer's numbers reach the store. Metres once carried (PROJ answers in the
+        // drawing's metres); the file's unit otherwise.
+        const Carry carry{carried ? core::DrawingUnit::Metre : unit, carried.get(), &diag,
+                          &refused_by_proj};
 
         // The other half of the DXF single-layer story. On the way out we write
         // every drawing layer into the one OGR layer DXF allows and carry the name
@@ -1314,8 +1385,8 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                     linetype_field >= 0 && feature->IsFieldSetAndNotNull(linetype_field)
                         ? feature->GetFieldAsString(linetype_field)
                         : nullptr;
-                const bool own_linetype    = named_type != nullptr && *named_type != 0 &&
-                                             !core::turkish_iequals(named_type, "BYLAYER");
+                const bool own_linetype = named_type != nullptr && *named_type != 0 &&
+                                          !core::turkish_iequals(named_type, "BYLAYER");
                 const std::string_view pen = style_value(feature->GetStyleString(), "c");
                 const bool own_colour      = !pen.empty() && pen != "#000000" && pen != "#000000FF";
                 if (own_linetype || own_colour) ++styles_ignored;
@@ -1328,13 +1399,13 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             const auto push_polygon = [&](const OGRPolygon* polygon, std::uint16_t part) {
                 if (const OGRLinearRing* outer = polygon->getExteriorRing()) {
                     ring_store.emplace_back();
-                    ring_to_mm(outer, ring_store.back(), unit, &diag);
+                    ring_to_mm(outer, ring_store.back(), carry);
                     rings.push_back(
                         core::RingGeometry::RingInput{{}, core::RingRole::Exterior, part});
                 }
                 for (int h = 0; h < polygon->getNumInteriorRings(); ++h) {
                     ring_store.emplace_back();
-                    ring_to_mm(polygon->getInteriorRing(h), ring_store.back(), unit, &diag);
+                    ring_to_mm(polygon->getInteriorRing(h), ring_store.back(), carry);
                     rings.push_back(
                         core::RingGeometry::RingInput{{}, core::RingRole::Interior, part});
                 }
@@ -1346,9 +1417,8 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             // in with its parcels and without its nirengi, its röpers or a single
             // parsel number — which is most of what makes the sheet readable.
             if (type == wkbPoint) {
-                const OGRPoint* p = geometry->toPoint();
-                const core::Point2 where{value_to_mm(p->getX(), unit, &diag),
-                                         value_to_mm(p->getY(), unit, &diag)};
+                const OGRPoint* p        = geometry->toPoint();
+                const core::Point2 where = carry_point(p->getX(), p->getY(), carry);
 
                 const char* label = text_field >= 0 && feature->IsFieldSetAndNotNull(text_field)
                                         ? feature->GetFieldAsString(text_field)
@@ -1451,7 +1521,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             switch (type) {
             case wkbLineString:
                 ring_store.emplace_back();
-                line_to_mm(geometry->toLineString(), ring_store.back(), unit, &diag);
+                line_to_mm(geometry->toLineString(), ring_store.back(), carry);
                 rings.push_back(core::RingGeometry::RingInput{{}, core::RingRole::Open, 0});
                 break;
 
@@ -1459,7 +1529,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                 const OGRMultiLineString* multi = geometry->toMultiLineString();
                 for (int g = 0; g < multi->getNumGeometries(); ++g) {
                     ring_store.emplace_back();
-                    line_to_mm(multi->getGeometryRef(g), ring_store.back(), unit, &diag);
+                    line_to_mm(multi->getGeometryRef(g), ring_store.back(), carry);
                     rings.push_back(core::RingGeometry::RingInput{
                         {}, core::RingRole::Open, static_cast<std::uint16_t>(g)});
                 }
@@ -1628,6 +1698,16 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
         }
     }
 
+    // A VERTEX PROJ COULD NOT CARRY fails the import whole. A parcel with one corner left where
+    // it was is a different parcel, and the rest of the file would still look right.
+    if (refused_by_proj != 0)
+        co_return err(
+            ErrorCode::ValidationFailed,
+            std::to_string(refused_by_proj) +
+                " köşe, iki koordinat sisteminin geçerli alanının dışında kaldığı için "
+                "dönüştürülemedi; çizime hiçbir şey eklenmedi. Dosyanın sistemini ve "
+                "çizimin sistemini denetleyin (yanlış dilim bu hatanın olağan nedenidir).");
+
     // NOTHING SURVIVED. When the numbers looked like degrees that is almost
     // certainly why: a 60 m parcel in longitude and latitude is 0,0006°, read as
     // metres it rounds to a millimetre and every face comes out with no area.
@@ -1651,10 +1731,12 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     // plotted as a TM33 one. The mismatch is REPORTED and left for the user
     // (io.md R20, model.md R37a).
     if (!project_crs.empty() && project_crs != report.crs)
-        diag.note(Severity::Warning, "Dosyanın koordinat sistemi " + report.crs + ", çizimin ki " +
-                                         project_crs +
-                                         ". Koordinatlar dönüştürülmedi; AYAR koordinat_sistemi "
-                                         "ile denetleyin.");
+        diag.note(Severity::Warning,
+                  "Dosyanın koordinat sistemi " + report.crs + ", çizimin ki " + project_crs +
+                      ". Koordinatlar dönüştürülmedi: sayılar çizimin sistemindeymiş gibi okundu. "
+                      "Dosyanın sistemi doğruysa GERİAL ile geri alıp İÇEAKTAR cevir=evet ile "
+                      "yeniden aktarın (PROJ çizimin sistemine taşır); çizimin sistemi yanlışsa "
+                      "AYAR koordinat_sistemi ile düzeltin.");
 
     // THE LOSSES THIS PATH CANNOT AVOID, said by count. OGR's DXF driver hands
     // every curve over stroked and every hatch over as a polygon; the file's own

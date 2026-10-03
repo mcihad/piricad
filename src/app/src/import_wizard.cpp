@@ -553,6 +553,31 @@ QWidget* ImportWizard::buildFileStrip()
     facts->setContentsMargins(kCaption + 6, 0, 0, 0);
     facts->addWidget(fileFacts_);
     column->addLayout(facts);
+
+    // THE SYSTEM THE NUMBERS ARE IN, asked BEFORE the file is read because the read depends on it:
+    // a layer in degrees or in another zone is refused without it, and the preview of a layer
+    // carried into the drawing's system is a different picture from the one read as it stands.
+    // Off: the file's numbers are read as the drawing's own and a mismatch is only said —
+    // ASSIGNING a system. On: PROJ carries every position into the drawing's system and the
+    // transcript names the operation and its accuracy — PROJECTING into one. The two are different
+    // acts and the person chooses (TODOS G-01). Ticking it reads the file again.
+    reproject_ = new CheckBox(tr("Çizimin sistemine dönüştür (PROJ)"), strip);
+    reproject_->setToolTip(
+        tr("Dosyanın koordinat sistemi çizimin sisteminden farklıysa PROJ her "
+           "köşeyi çizimin sistemine taşır ve kullandığı işlemi söyler. Kapalıyken "
+           "sayılar olduğu gibi okunur ve fark yalnız uyarılır. Derece, ayak ve "
+           "başka dilimdeki dosyalar için açın."));
+    reproject_->setAccessibleName(tr("Çizimin sistemine dönüştür"));
+    connect(reproject_, &QAbstractButton::toggled, this, [this](bool) {
+        // The preview, the layer list and the line all follow what the read now means.
+        if (pickReadable_ && !pathField_->text().trimmed().isEmpty()) startProbe();
+        refreshLine();
+    });
+    auto* carry = new QHBoxLayout;
+    carry->setContentsMargins(kCaption + 6, 0, 0, 0);
+    carry->addWidget(reproject_);
+    carry->addStretch(1);
+    column->addLayout(carry);
     return strip;
 }
 
@@ -845,6 +870,7 @@ QWidget* ImportWizard::buildColumn()
     panes_->addWidget(buildLayerPane());
     panes_->addWidget(buildFieldPane());
     col->addWidget(panes_, 1);
+
     column_->addWidget(chosenBox);
 
     outer->addWidget(column_, 1);
@@ -1186,6 +1212,11 @@ void ImportWizard::startProbe()
     options.project_meridian = mine.central_meridian_deg();
     options.drawing_unit =
         core::drawing_unit_from_setting(controller_.bus().setting("core.cizim.birim").as_enum());
+    // THE READ MEANS WHAT THE IMPORT WILL MEAN: with the box ticked the layers are carried into the
+    // drawing's system here too, so what is listed and drawn is what will arrive.
+    if (reproject_ != nullptr && reproject_->checkState() == Qt::Checked &&
+        controller_.bus().on_crs_mapping)
+        options.mapper = controller_.bus().on_crs_mapping;
 
     probe_ = new ImportProbeThread(*scratch_, path, std::move(options), this);
     connect(probe_, &QThread::finished, this, &ImportWizard::probeFinished);
@@ -1457,6 +1488,8 @@ QString ImportWizard::lineFor() const
         line += QStringLiteral(" alanlar=*");
     else if (ticked > 0)
         line += QStringLiteral(" alanlar=") + quoted(chosenFields().join(QLatin1Char(',')));
+    if (reproject_ != nullptr && reproject_->checkState() == Qt::Checked)
+        line += QStringLiteral(" cevir=evet");
     return line;
 }
 

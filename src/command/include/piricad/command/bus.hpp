@@ -14,6 +14,7 @@
 
 #include "piricad/command/aids.hpp"
 #include "piricad/command/changes.hpp"
+#include "piricad/command/crs_mapping.hpp"
 #include "piricad/command/journal.hpp"
 #include "piricad/command/measure_mark.hpp"
 #include "piricad/command/parser.hpp"
@@ -133,6 +134,14 @@ struct FileRequest
     /// `no X Y` instead of the Turkish `no Y X`. Stated by the user, never
     /// guessed — no heuristic can tell a 485 320 easting from a northing.
     bool swapped_axes{false};
+
+    /// Import: carry every layer whose own coordinate system differs from the drawing's into it
+    /// (`İÇEAKTAR cevir=evet`) rather than reading its numbers as the drawing's own. PROJ's work.
+    bool reproject{false};
+
+    /// Import with `reproject`: accept a ballpark shift or a lower-accuracy operation
+    /// (`kaba=evet`); off by default, because such a result lands metres away and looks right.
+    bool allow_rough{false};
 
     /// ExportPoints: the entities whose CORNERS are written, one row per vertex,
     /// numbered `key.n`. Empty means the drawing's point entities, which is what
@@ -936,6 +945,13 @@ public:
     /// its id and stays unresolved, which is honest: a build with no geodesy module
     /// genuinely does not know that TM30 is EPSG:5254.
     std::function<core::Crs(std::string_view id)> on_crs_resolve;
+
+    /// Builds a mapping of coordinates from one system into another (`CrsMapping`).
+    ///
+    /// Installed by the geodesy module beside `on_crs_resolve`, for the same reason: PROJ lives
+    /// there and /src/io may not reach it. Unset means this build has no PROJ, and a client that
+    /// needs a mapping says so rather than leaving the numbers where they were (TODOS G-01).
+    CrsMappingHook on_crs_mapping;
 
     /// View state is not document state, so it is not undoable and does not go
     /// through a transaction. The command still travels the bus, so a script and

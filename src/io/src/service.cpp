@@ -289,7 +289,8 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
     case command::FileRequest::Verb::Import:
         co_return co_await import_into(request.tx, request.session, std::move(request.path),
                                        std::move(request.format), std::move(request.layers),
-                                       std::move(request.fields));
+                                       std::move(request.fields), request.reproject,
+                                       request.allow_rough);
 
     case command::FileRequest::Verb::Export:
         co_return co_await export_out(request.session, std::move(request.path),
@@ -918,7 +919,7 @@ core::Result<std::string> FileService::save(const std::string& path, bool save_a
 command::Task<core::Result<std::string>>
 FileService::import_into(command::Transaction* tx, command::Session* session, std::string path,
                          std::string format, std::vector<std::string> only,
-                         std::vector<std::string> fields)
+                         std::vector<std::string> fields, bool reproject, bool allow_rough)
 {
     if (!tx)
         co_return err(ErrorCode::Internal,
@@ -938,6 +939,19 @@ FileService::import_into(command::Transaction* tx, command::Session* session, st
     options.only             = std::move(only);
     options.fields           = std::move(fields);
     options.drawing_unit     = effective_unit(bus_);
+
+    // CARRYING A LAYER INTO THE DRAWING'S SYSTEM is PROJ's work and this module cannot reach PROJ:
+    // the geodesy module installed the seam on the bus, and a build without it says so here rather
+    // than reading the numbers as they stand and calling that a conversion (TODOS G-01).
+    if (reproject) {
+        if (!bus_.on_crs_mapping)
+            co_return err(ErrorCode::Unsupported,
+                          "Bu yapıda koordinat dönüşümü (PROJ) yok; cevir=evet kullanılamaz. "
+                          "PIRICAD_WITH_PROJ=ON ile derleyin ya da dosyayı önce başka bir araçla "
+                          "çizimin sistemine dönüştürün.");
+        options.mapper        = bus_.on_crs_mapping; // a copy: the worker thread owns its own
+        options.rough_mapping = allow_rough;
+    }
 
     // PHASE ONE: the read, into a document of its own. Everything below `job.work`
     // may run on a host thread while this frame sits suspended; the scratch

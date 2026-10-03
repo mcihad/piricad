@@ -30,17 +30,17 @@ core::Status file_crs_holds_metres(const core::Crs& crs, const std::string& wher
 {
     const std::string problem = core::crs_unit_problem(crs);
     if (problem.empty()) return {};
-    // THE WAY IN, for the tools a Turkish GIS office already has open: the
-    // conversion is PROJ's in both, and a later import reads metres. Not a
-    // conversion of our own on the way in — that is a datum question (which
-    // transformation, how accurate) and it gets its own answer rather than a
-    // silent ballpark one.
+    // THE WAY IN. `cevir=evet` is the program's own: PROJ carries the file into the drawing's
+    // system and says which operation it used and how accurate that is (TODOS G-01). The other is
+    // for the tools a Turkish GIS office already has open — the conversion is PROJ's in all of
+    // them.
     return err(ErrorCode::ValidationFailed,
                where + " içe alınmadı. " + problem +
-                   " Dosyayı önce metre birimli bir sisteme dönüştürüp öyle alın: QGIS'te "
-                   "Farklı Kaydet ▸ KRS olarak ör. EPSG:5256 (TUREF/TM36), ya da komutla "
-                   "ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg. İçe alırken dönüştürme "
-                   "Faz 1'de gelecek.");
+                   " İÇEAKTAR cevir=evet dosyayı PROJ ile çizimin sistemine taşır ve hangi "
+                   "işlemi, ne doğrulukla kullandığını söyler. Ya da dosyayı önce metre birimli "
+                   "bir sisteme dönüştürüp öyle alın: QGIS'te Farklı Kaydet ▸ KRS olarak ör. "
+                   "EPSG:5256 (TUREF/TM36), ya da komutla ogr2ogr -t_srs EPSG:5256 yeni.gpkg "
+                   "eski.gpkg.");
 }
 
 std::string prj_sidecar_path(const std::string& path)

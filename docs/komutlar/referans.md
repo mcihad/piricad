@@ -73,7 +73,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.mirror`](mirror.md) | Aynala | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
 | [`core.measure`](measure.md) | Ölç | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir. |
 | [`core.measure_area`](measure_area.md) | Alan Ölç | `ALANÖLÇ`, `ALANOLC`, `ALANSOR`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini hesaplar ve yazar. |
-| [`core.coordinate`](coordinate.md) | Koordinat Oku | `KOORDİNAT`, `KOORDINAT`, `XYZSOR`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
+| [`core.coordinate`](coordinate.md) | Koordinat Oku | `KOORDİNAT`, `KOORDINAT`, `XYZSOR`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde, istenirse başka bir sistemde de yazar. |
 | [`core.extent_check`](extent_check.md) | Kapsam Denetimi | `KAPSAMDENETİM`, `KAPSAMDENETIM`, `EXTENTCHECK`, `KPD` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
 | [`core.station_offset`](station_offset.md) | Prizma (Dik Ayak ve Dik Boy) | `PRİZMA`, `PRIZMA`, `STATIONOFFSET`, `PRZ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir. |
 | [`core.pan`](pan.md) | Kaydır | `KAYDIR`, `PAN`, `KY` | Görünüm | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
@@ -1080,11 +1080,13 @@ Ayrıntılı kullanım: [ALANÖLÇ](measure_area.md)
 
 ### `core.coordinate` — KOORDİNAT (Koordinat Oku)
 
-Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.
+Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde, istenirse başka bir sistemde de yazar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nokta` | point | 1 | Okunacak nokta |
+| `sistem` | text | isteğe bağlı | Noktayı ayrıca bu sistemde de oku (örnek EPSG:4326); çizim değişmez, yalnız okuma |
+| `kaba` | bool | isteğe bağlı | sistem= ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır |
 
 Ayrıntılı kullanım: [KOORDİNAT](coordinate.md)
 
@@ -1835,6 +1837,8 @@ Dış bir veri dosyasını çizime ekler.
 | `bicim` | text | isteğe bağlı | Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur |
 | `katmanlar` | text | isteğe bağlı | Yalnızca bu katmanlar okunur, virgülle ayrılır; verilmezse tümü |
 | `alanlar` | text | isteğe bağlı | Sütun olarak okunacak öznitelik alanları, virgülle; * hepsi; verilmezse alan okunmaz |
+| `cevir` | bool | isteğe bağlı | Dosyanın koordinat sistemi çizimin sisteminden farklıysa PROJ ile çizimin sistemine dönüştür; varsayılan hayır (sayılar olduğu gibi okunur, fark uyarılır) |
+| `kaba` | bool | isteğe bağlı | cevir=evet ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır |
 
 Ayrıntılı kullanım: [İÇEAKTAR](import.md)
 
@@ -2146,6 +2150,7 @@ Ayrıntılı kullanım: [APLİKASYON](stakeout.md)
 |---|---|---|---|
 | `hedef` | text | 1 | Hedef koordinat sistemi, örnek EPSG:5256 ya da TUREF/TM36 |
 | `kaynak` | text | isteğe bağlı | Kaynak sistem; yoksa çizimin kendi koordinat sistemi |
+| `kaba` | bool | isteğe bağlı | Kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır |
 
 Ayrıntılı kullanım: [DÖNÜŞTÜR](reproject.md)
 
@@ -4897,7 +4902,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
   {
     "name": "core_coordinate",
     "title": "Koordinat Oku",
-    "description": "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.\nKomut: KOORDİNAT (KOORDINAT, XYZSOR, COORDINATE, KRD)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "description": "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde, istenirse başka bir sistemde de yazar.\nKomut: KOORDİNAT (KOORDINAT, XYZSOR, COORDINATE, KRD)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -4933,6 +4938,14 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
             }
           ],
           "description": "Okunacak nokta — nokta — bir okuma aracının tutamağı ya da ondan ölçüyle uzaklaşan göreli nokta. Koordinat yazılamaz."
+        },
+        "sistem": {
+          "type": "string",
+          "description": "Noktayı ayrıca bu sistemde de oku (örnek EPSG:4326); çizim değişmez, yalnız okuma (metin)"
+        },
+        "kaba": {
+          "type": "boolean",
+          "description": "sistem= ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",
@@ -11927,6 +11940,10 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "kaynak": {
           "type": "string",
           "description": "Kaynak sistem; yoksa çizimin kendi koordinat sistemi (metin)"
+        },
+        "kaba": {
+          "type": "boolean",
+          "description": "Kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır (evet/hayır)"
         },
         "varsayimlar": {
           "type": "array",

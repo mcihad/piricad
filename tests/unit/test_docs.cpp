@@ -16,6 +16,8 @@
 #include "piricad/core/planar.hpp"
 #include "piricad/domain/cadastre/commands.hpp"
 #include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/geodesy/crs_catalog.hpp"
+#include "piricad/domain/geodesy/crs_service.hpp"
 #include "piricad/domain/surface/commands.hpp"
 #include "piricad/processing/registry.hpp"
 #include "piricad/script/json_runner.hpp"
@@ -27,6 +29,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -72,7 +75,17 @@ struct Rig
         // page is checked whoever its command is written for.
         ai::register_ai_commands(reg);
         bus.on_echo = [](std::string_view) {}; // transcript output is not the subject
+
+        // THE CRS SERVICE, as the program installs it: a page that reads a point in another system
+        // (`KOORDİNAT sistem=`) or names a zone by its surveyor's spelling is checked against the
+        // resolver and the PROJ mapping the program really has.
+        if (auto catalogue =
+                domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
+            catalogue)
+            crs.emplace(bus, std::move(catalogue.value()));
     }
+
+    std::optional<domain::geodesy::CrsService> crs;
 };
 
 std::vector<fs::path> markdown_pages()

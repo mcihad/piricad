@@ -24,8 +24,10 @@
 #include "piricad/core/geometry.hpp"
 #include "piricad/core/json.hpp"
 #include "piricad/core/offset.hpp"
+#include "piricad/core/text.hpp"
 #include "piricad/core/units.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -263,7 +265,7 @@ Task<void> measure_by_corners(Context& ctx)
     ctx.echo("Alan olarak çizmek için: " + line);
     ctx.offer(Offer{.title = "Ölçülen alan",
                     .text  = "Alan: " + square_metres(area) + " · " + std::to_string(ring.size()) +
-                             " köşe. Aynı köşelerle bir alan çizer.",
+                            " köşe. Aynı köşelerle bir alan çizer.",
                     .label = "Alan olarak çiz",
                     .line  = line});
 
@@ -324,7 +326,7 @@ Task<void> measure_inside(Context& ctx)
     ctx.echo("Sınır olarak çizmek için: " + line);
     ctx.offer(Offer{.title = "Ölçülen bölge",
                     .text  = "Alan: " + square_metres(face.area) +
-                             ". Bölgenin sınırını bir alan olarak çizer.",
+                            ". Bölgenin sınırını bir alan olarak çizer.",
                     .label = "Sınır olarak çiz",
                     .line  = line});
 
@@ -468,6 +470,57 @@ Task<void> run_coordinate(Context& ctx)
     };
     ctx.echo("Sağa: " + reading(at->x) + "   Yukarı: " + reading(at->y) + where);
 
+    // THE SAME POINT IN ANOTHER SYSTEM (TODOS G-01): the drawing keeps its own, and a reading can
+    // ask for any other — WGS 84 for a phone's map, a neighbour's zone, a foreign office's feet. It
+    // is a VIEW of the point, never a change of the drawing: the document's system stays, which is
+    // what keeps "reading in another system" and "projecting the drawing into it" two acts. PROJ
+    // does it all, the unit and the datum shift included, and the sentence says how accurate it is.
+    if (const Value other = ctx.argument("sistem"); !other.empty()) {
+        Bus& bus = ctx.session().bus();
+        if (!bus.on_crs_mapping) {
+            ctx.refuse(core::ErrorCode::Unsupported,
+                       "Bu yapıda koordinat dönüşümü (PROJ) yok; başka bir sistemde okunamaz.");
+            co_return;
+        }
+        const std::string to = other.as_text();
+        auto mapping =
+            bus.on_crs_mapping(CrsMappingRequest{crs, to, ctx.argument("kaba").as_bool()});
+        if (!mapping) {
+            ctx.refuse(mapping.error());
+            co_return;
+        }
+        const double from_x = core::mm_to_metres(at->x);
+        const double from_y = core::mm_to_metres(at->y);
+        double x = from_x, y = from_y;
+        if (!mapping.value()->apply(x, y)) {
+            ctx.refuse(core::ErrorCode::ValidationFailed,
+                       "Nokta " + crs + " ile " + to +
+                           " sistemlerinin geçerli alanının dışında; o sistemde okunamaz.");
+            co_return;
+        }
+        const core::Crs there = bus.on_crs_resolve ? bus.on_crs_resolve(to) : core::Crs(to);
+        std::string unit =
+            there.unit_name().empty() ? std::string() : " (" + there.unit_name() + ")";
+        // Rounded at the last decimal asked for, written with the manual's comma and no more
+        // digits than the number has: the writer is locale-proof (`core::format_general`).
+        const auto fixed = [](double v, int decimals) {
+            const double scale = std::pow(10.0, decimals);
+            std::string out    = core::format_general(std::round(v * scale) / scale, 15);
+            std::replace(out.begin(), out.end(), '.', ',');
+            return out;
+        };
+        if (mapping.value()->to_degrees)
+            ctx.echo("Boylam: " + fixed(x, 9) + "°   Enlem: " + fixed(y, 9) + "°   (" + to + ")");
+        else
+            ctx.echo("Sağa: " + fixed(x, decimals) + "   Yukarı: " + fixed(y, decimals) + unit +
+                     "   (" + to + ")");
+        if (mapping.value()->describe_at)
+            if (const std::string how = mapping.value()->describe_at(from_x, from_y); !how.empty())
+                ctx.echo(how);
+        ctx.record("sistem", other);
+        if (ctx.argument("kaba").as_bool()) ctx.record("kaba", Value::boolean(true));
+    }
+
     // AND THE READING STAYS WHERE IT WAS TAKEN, in the Y/X a surveyor writes.
     ctx.mark(MeasureMark{.shape  = MeasureMark::Shape::Point,
                          .points = {*at},
@@ -516,27 +569,27 @@ PIRICAD_COMMAND(measure_area)
         .title    = "Alan Ölç",
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                           "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}
+                         "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}
                          .en("objects"),
                      Param::choice("yontem", Arity::optional(), {"nesne", "nokta", "ic"},
                                    "nesne: seçilen nesnelerin alanı (öntanımlı); nokta: "
-                                   "köşeleri gösterilen alan; ic: içine tıklanan bölge")
+                                     "köşeleri gösterilen alan; ic: içine tıklanan bölge")
                          .en("method"),
                      Param::points("noktalar", Arity::at_least(0),
                                    "yontem=nokta için alanın köşeleri; verilirse yöntem "
-                                   "kendiliğinden nokta olur")
+                                     "kendiliğinden nokta olur")
                          .en("points"),
                      Param{"nokta", ParamKind::Point, Arity::optional(),
-                           "yontem=ic için bölgenin içindeki nokta; verilirse yöntem "
+                         "yontem=ic için bölgenin içindeki nokta; verilirse yöntem "
                            "kendiliğinden ic olur"}
                          .en("point"),
                      Param::boolean("ada", Arity::optional(),
                                     "yontem=ic: bölgenin içindeki kapalı çizgiler ada olarak "
-                                    "düşülür (öntanımlı evet)")
+                                      "düşülür (öntanımlı evet)")
                          .en("islands"),
                      Param::integer("bosluk", Arity::optional(),
                                     "yontem=ic: bu kadar milimetreye kadar açık uçları köprüler; "
-                                    "0 hiç")
+                                      "0 hiç")
                          .measured_in("mm")
                          .en("gap")},
         .undo     = UndoPolicy::None,
@@ -555,10 +608,22 @@ PIRICAD_COMMAND(coordinate)
         .names    = {"KOORDİNAT", "KOORDINAT", "XYZSOR", "COORDINATE", "KRD"},
         .title    = "Koordinat Oku",
         .category = Category::Query,
-        .params   = {Param::point("nokta", "Okunacak nokta").en("point")},
-        .undo     = UndoPolicy::None,
-        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
-        .summary = "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.",
+        .params =
+            {
+                Param::point("nokta", "Okunacak nokta").en("point"),
+                Param::text("sistem", Arity::optional(),
+                            "Noktayı ayrıca bu sistemde de oku (örnek EPSG:4326); çizim "
+                            "değişmez, yalnız okuma")
+                    .en("system"),
+                Param::boolean("kaba", Arity::optional(),
+                               "sistem= ile: kaba (ballpark) ya da eksik grid yüzünden düşük "
+                               "doğruluklu işleme izin ver; varsayılan hayır")
+                    .en("rough"),
+            },
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .summary = "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde, "
+                   "istenirse başka bir sistemde de yazar.",
         .run     = &run_coordinate,
     };
 }

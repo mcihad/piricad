@@ -1198,11 +1198,15 @@ def measure_area(
 def coordinate(
     *,
     point: Coord = ...,
+    system: str = ...,
+    rough: bool = ...,
 ) -> int:
-    """Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.
+    """Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde, istenirse başka bir sistemde de yazar.
 
     Komut: core.coordinate (KOORDİNAT)
         point — Okunacak nokta [mm, Sağa (Y) önce]
+        system — Noktayı ayrıca bu sistemde de oku (örnek EPSG:4326); çizim değişmez, yalnız okuma
+        rough — sistem= ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır
     """
 
 def extent_check(
@@ -2219,6 +2223,8 @@ def import(
     format: str = ...,
     layers: str = ...,
     fields: str = ...,
+    reproject: bool = ...,
+    rough: bool = ...,
 ) -> int:
     """Dış bir veri dosyasını çizime ekler.
 
@@ -2227,6 +2233,8 @@ def import(
         format — Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur
         layers — Yalnızca bu katmanlar okunur, virgülle ayrılır; verilmezse tümü
         fields — Sütun olarak okunacak öznitelik alanları, virgülle; * hepsi; verilmezse alan okunmaz
+        reproject — Dosyanın koordinat sistemi çizimin sisteminden farklıysa PROJ ile çizimin sistemine dönüştür; varsayılan hayır (sayılar olduğu gibi okunur, fark uyarılır)
+        rough — cevir=evet ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır
     """
 
 def export(
@@ -2615,12 +2623,14 @@ def reproject(
     *,
     target: str = ...,
     source: str = ...,
+    rough: bool = ...,
 ) -> int:
     """Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür.
 
     Komut: core.reproject (DÖNÜŞTÜR)
         target — Hedef koordinat sistemi, örnek EPSG:5256 ya da TUREF/TM36
         source — Kaynak sistem; yoksa çizimin kendi koordinat sistemi
+        rough — Kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır
     """
 
 def traverse(

@@ -250,6 +250,25 @@ Task<void> run_import(Context& ctx)
         ctx.record("alanlar", wanted);
     }
 
+    // CARRY THE FILE INTO THE DRAWING'S SYSTEM (TODOS G-01), asked for by name. Without it a layer
+    // in another zone, another datum or in degrees is read as the drawing's own numbers and the
+    // mismatch is said; with it PROJ moves every position and says which operation it used and how
+    // accurate that is. Two different acts — assigning a system and projecting into one — and
+    // the user chooses which, never the program.
+    if (ctx.argument("cevir").as_bool()) {
+        request.reproject = true;
+        ctx.record("cevir", Value::boolean(true));
+        if (ctx.argument("kaba").as_bool()) {
+            request.allow_rough = true;
+            ctx.record("kaba", Value::boolean(true));
+        }
+    } else if (ctx.argument("kaba").as_bool()) {
+        ctx.refuse(core::ErrorCode::InvalidArgument,
+                   "kaba=evet yalnız cevir=evet ile anlamlıdır: dönüştürme istenmediğinde "
+                   "dosyanın sayıları olduğu gibi okunur ve izin verilecek bir işlem yoktur.");
+        co_return;
+    }
+
     // The command's OWN transaction, so the whole import is one undo step and any
     // failure rolls the document back to exactly its pre-import state (io.md R17,
     // P11). This is the only file verb that mutates the document in place.
@@ -470,6 +489,15 @@ PIRICAD_COMMAND(import)
                             "Sütun olarak okunacak öznitelik alanları, virgülle; "
                             "* hepsi; verilmezse alan okunmaz")
                     .en("fields"),
+                Param::boolean("cevir", Arity::optional(),
+                               "Dosyanın koordinat sistemi çizimin sisteminden farklıysa PROJ ile "
+                               "çizimin sistemine dönüştür; varsayılan hayır (sayılar olduğu gibi "
+                               "okunur, fark uyarılır)")
+                    .en("reproject"),
+                Param::boolean("kaba", Arity::optional(),
+                               "cevir=evet ile: kaba (ballpark) ya da eksik grid yüzünden düşük "
+                               "doğruluklu işleme izin ver; varsayılan hayır")
+                    .en("rough"),
             },
         // io.md R17: one transaction, one undo entry, and a failure leaves the
         // document byte for byte as it was.

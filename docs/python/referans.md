@@ -153,7 +153,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.mirror`](#cadmirror) | `core.mirror` | `AYNALA` | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
 | [`cad.measure`](#cadmeasure) | `core.measure` | `ÖLÇ` | Noktalar arasındaki mesafeyi, koordinat farkını ve açıyı yazar; ikiden fazla nokta kenarları ve toplam uzunluğu, sabit=evet ise her noktanın ilk noktaya uzaklığını verir. |
 | [`cad.measure_area`](#cadmeasure_area) | `core.measure_area` | `ALANÖLÇ` | Seçilen nesnelerin ya da köşeleri gösterilen bir alanın alanını ve çevresini hesaplar ve yazar. |
-| [`cad.coordinate`](#cadcoordinate) | `core.coordinate` | `KOORDİNAT` | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
+| [`cad.coordinate`](#cadcoordinate) | `core.coordinate` | `KOORDİNAT` | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde, istenirse başka bir sistemde de yazar. |
 | [`cad.extent_check`](#cadextent_check) | `core.extent_check` | `KAPSAMDENETİM` | Çizimin çoğunluğundan kopuk nesneleri — sıfıra düşmüş, başka bir koordinat sisteminde gelmiş — bulur, işaretler ve bildirir; hiçbirini taşımaz. |
 | [`cad.station_offset`](#cadstation_offset) | `core.station_offset` | `PRİZMA` | Noktaların iki noktalı bir tabana göre dik ayağını ve dik boyunu okur; boy sağda pozitif, solda negatiftir. |
 | [`cad.pan`](#cadpan) | `core.pan` | `KAYDIR` | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
@@ -1854,19 +1854,23 @@ cad.measure_area(
 
 ### `cad.coordinate`
 
-Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.
+Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde, istenirse başka bir sistemde de yazar.
 
 Komut: `core.coordinate` — `KOORDİNAT`
 
 ```python
 cad.coordinate(
     point: Coord,
+    system: str,
+    rough: bool,
 ) -> int
 ```
 
 | Anahtar | Tür | Türkçe adı | Açıklama |
 |---|---|---|---|
 | `point` | `Coord` | `nokta` | Okunacak nokta [mm, Sağa (Y) önce] |
+| `system` | `str` | `sistem` | Noktayı ayrıca bu sistemde de oku (örnek EPSG:4326); çizim değişmez, yalnız okuma |
+| `rough` | `bool` | `kaba` | sistem= ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır |
 
 [Komut sayfası](../komutlar/coordinate.md)
 
@@ -3234,6 +3238,8 @@ cad.import(
     format: str,
     layers: str,
     fields: str,
+    reproject: bool,
+    rough: bool,
 ) -> int
 ```
 
@@ -3243,6 +3249,8 @@ cad.import(
 | `format` | `str` | `bicim` | Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur |
 | `layers` | `str` | `katmanlar` | Yalnızca bu katmanlar okunur, virgülle ayrılır; verilmezse tümü |
 | `fields` | `str` | `alanlar` | Sütun olarak okunacak öznitelik alanları, virgülle; * hepsi; verilmezse alan okunmaz |
+| `reproject` | `bool` | `cevir` | Dosyanın koordinat sistemi çizimin sisteminden farklıysa PROJ ile çizimin sistemine dönüştür; varsayılan hayır (sayılar olduğu gibi okunur, fark uyarılır) |
+| `rough` | `bool` | `kaba` | cevir=evet ile: kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır |
 
 [Komut sayfası](../komutlar/import.md)
 
@@ -3790,6 +3798,7 @@ Komut: `core.reproject` — `DÖNÜŞTÜR`
 cad.reproject(
     target: str,
     source: str,
+    rough: bool,
 ) -> int
 ```
 
@@ -3797,6 +3806,7 @@ cad.reproject(
 |---|---|---|---|
 | `target` | `str` | `hedef` | Hedef koordinat sistemi, örnek EPSG:5256 ya da TUREF/TM36 |
 | `source` | `str` | `kaynak` | Kaynak sistem; yoksa çizimin kendi koordinat sistemi |
+| `rough` | `bool` | `kaba` | Kaba (ballpark) ya da eksik grid yüzünden düşük doğruluklu işleme izin ver; varsayılan hayır |
 
 [Komut sayfası](../komutlar/reproject.md)
 

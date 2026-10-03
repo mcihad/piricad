@@ -197,6 +197,34 @@ dilimler arası dönüşüm çalışır.
 Ölçülen gidiş-dönüş hatası milimetrenin çok altındadır; sakladığımız birim
 milimetre olduğu için dönüşüm pratikte kayıpsızdır.
 
+### Üç sistem, üç ayrı soru
+
+Bir koordinatın "hangi sistemde" olduğu üç ayrı yerde sorulur ve PiriCAD hepsini ayrı tutar:
+
+| Sistem | Nerede | Ne zaman değişir |
+|---|---|---|
+| **Kaynak** | Bir dosyanın ya da katmanın kendi sistemi (GeoPackage'in içinde, Shapefile'ın `.prj`'sinde) | Hiç; dosyanındır |
+| **Belge** | Çizimin sayılarının içinde saklandığı sistem (`AYAR koordinat_sistemi`) | `OTURT` ile *atanır*, `DÖNÜŞTÜR` ile *dönüştürülür* |
+| **Okuma** | Bir noktanın okunduğu sistem (`KOORDİNAT sistem=`) | Her okumada; çizim değişmez |
+
+**Atamak ile dönüştürmek ayrı işlemlerdir.** `OTURT sistem=` ve `AYAR koordinat_sistemi` çizimin
+*etiketini* değiştirir, sayılara dokunmaz: "bu sayılar aslında şu sistemdeydi" demektir. `DÖNÜŞTÜR` ise
+sayıları PROJ ile yeni sisteme *taşır*. İçe aktarırken de aynı ayrım geçerlidir: `İÇEAKTAR` dosyanın
+sayılarını olduğu gibi okur ve farkı uyarır (atama); `İÇEAKTAR cevir=evet` PROJ ile çizimin sistemine
+taşır. Hangisinin kastedildiğine program karar vermez, siz seçersiniz.
+
+**Bilinmeyen ya da eksik hiçbir şey sessizce varsayılmaz.** Tanınmayan bir sistem adı reddedilir;
+bir datum değişiminin en iyi işleminin grid dosyası bu makinede yoksa ya da PROJ iki datumu yalnız kaba
+(*ballpark*) bir kaydırmayla bağlayabiliyorsa dönüşüm **reddedilir** ve eksik gridi söyler; `kaba=evet`
+bilinçli bir izindir. Kullanılan işlemin adı ve PROJ'un bildirdiği doğruluk her dönüşümle birlikte
+yazılır ([`DÖNÜŞTÜR`](../komutlar/reproject.md#hangi-işlemle-ne-doğrulukla)). **Birim ve eksen sırası
+PROJ'dan sorulur**, programda bir tablosu yoktur: metre, ayak ve derece, `proj_normalize_for_visualization`
+ile sağa-önce sıraya çevrilir.
+
+**Yerel bir çizim** (`YEREL`) haritada bir yere bağlı değildir ve hiçbir kayıt bunu söyleyemez. Başka bir
+sisteme dönüştürülmek istendiğinde program reddeder ve sizden açık bir yerleştirme ister: ortak noktalarla
+[`OTURT`](../komutlar/fit.md): öteleme, dönme ve tek ölçekten oluşan bir benzerlik dönüşümü kurar (artıklarını yazar), `sistem=` ile de çizimin gerçek sistemini söyler.
+
 ### İki tuzak, ikisi de kapatıldı
 
 **Eksen sırası.** EPSG:5254 koordinatı *yukarı değer önce* bekler. PiriCAD sağa
@@ -215,7 +243,9 @@ Coğrafi okuma ekranda ve dışa aktarımda kullanılır, çizimin içinde deği
 | `Çizimin koordinat sistemi değişmedi. 'EPSG:4326' coğrafi bir koordinat sistemi: koordinatlarını derece olarak sayar. …` | `AYAR koordinat_sistemi` ile derece sayan bir sistem istendi | Metre sayan bir izdüşüm sistemi seçin, ör. `AYAR koordinat_sistemi TUREF/TM36` |
 | `Çizimin koordinat sistemi değişmedi. 'EPSG:2263' koordinatlarını 'US survey foot' birimiyle sayar. …` | Metre dışında bir birim sayan bir sistem istendi | Metre sayan bir izdüşüm sistemi seçin |
 | `Çizim bu sisteme oturtulamaz. …` | `OTURT sistem=` derece ya da başka bir birim sayan bir sistem gösteriyor | `sistem=` için metre sayan bir sistem verin |
-| `'yollar.gpkg' dosyasının 'yollar' katmanı içe alınmadı. 'EPSG:4326' coğrafi bir koordinat sistemi …` | İçe alınan katman derece sayıyor | Dosyayı metre sayan bir sisteme dönüştürüp yeniden alın (yukarıdaki `ogr2ogr` satırı) |
+| `'yollar.gpkg' dosyasının 'yollar' katmanı içe alınmadı. 'EPSG:4326' coğrafi bir koordinat sistemi …` | İçe alınan katman derece sayıyor | `İÇEAKTAR … cevir=evet` ile PROJ'a taşıtın; ya da dosyayı önce metre sayan bir sisteme dönüştürüp yeniden alın (yukarıdaki `ogr2ogr` satırı) |
+| `… dönüşümü kurulamadı: PROJ bu ikili için doğruluğu bilinen, kullanılabilir bir işlem bulamadı …` | İki datum arasında yalnız kaba (*ballpark*) bir kaydırma ya da bu makinede olmayan bir grid var | Mesajdaki gridi PROJ veri dizinine koyun; sonucun kayabileceğini bilerek `kaba=evet` yazın |
+| `'X' yerel bir sistem; haritadaki yeri bilinmediği için başka bir sisteme dönüştürülemez. …` | `YEREL` çizim başka bir sistemle ilişkilendirilmek istendi | Ortak noktalarla `OTURT sistem=…` |
 | `'cizim.dxf' içe alınmadı. …` | DXF'in yanındaki `.prj` derece sayan bir sistem bildiriyor | `.prj` yanlışsa düzeltin; doğruysa DXF'i metre sayan bir sisteme dönüştürün |
 | `… okunabilir çizgi ya da alan içermiyor; … büyük olasılıkla boylam ve enlem (derece) …` | Sistem bildirmeyen dosyanın derece sayıları metre okunup ezildi | Dosyanın sistemini bulun, metre sayan bir sisteme dönüştürüp yeniden aktarın |
 | `Çizimin koordinat sistemi metre saymıyor. …` (açılışta uyarı) | Çizim, bu kuraldan önce coğrafi bir sistemle kaydedilmiş | Nesneleri kaynak dosyasından doğru sistemde yeniden aktarın |
@@ -224,9 +254,9 @@ Coğrafi okuma ekranda ve dışa aktarımda kullanılır, çizimin içinde deği
 
 | Yetenek | Ne zaman |
 |---|---|
-| Derece ya da başka bir sistemdeki dosyayı içe alırken dönüştürme | Faz 1 |
+| Yükseklik (düşey datum) dönüşümü ve jeoit: yükseklikler bugün dönüştürülmez, atılır ve söylenir | Faz 1 |
+| ED50 ↔ TUREF için TKGM'nin resmî bölgesel dönüşüm parametreleri (bugün PROJ'un EPSG işlemleri, yaklaşık 2–3 m; her dönüşümde doğruluğu yazılır) | referans veri geldiğinde |
 | Türkiye Jeoit Modeli ile ortometrik yükseklik | Faz 1 |
-| ED50 / UTM 6° ve ITRF ↔ ED50 bölgesel dönüşüm | Faz 1 |
 | TKGM referans koordinatlarıyla doğrulama | referans veri geldiğinde |
 | TUSAGA-Aktif / CORS-TR, RINEX, NTRIP | Faz 2 |
 | Epok ve hız alanı yönetimi | Faz 2 |

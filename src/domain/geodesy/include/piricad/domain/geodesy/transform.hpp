@@ -25,6 +25,45 @@
 
 namespace piricad::domain::geodesy {
 
+/// What PROJ says about the operation that really moves a coordinate, at a place.
+///
+/// A transformation between two datums is not one formula: PROJ holds several
+/// candidate operations, each with its own accuracy and area of use, and picks per
+/// point. Moving a boundary between ED50 and TUREF by "the" transformation hides
+/// that the best one on offer is good to two metres — which is the first thing a
+/// cadastral reader must be told. Everything here is PROJ's own answer; no table
+/// of ours stands behind it (TODOS G-01).
+struct TransformInfo
+{
+    /// One grid file an operation reads, and whether this machine has it.
+    struct Grid
+    {
+        std::string name;     ///< the grid's short name, as PROJ writes it
+        bool available{true}; ///< false: PROJ cannot read it here
+        std::string url;      ///< where PROJ says it can be had; empty when it names none
+    };
+
+    std::string name;        ///< PROJ's own name for the operation; empty when none was used
+    double accuracy_m{-1.0}; ///< the horizontal accuracy PROJ states, metres; negative: none stated
+    bool ballpark{false};    ///< the operation ignores a datum difference it could not model
+    std::vector<Grid> grids; ///< the grid files the operation reads
+
+    /// Whether PROJ named an operation at all.
+    bool known() const noexcept { return !name.empty(); }
+
+    /// One Turkish sentence for a transcript: the operation, its accuracy and its grids.
+    std::string sentence() const;
+};
+
+/// What `Transform::between` may settle for.
+struct TransformOptions
+{
+    /// Accept an operation that ignores a datum difference (a "ballpark" shift) or one of lower
+    /// accuracy than the best PROJ knows because the best needs a grid this machine lacks. OFF by
+    /// default: such a result lands metres away and still looks like a coordinate (TODOS G-01).
+    bool allow_ballpark{false};
+};
+
 /// A prepared transformation between two coordinate reference systems.
 ///
 /// Construction is expensive and thread-unsafe; application is cheap. Build one
@@ -35,7 +74,12 @@ class Transform
 public:
     /// `source` and `target` are anything PROJ accepts: "EPSG:5254",
     /// "TUREF/TM30" once the catalogue maps it, a PROJ string, or WKT.
-    static core::Result<Transform> between(const std::string& source, const std::string& target);
+    ///
+    /// Refuses, by default, a pair PROJ can only join with a ballpark shift or with a
+    /// lower-accuracy operation than its best (a grid missing here), and says which grid is missing
+    /// and where it can be had. `options.allow_ballpark` is the explicit consent.
+    static core::Result<Transform> between(const std::string& source, const std::string& target,
+                                           TransformOptions options = {});
 
     ~Transform();
     Transform(Transform&&) noexcept;
@@ -67,6 +111,11 @@ public:
 
     /// True when both sides are projected, i.e. the span overloads are usable.
     bool projected_both_ways() const noexcept { return !source_angular_ && !target_angular_; }
+
+    /// The operation PROJ really applies to the point (`easting`, `northing`) of the SOURCE system,
+    /// in that system's own units — degrees for a geographic one. Applies the transformation once
+    /// to find out, so it names the operation chosen for THAT place; ask at the middle of the data.
+    core::Result<TransformInfo> info_at(double easting, double northing) const;
 
     const std::string& source() const noexcept { return source_; }
 

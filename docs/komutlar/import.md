@@ -40,6 +40,7 @@ Hangi biçimlerin okunduğu ve neyin taşındığı:
 İÇEAKTAR dosya=<dosya-yolu> bicim=<sürücü-adı>
 İÇEAKTAR dosya=<dosya-yolu> katmanlar="<ad>,<ad>,<ad>" alanlar="<alan>,<alan>"
 İÇEAKTAR dosya=<dosya-yolu> alanlar=*
+İÇEAKTAR dosya=<dosya-yolu> cevir=evet [kaba=evet]
 ```
 
 Biçim verilmezse uzantıdan bulunur. İçinde boşluk olan yol tırnak içine alınır.
@@ -52,6 +53,8 @@ Biçim verilmezse uzantıdan bulunur. İçinde boşluk olan yol tırnak içine a
 | `bicim` | Sürücü adı: `DXF`, `DWG`, `GPKG` ya da `NCZ`. Verilmezse uzantıdan bulunur |
 | `katmanlar` | Yalnızca bu katmanlar okunur, virgülle ayrılır. Verilmezse dosyadaki bütün katmanlar okunur |
 | `alanlar` | Sütun olarak okunacak öznitelik alanları, virgülle; `*` hepsini okur. Verilmezse hiçbir alan okunmaz, yalnız geometri gelir |
+| `cevir` | `evet`: dosyanın koordinat sistemi çizimin sisteminden farklıysa **PROJ** her köşeyi çizimin sistemine taşır (derece, ayak, başka dilim, başka datum). Varsayılan `hayır`: sayılar olduğu gibi okunur, fark uyarılır |
+| `kaba` | `cevir=evet` ile: kaba (*ballpark*) ya da eksik grid yüzünden düşük doğruluklu bir işleme izin verir. Varsayılan `hayır` |
 
 Tipi ve adedi için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -77,14 +80,38 @@ Transkript şunu yazar:
   not: Okunan türler: Polygon 96, Line String 32
 ```
 
-Koordinat sistemi çizimden farklıysa bu bir **uyarı** olarak söylenir:
+Koordinat sistemi çizimden farklıysa bu bir **uyarı** olarak söylenir ve sayılar çizimin
+sisteminin sayılarıymış gibi okunur — bu, bir sistemi **atamaktır**, dönüştürmek değil:
 
 ```text
 İçe aktarıldı: 128 nesne, 3 katman (GPKG, EPSG:5255)
   uyarı: Dosyanın koordinat sistemi EPSG:5255, çizimin ki EPSG:5254. Koordinatlar
-         dönüştürülmedi; AYAR koordinat_sistemi ile denetleyin.
+         dönüştürülmedi: sayılar çizimin sistemindeymiş gibi okundu. Dosyanın sistemi
+         doğruysa GERİAL ile geri alıp İÇEAKTAR cevir=evet ile yeniden aktarın …
   not: Okunan türler: Polygon 96, Line String 32
 ```
+
+### Başka bir sistemdeki dosyayı çizimin sistemine taşımak
+
+Aynı alanın farklı sistemlerdeki verisi doğru üst üste gelsin istiyorsanız `cevir=evet` yazın.
+Dosyanın her katmanı kendi sisteminden (dosyanın ya da yanındaki `.prj`'nin bildirdiği) çizimin
+sistemine **PROJ** ile taşınır; birim dönüşümü (derece, ayak) ve datum kayması PROJ'un işidir,
+programda bunların elle yazılmış bir tablosu yoktur:
+
+```text
+İçe aktarıldı: 128 nesne, 3 katman (GPKG, EPSG:5254)
+  not: 'PARSEL' katmanı EPSG:5253 -> EPSG:5254 dönüştürüldü. PROJ işlemi: Inverse of 3-degree Gauss-Kruger CM 27E + 3-degree Gauss-Kruger CM 30E. Doğruluk: aynı datum içinde, dönüşüm tam (izdüşüm değişimi).
+```
+
+Transkript her katman için **hangi işlemin, ne doğrulukla** kullanıldığını yazar. Datum değişiyorsa
+(ED50 → TUREF) doğruluk metre mertebesindedir ve söylenir; PROJ yalnız kaba bir kaydırma
+bulabiliyorsa dönüşüm reddedilir ve `kaba=evet` ile açıkça izin vermeniz istenir
+([`DÖNÜŞTÜR`](reproject.md#kaba-işlem-açık-izin-ister)). Dönüşümün geçerli alanı dışında kalan tek bir
+köşe bile **içe aktarmayı bütünüyle** geri alır: bir köşesi yerinde kalmış parsel başka bir parseldir.
+
+`cevir=evet` **yükseklikleri dönüştürmez**: çizim düzlemseldir ve yükseklik zaten atılır (okuma raporu
+sayar). Çizimin kendi sistemini değiştirmek için [`DÖNÜŞTÜR`](reproject.md), bir noktayı başka bir
+sistemde okumak için [`KOORDİNAT sistem=`](coordinate.md) kullanılır.
 
 ### Yalnızca istediğiniz katmanlar
 
@@ -256,6 +283,14 @@ Dosya seçilmeden önce ortada ne yapılacağı yazar, sağ sütunda ise bu yap�
 biçimler, her birinin yanında **okunur**, **okunur, yazılır** ya da **okunmaz** etiketiyle
 listelenir.
 
+**Çizimin sistemine dönüştür (PROJ).** Dosya kutusunun altındaki bu kutu `cevir=evet` demektir ve
+**dosya okunmadan önce** işaretlenir, çünkü okuma buna bağlıdır: işaretliyken derece sayan ya da başka
+dilimdeki katman da okunur, önizleme ve katman listesi çizimin sistemine taşınmış hâliyle gelir, dosya
+özeti PROJ'un kullandığı işlemi ve doğruluğunu yazar ve komut satırı `cevir=evet` ile biter. İşaretlemek
+dosyayı yeniden okutur.
+
+![İçe Aktar penceresi: kutu işaretli, WGS 84 dosyası çizimin sistemine taşınmış; özet satırında PROJ işlemi ve doğruluğu](import-cevir.png)
+
 **Okunamayan bir dosya seçtiğinizde bunu orada söyler.** Bir `.dwg` (bu yapı DWG
 okumuyorsa) ya da listede olmayan bir uzantı seçerseniz ortada ne yapmanız gerektiğini yazan
 bir uyarı çıkar ve dosya okunmaz.
@@ -360,7 +395,10 @@ satırından, betikten ya da yapay zekâ önerisinden gelmiş olması fark etmez
 | `io.no_driver: Dış biçim desteği KAPALI.` | GDAL olmadan derlenmiş yapı | Mesajdaki kurulum komutunu izleyin |
 | `'...' açılamadı: ...` | Dosya yok, okunamıyor ya da bozuk | Yolu ve izinleri denetleyin |
 | `İçe aktarma iptal edildi; çizim değişmedi.` | Okuma sürerken durduruldu | İçe Aktar penceresinde **Yeniden oku**'ya basın ya da komutu yeniden çalıştırın |
-| `'...' dosyasının '...' katmanı içe alınmadı. '...' coğrafi bir koordinat sistemi …` | Katman koordinatlarını derece (ya da metre dışında bir birimle) sayıyor | Dosyayı metre sayan bir sisteme dönüştürüp yeniden alın: `ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg`. Ayrıntı: [Koordinat sisteminin birimi](../veri/koordinat-sistemleri.md#koordinat-sisteminin-birimi-yalnız-metre) |
+| `'...' dosyasının '...' katmanı içe alınmadı. '...' coğrafi bir koordinat sistemi …` | Katman koordinatlarını derece (ya da metre dışında bir birimle) sayıyor | `cevir=evet` ekleyin: PROJ dosyayı çizimin sistemine taşır. Ya da dosyayı önce metre sayan bir sisteme dönüştürün: `ogr2ogr -t_srs EPSG:5256 yeni.gpkg eski.gpkg`. Ayrıntı: [Koordinat sisteminin birimi](../veri/koordinat-sistemleri.md#koordinat-sisteminin-birimi-yalnız-metre) |
+| `'...' katmanı çizimin sistemine (...) dönüştürülemedi: ... dönüşümü kurulamadı: PROJ bu ikili için doğruluğu bilinen … işlem bulamadı …` | `cevir=evet` ile PROJ iki sistemi yalnız kaba bir kaydırmayla ya da bu makinede olmayan bir grid ile bağlayabiliyor | Mesaj eksik gridi söylüyorsa dosyayı PROJ veri dizinine koyun; sonucun metrelerce kayabileceğini bilerek isterseniz `kaba=evet` ekleyin |
+| `N köşe, iki koordinat sisteminin geçerli alanının dışında kaldığı için dönüştürülemedi; çizime hiçbir şey eklenmedi.` | `cevir=evet` ile bazı köşeler dönüşümün geçerli alanı dışında (çoğunlukla yanlış dilim) | Dosyanın ve çizimin sistemlerini denetleyin |
+| `kaba=evet yalnız cevir=evet ile anlamlıdır …` | `kaba=evet` tek başına verildi | Dönüştürmek istiyorsanız `cevir=evet` de yazın |
 | `'...' okunabilir çizgi ya da alan içermiyor; … büyük olasılıkla boylam ve enlem (derece) …` | Sistem bildirmeyen dosyanın derece sayıları metre okunup ezildi | Dosyanın sistemini bulup dönüştürün ve yeniden aktarın |
 | `'...' katmanı hiçbir koordinat sistemi bildirmiyor.` | Veri kümesi etiketsiz | Yanına aynı adlı bir `.prj` dosyası koyun |
 | `'...' içindeki katmanlar farklı koordinat sistemleri bildiriyor` | Karışık veri kümesi | Tek bir sisteme dönüştürüp yeniden deneyin |

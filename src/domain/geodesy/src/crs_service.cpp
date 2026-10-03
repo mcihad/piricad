@@ -2,6 +2,7 @@
 #include "piricad/domain/geodesy/crs_service.hpp"
 
 #include "piricad/core/text.hpp"
+#include "piricad/domain/geodesy/transform.hpp"
 
 #ifdef PIRICAD_HAVE_PROJ
 #include <proj.h>
@@ -170,15 +171,84 @@ std::pair<core::CrsUnit, std::string> unit_of(std::string_view definition)
 
 } // namespace
 
+bool is_local_grid(std::string_view id)
+{
+    return local_grid(id);
+}
+
+std::string local_grid_refusal(std::string_view id)
+{
+    return "'" + std::string(id) +
+           "' yerel bir sistem; haritadaki yeri bilinmediği için başka bir sisteme dönüştürülemez. "
+           "Yerleşimi açıkça siz verin: ortak noktalarla OTURT (sistem= ile gerçek sistemi de "
+           "söyler).";
+}
+
 CrsService::CrsService(command::Bus& bus, CrsCatalog catalogue)
     : bus_(bus), catalogue_(std::move(catalogue))
 {
     bus_.on_crs_resolve = [this](std::string_view id) { return resolve(id); };
+    bus_.on_crs_mapping = [this](const command::CrsMappingRequest& request) {
+        return mapping(request);
+    };
 }
 
 CrsService::~CrsService()
 {
     bus_.on_crs_resolve = nullptr;
+    bus_.on_crs_mapping = nullptr;
+}
+
+std::string CrsService::proj_text(std::string_view id) const
+{
+    // A name the catalogue places is handed to PROJ by its EPSG code, which is unambiguous:
+    // `TUREF/TM30` is a surveyor's spelling and PROJ would have to guess which of its entries is
+    // meant. Anything else (a code, a PROJ string, WKT) goes through as written.
+    if (const core::Crs crs = resolve(id); crs.epsg() != 0)
+        return "EPSG:" + std::to_string(crs.epsg());
+    return std::string(id);
+}
+
+core::Result<std::shared_ptr<command::CrsMapping>>
+CrsService::mapping(const command::CrsMappingRequest& request) const
+{
+    // A LOCAL GRID IS NOT ON THE MAP, and no registry can say where it is: its relation to the
+    // ground is the surveyor's own placement (OTURT), never a guess made here.
+    for (const std::string* side : {&request.from, &request.to})
+        if (local_grid(*side))
+            return core::err(core::ErrorCode::InvalidArgument, local_grid_refusal(*side));
+
+    auto built = Transform::between(proj_text(request.from), proj_text(request.to),
+                                    TransformOptions{.allow_ballpark = request.allow_rough});
+    if (!built) return built.error();
+
+    // The transform is shared by the closures below: a PROJ handle is one thing and is used by one
+    // thread at a time, which is how the clients use it.
+    auto transform = std::make_shared<Transform>(std::move(built.value()));
+
+    auto out          = std::make_shared<command::CrsMapping>();
+    out->from_degrees = transform->source_is_angular();
+    out->to_degrees   = transform->target_is_angular();
+    out->apply        = [transform](double& x, double& y) { return transform->forward(x, y); };
+    out->describe_at  = [transform](double x, double y) {
+        auto info = transform->info_at(x, y);
+        return info && info.value().known() ? info.value().sentence() : std::string{};
+    };
+    out->report_at = [transform](double x, double y) {
+        core::Json report;
+        auto info = transform->info_at(x, y);
+        if (!info || !info.value().known()) return report;
+        report.set("islem", core::Json::string(info.value().name));
+        if (info.value().accuracy_m >= 0.0)
+            report.set("dogruluk_m", core::Json::number(info.value().accuracy_m));
+        report.set("kaba", core::Json::boolean(info.value().ballpark));
+        core::Json grids = core::Json::array({});
+        for (const TransformInfo::Grid& g : info.value().grids)
+            grids.push(core::Json::string(g.name));
+        report.set("gridler", std::move(grids));
+        return report;
+    };
+    return out;
 }
 
 core::Crs CrsService::resolve(std::string_view id) const
