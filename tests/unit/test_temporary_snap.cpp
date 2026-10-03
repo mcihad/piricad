@@ -16,6 +16,7 @@
 #include "piricad/core/pick.hpp"
 #include "piricad/core/snap.hpp"
 
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -305,4 +306,46 @@ TEST_CASE("SEÇİM: gizli katman ne seçilir ne yakalanır, ayardan bağımsız"
     q.radius = 1'600;
     q.modes  = core::SnapEndpoint;
     CHECK(core::snap(r.doc, q).mode == core::SnapNone);
+}
+
+// =============================================================================
+// THE APERTURE IS PIXELS (TODOS U-03): the same reach at every zoom
+// =============================================================================
+
+TEST_CASE("YAKALAMA: tolerans ekran pikselidir, yakınlaştırma ne olursa olsun aynı hissi verir")
+{
+    // The acceptance says the pixel tolerance feels constant when the zoom changes. It does when
+    // the aperture is pixels (`core.yakalama.tolerans`, 16 by default) turned into ground at THIS
+    // zoom: a point 14 pixels from a corner is taken at 1 mm a pixel and at 2 km a pixel, a point
+    // 20 pixels away is taken at neither, and the corner it lands on is the same corner.
+    const double scales[] = {0.25, 1.0, 7.0, 50.0, 333.0, 2'000.0};
+    for (const double mm_per_pixel : scales) {
+        INFO("mm/piksel " << mm_per_pixel);
+        Rig r;
+        r.bus.aids().set_view_scale(mm_per_pixel);
+        r.run("MOD ad=yakalama_modları deger=" + std::to_string(core::SnapEndpoint));
+        r.run("ÇİZGİ 0,0 10000,0"); ///< the far end is (10 km, 0): corners at both ends
+        const core::Point2 corner{10'000'000, 0};
+
+        const auto answered = [&](core::Point2 aim) {
+            auto started = r.bus.begin_interactive("ÇİZGİ");
+            REQUIRE(started.ok());
+            Session& s = *started.value();
+            REQUIRE(s.supply(Value::aimed_point(aim)).ok());
+            const core::Point2 landed = s.prompt().rubber_origin;
+            s.cancel();
+            (void)r.bus.finish(s);
+            return landed;
+        };
+        const auto px = [mm_per_pixel](double pixels) {
+            return static_cast<core::Mm>(std::llround(pixels * mm_per_pixel));
+        };
+
+        // 14 pixels out, along and across: taken.
+        CHECK(answered(core::Point2{corner.x + px(14), 0}) == corner);
+        CHECK(answered(core::Point2{corner.x, px(10)}) == corner);
+        // 20 pixels out: left where it was aimed.
+        const core::Point2 far{corner.x + px(20), 0};
+        CHECK(answered(far) == far);
+    }
 }
