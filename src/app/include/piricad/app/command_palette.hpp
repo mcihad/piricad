@@ -118,6 +118,10 @@ private:
     /// Stars or un-stars the row under the cursor, keeping the cursor on it.
     void toggleFavourite();
 
+    /// Moves the starred row under the cursor `by` places within Favoriler (Alt+↑ / Alt+↓),
+    /// keeping the cursor on it. Does nothing on a row that is not starred or while searching.
+    void moveFavourite(int by);
+
     /// The row the cursor should land on when the list is refilled: the first
     /// command, never a heading.
     void selectFirstCommand();
@@ -125,6 +129,7 @@ private:
     const command::Registry& registry_;
     CommandUsage* usage_ = nullptr;
     int topRows_         = 0; ///< command rows in the starred and recent sections just built
+    int topEnd_          = 0; ///< list items those sections (headings included) take, from 0
     std::vector<Row> rows_;
     QLineEdit* query_  = nullptr;
     QListWidget* list_ = nullptr;

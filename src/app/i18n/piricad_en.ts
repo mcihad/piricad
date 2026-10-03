@@ -685,8 +685,8 @@
         <translation>Recently used</translation>
     </message>
     <message>
-        <source>%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın (“köşeyi yuvarla”); ↑ ↓ ile gezin, Enter komut satırına yazar; Ctrl+D ya da soldaki yıldız komutu favoriye ekler.</source>
-        <translation>%1 commands. Type to filter, or type what you want to do (“round the corner”); ↑ ↓ to move, Enter writes it to the command line; Ctrl+D or the star on the left adds it to favourites.</translation>
+        <source>%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın (“köşeyi yuvarla”); ↑ ↓ gezin, Enter komut satırına yazar; Ctrl+D favoriye ekler, Alt+↑ ↓ favoriyi taşır.</source>
+        <translation>%1 commands. Type to filter, or type what you want to do (“round the corner”); ↑ ↓ to move, Enter writes it to the command line; Ctrl+D adds a favourite, Alt+↑ ↓ moves it.</translation>
     </message>
     <message>
         <source>Eşleşen komut yok. Başka sözcüklerle deneyin ya da aramayı temizleyin — arama adı, kısaltmayı ve ne yaptığını birlikte tarar.</source>

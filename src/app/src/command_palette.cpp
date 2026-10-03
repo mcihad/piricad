@@ -441,6 +441,7 @@ void CommandPalette::refilter()
 
     list_->clear();
     topRows_ = 0;
+    topEnd_  = 0;
 
     int shown = 0;
     if (typed.empty()) {
@@ -471,6 +472,7 @@ void CommandPalette::refilter()
             section(tr("Favoriler"), usage_->favourites(), {});
             section(tr("Son kullanılanlar"), usage_->recents(), usage_->favourites());
         }
+        topEnd_ = list_->count();
 
         // BROWSING: every command under its category, in the order the
         // registry declared them.
@@ -534,8 +536,8 @@ void CommandPalette::refilter()
                "arama adı, kısaltmayı ve ne yaptığını birlikte tarar."));
     else if (typed.empty())
         footer_->setText(tr("%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın "
-                            "(“köşeyi yuvarla”); ↑ ↓ ile gezin, Enter komut satırına yazar; "
-                            "Ctrl+D ya da soldaki yıldız komutu favoriye ekler.")
+                            "(“köşeyi yuvarla”); ↑ ↓ gezin, Enter komut satırına yazar; "
+                            "Ctrl+D favoriye ekler, Alt+↑ ↓ favoriyi taşır.")
                              .arg(rows_.size()));
     else
         footer_->setText(
@@ -662,6 +664,33 @@ void CommandPalette::toggleFavourite()
     list_->verticalScrollBar()->setValue(scrolled);
 }
 
+void CommandPalette::moveFavourite(int by)
+{
+    QListWidgetItem* item = list_->currentItem();
+    if (usage_ == nullptr || item == nullptr || !item->data(Qt::UserRole).isValid()) return;
+    if (!query_->text().trimmed().isEmpty()) return; ///< an answer's rank is not the person's
+
+    const QString name = item->data(Qt::UserRole).toString();
+    const auto row = std::ranges::find_if(rows_, [&name](const Row& r) { return r.name == name; });
+    if (row == rows_.end() || !usage_->isFavourite(row->id.toStdString())) return;
+
+    // THE CURSOR STAYS ON THE COPY IT WAS ON: a starred command is listed under Favoriler and
+    // again under its category, and the move is about the first.
+    const bool inTop   = list_->currentRow() < topEnd_;
+    const int scrolled = list_->verticalScrollBar()->value();
+    if (!usage_->moveFavourite(row->id.toStdString(), by)) return;
+
+    refilter();
+    const int from = inTop ? 0 : topEnd_;
+    const int to   = inTop ? topEnd_ : list_->count();
+    for (int i = from; i < to; ++i)
+        if (list_->item(i)->data(Qt::UserRole).toString() == name) {
+            list_->setCurrentRow(i);
+            break;
+        }
+    list_->verticalScrollBar()->setValue(scrolled);
+}
+
 bool CommandPalette::eventFilter(QObject* watched, QEvent* event)
 {
     // THE STAR, CLICKED: a press in a command row's left gutter stars it rather than
@@ -683,6 +712,13 @@ bool CommandPalette::eventFilter(QObject* watched, QEvent* event)
         const auto* key = static_cast<QKeyEvent*>(event);
         if (key->key() == Qt::Key_D && (key->modifiers() & Qt::ControlModifier) != 0) {
             toggleFavourite();
+            return true;
+        }
+        // Alt+↑ / Alt+↓ arranges the starred commands, the caret staying in the field. Before
+        // the arrow keys below, which would otherwise move the cursor and nothing else.
+        if ((key->key() == Qt::Key_Up || key->key() == Qt::Key_Down) &&
+            (key->modifiers() & Qt::AltModifier) != 0) {
+            moveFavourite(key->key() == Qt::Key_Up ? -1 : 1);
             return true;
         }
     }

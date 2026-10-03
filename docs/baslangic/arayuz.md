@@ -431,6 +431,13 @@ Bir şey yazmadan açtığınızda liste, kategorilerden önce **sizin** komutla
   için imleci üzerine getirip **Ctrl+D**'ye basın (imleç süzgeçte kalır) ya da satırın solundaki
   yıldıza tıklayın. Aynı tuş yıldızı kaldırır. İmleç yıldızladığınız komutun üzerinde kalır,
   böylece art arda on komutu yıldızlamak listenin başına dönmek demek değildir.
+  **Sırayı siz belirlersiniz:** yıldızlı bir komutun üzerindeyken **Alt+↑** ya da **Alt+↓** onu
+  Favoriler içinde bir yer yukarı ya da aşağı taşır (imleç taşınan komutta kalır, süzgeç
+  yazmaya devam eder); en başta ya da en sondaysa yerinde durur. Sıra bu bilgisayarda kalır,
+  çizime yazılmaz. Bir şey yazarken Alt+↑/↓ bir şey yapmaz: arama sonucunun sırası sizin
+  değil eşleşmenin sırasıdır.
+
+  ![Komut paleti: Favoriler'de ÇİZGİ üstte, DİKDÖRTGEN altta; imleç taşınan DİKDÖRTGEN'de](komut-paleti-favori-sirasi.png)
 - **Son kullanılanlar** — en son kendi elinizle başlattığınız en çok sekiz komut, en yenisi
   üstte; yıldızlıysa Favoriler'de olduğundan burada tekrar yazılmaz. Komut satırına yazdığınız,
   şerit düğmesine bastığınız ve bu listeden seçtiğiniz komutlar sayılır. **Sayılmayanlar:**

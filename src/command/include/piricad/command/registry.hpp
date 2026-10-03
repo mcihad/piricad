@@ -153,6 +153,12 @@ void note_use(std::vector<std::string>& recent, std::string_view id, std::size_t
 /// a member afterwards. Order is the order of adding.
 bool toggle_member(std::vector<std::string>& set, std::string_view id);
 
+/// Moves `id` `by` places within `set` — negative towards the front — and stops at either end:
+/// the order of the starred commands is the person's to arrange (TODOS U-01), and the lists stay
+/// plain ids. True when the order changed; false when `id` is not a member, `by` is 0 or it was
+/// at that end already.
+bool move_member(std::vector<std::string>& set, std::string_view id, int by);
+
 /// Whether a finished command is one a person would look for again. A view change
 /// (ZOOM, PAN — the `Transparent` commands) is typed or pressed a hundred times a
 /// session and is never what is being looked for, and undoing is not a tool; either

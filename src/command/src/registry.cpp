@@ -188,6 +188,24 @@ bool toggle_member(std::vector<std::string>& set, std::string_view id)
     return true;
 }
 
+bool move_member(std::vector<std::string>& set, std::string_view id, int by)
+{
+    const auto at = std::ranges::find(set, id);
+    if (at == set.end() || by == 0) return false;
+
+    const auto from = at - set.begin();
+    const auto last = static_cast<std::ptrdiff_t>(set.size()) - 1;
+    const auto to   = std::clamp<std::ptrdiff_t>(from + by, 0, last);
+    if (to == from) return false;
+
+    // A rotation keeps the others in their order, which is what moving one row means.
+    if (to < from)
+        std::rotate(set.begin() + to, at, at + 1);
+    else
+        std::rotate(at, at + 1, set.begin() + to + 1);
+    return true;
+}
+
 bool worth_remembering(const CommandSpec& spec)
 {
     return !has_flag(spec.flags, Flags::Transparent) && spec.id != "core.undo" &&

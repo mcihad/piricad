@@ -182,6 +182,25 @@ TEST_CASE("arama: son kullanılanlar ve favoriler düz kimlik listesidir (U-01)"
     CHECK(starred == std::vector<std::string>{"core.offset"});
     CHECK_FALSE(toggle_member(starred, ""));
 
+    // THE ORDER OF THE STARRED IS THE PERSON'S: moved one place at a time, the others keeping
+    // theirs, and stopping at either end.
+    std::vector<std::string> favourites{"a", "b", "c", "d"};
+    CHECK(move_member(favourites, "c", -1));
+    CHECK(favourites == std::vector<std::string>{"a", "c", "b", "d"});
+    CHECK(move_member(favourites, "a", 1));
+    CHECK(favourites == std::vector<std::string>{"c", "a", "b", "d"});
+    CHECK(move_member(favourites, "d", -3));
+    CHECK(favourites == std::vector<std::string>{"d", "c", "a", "b"});
+    CHECK(move_member(favourites, "d", 99)); ///< clamped to the last place
+    CHECK(favourites == std::vector<std::string>{"c", "a", "b", "d"});
+    CHECK_FALSE(move_member(favourites, "c", -1));                     ///< already first
+    CHECK_FALSE(move_member(favourites, "d", 1));                      ///< already last
+    CHECK_FALSE(move_member(favourites, "zzz", 1));                    ///< not a member
+    CHECK_FALSE(move_member(favourites, "a", 0));                      ///< nowhere
+    CHECK(favourites == std::vector<std::string>{"c", "a", "b", "d"}); ///< refusals changed nothing
+    std::vector<std::string> alone{"x"};
+    CHECK_FALSE(move_member(alone, "x", 1));
+
     // What is worth remembering: a tool, not a view change and not an undo.
     Fixture f;
     for (const char* id : {"core.line", "core.move", "core.offset"}) {

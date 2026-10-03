@@ -46,6 +46,10 @@ public:
     /// Stars the command, or takes the star off; true when it is starred afterwards.
     bool toggleFavourite(const std::string& id);
 
+    /// Moves a starred command `by` places up (negative) or down the list, which is the
+    /// order the palette shows them in. True when the order changed.
+    bool moveFavourite(const std::string& id, int by);
+
 signals:
     /// Either list changed.
     void changed();

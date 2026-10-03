@@ -63,6 +63,14 @@ bool CommandUsage::toggleFavourite(const std::string& id)
     return starred;
 }
 
+bool CommandUsage::moveFavourite(const std::string& id, int by)
+{
+    if (!command::move_member(favourite_, id, by)) return false;
+    save();
+    emit changed();
+    return true;
+}
+
 void CommandUsage::load()
 {
     const QSettings file;

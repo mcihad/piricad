@@ -6,6 +6,16 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — favorilerin sırası kişinin (U-01)
+
+- Komut paletinde yıldızlı bir komutun üzerindeyken **Alt+↑ / Alt+↓** onu Favoriler içinde bir yer
+  taşır; uçta yerinde durur, imleç taşınan komutta kalır, arama sırasında hiçbir şey yapmaz (bir
+  cevabın sırası kişinin değil eşleşmenin). Kural Qt'siz: `command::move_member` (kaydırma,
+  uçlarda kenetlenir, üye değilse/0 ise `false`), `CommandUsage::moveFavourite` kalıcılığı taşır.
+- Alt bilgi satırı kısaltıldı ve yeni tuşu söylüyor (TR/EN).
+- Kanıt: `test_command.cpp` favoriler vakası (`move_member` 10 durum), `PIRICAD_HELP_PROBE`
+  (sıra, uç, arama, imleç; Xvfb) ve `docs/baslangic/komut-paleti-favori-sirasi.png`.
+
 ### Eklendi — istem seçenekleri şeritte düğme; `SPLINE` ve `ALAN`'da `K` (U-01)
 
 - **Nokta Girişi ▸ Seçenekler** paneli: **Geri Al** (⌫/`G` ile aynı `Session::retract`) ve istemin

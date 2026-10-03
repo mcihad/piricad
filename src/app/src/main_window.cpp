@@ -4050,6 +4050,50 @@ int MainWindow::probeHelpPage()
         field->clear();
         QCoreApplication::processEvents();
 
+        // THE ORDER OF THE STARRED IS THE PERSON'S: a second star, then Alt+↓ and Alt+↑ move the
+        // row under the cursor within Favoriler, the caret staying in the field.
+        const auto alt = [field](int key) {
+            QKeyEvent down(QEvent::KeyPress, key, Qt::AltModifier);
+            QCoreApplication::sendEvent(field, &down);
+            QCoreApplication::processEvents();
+        };
+        field->setText(QStringLiteral("çizgi"));
+        QCoreApplication::processEvents();
+        ctrl_d(); ///< the first hit, ÇİZGİ, is starred second
+        field->clear();
+        QCoreApplication::processEvents();
+        const QStringList before = palette_->shown().starred;
+        check(before.size() >= 2 && before.at(0) == QStringLiteral("DİKDÖRTGEN") &&
+                  before.at(1) == QStringLiteral("ÇİZGİ"),
+              QStringLiteral("favoriler yıldızlanma sırasında (%1)")
+                  .arg(before.join(QStringLiteral(", "))));
+        alt(Qt::Key_Down);
+        const CommandPalette::Shown moved = palette_->shown();
+        check(moved.starred.size() >= 2 && moved.starred.at(0) == QStringLiteral("ÇİZGİ") &&
+                  moved.starred.at(1) == QStringLiteral("DİKDÖRTGEN"),
+              QStringLiteral("Alt+↓ DİKDÖRTGEN'i bir aşağı aldı (%1)")
+                  .arg(moved.starred.join(QStringLiteral(", "))));
+        check(moved.selected == QStringLiteral("DİKDÖRTGEN"),
+              QStringLiteral("imleç taşınan komutta kaldı (%1)").arg(moved.selected));
+        picture("komut-paleti-sira");
+        alt(Qt::Key_Down); ///< already last: nothing moves
+        check(palette_->shown().starred == moved.starred,
+              QStringLiteral("sondaki favori Alt+↓ ile yerinden oynamadı"));
+        alt(Qt::Key_Up);
+        check(palette_->shown().starred.mid(0, 2) == before.mid(0, 2),
+              QStringLiteral("Alt+↑ geri getirdi (%1)")
+                  .arg(palette_->shown().starred.join(QStringLiteral(", "))));
+        // And searching leaves the order alone: an answer's rank is not the person's.
+        field->setText(QStringLiteral("çizgi"));
+        QCoreApplication::processEvents();
+        const QStringList ranked = palette_->shown().first;
+        alt(Qt::Key_Down);
+        check(palette_->shown().first == ranked,
+              QStringLiteral("aramada Alt+↓ sıralamayı değiştirmedi"));
+        ctrl_d(); ///< ÇİZGİ off again
+        field->clear();
+        QCoreApplication::processEvents();
+
         ctrl_d();
         const CommandPalette::Shown cleared = palette_->shown();
         check(cleared.starred.isEmpty() &&

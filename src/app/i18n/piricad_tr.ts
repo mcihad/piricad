@@ -686,8 +686,8 @@
         <translation>Son kullanılanlar</translation>
     </message>
     <message>
-        <source>%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın (“köşeyi yuvarla”); ↑ ↓ ile gezin, Enter komut satırına yazar; Ctrl+D ya da soldaki yıldız komutu favoriye ekler.</source>
-        <translation>%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın (“köşeyi yuvarla”); ↑ ↓ ile gezin, Enter komut satırına yazar; Ctrl+D ya da soldaki yıldız komutu favoriye ekler.</translation>
+        <source>%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın (“köşeyi yuvarla”); ↑ ↓ gezin, Enter komut satırına yazar; Ctrl+D favoriye ekler, Alt+↑ ↓ favoriyi taşır.</source>
+        <translation>%1 komut. Yazarak süzün ya da ne yapmak istediğinizi yazın (“köşeyi yuvarla”); ↑ ↓ gezin, Enter komut satırına yazar; Ctrl+D favoriye ekler, Alt+↑ ↓ favoriyi taşır.</translation>
     </message>
     <message>
         <source>Eşleşen komut yok. Başka sözcüklerle deneyin ya da aramayı temizleyin — arama adı, kısaltmayı ve ne yaptığını birlikte tarar.</source>
