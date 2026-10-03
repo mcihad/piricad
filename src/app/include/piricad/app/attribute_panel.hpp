@@ -59,6 +59,10 @@ struct AttributeRow
     /// Read-only is still the empty `command`, not a kind: a row with nothing to
     /// send has nothing to edit, and saying so twice invites the two to disagree.
     FieldSpec field;
+
+    /// The selected objects that carry this column hold DIFFERENT values: the cell says `karışık`
+    /// and the editor opens empty, because there is no value to start from.
+    bool mixed = false;
 };
 
 struct AttributeGroup
@@ -66,6 +70,7 @@ struct AttributeGroup
     QString title;              ///< the uppercase heading on the group bar
     QVector<AttributeRow> rows; ///< in declaration order, never sorted
     bool open = true;           ///< collapsed groups keep their rows, just unpainted
+    QString note;               ///< small text at the bar's right edge: `3 nesne` over a selection
 };
 
 class AttributePanel : public QWidget, public Themed
@@ -113,6 +118,10 @@ public:
     /// value used to be painted underneath the box, and no transcript could have
     /// shown that.
     bool openRowForProbe(const QString& key);
+
+    /// Opens the group whose bar reads `title` (and leaves the rest as they are), so a probe can
+    /// photograph rows that start collapsed.
+    void openGroupForProbe(const QString& title);
 
     /// Every row key the panel is currently showing, for the same probe.
     QStringList probeRowKeys() const;

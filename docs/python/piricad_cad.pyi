@@ -1712,6 +1712,7 @@ def attribute(
     name: str = ...,
     object: int = ...,
     value: str = ...,
+    objects: list[int] = ...,
 ) -> int:
     """Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.
 
@@ -1719,6 +1720,7 @@ def attribute(
         name — Öznitelik kimliği; yoksa tanımlı sütunlar listelenir
         object — Nesnenin kalıcı kimliği
         value — Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır
+        objects — Birden çok nesnenin kalıcı kimlikleri: deger hepsine tek işlemde (tek geri alma adımı) yazılır; biri reddederse hiçbiri değişmez [kalıcı nesne anahtarı]
     """
 
 def column(

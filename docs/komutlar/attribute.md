@@ -45,6 +45,7 @@ Sütun tanımlamak ayrı bir komuttur: [`SÜTUN`](column.md).
 ÖZNİTELİK <ad> <nesne>
 ÖZNİTELİK <ad> <nesne> <deger>
 ÖZNİTELİK ad=<ad> nesne=<kimlik> deger=<deger>
+ÖZNİTELİK ad=<ad> nesneler=<k1> nesneler=<k2> … deger=<deger>
 ÖZNİTELİK <ad> <nesne> yok
 ```
 
@@ -54,6 +55,7 @@ Sütun tanımlamak ayrı bir komuttur: [`SÜTUN`](column.md).
 |---|---|
 | `ad` | Öznitelik kimliği. Verilmezse tanımlı sütunlar listelenir |
 | `nesne` | Nesnenin **kalıcı kimliği**. `SEÇ` ile öğrenilir |
+| `nesneler` | Birden çok nesnenin kalıcı kimlikleri (`nesneler=1 nesneler=2 …`). `deger` hepsine **tek işlemde** yazılır: günlükte tek satır, **tek geri alma adımı**. Biri reddederse (olmayan kimlik, o katmanın taşımadığı sütun, kilitli katman) hiçbiri değişmez. Yazmak için `deger` şarttır |
 | `deger` | Yeni değer. Verilmezse yalnızca okur. `yok` hücreyi boşaltır |
 
 `nesne` kalıcı kimliktir, ekrandaki sıra numarası değil. Bu ayrım kritiktir: sıra
@@ -111,7 +113,11 @@ Bir hücreyi boşaltın:
 ### Arayüz
 
 Sağdaki **Öznitelikler** panelinde seçili nesnenin bütün sütunları görünür ve
-düzenlenebilir (panel kapalıysa **Görünüm ▸ Pencereler ▸ Paneller ▸ Öznitelikler**). Komutun kendisi
+düzenlenebilir. **Birden çok nesne seçiliyse** her satır hepsi adına konuşur: nesnelerin değeri
+aynıysa o değer, farklıysa `karışık` (KARIŞIK) yazar; grup çubuğunun sağında kaç nesneyi
+etkileyeceği (`3 nesne`) görünür; sütunu seçilenlerin yalnız bir kısmı taşıyorsa satır adının
+yanında `2/3` yazar. Bir değeri yazınca `nesneler=` ile **hepsine tek adımda** gider ve tek
+`GERİAL` hepsini geri alır (panel kapalıysa **Görünüm ▸ Pencereler ▸ Paneller ▸ Öznitelikler**). Komutun kendisi
 şeritte **Değiştir** sekmesinin sonundaki **Diğer** listesindedir. Panelden yapılan her değişiklik bu komutu gönderir — panel ikinci bir
 yazma yolu değildir, komutun bir istemcisidir.
 

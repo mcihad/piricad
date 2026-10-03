@@ -382,6 +382,10 @@ public:
     /// leaving the journal line typing it leaves. Returns the failures.
     int probePromptTabs();
 
+    /// The table and the map holding one selection, and the property panel reading a selection of
+    /// several as common-or-mixed values written in one step (`PIRICAD_LINK_PROBE`, TODOS U-04).
+    int probeLinkedSelection();
+
     /// `PIRICAD_MENU_PROBE`: opens every menu in turn, photographs it and prints
     /// what it holds. Returns the failure count.
     ///

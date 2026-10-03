@@ -91,6 +91,46 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
+    // MANY OBJECTS, ONE WRITE (TODOS U-04): `nesneler=` names the ones a multi-selection holds and
+    // the value goes onto every one of them in THIS transaction — so it is one undo step, and a
+    // refusal on any of them (a column the object's layer does not carry) leaves none changed.
+    if (const Value many = ctx.argument("nesneler"); !many.empty()) {
+        const Value value = ctx.argument("deger");
+        if (value.empty()) {
+            ctx.refuse(core::ErrorCode::InvalidArgument,
+                       "Birden çok nesneye yazmak için deger gerekir: ÖZNİTELİK ad=<ad> "
+                       "nesneler=<k1> nesneler=<k2> deger=<değer>");
+            co_return;
+        }
+        auto parsed = parse_for(table.column(col)->spec(), value.as_text());
+        if (!parsed) {
+            ctx.refuse(parsed.error());
+            co_return;
+        }
+        std::size_t written = 0;
+        for (const std::int64_t raw : many.as_ids()) {
+            const core::EntityId slot = ctx.document().slot_of(
+                static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
+            if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
+                ctx.refuse(core::ErrorCode::NotFound,
+                           "Bilinmeyen nesne: " + std::to_string(raw) +
+                               ". Nesne kimliklerini SEÇ ile görebilirsiniz.");
+                co_return;
+            }
+            if (auto st = ctx.transaction().set_attribute(col, slot, parsed.value()); !st) {
+                ctx.refuse(st.error()); // the bus rolls every earlier one back
+                co_return;
+            }
+            ++written;
+        }
+        ctx.record("ad", Value::text(table.column(col)->spec().id));
+        ctx.record("nesneler", many);
+        ctx.record("deger", value);
+        ctx.echo(name.as_text() + " = " + show(parsed.value()) + "   (" + std::to_string(written) +
+                 " nesneye yazıldı)");
+        co_return;
+    }
+
     const Value target = ctx.argument("nesne");
     if (target.empty()) {
         ctx.refuse(core::ErrorCode::InvalidArgument,
@@ -158,6 +198,13 @@ PIRICAD_COMMAND(attribute)
                 Param::text("deger", Arity::optional(),
                             "Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır")
                     .en("value"),
+                // AFTER `deger` ON PURPOSE: positional words bind in declared order
+                // (`ÖZNİTELİK ada_no 1 1234` is name, object, value), so a parameter inserted
+                // before it would take the value.
+                Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Birden çok nesnenin kalıcı kimlikleri: deger hepsine tek işlemde (tek "
+                      "geri alma adımı) yazılır; biri reddederse hiçbiri değişmez"}
+                    .en("objects"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Scriptable | Flags::AiAccessible,

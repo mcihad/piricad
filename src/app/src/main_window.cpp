@@ -3602,6 +3602,145 @@ void MainWindow::probeSchemaPage()
         say(QStringLiteral("kare: sutun-formu.png"));
 }
 
+int MainWindow::probeLinkedSelection()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[bağlı] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+    const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_LINK_PROBE"));
+    const auto picture = [this, &into](QWidget* what, const char* name) {
+        if (into.size() <= 1 || what == nullptr) return;
+        QDir().mkpath(into);
+        (void)what->grab().save(into + QLatin1Char('/') + QLatin1String(name) +
+                                QStringLiteral(".png"));
+    };
+    const auto keys_of = [this] {
+        QStringList out;
+        for (const core::EntityKey k : controller_->bus().selection().keys())
+            out << QString::number(static_cast<qulonglong>(core::raw(k)));
+        out.sort();
+        return out.join(QLatin1Char(','));
+    };
+
+    // ---- a drawing: three parcels and a road, a project column and a column of the parcels ----
+    for (const char* line : {"YENİ", "KATMAN ad=PARSEL"})
+        runScriptLine(QString::fromUtf8(line));
+    for (int i = 0; i < 3; ++i) {
+        runScriptLine(QStringLiteral("ALAN %1,0 %2,0 %2,10 %1,10").arg(i * 20).arg(i * 20 + 10));
+        endCommand();
+    }
+    runScriptLine(QStringLiteral("KATMAN ad=YOL"));
+    runScriptLine(QStringLiteral("ÇİZGİ 0,-5 60,-5"));
+    endCommand();
+    for (const char* line :
+         {"SÜTUN kimlik=ada tur=tam_sayi ad=\"Ada\"",
+          "SÜTUN kimlik=malik tur=metin ad=\"Malik\" katman=PARSEL",
+          "ÖZNİTELİK ad=ada nesne=1 deger=17", "ÖZNİTELİK ad=ada nesne=2 deger=17",
+          "ÖZNİTELİK ad=ada nesne=3 deger=18", "ÖZNİTELİK ad=malik nesne=1 deger=\"Ay\"",
+          "ÖZNİTELİK ad=malik nesne=2 deger=\"Ay\"", "ÖZNİTELİK ad=malik nesne=3 deger=\"Ay\""})
+        runScriptLine(QString::fromUtf8(line));
+    QCoreApplication::processEvents();
+    check(controller_->document().live_entity_count() == 4, QStringLiteral("dört nesne çizildi"));
+
+    // ---- 1. THE TABLE AND THE MAP, ONE SELECTION ----
+    AttributeTable table(*controller_, QStringLiteral("PARSEL"), this);
+    table.applyTheme(theme_);
+    table.resize(1000, 420);
+    table.show();
+    QCoreApplication::processEvents();
+
+    // Map -> table: what is selected on the drawing is the row the table holds.
+    runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+    runScriptLine(QStringLiteral("SEÇ nesneler=2"));
+    QCoreApplication::processEvents();
+    check(table.probeGrid(QStringLiteral("secili"), {}) == QStringLiteral("2"),
+          QStringLiteral("haritadan seçilen nesne tabloda satır oldu (%1)")
+              .arg(table.probeGrid(QStringLiteral("secili"), {})));
+
+    // Table -> map: the rows chosen in the table are what the drawing selects, through the SEÇ line
+    // a typed one would be.
+    (void)table.probeGrid(QStringLiteral("sec"), QStringLiteral("0,2"));
+    QCoreApplication::processEvents();
+    check(keys_of() == QStringLiteral("1,3"),
+          QStringLiteral("tablodan seçilen satırlar haritada seçildi (%1)").arg(keys_of()));
+    check(table.probeGrid(QStringLiteral("secili"), {}) == QStringLiteral("1,3"),
+          QStringLiteral("seçim tabloda kaldı"));
+    picture(&table, "bagli-secim-tablo");
+    table.close();
+
+    // ---- 2. THE PANEL OVER SEVERAL OBJECTS ----
+    const auto panel_rows = [this] {
+        attributePanel_->resize(340, 620);
+        attributePanel_->refresh();
+        QCoreApplication::processEvents();
+    };
+
+    // Two parcels that agree: the value, no badge, and the bar says who it speaks for.
+    runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+    runScriptLine(QStringLiteral("SEÇ nesneler=1 nesneler=2"));
+    panel_rows();
+    check(attributePanel_->probeRowValue(QStringLiteral("Ada")) == QStringLiteral("17") &&
+              attributePanel_->probeRowBadge(QStringLiteral("Ada")).isEmpty(),
+          QStringLiteral("iki parselde ortak değer gösteriliyor (%1)")
+              .arg(attributePanel_->probeRowValue(QStringLiteral("Ada"))));
+
+    // Three that differ: the row says mixed instead of showing the first one's value as everyone's.
+    runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+    runScriptLine(QStringLiteral("SEÇ nesneler=1 nesneler=2 nesneler=3"));
+    panel_rows();
+    check(attributePanel_->probeRowValue(QStringLiteral("Ada")) == QStringLiteral("karışık") &&
+              attributePanel_->probeRowBadge(QStringLiteral("Ada")) == QStringLiteral("KARIŞIK"),
+          QStringLiteral("farklı değerler karışık diye gösteriliyor (%1)")
+              .arg(attributePanel_->probeRowValue(QStringLiteral("Ada"))));
+    check(attributePanel_->probeRowValue(QStringLiteral("Malik")) == QStringLiteral("Ay"),
+          QStringLiteral("üç parselin ortak malik değeri gösteriliyor"));
+    attributePanel_->openGroupForProbe(QStringLiteral("ÖZNİTELİKLER"));
+    QCoreApplication::processEvents();
+    picture(attributePanel_, "bagli-secim-panel-karisik");
+
+    // A column only some of the selected objects carry says how many it will reach.
+    runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+    panel_rows();
+    check(attributePanel_->probeRowKeys().contains(QStringLiteral("Malik  3/4")),
+          QStringLiteral("sütunu yalnız 3/4 nesne taşıyorsa satır bunu söylüyor (%1)")
+              .arg(attributePanel_->probeRowKeys().join(QStringLiteral(" | "))));
+
+    // ---- 3. ONE EDIT, THREE OBJECTS, ONE UNDO STEP ----
+    runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+    runScriptLine(QStringLiteral("SEÇ nesneler=1 nesneler=2 nesneler=3"));
+    panel_rows();
+    const std::size_t depth = controller_->undoStack().undo_depth();
+    check(attributePanel_->editRowForProbe(QStringLiteral("Ada"), QStringLiteral("20")),
+          QStringLiteral("karışık satır düzenlenebilir"));
+    QCoreApplication::processEvents();
+    panel_rows();
+    check(attributePanel_->probeRowValue(QStringLiteral("Ada")) == QStringLiteral("20") &&
+              attributePanel_->probeRowBadge(QStringLiteral("Ada")).isEmpty(),
+          QStringLiteral("üç nesneye de 20 yazıldı, artık ortak (%1)")
+              .arg(attributePanel_->probeRowValue(QStringLiteral("Ada"))));
+    check(controller_->undoStack().undo_depth() - depth == 1,
+          QStringLiteral("toplu değişiklik tek geri alma adımı"));
+    attributePanel_->openGroupForProbe(QStringLiteral("ÖZNİTELİKLER"));
+    QCoreApplication::processEvents();
+    picture(attributePanel_, "bagli-secim-panel-yazildi");
+
+    runScriptLine(QStringLiteral("GERİAL"));
+    panel_rows();
+    check(attributePanel_->probeRowValue(QStringLiteral("Ada")) == QStringLiteral("karışık"),
+          QStringLiteral("tek GERİAL üçünü birden eski değerlerine döndürdü"));
+    // AND THE TABLE, STILL OPEN, LEFT THE DRAWING'S SELECTION ALONE: its reload used to put its
+    // cursor row back as a selection, so one undo collapsed three selected parcels into one.
+    check(keys_of() == QStringLiteral("1,2,3"),
+          QStringLiteral("tablo açıkken GERİAL çizimdeki seçimi bozmadı (%1)").arg(keys_of()));
+
+    controller_->cancelAll();
+    return failures;
+}
+
 void MainWindow::probeAttributeGrid()
 {
     const auto say = [](const QString& text) {

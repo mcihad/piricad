@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// THE ONE-SHOT OBJECT SNAP (TODOS U-03): `orta` typed where a point is asked looks for midpoints
-// alone, for the next point only.
+// THE HAND ON THE DRAWING (TODOS U-03, U-04): what a pointer can reach and what a selection writes.
 //
-// What is pinned: the words (the modes' own ids and labels, folded the Turkish way, the English
-// three-letter names), what a prompt does with the override (aids_for), that it moves an AIMED
-// point and no other, that the point that answers is spent and the next question starts without
-// it, and that the journal records the point it put and never the word.
+//   * THE ONE-SHOT OBJECT SNAP: `orta` typed where a point is asked looks for midpoints alone, for
+//     the next point only — the words (the modes' own ids and labels, folded the Turkish way, the
+//     English three-letter names), what a prompt does with the override (aids_for), that it moves
+//     an AIMED point and no other, that the point that answers is spent and the next question
+//     starts without it, and that the journal records the point it put and never the word.
+//   * WHAT IS UNDER THE POINTER: a hundred objects on one spot are each reachable by the line a
+//     script sends; a locked layer is selected and snapped to unless the person said otherwise, a
+//     hidden one never; the aperture is the same number of PIXELS at every zoom.
+//   * ONE WRITE FOR SEVERAL OBJECTS: `ÖZNİTELİK nesneler=` is one transaction, one undo step, all
+//   or
+//     nothing.
 #include "piricad_test.hpp"
 
 #include "piricad/command/aids.hpp"
@@ -348,4 +354,62 @@ TEST_CASE("YAKALAMA: tolerans ekran pikselidir, yakınlaştırma ne olursa olsun
         const core::Point2 far{corner.x + px(20), 0};
         CHECK(answered(far) == far);
     }
+}
+
+// =============================================================================
+// SEVERAL OBJECTS, ONE ATTRIBUTE WRITE (TODOS U-04)
+// =============================================================================
+
+TEST_CASE("ÖZNİTELİK: nesneler= birçok nesneye tek işlemde yazar, tek geri alma adımı")
+{
+    Rig r;
+    r.run("SÜTUN kimlik=ada tur=tam_sayi");
+    for (int i = 0; i < 4; ++i)
+        r.run("ALAN " + std::to_string(i * 20) + ",0 " + std::to_string(i * 20 + 10) + ",0 " +
+              std::to_string(i * 20 + 10) + ",10 " + std::to_string(i * 20) + ",10");
+
+    const auto value_of = [&r](std::int64_t key) {
+        const auto slot = r.doc.slot_of(static_cast<core::EntityKey>(key));
+        return r.doc.attribute(r.doc.attributes().find("ada"), slot);
+    };
+    const std::size_t depth = r.undo.undo_depth();
+
+    // Three of the four in one write.
+    r.run("ÖZNİTELİK ad=ada nesneler=1 nesneler=2 nesneler=4 deger=77");
+    for (const std::int64_t key : {1, 2, 4}) {
+        REQUIRE(value_of(key).ok());
+        CHECK(value_of(key).value().present);
+        CHECK(value_of(key).value().number == 77);
+    }
+    REQUIRE(value_of(3).ok());
+    CHECK_FALSE(value_of(3).value().present); ///< the one not named is untouched
+    CHECK(r.undo.undo_depth() - depth == 1);  ///< one step for the three
+
+    // ONE UNDO takes all three back.
+    r.run("GERİAL");
+    for (const std::int64_t key : {1, 2, 4})
+        CHECK_FALSE(value_of(key).value().present);
+
+    // The journal holds the line a script would write: the same ids, the same value.
+    const auto& last = r.journal.entries().back();
+    CHECK(last.command_id == "core.attribute");
+    CHECK(last.args.find("nesneler") != nullptr);
+    CHECK(last.args.find("nesneler")->as_ids() == std::vector<std::int64_t>{1, 2, 4});
+
+    // ATOMIC: one bad id and none is written.
+    auto bad = r.bus.execute_line("ÖZNİTELİK ad=ada nesneler=1 nesneler=2 nesneler=999 deger=5",
+                                  Origin::Test);
+    CHECK_FALSE(bad.ok());
+    CHECK_FALSE(value_of(1).value().present);
+    CHECK_FALSE(value_of(2).value().present);
+
+    // A value that is no value for the column is refused before anything is written.
+    auto wrong =
+        r.bus.execute_line("ÖZNİTELİK ad=ada nesneler=1 nesneler=2 deger=abc", Origin::Test);
+    CHECK_FALSE(wrong.ok());
+    CHECK_FALSE(value_of(1).value().present);
+
+    // And the single-object form still works as it always did.
+    r.run("ÖZNİTELİK ad=ada nesne=3 deger=9");
+    CHECK(value_of(3).value().number == 9);
 }

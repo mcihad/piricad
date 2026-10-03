@@ -3392,6 +3392,13 @@ int main(int argc, char** argv)
                            [&window] { QApplication::exit(window.probeHelpPage() == 0 ? 0 : 1); });
     }
 
+    // THE TABLE AND THE MAP ON ONE SELECTION, and the panel over several objects.
+    if (qEnvironmentVariableIsSet("PIRICAD_LINK_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            QApplication::exit(window.probeLinkedSelection() == 0 ? 0 : 1);
+        });
+    }
+
     // THE PROMPT TABS AND A LINE COMPOSED WITH THE SCENE, over the real canvas.
     if (qEnvironmentVariableIsSet("PIRICAD_PROMPT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {

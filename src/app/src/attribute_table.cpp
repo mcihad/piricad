@@ -619,10 +619,19 @@ AttributeTable::AttributeTable(Controller& controller, QString layerName, QWidge
         lastCell_ = at.isValid() ? QPair<int, int>{at.row(), at.column()} : QPair<int, int>{-1, -1};
     });
     connect(model_, &QAbstractItemModel::modelReset, this, [this] {
-        if (lastCell_.first < 0) return;
-        if (lastCell_.first >= model_->rowCount() || lastCell_.second >= model_->columnCount())
-            return;
-        view_->setCurrentIndex(model_->index(lastCell_.first, lastCell_.second));
+        if (lastCell_.first >= 0 && lastCell_.first < model_->rowCount() &&
+            lastCell_.second < model_->columnCount()) {
+            // THE CURSOR COMES BACK AND THE SELECTION DOES NOT MOVE WITH IT. `setCurrentIndex` on
+            // the view also SELECTS that row, which sent `SEÇ` for it: any edit or undo while the
+            // table was open collapsed the drawing's selection to wherever the cursor last stood —
+            // three parcels selected, one GERİAL, and one parcel (TODOS U-04). The cursor alone is
+            // put back; the rows are the drawing's selection, read off it below.
+            view_->selectionModel()->setCurrentIndex(
+                model_->index(lastCell_.first, lastCell_.second), QItemSelectionModel::NoUpdate);
+        }
+        // The reset emptied the view's selection; the drawing's is the truth, and it is shown
+        // again.
+        followCanvas();
     });
 
     // Sized by type, then left alone: a column the user widened must stay
@@ -1256,6 +1265,30 @@ QString AttributeTable::probeGrid(const QString& action, const QString& value)
     if (action == QStringLiteral("oku")) {
         const QModelIndex at = view_->currentIndex();
         return at.isValid() ? at.data(Qt::EditRole).toString() : QString();
+    }
+
+    // SELECT ROWS the way a click on the row headers does (`0,2` = rows 0 and 2), through the
+    // selection model so `pushSelection` is what answers; and read the rows the table holds as
+    // OBJECT KEYS. Together they let a probe hold the link between the table and the map to its
+    // word (TODOS U-04).
+    if (action == QStringLiteral("sec")) {
+        QItemSelection rows;
+        for (const QString& part : value.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+            const int row = part.toInt();
+            rows.select(model_->index(row, 0), model_->index(row, model_->columnCount() - 1));
+        }
+        view_->selectionModel()->select(rows, QItemSelectionModel::ClearAndSelect |
+                                                  QItemSelectionModel::Rows);
+        QCoreApplication::processEvents();
+        return QStringLiteral("seçildi");
+    }
+
+    if (action == QStringLiteral("secili")) {
+        QStringList keys;
+        for (const QModelIndex& index : view_->selectionModel()->selectedRows())
+            keys << QString::number(static_cast<qulonglong>(model_->keyAt(index.row())));
+        keys.sort();
+        return keys.join(QLatin1Char(','));
     }
 
     if (action == QStringLiteral("sikayet")) return complaint_->text();

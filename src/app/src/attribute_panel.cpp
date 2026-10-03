@@ -874,75 +874,100 @@ void AttributePanel::rebuild()
     // Every DECLARED column, in declaration order. Nothing here knows what a
     // column means — the panel shows what the catalogue put in the document,
     // which is the only way a legislation update stays a data release (5.13).
-    AttributeGroup attrs{tr("ÖZNİTELİKLER"), {}, false};
+    AttributeGroup attrs{tr("ÖZNİTELİKLER"), {}, false, {}};
 
-    // The layer this object sits on, by name: a layer column is scoped by name
-    // for the reason `AttrSpec::layer` gives — a `LayerId` is a slot and slots
-    // move (model.md R1/R5).
-    QString on_layer;
-    if (const core::LayerId on = doc.entities().layer[slot]; on < doc.layers().size())
-        on_layer = QString::fromStdString(doc.layers()[on].name);
+    // THE OBJECTS THE ROWS SPEAK FOR: every live object of the selection. One of them is the old
+    // case; several are a column read across all of them (TODOS U-04).
+    std::vector<core::EntityKey> alive_keys;
+    for (const core::EntityKey k : sel.keys())
+        if (const core::EntityId e = doc.slot_of(k); e != core::kNoEntity && doc.alive(e))
+            alive_keys.push_back(k);
+    const bool many = alive_keys.size() > 1;
+    if (many) attrs.note = tr("%1 nesne").arg(alive_keys.size());
 
     const core::AttrTable& table = doc.attributes();
     for (std::size_t c = 0; c < table.columns(); ++c) {
         const core::AttrColumn* column = table.column(static_cast<core::AttrId>(c));
         if (!column) continue;
 
-        // ONLY WHAT THIS OBJECT'S LAYER CARRIES. A project column is on every
-        // object; a layer column belongs to its own layer alone, and showing it
-        // elsewhere puts a row nobody can ever fill in on every parcel, every
-        // road and every tree in the drawing.
-        if (!core::attr_applies_to(column->spec(), on_layer.toStdString())) continue;
+        // ONLY THE OBJECTS THIS COLUMN IS CARRIED BY. A project column is on every object; a layer
+        // column belongs to its own layer alone, and showing it elsewhere puts a row nobody can
+        // ever fill in on every parcel, every road and every tree in the drawing. Across a
+        // selection the row speaks for the objects whose layer carries it, and says how many they
+        // are.
+        std::vector<core::EntityKey> carried;
+        QStringList texts;
+        bool all_present = true;
+        for (const core::EntityKey k : alive_keys) {
+            const core::EntityId e = doc.slot_of(k);
+            QString on_layer;
+            if (const core::LayerId on = doc.entities().layer[e]; on < doc.layers().size())
+                on_layer = QString::fromStdString(doc.layers()[on].name);
+            if (!core::attr_applies_to(column->spec(), on_layer.toStdString())) continue;
 
-        // THROUGH THE DOCUMENT, NOT INTO THE COLUMN. An attribute column is
-        // indexed by GEOMETRY slot (`Document::set_attribute` writes
-        // `entities_.slot[e]`), and this panel was reading it with the ENTITY
-        // slot. The two agree only while every entity was created in order and
-        // none was edited — so the panel showed the right value on a fresh
-        // drawing and a DIFFERENT parcel's value on a real one.
-        //
-        // `Document::attribute` does the mapping, and it is the only reader that
-        // can be right by construction.
-        const auto stored  = doc.attribute(static_cast<core::AttrId>(c), slot);
-        const bool present = stored.ok() && stored.value().present;
+            // THROUGH THE DOCUMENT, NOT INTO THE COLUMN. An attribute column is indexed by GEOMETRY
+            // slot (`Document::set_attribute` writes `entities_.slot[e]`), and this panel was
+            // reading it with the ENTITY slot. The two agree only while every entity was created in
+            // order and none was edited — so the panel showed the right value on a fresh drawing
+            // and a DIFFERENT parcel's value on a real one. `Document::attribute` does the mapping,
+            // and it is the only reader that can be right by construction.
+            const auto stored  = doc.attribute(static_cast<core::AttrId>(c), e);
+            const bool present = stored.ok() && stored.value().present;
+            all_present        = all_present && present;
 
-        // THROUGH THE ONE FORMATTER, and it was not. This panel printed the raw
-        // stored integer, which is right for a count and wrong for everything
-        // else: a length came out in millimetres where the whole document says
-        // metres, and a fixed-point rate came out as `40` where the plan note
-        // says `0,40`. `core::attr_display` is the function that knows, and it is
-        // the same one the attribute table and every export use.
-        //
-        // The POINT, not the comma. What is shown here is what the editor opens
-        // with and what the command receives back, so it has to be the form the
-        // command parses — the paper form belongs on paper.
-        const QString shown = present ? QString::fromStdString(core::attr_display(
-                                            stored.value(), core::DecimalMark::Point))
-                                      : QStringLiteral("—");
+            // THROUGH THE ONE FORMATTER (`core::attr_display`, the attribute table's and every
+            // export's), and the POINT, not the comma: what is shown here is what the editor opens
+            // with and what the command receives back, so it is the form the command parses.
+            texts << (present ? QString::fromStdString(
+                                    core::attr_display(stored.value(), core::DecimalMark::Point))
+                              : QStringLiteral("—"));
+            carried.push_back(k);
+        }
+        if (carried.empty()) continue;
 
-        // WHAT THE COLUMN IS DECIDES WHAT OPENS. A `tarih` column gets a calendar,
-        // an `evet_hayir` gets the two-word segment. Read from the ONE mapping in
-        // `fields.hpp`, which the attribute table reads too: two copies of it is
-        // how one of them keeps offering a line edit for a date long after the
-        // other stopped.
+        // COMMON OR MIXED. Every object that carries the column holds the same value, or they
+        // differ and the row says so rather than showing the first one's as if it were all of
+        // theirs.
+        texts.removeDuplicates();
+        const bool mixed    = texts.size() > 1;
+        const QString shown = mixed ? tr("karışık") : texts.front();
+        QString badge;
+        if (mixed)
+            badge = tr("KARIŞIK");
+        else if (!all_present)
+            badge = tr("BOŞ");
+
+        // WHAT THE EDITOR OPENS WITH is the common value; when they differ there is nothing to
+        // start from, so it opens empty rather than on a word that is not a value.
         const FieldSpec editor = field_for(column->spec());
 
-        // ONE COMMAND PER OBJECT, and the object is named by its PERMANENT key
-        // rather than by the slot it happens to occupy: a slot is a storage
-        // detail that a later edit may reuse, and a journal replay that resolved
-        // one would write the value onto a different parsel (model.md R2).
-        //
-        // Written for the first selected object. A multi-object edit sends one
-        // command per key, which is what `commitEdit` does.
-        attrs.rows.push_back(
-            {QString::fromStdString(column->spec().name_tr.empty() ? column->spec().id
-                                                                   : column->spec().name_tr),
-             shown, present ? QString() : tr("BOŞ"), false,
-             QStringLiteral("ÖZNİTELİK ad=\"%1\" nesne=%2 deger=\"%3\"")
-                 .arg(QString::fromStdString(column->spec().id))
-                 .arg(static_cast<qulonglong>(key))
-                 .arg(QStringLiteral("%1")),
-             editor});
+        // ONE COMMAND, AND THE OBJECTS NAMED BY THEIR PERMANENT KEYS rather than by the slots they
+        // happen to occupy: a slot is a storage detail that a later edit may reuse, and a journal
+        // replay that resolved one would write the value onto a different parsel (model.md R2). One
+        // object is the form it always was; several are `nesneler=` and ONE write — one journal
+        // line, one undo step (`core.attribute`).
+        QString line =
+            QStringLiteral("ÖZNİTELİK ad=\"%1\"").arg(QString::fromStdString(column->spec().id));
+        if (carried.size() == 1) {
+            line += QStringLiteral(" nesne=%1")
+                        .arg(static_cast<qulonglong>(core::raw(carried.front())));
+        } else {
+            for (const core::EntityKey k : carried)
+                line += QStringLiteral(" nesneler=%1").arg(static_cast<qulonglong>(core::raw(k)));
+        }
+        line += QStringLiteral(" deger=\"%1\"");
+
+        // HOW MANY IT WILL TOUCH, before it is touched: a column only some of the selected objects
+        // carry is marked `2/3`, so a bulk change never writes onto objects the person did not
+        // know it reached.
+        QString name = QString::fromStdString(
+            column->spec().name_tr.empty() ? column->spec().id : column->spec().name_tr);
+        if (many && carried.size() != alive_keys.size())
+            name += QStringLiteral("  %1/%2").arg(carried.size()).arg(alive_keys.size());
+
+        AttributeRow row{name, shown, badge, false, line, editor};
+        row.mixed = mixed;
+        attrs.rows.push_back(row);
     }
     // AN EMPTY STATE, AND IT MUST NOT LOOK LIKE A ROW. This used to be
     // `sütun / tanımlı değil / BOŞ` — a key, a value and the badge that means
@@ -1027,7 +1052,7 @@ void AttributePanel::beginEdit(int group, int index)
 
     // An empty cell reads as `—`; putting that in the box would make the user
     // delete a character that was never a value.
-    editor_->setValue(row.value == QStringLiteral("—") ? QString() : row.value);
+    editor_->setValue(row.value == QStringLiteral("—") || row.mixed ? QString() : row.value);
     editor_->show();
     editor_->beginEditing();
     update();
@@ -1057,6 +1082,13 @@ void AttributePanel::commitEdit(const QString& value)
     typed.replace(QLatin1Char('\n'), QStringLiteral("\\n"));
     controller_.runLine(command.arg(typed), command::Origin::Gui);
     refresh();
+}
+
+void AttributePanel::openGroupForProbe(const QString& title)
+{
+    for (AttributeGroup& group : groups_)
+        if (group.title == title) group.open = true;
+    update();
 }
 
 QStringList AttributePanel::probeRowKeys() const
@@ -1343,6 +1375,14 @@ void AttributePanel::paintEvent(QPaintEvent*)
         p.setPen(t.text);
         p.drawText(QRect(kGroupPadX + 16, y, width(), kGroupHeight),
                    Qt::AlignVCenter | Qt::AlignLeft, group.title);
+        if (!group.note.isEmpty()) {
+            // WHO THE ROWS UNDER IT SPEAK FOR, at the bar's right edge: an edit under `3 nesne` is
+            // written onto three objects, and the bar says so before the row is touched.
+            p.setFont(sans(kCaptionPx));
+            p.setPen(t.accent);
+            p.drawText(QRect(0, y, width() - kGroupPadX, kGroupHeight),
+                       Qt::AlignVCenter | Qt::AlignRight, group.note);
+        }
         p.fillRect(QRect(0, y + kGroupHeight - 1, width(), 1), t.lineHard);
         y += kGroupHeight;
 

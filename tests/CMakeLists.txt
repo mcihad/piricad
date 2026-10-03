@@ -45,7 +45,7 @@ add_executable(piricad_tests
     unit/test_curve_path.cpp
     unit/test_draw_methods.cpp
     unit/test_dynamic_entry.cpp
-    unit/test_temporary_snap.cpp
+    unit/test_hand.cpp
     unit/test_locale.cpp
     unit/test_split_join.cpp
     unit/test_fillet.cpp

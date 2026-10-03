@@ -974,8 +974,19 @@ için alan yazmaz. [`ALANÖLÇ`](../komutlar/measure_area.md) ile aynı hesap.
 
 **Birden çok nesne seçtiyseniz** panel tek tek satır yazmaz; **SEÇİM** grubunda
 adet, ortak katman (karışıksa `karışık`), toplam uzunluk ve toplam alan verilir.
+**ÖZNİTELİKLER** grubu da hepsi adına konuşur: seçilen nesnelerin o sütundaki değeri aynıysa
+o değer, farklıysa **`karışık`** (KARIŞIK rozeti) yazılır; grup çubuğunun sağında kaç nesneyi
+etkileyeceği (`3 nesne`) görünür, sütunu yalnız bir kısmı taşıyorsa satırın adında `2/3` yazar.
+Bir satırı düzenlemek değeri **tüm** nesnelere tek adımda yazar (`ÖZNİTELİK … nesneler=…`) ve
+tek **Ctrl+Z** hepsini geri alır. Karışık bir satırın düzenleyicisi boş açılır: başlanacak tek
+bir değer yoktur.
+
+![Üç parsel seçili: Ada karışık (solda); tek düzenlemeden sonra üçünde de 20 (sağda)](panel-coklu-secim.png)
+
 Nesne nesne okumak için [öznitelik tablosunu](../veri/oznitelik-tablosu.md)
-(**F6**) kullanın — 312 piksellik bir panel ikinci bir tablo değildir.
+(**F6**) kullanın — 312 piksellik bir panel ikinci bir tablo değildir. Tabloda
+**Haritayla eşitle** işaretliyken iki yüz birdir: tabloda seçtiğiniz satırlar haritada, haritada
+seçtiğiniz nesneler tabloda seçilir (aynı `SEÇ` satırı, her ikisi de komut).
 
 #### Değer düzenleme
 

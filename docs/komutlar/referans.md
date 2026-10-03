@@ -1475,6 +1475,7 @@ Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.
 | `ad` | text | isteğe bağlı | Öznitelik kimliği; yoksa tanımlı sütunlar listelenir |
 | `nesne` | integer | isteğe bağlı | Nesnenin kalıcı kimliği |
 | `deger` | text | isteğe bağlı | Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır |
+| `nesneler` | selection | en az 0 | Birden çok nesnenin kalıcı kimlikleri: deger hepsine tek işlemde (tek geri alma adımı) yazılır; biri reddederse hiçbiri değişmez |
 
 Ayrıntılı kullanım: [ÖZNİTELİK](attribute.md)
 
@@ -3597,6 +3598,11 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "deger": {
           "type": "string",
           "description": "Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır (metin)"
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birden çok nesnenin kalıcı kimlikleri: deger hepsine tek işlemde (tek geri alma adımı) yazılır; biri reddederse hiçbiri değişmez — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "varsayimlar": {
           "type": "array",

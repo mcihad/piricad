@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — panel birden çok nesne adına konuşuyor; toplu değişiklik tek adım (U-04)
+
+- **Öznitelikler paneli bir seçimde ortak/farklı değeri söylüyor.** Önceden birden çok nesne
+  seçiliyken ÖZNİTELİKLER grubu *ilk nesnenin* değerlerini hepsininmiş gibi gösteriyor ve düzenleme
+  yalnız ona yazıyordu. Şimdi her satır seçilenlerin hepsini okuyor: değer aynıysa o, farklıysa
+  `karışık` (KARIŞIK rozeti); grup çubuğunun sağında kaç nesneyi etkileyeceği (`3 nesne`);
+  sütunu yalnız bir kısmı taşıyorsa satırda `2/3`. Karışık satırın düzenleyicisi boş açılıyor.
+- **Toplu yazma tek işlem:** `ÖZNİTELİK ad=… nesneler=1 nesneler=2 … deger=…` (yeni `nesneler`
+  parametresi; `nesne` aynen çalışıyor) hepsine aynı işlemde yazıyor: günlükte tek satır, tek
+  GERİAL adımı, biri reddederse hiçbiri değişmez. Panel düzenlemesi bu satırı gönderiyor.
+  `make reference` ile altı üretilmiş belge yenilendi.
+- **Düzeltilen kusur (tablo açıkken seçim kayıyordu):** öznitelik tablosu belge değişince
+  yeniden yükleniyor ve imleç satırını `setCurrentIndex` ile geri koyarken o satırı *seçiyor* ve
+  `SEÇ` gönderiyordu: tablo açıkken bir düzenleme ya da GERİAL, çizimdeki üç seçili parseli
+  tek parsele indiriyordu. İmleç artık seçime dokunmadan geri geliyor, seçim çizimden okunuyor.
+- Harita ↔ tablo bağı doğrulandı: haritada seçilen tabloda satır, tabloda seçilen satırlar
+  haritada seçili (her ikisi de `SEÇ` satırı).
+- Kanıt: `test_hand.cpp` (ÖZNİTELİK nesneler=: tek adım, geri alma, günlük, atomik), yeni kapı
+  `scripts/ci-gate-bagli-secim.sh` (`PIRICAD_LINK_PROBE`, 14 denetim; kusur düzeltilmeden
+  "seçim=1" ile kırılıyordu), kare `docs/baslangic/panel-coklu-secim.png`.
+
 ### Eklendi — kilitli katmanın seçilmesi ve yakalanması ayarlanabilir; yüz üst üste nesne ölçüldü (U-03)
 
 - İki yeni ayar (varsayılanlar eski davranış): `core.yakalama.kilitli_katman` ve
@@ -15,8 +36,8 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   Motorda `SnapQuery::on_locked_layers`, `core::drop_locked_layers`; tuval aynı süzgeci
   seçim listesinde uyguluyor.
 - **Yüz üst üste nesne:** `SEÇ mod=NOKTA sira=1…100` her sırada tam o nesneyi seçer, 101 reddedilir
-  (`test_temporary_snap.cpp`); fare gerektirmeyen, betikten de giden yol.
-- Kanıt: `test_temporary_snap.cpp` (varsayılanlar, kapatınca seçim/yakalama/katman modu, gizli katman,
+  (`test_hand.cpp`); fare gerektirmeyen, betikten de giden yol.
+- Kanıt: `test_hand.cpp` (varsayılanlar, kapatınca seçim/yakalama/katman modu, gizli katman,
   yüz nesne), ayarlar penceresi karesi `docs/baslangic/ayar-kilitli-katman.png`
   (`PIRICAD_SETTINGS_SEARCH` ile uzun sayfa aranan satırda çekilebiliyor).
 
@@ -28,7 +49,7 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   İmleç yanında "yalnız orta nokta" yazar, işaretçi o noktayı gösterir; Esc geri alır; yazılan
   koordinat ve betik noktaları dokunulmaz. Kelimeler modların kendi adlarından üretilir
   (`snap_mode_id/label`), `KES` gibi komut adları komut kalır (`command.md` R32).
-- Kanıt: `test_temporary_snap.cpp` (4 vaka: sözcükler, `aids_for`, nişanlanan nokta orta noktaya
+- Kanıt: `test_hand.cpp` (4 vaka: sözcükler, `aids_for`, nişanlanan nokta orta noktaya
   oturur/sonraki oturmaz/günlükte sözcük yok, yazılan koordinat), `PIRICAD_PROMPT_PROBE` bloğu
   (gerçek pencere, tıklama orta noktaya oturdu) ve `docs/komutlar/gecici-yakalama.png`.
 

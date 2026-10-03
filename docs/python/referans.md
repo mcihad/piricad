@@ -2569,6 +2569,7 @@ cad.attribute(
     name: str,
     object: int,
     value: str,
+    objects: list[int],
 ) -> int
 ```
 
@@ -2577,6 +2578,7 @@ cad.attribute(
 | `name` | `str` | `ad` | Öznitelik kimliği; yoksa tanımlı sütunlar listelenir |
 | `object` | `int` | `nesne` | Nesnenin kalıcı kimliği |
 | `value` | `str` | `deger` | Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır |
+| `objects` | `list[int]` | `nesneler` | Birden çok nesnenin kalıcı kimlikleri: deger hepsine tek işlemde (tek geri alma adımı) yazılır; biri reddederse hiçbiri değişmez [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/attribute.md)
 
