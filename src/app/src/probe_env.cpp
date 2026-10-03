@@ -23,6 +23,7 @@ bool probe_environment()
              "PIRICAD_THEME_PROBE",     "PIRICAD_FRAME_DUMP",     "PIRICAD_MCP_PROBE",
              "PIRICAD_EDIT_PROBE",      "PIRICAD_LINK_PROBE",     "PIRICAD_LAYERPROPS_PROBE",
              "PIRICAD_SAMPLE_PROBE",    "PIRICAD_BIGTABLE_PROBE", "PIRICAD_CALC_PROBE",
+             "PIRICAD_KALEM_PROBE",
          })
         if (qEnvironmentVariableIsSet(probe)) return true;
     return false;

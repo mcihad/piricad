@@ -1978,6 +1978,23 @@ Status Document::set_layer_group(LayerId l, std::string group, Op& undo_out)
     return ok();
 }
 
+Status Document::set_layer_feature_class(LayerId l, std::string feature_class, Op& undo_out)
+{
+    Layer* record = layers_.at(l);
+    if (record == nullptr)
+        return err(ErrorCode::NotFound, "Katman bulunamadı: " + std::to_string(l) + ".");
+
+    std::string was       = record->feature_class;
+    record->feature_class = std::move(feature_class);
+    bump_revision();
+
+    undo_out         = Op{};
+    undo_out.kind    = Op::Kind::SetLayerFeatureClass;
+    undo_out.layer   = l;
+    undo_out.str_arg = std::move(was);
+    return ok();
+}
+
 Status Document::set_crs(Crs crs, Op& undo_out)
 {
     if (crs.id().empty())
@@ -2050,6 +2067,8 @@ Status Document::apply(const Op& op, Op* undo_out)
         return set_layer_appearance(op.layer, op.appearance_arg, inverse);
     case Op::Kind::SetLayerStyle: return set_layer_style(op.layer, op.style_arg, inverse);
     case Op::Kind::SetLayerGroup: return set_layer_group(op.layer, op.str_arg, inverse);
+    case Op::Kind::SetLayerFeatureClass:
+        return set_layer_feature_class(op.layer, op.str_arg, inverse);
     case Op::Kind::SetLayerProps: return set_layer_props(op.layer, op.props_arg, inverse);
     case Op::Kind::SetCrs: return set_crs(op.crs_arg, inverse);
     case Op::Kind::SetGuides: {

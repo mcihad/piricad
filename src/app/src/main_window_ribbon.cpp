@@ -28,6 +28,7 @@
 #include "piricad/command/bus.hpp"
 #include "piricad/command/colour.hpp"
 #include "piricad/command/drawing_catalogs.hpp"
+#include "piricad/command/feature_classes.hpp"
 #include "piricad/command/parser.hpp"
 #include "piricad/command/registry.hpp"
 #include "piricad/command/select_modes.hpp"
@@ -976,6 +977,51 @@ void MainWindow::buildRibbon()
                    commandAction(Glyph::Volume, tr("Hacim"), QStringLiteral("HACİM"),
                                  tr("HACİM — iki yüzey arasındaki kazı ve dolgu hacmi  ·  "
                                     "kısaltma: HCM"))});
+
+    // THE PEN (TODOS G-04), first on the drawing tab because it is the first thing a digitiser
+    // picks — and not on `Giriş`, whose row is already as wide as the narrowest window allows: what
+    // is being drawn, as a surveyor says it — a building, a road centreline, a parcel — rather than
+    // a layer and a list of columns. Picking one runs `KALEM`, which builds the layer and its
+    // fields and makes it the active one; whatever is drawn next starts with the class's defaults.
+    // The two verbs beside it bring what is already drawn under the class in hand and ask whether
+    // everything on a class layer still is what it says.
+    SARibbonPanel* pen = mapTab->addPanel(tr("Kalem"));
+    ribbonLive_->pen   = new ComboBox(pen);
+    ribbonLive_->pen->setObjectName(QStringLiteral("ribbonPen"));
+    ribbonLive_->pen->setControlSize(ControlSize::Compact);
+    ribbonLive_->pen->setFixedWidth(150);
+    ribbonLive_->pen->setAccessibleName(tr("Sayısallaştırma kalemi"));
+    ribbonLive_->pen->setToolTip(
+        tr("Sayısallaştırma kalemi: Bina, Yol ekseni, Parsel… Birini seçince katmanı ve alanları "
+           "kurulur, etkin olur ve çizdiğiniz nesne sınıfın varsayılanlarıyla başlar (KALEM)."));
+    connect(ribbonLive_->pen, &QComboBox::activated, this, [this](int index) {
+        const QString id = ribbonLive_->pen->itemData(index).toString();
+        if (!id.isEmpty())
+            controller_->runLine(QStringLiteral("KALEM \"%1\"").arg(id), command::Origin::Gui);
+    });
+    pen->addSmallWidget(ribbonLive_->pen);
+    auto* penBind = new QAction(tr("Seçimi bağla"), this);
+    penBind->setObjectName(QStringLiteral("ribbonPenBind"));
+    penBind->setData(static_cast<int>(Glyph::Attach));
+    penBind->setToolTip(
+        tr("Seçili nesneleri kalemdeki sınıfa bağlar: katmana alır, varsayılanları doldurur; "
+           "uymayanları atlar (KALEMBAĞLA)"));
+    connect(penBind, &QAction::triggered, this, [this] {
+        const QString id = ribbonLive_->pen->currentData().toString();
+        if (id.isEmpty()) {
+            onEcho(tr("Önce bir kalem seçin; sonra seçilen nesneler o sınıfa bağlanır."));
+            return;
+        }
+        controller_->runLine(QStringLiteral("KALEMBAĞLA ad=\"%1\"").arg(id), command::Origin::Gui);
+    });
+    auto* penCheck = new QAction(tr("Sınıfı denetle"), this);
+    penCheck->setObjectName(QStringLiteral("ribbonPenCheck"));
+    penCheck->setData(static_cast<int>(Glyph::Check));
+    penCheck->setToolTip(tr("Bir sınıfı izleyen katmanlardaki nesnelerin hâlâ sınıfın dediği gibi "
+                            "olup olmadığına bakar (KALEMDENETİM)"));
+    connect(penCheck, &QAction::triggered, this,
+            [this] { controller_->runLine(QStringLiteral("KALEMDENETİM"), command::Origin::Gui); });
+    rows(pen, {penBind, penCheck});
 
     SARibbonPanel* sources = mapTab->addPanel(tr("Veri"));
     leads(sources, {actDatabase_});
@@ -2280,6 +2326,7 @@ void MainWindow::refreshRibbon()
 {
     if (ribbonLive_->layer == nullptr) return;
     refreshLayerBox();
+    refreshPenBox();
     refreshColourBoxes();
     refreshRibbonDefaults();
     refreshContextTabs();
@@ -2321,6 +2368,48 @@ void MainWindow::refreshLayerBox()
     }
     box->setRows(rows, shown, tr("farklı katmanlar"));
     box->setProperty("state", any ? QStringLiteral("derived") : QString());
+}
+
+void MainWindow::refreshPenBox()
+{
+    ComboBox* box = ribbonLive_->pen;
+    if (box == nullptr) return;
+    const auto catalog = controller_->bus().feature_classes();
+    const QSignalBlocker quiet(box);
+
+    // FILLED ONLY WHEN THE PACKAGE CHANGED: this runs after every command, and the list is the
+    // package's, not the drawing's.
+    if (catalog.get() != ribbonLive_->penPackage) {
+        ribbonLive_->penPackage = catalog.get();
+        box->clear();
+        box->addItem(catalog != nullptr ? tr("Kalem seçin…") : tr("Kalem kataloğu yok"), QString());
+        if (catalog != nullptr)
+            for (const command::FeatureClass& c : catalog->classes) {
+                box->addItem(
+                    tr("%1 — %2").arg(QString::fromStdString(c.name),
+                                      QString::fromUtf8(command::class_geometry_noun(c.geometry))),
+                    QString::fromStdString(c.id));
+                box->setItemData(box->count() - 1,
+                                 QString::fromStdString(c.summary) + QStringLiteral("\n") +
+                                     tr("Katman: %1").arg(QString::fromStdString(c.layer)),
+                                 Qt::ToolTipRole);
+            }
+        else
+            box->setToolTip(QString::fromStdString(controller_->bus().feature_classes_error()));
+    }
+    box->setEnabled(catalog != nullptr);
+
+    // THE CLASS THE ACTIVE LAYER FOLLOWS, or none.
+    int shown = 0;
+    if (catalog != nullptr) {
+        const core::Layer* active =
+            controller_->document().layer(controller_->bus().active_layer());
+        if (active != nullptr)
+            if (const command::FeatureClass* c = catalog->of_reference(active->feature_class);
+                c != nullptr)
+                shown = std::max(0, box->findData(QString::fromStdString(c->id)));
+    }
+    box->setCurrentIndex(shown);
 }
 
 void MainWindow::refreshColourBoxes()

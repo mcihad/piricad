@@ -30,6 +30,7 @@ add_library(piricad_command STATIC
     src/value.cpp
     src/drawing_catalogs.cpp
     src/expression.cpp
+    src/feature_classes.cpp
     src/samples.cpp
     src/dynamic_entry.cpp
     src/commands/block.cpp
@@ -49,6 +50,7 @@ add_library(piricad_command STATIC
     src/commands/layer_state.cpp
     src/commands/sample.cpp
     src/commands/attribute_calc.cpp
+    src/commands/feature_class.cpp
     src/commands/layer_visibility.cpp
     src/commands/layout.cpp
     src/commands/area.cpp

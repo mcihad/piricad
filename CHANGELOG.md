@@ -6,6 +6,43 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — şema bilen sayısallaştırma kalemleri (G-04)
+
+- **Sınıf = veri paketi.** Bir sayısallaştırma sınıfı ("Bina", "Yol ekseni", "Parsel", "Dere"…) geometri türünü
+  (nokta, açık çizgi, kapalı alan), katmanını, taşıdığı alanları (tür, başlangıç değeri, izinli değerler, zorunluluk),
+  gösterimini ve iki büyüklük sınırını birlikte söyler. Tanımlar `data/catalogs/cad/kalem-katalogu.json` içindedir
+  (şema `kalem-katalogu.schema.json`, yedi **örnek** sınıf; hiçbir yönetmelik atfı taşımaz) ve `core.kalem.katalog`
+  ayarıyla kurumun kendi paketine çevrilir; dosya değişince bir sonraki komut yeni sürümü okur. Çalışmayacak bir
+  tanım (bilinmeyen tür, türün okuyamadığı ya da kendi seçeneklerinin dışındaki varsayılan, bir katmanı paylaşan iki
+  sınıf, kötü renk) yüklenirken sınıfı ve alanı adıyla reddedilir.
+- **`KALEM [sınıf]`** (`core.feature_class`): argümansız sınıfları sayar; bir sınıf adıyla katmanı (renk, kalınlık, alan
+  dolgusu bir sembol katmanı olarak, katman ağacındaki yer), sınıfın sütunlarını kurar, katmanı sınıfı izler yapar ve
+  etkinleştirir. Birkaç sınıfın taşıdığı alan baştan projenin sütunudur; bir sınıfa özel alan o katmana özeldir; türü
+  uymayan mevcut sütun ilk değişiklikten **önce** reddedilir.
+- **Çizilen şey anlamlı kayıttır — her istemci için.** Sınıf katmanına gelen nesne (çizilen ya da taşınan), komut hangisi
+  olursa olsun, boş hücrelerine sınıfın başlangıç değerlerini alır; **sınıfın geometrisinde olmayan nesne bütün komutla
+  birlikte reddedilir** (bina katmanında açık çizgi). Yazılmış değerin üstüne yazılmaz, başlangıç değeri olmayan alan boş
+  kalır (sıfır olmaz). Zorunlu alan, en küçük alan/uzunluk ve izinli değerler çizimde sorulmaz (parsel numarası sonra
+  gelir), denetlenirken sorulur.
+- **`KALEMBAĞLA ad= [nesneler=|katman=|seçim] [esle=eski:alan] [onizle=evet]`** (`core.feature_class_bind`): var olan CAD
+  nesnelerini sınıfa bağlar — katmana alır, eski sütunun değerini sınıfın alanına taşır (aynı tür ya da metin alanı),
+  boşları doldurur. **Önizleme hiçbir şey yazmaz** (katman, sütun, taşıma yok). Geometrisi uymayan ve kilitli katmandaki
+  nesne atlanır **ve tür adıyla sayılır**; tek geri alma adımı.
+- **`KALEMDENETİM [ad=] [katman=] [sec=evet]`** (`core.feature_class_check`): sınıf izleyen katmanlardaki nesnelere
+  sınıfın kurallarını sorar — geometri, çok küçük/kısa, eksik zorunlu değer, listede olmayan değer, silinmiş sütun — ve
+  sorunlu nesneleri isteğe bağlı seçer; hiçbir şey değiştirmez.
+- **Dosya:** katman hangi paketin hangi sürümünün hangi sınıfını izlediğini saklar (`Layer::feature_class`, isteğe
+  bağlı `0x0023` bloğu; sınıf kullanmayan dosya eskisiyle bayt bayt aynı, belge parmak izi yalnız set edilince değişir).
+  Üç fuzz tohumu (geçerli, bozuk dizin, eksik satır).
+- **Arayüz:** Harita sekmesinde **Kalem** paneli — paketin sınıflarını sayan liste (etkin katmanın sınıfını gösterir),
+  **Seçimi bağla** ve **Sınıfı denetle**; katman özellik panelinde salt okunur `sinif` satırı. Giriş ve Çizim sekmeleri
+  en dar pencereye zaten tam sığdığı için panel Harita'dadır (`ci-gate-serit` 0 bulgu).
+- Belgeler: `komutlar/feature_class.md`, `feature_class_bind.md`, `feature_class_check.md` (yeni), `baslangic/kalemle-sayisallastirma.md`,
+  `veri/kalem-katalogu.md`, `komutlar/layer.md`, sözlük. Kanıt: `test_feature_class.cpp` (paket, KALEM, varsayılanlar,
+  reddedilen şekil, ortak alan, çakışan katman, KALEMBAĞLA önizleme/eşleme/kilit, KALEMDENETİM, komut satırı = betik = oynatma,
+  dosya gidiş-dönüşü, tohumlar), `ci-gate-kalem` (`PIRICAD_KALEM_PROBE`, gerçek pencere), kareler `docs/komutlar/kalem-*.png`.
+  CLAUDE.md değişmedi; `.claude/command.md` R36, `model.md` R48, `data.md` R19, `ui.md` R57.
+
 ### Eklendi — alan hesaplayıcı, tek ifade motoru ve bir milyon satırlık tablo (G-03)
 
 - **`ÖZNİTELİKHESAPLA ad= ifade= [katman=] [filtre=] [onizle=] [nesneler=]`** (`core.attribute_calc`): bir ifadeyi

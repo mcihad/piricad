@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "package_version": "0.1.0",
+  "id": "piricad-ornek-kalemler",
+  "source": "PiriCAD örnek sayısallaştırma sınıfları — bir kurum tanımı ya da mevzuat metni DEĞİLDİR; kurumunuzun kendi paketinin nasıl yazılacağını gösterir",
+  "published": "2026-10-03",
+  "licence": "GPL-3.0-or-later",
+  "aciklama": "Haritacıların sayısallaştırırken en sık kullandığı yedi sınıf: bina, yol ekseni, parsel, dere, direk, ağaç ve çit. Hiçbirinde bir yönetmelik atfı yoktur; kodlar ve alan adları örnektir. Kurumunuzun sınıfları için bu dosyayı kopyalayıp `core.kalem.katalog` ayarına yolunu verin.",
+  "kapsam": {
+    "durum": "örnek",
+    "onay": "Uzman onayı yok ve istenmedi: bu paket mevzuat iddiası taşımaz. BÖHHBÜY ya da MPYY kodlarına bağlı gerçek sınıf paketleri ayrı birer veri paketidir ve harita mühendisi / şehir plancısı onayıyla gelir (CLAUDE.md 6.11)."
+  },
+  "siniflar": [
+    {
+      "id": "bina",
+      "ad": "Bina",
+      "adlar": ["BINA", "BUILDING", "BNA"],
+      "ozet": "Bir yapının zemindeki oturum alanı; kapalı bir alan.",
+      "geometri": "alan",
+      "katman": {
+        "ad": "BINA",
+        "grup": "TOPOGRAFYA > YAPI",
+        "renk": "#7A4A1C",
+        "kalinlik_mm": 0.35,
+        "dolgu": "#7A4A1C30",
+        "aciklama": "Bina oturum alanları"
+      },
+      "alanlar": [
+        { "kimlik": "sinif_kodu", "ad": "Sınıf kodu", "tur": "metin", "varsayilan": "BNA" },
+        { "kimlik": "bina_no", "ad": "Bina no", "tur": "tam_sayi" },
+        { "kimlik": "kat_sayisi", "ad": "Kat sayısı", "tur": "tam_sayi", "varsayilan": "1" },
+        { "kimlik": "yapi_turu", "ad": "Yapı türü", "tur": "metin", "varsayilan": "Betonarme",
+          "secenekler": ["Betonarme", "Yığma", "Çelik", "Ahşap", "Diğer"] }
+      ],
+      "dogrulama": { "en_az_alan_m2": 4.0 }
+    },
+    {
+      "id": "yol_ekseni",
+      "ad": "Yol ekseni",
+      "adlar": ["YOL", "YOLEKSENI", "ROAD", "ROADCENTRELINE"],
+      "ozet": "Bir yolun orta çizgisi; açık bir çizgi.",
+      "geometri": "cizgi",
+      "katman": {
+        "ad": "YOL_EKSENI",
+        "grup": "TOPOGRAFYA > ULAŞIM",
+        "renk": "#444444",
+        "kalinlik_mm": 0.25,
+        "aciklama": "Yol eksen çizgileri"
+      },
+      "alanlar": [
+        { "kimlik": "sinif_kodu", "ad": "Sınıf kodu", "tur": "metin", "varsayilan": "YOL" },
+        { "kimlik": "yol_adi", "ad": "Yol adı", "tur": "metin" },
+        { "kimlik": "yol_sinifi", "ad": "Yol sınıfı", "tur": "metin", "varsayilan": "Mahalle yolu",
+          "secenekler": ["Otoyol", "Ana arter", "Toplayıcı yol", "Mahalle yolu", "Servis yolu"] }
+      ],
+      "dogrulama": { "en_az_uzunluk_m": 1.0 }
+    },
+    {
+      "id": "parsel",
+      "ad": "Parsel",
+      "adlar": ["PARSEL", "PARCEL", "PRS"],
+      "ozet": "Bir taşınmazın sınırı; kapalı bir alan.",
+      "geometri": "alan",
+      "katman": {
+        "ad": "PARSEL",
+        "grup": "KADASTRO",
+        "renk": "#B22222",
+        "kalinlik_mm": 0.3,
+        "aciklama": "Parsel sınırları"
+      },
+      "alanlar": [
+        { "kimlik": "sinif_kodu", "ad": "Sınıf kodu", "tur": "metin", "varsayilan": "PRS" },
+        { "kimlik": "ada", "ad": "Ada", "tur": "tam_sayi", "zorunlu": true },
+        { "kimlik": "parsel", "ad": "Parsel", "tur": "tam_sayi", "zorunlu": true },
+        { "kimlik": "nitelik", "ad": "Nitelik", "tur": "metin" }
+      ],
+      "dogrulama": { "en_az_alan_m2": 1.0 }
+    },
+    {
+      "id": "dere",
+      "ad": "Dere",
+      "adlar": ["DERE", "STREAM", "DRN"],
+      "ozet": "Bir akarsuyun ekseni; açık bir çizgi.",
+      "geometri": "cizgi",
+      "katman": {
+        "ad": "DERE",
+        "grup": "TOPOGRAFYA > SU",
+        "renk": "#1F6FB5",
+        "kalinlik_mm": 0.3,
+        "aciklama": "Dere ve akarsu eksenleri"
+      },
+      "alanlar": [
+        { "kimlik": "sinif_kodu", "ad": "Sınıf kodu", "tur": "metin", "varsayilan": "DRE" },
+        { "kimlik": "dere_adi", "ad": "Dere adı", "tur": "metin" },
+        { "kimlik": "akis", "ad": "Akış", "tur": "metin", "varsayilan": "Sürekli",
+          "secenekler": ["Sürekli", "Mevsimlik"] }
+      ],
+      "dogrulama": { "en_az_uzunluk_m": 1.0 }
+    },
+    {
+      "id": "direk",
+      "ad": "Direk",
+      "adlar": ["DIREK", "POLE", "DRK"],
+      "ozet": "Bir enerji ya da aydınlatma direği; tek nokta.",
+      "geometri": "nokta",
+      "katman": {
+        "ad": "DIREK",
+        "grup": "TOPOGRAFYA > ALTYAPI",
+        "renk": "#7B2D8E",
+        "aciklama": "Direkler"
+      },
+      "alanlar": [
+        { "kimlik": "sinif_kodu", "ad": "Sınıf kodu", "tur": "metin", "varsayilan": "DRK" },
+        { "kimlik": "direk_no", "ad": "Direk no", "tur": "metin" },
+        { "kimlik": "direk_turu", "ad": "Direk türü", "tur": "metin", "varsayilan": "Aydınlatma",
+          "secenekler": ["Aydınlatma", "Enerji", "Telefon"] },
+        { "kimlik": "direk_yuksekligi", "ad": "Yükseklik", "tur": "uzunluk" }
+      ]
+    },
+    {
+      "id": "agac",
+      "ad": "Ağaç",
+      "adlar": ["AGAC", "TREE", "AGC"],
+      "ozet": "Tek bir ağaç; tek nokta.",
+      "geometri": "nokta",
+      "katman": {
+        "ad": "AGAC",
+        "grup": "TOPOGRAFYA > BİTKİ",
+        "renk": "#2E7D32",
+        "aciklama": "Ağaçlar"
+      },
+      "alanlar": [
+        { "kimlik": "sinif_kodu", "ad": "Sınıf kodu", "tur": "metin", "varsayilan": "AGC" },
+        { "kimlik": "agac_turu", "ad": "Tür", "tur": "metin" },
+        { "kimlik": "govde_capi", "ad": "Gövde çapı", "tur": "uzunluk" }
+      ]
+    },
+    {
+      "id": "cit",
+      "ad": "Çit",
+      "adlar": ["CIT", "FENCE", "DUVAR", "CT"],
+      "ozet": "Çit ya da duvar; açık bir çizgi.",
+      "geometri": "cizgi",
+      "katman": {
+        "ad": "CIT",
+        "grup": "TOPOGRAFYA > YAPI",
+        "renk": "#8D6E63",
+        "kalinlik_mm": 0.2,
+        "aciklama": "Çit ve duvarlar"
+      },
+      "alanlar": [
+        { "kimlik": "sinif_kodu", "ad": "Sınıf kodu", "tur": "metin", "varsayilan": "CIT" },
+        { "kimlik": "cit_turu", "ad": "Tür", "tur": "metin", "varsayilan": "Tel örgü",
+          "secenekler": ["Tel örgü", "Duvar", "Ahşap", "Demir korkuluk"] }
+      ],
+      "dogrulama": { "en_az_uzunluk_m": 0.5 }
+    }
+  ]
+}

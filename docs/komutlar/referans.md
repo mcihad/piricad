@@ -109,6 +109,9 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.sample`](sample.md) | Örnek Proje | `ÖRNEKPROJE`, `ORNEKPROJE`, `SAMPLE`, `ÖRNEK`, `ORNEK` | Dosya | komuta özel | etkileşimli, betiklenebilir, salt okunur | Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, aplikasyon) boş bir çizim olarak açar ve ne deneyeceğinizi söyler. |
 | [`core.source`](source.md) | Kaynak Bilgisi | `KAYNAK`, `KAYNAKBİLGİ`, `KAYNAKBILGI`, `SOURCE`, `KYN` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır. |
 | [`core.attribute_calc`](attribute_calc.md) | Alan Hesaplayıcı | `ÖZNİTELİKHESAPLA`, `OZNITELIKHESAPLA`, `ALANHESAPLA`, `FIELDCALC`, `ÖHESAPLA`, `OHESAPLA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek geri alma adımı, önizlemesi ve değişim özetiyle. |
+| [`core.feature_class`](feature_class.md) | Sayısallaştırma Kalemi | `KALEM`, `SINIF`, `PEN`, `FEATURECLASS`, `KLM` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Sayısallaştırma sınıfını (kalemi) seçer: katmanı ve alanlarını kurar, etkin yapar; çizilen nesne sınıfın varsayılanlarıyla başlar. |
+| [`core.feature_class_bind`](feature_class_bind.md) | Nesneleri Sınıfa Bağla | `KALEMBAĞLA`, `KALEMBAGLA`, `SINIFABAĞLA`, `BINDCLASS`, `KLB` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan CAD nesnelerini bir sayısallaştırma sınıfına bağlar: katmana alır, alanları eşler, varsayılanları doldurur; önizlemesi ve tek geri alma adımı vardır. |
+| [`core.feature_class_check`](feature_class_check.md) | Sınıf Denetimi | `KALEMDENETİM`, `KALEMDENETIM`, `SINIFDENETİM`, `CHECKCLASS`, `KLD` | Sorgu | tek işlem | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Bir sınıfı izleyen katmanlardaki nesnelerin hâlâ sınıfın dediği gibi olup olmadığına bakar: geometri, en küçük alan/uzunluk, zorunlu ve izinli değerler. |
 | [`core.layout`](layout.md) | Çıktı Yerleşimi | `ÇIKTIYERLEŞİMİ`, `CIKTIYERLESIMI`, `LAYOUT`, `ÇYR`, `CYR` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`core.layout_item`](layout_item.md) | Çıktı Öğesi | `ÇIKTIÖĞE`, `CIKTIOGE`, `LAYOUTITEM`, `ÇÖĞ`, `COG` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`core.layout_template`](layout_template.md) | Çıktı Şablonu | `ÇIKTIŞABLON`, `CIKTISABLON`, `LAYOUTTEMPLATE`, `ÇŞB`, `CSB` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
@@ -1625,6 +1628,42 @@ Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek 
 | `nesneler` | selection | en az 0 | Yalnız bu nesnelerin kalıcı kimlikleri; verilirse katman ve seçim yok sayılır |
 
 Ayrıntılı kullanım: [ÖZNİTELİKHESAPLA](attribute_calc.md)
+
+### `core.feature_class` — KALEM (Sayısallaştırma Kalemi)
+
+Sayısallaştırma sınıfını (kalemi) seçer: katmanı ve alanlarını kurar, etkin yapar; çizilen nesne sınıfın varsayılanlarıyla başlar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | isteğe bağlı | Sınıfın kimliği, adı ya da kısaltması (Bina, Yol ekseni, Parsel…); boşsa sınıflar listelenir |
+
+Ayrıntılı kullanım: [KALEM](feature_class.md)
+
+### `core.feature_class_bind` — KALEMBAĞLA (Nesneleri Sınıfa Bağla)
+
+Var olan CAD nesnelerini bir sayısallaştırma sınıfına bağlar: katmana alır, alanları eşler, varsayılanları doldurur; önizlemesi ve tek geri alma adımı vardır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | 1 | Bağlanacağı sınıfın kimliği ya da adı |
+| `nesneler` | selection | en az 0 | Bağlanacak nesnelerin kalıcı kimlikleri; verilmezse katman, o da yoksa seçim |
+| `katman` | text | isteğe bağlı | Bu katmanın bütün nesneleri bağlanır (nesneler verilmediyse) |
+| `esle` | text | en az 0 | Bir sütunun değerini sınıfın alanına taşır: 'eski_sutun:sinif_alani' (aynı türde ya da metin alanına); birden çok kez verilebilir |
+| `onizle` | bool | isteğe bağlı | Hiçbir şey yazma: neyin bağlanacağını ve neyin uymadığını söyle; varsayılan hayır |
+
+Ayrıntılı kullanım: [KALEMBAĞLA](feature_class_bind.md)
+
+### `core.feature_class_check` — KALEMDENETİM (Sınıf Denetimi)
+
+Bir sınıfı izleyen katmanlardaki nesnelerin hâlâ sınıfın dediği gibi olup olmadığına bakar: geometri, en küçük alan/uzunluk, zorunlu ve izinli değerler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | isteğe bağlı | Yalnız bu sınıfın katmanı; verilmezse sınıf izleyen bütün katmanlar |
+| `katman` | text | isteğe bağlı | Yalnız bu katman |
+| `sec` | bool | isteğe bağlı | evet = sorunlu nesneleri seç; varsayılan hayır |
+
+Ayrıntılı kullanım: [KALEMDENETİM](feature_class_check.md)
 
 ### `core.layout` — ÇIKTIYERLEŞİMİ (Çıktı Yerleşimi)
 
@@ -7195,6 +7234,162 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "KAPSAMDENETIM",
         "EXTENTCHECK",
         "KPD"
+      ]
+    }
+  },
+  {
+    "name": "core_feature_class",
+    "title": "Sayısallaştırma Kalemi",
+    "description": "Sayısallaştırma sınıfını (kalemi) seçer: katmanı ve alanlarını kurar, etkin yapar; çizilen nesne sınıfın varsayılanlarıyla başlar.\nKomut: KALEM (SINIF, PEN, FEATURECLASS, KLM)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ad": {
+          "type": "string",
+          "description": "Sınıfın kimliği, adı ya da kısaltması (Bina, Yol ekseni, Parsel…); boşsa sınıflar listelenir (metin)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.piricad/commandId": "core.feature_class",
+      "cad.piricad/category": "Katman",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
+        "KALEM",
+        "SINIF",
+        "PEN",
+        "FEATURECLASS",
+        "KLM"
+      ]
+    }
+  },
+  {
+    "name": "core_feature_class_bind",
+    "title": "Nesneleri Sınıfa Bağla",
+    "description": "Var olan CAD nesnelerini bir sayısallaştırma sınıfına bağlar: katmana alır, alanları eşler, varsayılanları doldurur; önizlemesi ve tek geri alma adımı vardır.\nKomut: KALEMBAĞLA (KALEMBAGLA, SINIFABAĞLA, BINDCLASS, KLB)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ad": {
+          "type": "string",
+          "description": "Bağlanacağı sınıfın kimliği ya da adı (metin)"
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bağlanacak nesnelerin kalıcı kimlikleri; verilmezse katman, o da yoksa seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Bu katmanın bütün nesneleri bağlanır (nesneler verilmediyse) (metin)"
+        },
+        "esle": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bir sütunun değerini sınıfın alanına taşır: 'eski_sutun:sinif_alani' (aynı türde ya da metin alanına); birden çok kez verilebilir (metin)"
+        },
+        "onizle": {
+          "type": "boolean",
+          "description": "Hiçbir şey yazma: neyin bağlanacağını ve neyin uymadığını söyle; varsayılan hayır (evet/hayır)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [
+        "ad"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.piricad/commandId": "core.feature_class_bind",
+      "cad.piricad/category": "Katman",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
+        "KALEMBAĞLA",
+        "KALEMBAGLA",
+        "SINIFABAĞLA",
+        "BINDCLASS",
+        "KLB"
+      ]
+    }
+  },
+  {
+    "name": "core_feature_class_check",
+    "title": "Sınıf Denetimi",
+    "description": "Bir sınıfı izleyen katmanlardaki nesnelerin hâlâ sınıfın dediği gibi olup olmadığına bakar: geometri, en küçük alan/uzunluk, zorunlu ve izinli değerler.\nKomut: KALEMDENETİM (KALEMDENETIM, SINIFDENETİM, CHECKCLASS, KLD)\nBu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ad": {
+          "type": "string",
+          "description": "Yalnız bu sınıfın katmanı; verilmezse sınıf izleyen bütün katmanlar (metin)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Yalnız bu katman (metin)"
+        },
+        "sec": {
+          "type": "boolean",
+          "description": "evet = sorunlu nesneleri seç; varsayılan hayır (evet/hayır)"
+        },
+        "varsayimlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "description": "Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.piricad/commandId": "core.feature_class_check",
+      "cad.piricad/category": "Sorgu",
+      "cad.piricad/approval": "policy",
+      "cad.piricad/names": [
+        "KALEMDENETİM",
+        "KALEMDENETIM",
+        "SINIFDENETİM",
+        "CHECKCLASS",
+        "KLD"
       ]
     }
   },

@@ -286,6 +286,11 @@ yürütülmesi. Betikler böyle çalışır.
 **Öznitelik** — Bir katmanın veya dokümanın sayısal olmayan özellikleri; **Öznitelikler**
 panelinde görünür.
 
+**Kalem (sayısallaştırma sınıfı)** — Çizilen bir şeyin geometri türünü (nokta, açık çizgi, kapalı
+alan), katmanını, alanlarını ve başlangıç değerlerini, gösterimini ve denetimlerini birlikte
+söyleyen tanım: "Bina", "Yol ekseni". Tanımlar bir veri paketindedir; `KALEM` seçer. Bkz.
+[KALEM](komutlar/feature_class.md), [Kalem kataloğu](veri/kalem-katalogu.md).
+
 **İfade** — Bir satırın değerini ya da bir süzgecin evet/hayır cevabını veren yazı:
 `"alan_m2" > 2000`, `round($alan, 2)`. Süzme çubuğunda ve alan hesaplayıcıda aynı dille yazılır. Bkz. [İfade dili](veri/ifade-dili.md).
 

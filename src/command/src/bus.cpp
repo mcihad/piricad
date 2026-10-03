@@ -3,6 +3,7 @@
 
 #include <cmath>
 
+#include "piricad/command/feature_classes.hpp"
 #include "piricad/command/job.hpp"
 #include "piricad/command/log.hpp"
 #include "piricad/command/parser.hpp"
@@ -959,6 +960,17 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     // it, and that is said, because a deletion the user did not name is the one
     // thing here they should hear about.
     if (!read_only) {
+        // THE FEATURE CLASSES come first: an object drawn on a class layer is given its defaults,
+        // or the whole command is refused because the object is not what the class says (TODOS
+        // G-04). For every client alike — the rule belongs to the layer, not to who drew on it.
+        if (const auto classes = feature_classes(); classes != nullptr) {
+            auto settled = settle_feature_classes(session.transaction(), mark, *classes);
+            if (!settled) {
+                session.transaction().rollback_to(mark); // no partial application, ever (§2.5)
+                cut_back(session.tail_at_start(), session.active_layer_at_start());
+                return settled.error();
+            }
+        }
         // A TEXT'S BOX IS ITS WORDS, whatever edit touched it (TODOS C-18) —
         // first, so a caption that follows it reads the baseline it will keep.
         session.transaction().settle_texts();

@@ -78,8 +78,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 128 (112 tanesi onay ister)
-- Katalog parmak izi: `9794827268329005283`
+- Araç sayısı: 131 (115 tanesi onay ister)
+- Katalog parmak izi: `7252240921964416292`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -857,6 +857,51 @@ Doğrudan çalışır.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
+
+### `core_feature_class` — Sayısallaştırma Kalemi
+
+Sayısallaştırma sınıfını (kalemi) seçer: katmanı ve alanlarını kurar, etkin yapar; çizilen nesne sınıfın varsayılanlarıyla başlar.
+Komut: KALEM (SINIF, PEN, FEATURECLASS, KLM)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `ad` | string | hayır | Sınıfın kimliği, adı ya da kısaltması (Bina, Yol ekseni, Parsel…); boşsa sınıflar listelenir (metin) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_feature_class_bind` — Nesneleri Sınıfa Bağla
+
+Var olan CAD nesnelerini bir sayısallaştırma sınıfına bağlar: katmana alır, alanları eşler, varsayılanları doldurur; önizlemesi ve tek geri alma adımı vardır.
+Komut: KALEMBAĞLA (KALEMBAGLA, SINIFABAĞLA, BINDCLASS, KLB)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `ad` | string | evet | Bağlanacağı sınıfın kimliği ya da adı (metin) |
+| `nesneler` | string | hayır | Bağlanacak nesnelerin kalıcı kimlikleri; verilmezse katman, o da yoksa seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `katman` | string | hayır | Bu katmanın bütün nesneleri bağlanır (nesneler verilmediyse) (metin) |
+| `esle` | array | hayır | Bir sütunun değerini sınıfın alanına taşır: 'eski_sutun:sinif_alani' (aynı türde ya da metin alanına); birden çok kez verilebilir (metin) |
+| `onizle` | boolean | hayır | Hiçbir şey yazma: neyin bağlanacağını ve neyin uymadığını söyle; varsayılan hayır (evet/hayır) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
+
+### `core_feature_class_check` — Sınıf Denetimi
+
+Bir sınıfı izleyen katmanlardaki nesnelerin hâlâ sınıfın dediği gibi olup olmadığına bakar: geometri, en küçük alan/uzunluk, zorunlu ve izinli değerler.
+Komut: KALEMDENETİM (KALEMDENETIM, SINIFDENETİM, CHECKCLASS, KLD)
+Bu araç bir öneri kaydı açar ve komut satırlarını döndürür. Öneri, kullanıcının önceden seçtiği onay politikasına göre ya hemen uygulanır ya da bilgisayar başındaki mühendisin onayını bekler; yanıttaki `durum` hangisinin olduğunu söyler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `ad` | string | hayır | Yalnız bu sınıfın katmanı; verilmezse sınıf izleyen bütün katmanlar (metin) |
+| `katman` | string | hayır | Yalnız bu katman (metin) |
+| `sec` | boolean | hayır | evet = sorunlu nesneleri seç; varsayılan hayır (evet/hayır) |
+| `varsayimlar` | array | hayır | Bu çağrıyı hazırlarken yaptığın varsayımlar, her biri tek cümle: seçtiğin bir öntanımlı değer, belirsiz bir isteği nasıl okuduğun. Komuta gitmez; kullanıcıya gösterilir ve denetim kaydına yazılır. Varsayım yapmadıysan boş bırak. |
 
 ### `core_fillet` — Yuvarla
 

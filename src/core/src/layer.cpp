@@ -188,6 +188,9 @@ std::uint64_t LayerTable::fold(std::uint64_t seed) const
         // reinterpreted).
         if (!l.selectable) h = fnv1a_int(2, h);
         if (l.viewonly) h = fnv1a_int(3, h); // a view of a source is content too (TODOS G-02)
+        // The class a layer follows is content, and is folded only when set so that every document
+        // that never named one keeps the fingerprint it had (TODOS G-04).
+        if (!l.feature_class.empty()) h = fnv1a(l.feature_class, fnv1a_int(4, h));
         h = fold_appearance(l.appearance, h);
         // The zero sentinel predates full layer symbols. Leaving it out preserves
         // every legacy document fingerprint; a real layer symbol is content and

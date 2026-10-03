@@ -111,8 +111,9 @@ TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
     // last command (`core.arayuz.son_komut`, netcad_plan.md U-01) and the
     // extent check's threshold (`core.denetim.kopukluk_carpani`, N-01), and the
     // two that say whether a locked layer takes a snap or a selection
-    // (`core.yakalama.kilitli_katman`, `core.secim.kilitli_katman`, TODOS U-03).
-    CHECK(cat.size() == 78);
+    // (`core.yakalama.kilitli_katman`, `core.secim.kilitli_katman`, TODOS U-03), and the
+    // digitising class package (`core.kalem.katalog`, TODOS G-04).
+    CHECK(cat.size() == 79);
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());
@@ -526,16 +527,16 @@ TEST_CASE("Aynı ad iki ayara verilemez")
 {
     SettingCatalog c = test_catalogue();
     auto clash       = c.add(SettingSpec{
-        .id       = "test.baska.sayi",
-        .names    = {"sayi"}, // already taken by test.proje.sayi
-        .type     = SettingType::Int,
-        .scope    = SettingScope::Project,
-        .fallback = SettingValue::integer(0),
-        .range    = SettingRange::unbounded(),
-        .values   = {},
-        .unit     = "",
-        .summary  = "Çakışan ad.",
-        .section  = "Sınama",
+              .id       = "test.baska.sayi",
+              .names    = {"sayi"}, // already taken by test.proje.sayi
+              .type     = SettingType::Int,
+              .scope    = SettingScope::Project,
+              .fallback = SettingValue::integer(0),
+              .range    = SettingRange::unbounded(),
+              .values   = {},
+              .unit     = "",
+              .summary  = "Çakışan ad.",
+              .section  = "Sınama",
     });
     CHECK(!clash.ok());
     CHECK(mentions(clash.error().message, "test.proje.sayi"));

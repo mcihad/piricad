@@ -271,6 +271,9 @@ public:
 
     /// Moves a layer in the layer tree. An empty path puts it at the root.
     Status set_layer_group(LayerId l, std::string group);
+
+    /// Names the feature class a layer follows; empty releases it (TODOS G-04).
+    Status set_layer_feature_class(LayerId l, std::string feature_class);
     Status set_entity_style(EntityId e, StyleId style);
 
     Status set_entity_hidden(EntityId e, bool hidden);

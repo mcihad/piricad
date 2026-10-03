@@ -37,6 +37,7 @@ std::string known_block_name(std::uint32_t id)
     case kBlkStyles: return "stiller";
     case kBlkSymbols: return "semboller";
     case kBlkLayerGroups: return "katman gruplari";
+    case kBlkLayerFeatureClasses: return "katman sinifi";
     case kBlkSymbolLayerFlags: return "sembol katmani bayraklari";
     case kBlkSymbolLayerText: return "sembol katmani yazilari";
     case kBlkImages: return "gorseller";

@@ -110,6 +110,9 @@ namespace piricad::command {
     X(sample)                                                                                      \
     X(source)                                                                                      \
     X(attribute_calc)                                                                              \
+    X(feature_class)                                                                               \
+    X(feature_class_bind)                                                                          \
+    X(feature_class_check)                                                                         \
     X(layout)                                                                                      \
     X(layout_item)                                                                                 \
     X(layout_template)                                                                             \

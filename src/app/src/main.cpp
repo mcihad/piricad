@@ -3399,6 +3399,13 @@ int main(int argc, char** argv)
         });
     }
 
+    // THE PEN IN THE REAL SHELL (TODOS G-04).
+    if (qEnvironmentVariableIsSet("PIRICAD_KALEM_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            QApplication::exit(window.probeFeatureClass() == 0 ? 0 : 1);
+        });
+    }
+
     // THE FIELD CALCULATOR WINDOW over a small parcel layer (TODOS G-03).
     if (qEnvironmentVariableIsSet("PIRICAD_CALC_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {

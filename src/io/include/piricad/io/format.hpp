@@ -217,6 +217,14 @@ enum BlockId : std::uint32_t {
     /// block whose element size disagrees with the type.
     kBlkLayerGroups = 0x0021, ///< u32[], index into kBlkStringSpans
 
+    /// Which feature class each layer follows (TODOS G-04), one string index per layer, the empty
+    /// string for a layer that follows none. OPTIONAL for the same reason the layer tree is: the
+    /// layer
+    /// record has nothing spare. The block is written only when some layer follows a class, so a
+    /// file
+    /// that never used one is byte-identical to what an earlier build wrote.
+    kBlkLayerFeatureClasses = 0x0023, ///< u32[], index into kBlkStringSpans
+
     /// The full default symbol for each layer. OPTIONAL: absent from older files
     /// means every layer falls back to its Appearance, which is what they stored.
     kBlkLayerStyles = 0x0022, ///< StyleId[], one row per layer

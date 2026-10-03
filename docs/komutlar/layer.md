@@ -202,6 +202,10 @@ aktif yapar. (Seçim varken aynı liste seçili nesneleri o katmana taşır; bkz
 [`KATMANAT`](set_layer.md).) Listenin altındaki **Etkin Yap** simgesi seçili nesnenin
 katmanını aktif yapar.
 
+Bir katman bir **sayısallaştırma sınıfını** izliyorsa ([KALEM](feature_class.md)), özellik panelinde
+katman kipinde `grup` satırının altında `sinif` satırı çıkar; o katmana çizilen nesne sınıfın
+başlangıç değerlerini alır ve sınıfın şeklinde olmak zorundadır.
+
 Yeni bir katmanı **Katmanlar** panelinin başlığındaki **+** açar; büyük **Katmanlar**
 düğmesi (**Giriş ▸ Katmanlar**, **Görünüm ▸ Katmanlar**) paneli gösterir.
 

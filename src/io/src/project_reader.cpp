@@ -416,6 +416,16 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         group_rows = rows.value();
     }
 
+    // Which feature class each layer follows. OPTIONAL: a file written before classes existed has
+    // no such block and every layer follows none, which is what that file meant.
+    std::span<const std::uint32_t> class_rows;
+    if (view.has(kBlkLayerFeatureClasses) && dr.layer_count > 0) {
+        auto rows =
+            view.column<std::uint32_t>(kBlkLayerFeatureClasses, dr.layer_count, "katman sinifi");
+        if (!rows) return rows.error();
+        class_rows = rows.value();
+    }
+
     std::span<const core::StyleId> layer_style_rows;
     if (view.has(kBlkLayerStyles) && dr.layer_count > 0) {
         auto rows = view.column<core::StyleId>(kBlkLayerStyles, dr.layer_count, "katman stilleri");
@@ -468,6 +478,14 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             if (!group) return group.error();
             if (live->group != group.value())
                 if (auto st = tx.set_layer_group(slot, group.value()); !st) return st.error();
+        }
+
+        if (!class_rows.empty()) {
+            auto followed = strings.at(class_rows[static_cast<std::size_t>(i)], "katman sınıfı");
+            if (!followed) return followed.error();
+            if (live->feature_class != followed.value())
+                if (auto st = tx.set_layer_feature_class(slot, followed.value()); !st)
+                    return st.error();
         }
 
         // Locking is deferred: a locked layer refuses new geometry, and the

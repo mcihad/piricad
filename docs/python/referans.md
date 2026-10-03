@@ -189,6 +189,9 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.sample`](#cadsample) | `core.sample` | `ÖRNEKPROJE` | Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, aplikasyon) boş bir çizim olarak açar ve ne deneyeceğinizi söyler. |
 | [`cad.source`](#cadsource) | `core.source` | `KAYNAK` | Bir veri kaynağının sürücüsünü, katmanlarını, kimliğini, sistemini, satır tahminini, kısıtlarını ve yeteneklerini içe almadan anlatır. |
 | [`cad.attribute_calc`](#cadattribute_calc) | `core.attribute_calc` | `ÖZNİTELİKHESAPLA` | Bir ifadeyi satırlar üzerinde hesaplayıp bir öznitelik sütununa yazar; tek geri alma adımı, önizlemesi ve değişim özetiyle. |
+| [`cad.feature_class`](#cadfeature_class) | `core.feature_class` | `KALEM` | Sayısallaştırma sınıfını (kalemi) seçer: katmanı ve alanlarını kurar, etkin yapar; çizilen nesne sınıfın varsayılanlarıyla başlar. |
+| [`cad.feature_class_bind`](#cadfeature_class_bind) | `core.feature_class_bind` | `KALEMBAĞLA` | Var olan CAD nesnelerini bir sayısallaştırma sınıfına bağlar: katmana alır, alanları eşler, varsayılanları doldurur; önizlemesi ve tek geri alma adımı vardır. |
+| [`cad.feature_class_check`](#cadfeature_class_check) | `core.feature_class_check` | `KALEMDENETİM` | Bir sınıfı izleyen katmanlardaki nesnelerin hâlâ sınıfın dediği gibi olup olmadığına bakar: geometri, en küçük alan/uzunluk, zorunlu ve izinli değerler. |
 | [`cad.layout`](#cadlayout) | `core.layout` | `ÇIKTIYERLEŞİMİ` | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`cad.layout_item`](#cadlayout_item) | `core.layout_item` | `ÇIKTIÖĞE` | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`cad.layout_template`](#cadlayout_template) | `core.layout_template` | `ÇIKTIŞABLON` | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
@@ -2847,6 +2850,72 @@ cad.attribute_calc(
 | `objects` | `list[int]` | `nesneler` | Yalnız bu nesnelerin kalıcı kimlikleri; verilirse katman ve seçim yok sayılır [kalıcı nesne anahtarı] |
 
 [Komut sayfası](../komutlar/attribute_calc.md)
+
+### `cad.feature_class`
+
+Sayısallaştırma sınıfını (kalemi) seçer: katmanı ve alanlarını kurar, etkin yapar; çizilen nesne sınıfın varsayılanlarıyla başlar.
+
+Komut: `core.feature_class` — `KALEM`
+
+```python
+cad.feature_class(
+    name: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `name` | `str` | `ad` | Sınıfın kimliği, adı ya da kısaltması (Bina, Yol ekseni, Parsel…); boşsa sınıflar listelenir |
+
+[Komut sayfası](../komutlar/feature_class.md)
+
+### `cad.feature_class_bind`
+
+Var olan CAD nesnelerini bir sayısallaştırma sınıfına bağlar: katmana alır, alanları eşler, varsayılanları doldurur; önizlemesi ve tek geri alma adımı vardır.
+
+Komut: `core.feature_class_bind` — `KALEMBAĞLA`
+
+```python
+cad.feature_class_bind(
+    name: str,
+    objects: list[int],
+    layer: str,
+    map: list[str],
+    preview: bool,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `name` | `str` | `ad` | Bağlanacağı sınıfın kimliği ya da adı |
+| `objects` | `list[int]` | `nesneler` | Bağlanacak nesnelerin kalıcı kimlikleri; verilmezse katman, o da yoksa seçim [kalıcı nesne anahtarı] |
+| `layer` | `str` | `katman` | Bu katmanın bütün nesneleri bağlanır (nesneler verilmediyse) |
+| `map` | `list[str]` | `esle` | Bir sütunun değerini sınıfın alanına taşır: 'eski_sutun:sinif_alani' (aynı türde ya da metin alanına); birden çok kez verilebilir |
+| `preview` | `bool` | `onizle` | Hiçbir şey yazma: neyin bağlanacağını ve neyin uymadığını söyle; varsayılan hayır |
+
+[Komut sayfası](../komutlar/feature_class_bind.md)
+
+### `cad.feature_class_check`
+
+Bir sınıfı izleyen katmanlardaki nesnelerin hâlâ sınıfın dediği gibi olup olmadığına bakar: geometri, en küçük alan/uzunluk, zorunlu ve izinli değerler.
+
+Komut: `core.feature_class_check` — `KALEMDENETİM`
+
+```python
+cad.feature_class_check(
+    name: str,
+    layer: str,
+    select: bool,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `name` | `str` | `ad` | Yalnız bu sınıfın katmanı; verilmezse sınıf izleyen bütün katmanlar |
+| `layer` | `str` | `katman` | Yalnız bu katman |
+| `select` | `bool` | `sec` | evet = sorunlu nesneleri seç; varsayılan hayır |
+
+[Komut sayfası](../komutlar/feature_class_check.md)
 
 ### `cad.layout`
 

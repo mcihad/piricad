@@ -348,6 +348,30 @@ PIRICAD_SETTING(tarama_desen_katalogu)
     };
 }
 
+PIRICAD_SETTING(kalem_katalogu)
+{
+    return SettingSpec{
+        .id    = "core.kalem.katalog",
+        .names = {"kalem_kataloğu", "kalem_katalogu", "feature_classes", "sınıflar"},
+        .type  = SettingType::Text,
+        .scope = SettingScope::App,
+        .fallback =
+            text_value("data/catalogs/cad/kalem-katalogu.json"), // catalog-key: a path into
+                                                                 // /data/catalogs, not a value
+        .range  = SettingRange::unbounded(),
+        .values = {},
+        .unit   = "",
+        .summary =
+            "KALEM, KALEMBAĞLA ve KALEMDENETİM komutlarının sayısallaştırma sınıflarını " // ui-label
+            "(Bina, Yol ekseni, Parsel…) aldığı katalog: her sınıfın geometrisi, "
+            "katmanı, alanları, varsayılanları ve denetimi bu dosyadandır. Kurumunuzun "
+            "kendi sınıfları için dosyayı kopyalayıp yolunu verin. Bu makinedeki bir "
+            "dosya yolu olduğu için uygulama ayarıdır; çizim yalnız katmanın hangi "
+            "sınıfı izlediğini saklar.",
+        .section = "Veri Kaynakları", // ui-label
+    };
+}
+
 PIRICAD_SETTING(olcu_stil_katalogu)
 {
     return SettingSpec{
@@ -357,15 +381,15 @@ PIRICAD_SETTING(olcu_stil_katalogu)
         .scope    = SettingScope::App,
         .fallback = text_value("data/catalogs/dxf/olcu-stili.json"), // catalog-key: a path into
                                                                      // /data/catalogs, not a value
-        .range    = SettingRange::unbounded(),
-        .values   = {},
-        .unit     = "",
-        .summary  = "ÖLÇÜ ve LİDER komutlarının ok boyunu, uzatma çizgilerini ve yazı " // ui-label
-                    "yüksekliğini aldığı ölçü stili kataloğu (ISO-25, STANDARD, MIMARI). "
-                    "Değerler kâğıt mikrometresidir ve plan ölçeğiyle zemine iner. Bu "
-                    "makinedeki bir dosya yolu olduğu için uygulama ayarıdır; ölçünün "
-                    "kendi sayıları çizimle birlikte nesnede saklanır.",
-        .section  = "Veri Kaynakları", // ui-label
+        .range   = SettingRange::unbounded(),
+        .values  = {},
+        .unit    = "",
+        .summary = "ÖLÇÜ ve LİDER komutlarının ok boyunu, uzatma çizgilerini ve yazı " // ui-label
+                   "yüksekliğini aldığı ölçü stili kataloğu (ISO-25, STANDARD, MIMARI). "
+                   "Değerler kâğıt mikrometresidir ve plan ölçeğiyle zemine iner. Bu "
+                   "makinedeki bir dosya yolu olduğu için uygulama ayarıdır; ölçünün "
+                   "kendi sayıları çizimle birlikte nesnede saklanır.",
+        .section = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -378,13 +402,13 @@ PIRICAD_SETTING(vektor_kutuphanesi)
         .scope    = SettingScope::App,
         .fallback = text_value(""), // catalog-key: a path into
                                     // /data/catalogs, not a value
-        .range    = SettingRange::unbounded(),
-        .values   = {},
-        .unit     = "",
-        .summary  = "Sistem sembol kitaplığının üstüne yüklenecek ek paketin yolu. " // ui-label
-                    "Aynı kimlikli semboller ek paketten alınır. Boş bırakılırsa yalnız "
-                    "ana kitaplık yüklenir. Bu makineye ait bir uygulama ayarıdır.",
-        .section  = "Veri Kaynakları", // ui-label
+        .range   = SettingRange::unbounded(),
+        .values  = {},
+        .unit    = "",
+        .summary = "Sistem sembol kitaplığının üstüne yüklenecek ek paketin yolu. " // ui-label
+                   "Aynı kimlikli semboller ek paketten alınır. Boş bırakılırsa yalnız "
+                   "ana kitaplık yüklenir. Bu makineye ait bir uygulama ayarıdır.",
+        .section = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -418,6 +442,7 @@ PIRICAD_SETTING(sembol_kutuphanesi);
 PIRICAD_SETTING(vektor_kutuphanesi);
 PIRICAD_SETTING(tarama_desen_katalogu);
 PIRICAD_SETTING(olcu_stil_katalogu);
+PIRICAD_SETTING(kalem_katalogu);
 PIRICAD_SETTING(veritabani_sunucu);
 PIRICAD_SETTING(veritabani_port);
 PIRICAD_SETTING(veritabani_ad);
@@ -519,6 +544,7 @@ PIRICAD_SETTING(alan_birimi);
     X(harita_kalinlik)                                                                             \
     X(tarama_desen_katalogu)                                                                       \
     X(olcu_stil_katalogu)                                                                          \
+    X(kalem_katalogu)                                                                              \
     X(harita_kuzey_oku)                                                                            \
     X(harita_koordinat)                                                                            \
     X(harita_ipucu_boyu)                                                                           \
@@ -2444,8 +2470,8 @@ Status Settings::revert(const SettingChange& change)
     if (index == kNoSetting)
         return err(ErrorCode::NotFound, "Bilinmeyen ayar: " + quote(change.id));
 
-    const auto it = std::lower_bound(values_.begin(), values_.end(), index,
-                                     [](const auto& e, std::uint32_t k) { return e.first < k; });
+    const auto it      = std::lower_bound(values_.begin(), values_.end(), index,
+                                          [](const auto& e, std::uint32_t k) { return e.first < k; });
     const bool present = it != values_.end() && it->first == index;
 
     // The value came from this store, so it is not re-validated: undo restores what

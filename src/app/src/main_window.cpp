@@ -3709,6 +3709,175 @@ int MainWindow::probeSamples()
     return failures;
 }
 
+int MainWindow::probeFeatureClass()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[kalem] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+    const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_KALEM_PROBE"));
+    const auto picture = [this, &into](const char* name) {
+        if (into.size() <= 1) return;
+        QDir().mkpath(into);
+        QCoreApplication::processEvents();
+        QScreen* screen = windowHandle() != nullptr ? windowHandle()->screen() : nullptr;
+        QPixmap frame   = screen != nullptr ? screen->grabWindow(winId()) : QPixmap();
+        if (frame.isNull()) frame = grab();
+        (void)frame.save(into + QLatin1Char('/') + QLatin1String(name) + QStringLiteral(".png"));
+    };
+    const auto say = [this](const std::function<void()>& act) {
+        const int before = transcript_->toPlainText().size();
+        act();
+        QCoreApplication::processEvents();
+        return transcript_->toPlainText().mid(before);
+    };
+    const auto cell = [this](const char* column, std::int64_t key) {
+        const core::Document& doc = controller_->document();
+        const core::AttrId col    = doc.attributes().find(column);
+        if (col == core::kNoAttr) return QStringLiteral("sütun yok");
+        auto got = doc.attribute(col, doc.slot_of(static_cast<core::EntityKey>(key)));
+        return got && got.value().present ? QString::fromStdString(core::attr_display(
+                                                got.value(), core::DecimalMark::Point))
+                                          : QStringLiteral("boş");
+    };
+    /// Picks `id` in the ribbon's pen box the way a hand does: opens nothing, activates the row.
+    const auto pick = [this](const QString& id) {
+        ComboBox* box = ribbonLive_->pen;
+        const int at  = box != nullptr ? box->findData(id) : -1;
+        if (at < 0) return false;
+        box->setCurrentIndex(at);
+        emit box->activated(at);
+        QCoreApplication::processEvents();
+        return true;
+    };
+
+    runScriptLine(QStringLiteral("YENİ"));
+    refreshRibbon();
+
+    // ---- the box lists the package, and nothing is picked yet ----
+    ComboBox* box = ribbonLive_->pen;
+    check(box != nullptr && box->count() >= 8,
+          QStringLiteral("kalem kutusu paketin sınıflarını sayıyor (%1 satır)")
+              .arg(box != nullptr ? box->count() : 0));
+    check(box != nullptr && box->currentData().toString().isEmpty(),
+          QStringLiteral("henüz kalem seçilmedi"));
+
+    // ---- pick a class; draw; the defaults are there ----
+    check(pick(QStringLiteral("parsel")), QStringLiteral("Parsel kalemi seçildi"));
+    check(box->currentData().toString() == QStringLiteral("parsel"),
+          QStringLiteral("kutu seçilen kalemi gösteriyor"));
+    check(controller_->document().find_layer("PARSEL") == controller_->bus().active_layer(),
+          QStringLiteral("PARSEL katmanı etkin oldu"));
+    runScriptLine(QStringLiteral("ALAN noktalar=0,0 60,0 60,40 0,40"));
+    endCommand();
+    runScriptLine(QStringLiteral("ALAN noktalar=60,0 120,0 120,40 60,40"));
+    endCommand();
+    for (const char* line : {"ÖZNİTELİK ada 1 101", "ÖZNİTELİK parsel 1 1", "ÖZNİTELİK ada 2 101",
+                             "ÖZNİTELİK parsel 2 2"}) {
+        runScriptLine(QString::fromUtf8(line));
+        endCommand();
+    }
+    check(cell("sinif_kodu", 1) == QStringLiteral("PRS"),
+          QStringLiteral("çizilen parsel sınıfın kodunu taşıyor (%1)").arg(cell("sinif_kodu", 1)));
+
+    check(pick(QStringLiteral("bina")), QStringLiteral("Bina kalemi seçildi"));
+    for (const char* line :
+         {"ALAN noktalar=8,8 28,8 28,28 8,28", "ALAN noktalar=70,10 100,10 100,30 70,30"}) {
+        runScriptLine(QString::fromUtf8(line));
+        endCommand();
+    }
+    runScriptLine(QStringLiteral("ÖZNİTELİK kat_sayisi 4 3"));
+    endCommand();
+    check(cell("yapi_turu", 3) == QStringLiteral("Betonarme") &&
+              cell("kat_sayisi", 3) == QStringLiteral("1"),
+          QStringLiteral("çizilen bina sınıfın başlangıç değerlerini taşıyor"));
+
+    // ---- a shape that is not the class's is refused, and the transcript says why ----
+    const QString refused = say([&] {
+        runScriptLine(QStringLiteral("ÇİZGİ 0,0 50,50"));
+        endCommand();
+    });
+    check(refused.contains(QStringLiteral("'Bina' sınıfı kapalı alan ister")),
+          QStringLiteral("açık çizgi Bina katmanında reddedildi"));
+    const auto drawn = controller_->document().live_entity_count();
+    check(drawn == 4, QStringLiteral("reddedilen nesne belgeye girmedi (%1 nesne)").arg(drawn));
+
+    // ---- the rest of a small topographic sheet ----
+    check(pick(QStringLiteral("yol_ekseni")), QStringLiteral("Yol ekseni kalemi seçildi"));
+    runScriptLine(QStringLiteral("ÇİZGİ -10,-12 130,-12"));
+    endCommand();
+    check(pick(QStringLiteral("dere")), QStringLiteral("Dere kalemi seçildi"));
+    runScriptLine(QStringLiteral("ÇİZGİ -10,60 30,52 70,58 130,50"));
+    endCommand();
+    check(pick(QStringLiteral("direk")), QStringLiteral("Direk kalemi seçildi"));
+    for (const char* line : {"NOKTA 30,-8", "NOKTA 90,-8"}) {
+        runScriptLine(QString::fromUtf8(line));
+        endCommand();
+    }
+    check(pick(QStringLiteral("agac")), QStringLiteral("Ağaç kalemi seçildi"));
+    for (const char* line : {"NOKTA 40,20", "NOKTA 110,35", "NOKTA 45,32"}) {
+        runScriptLine(QString::fromUtf8(line));
+        endCommand();
+    }
+
+    // ---- bring an old CAD object under a class, with the ribbon button ----
+    runScriptLine(QStringLiteral("KATMAN ad=ESKI_CIZIM"));
+    endCommand();
+    runScriptLine(QStringLiteral("ALAN noktalar=130,10 150,10 150,30 130,30"));
+    endCommand();
+    const core::EntityKey old_one = controller_->document().key_of(
+        static_cast<core::EntityId>(controller_->document().entities().size() - 1));
+    runScriptLine(QStringLiteral("SEÇ NESNE nesneler=%1").arg(core::raw(old_one)));
+    endCommand();
+    check(pick(QStringLiteral("bina")), QStringLiteral("Bina kalemi yeniden seçildi"));
+    QAction* bind = findChild<QAction*>(QStringLiteral("ribbonPenBind"));
+    check(bind != nullptr, QStringLiteral("'Seçimi bağla' düğmesi şeritte"));
+    const QString bound = say([&] {
+        if (bind != nullptr) bind->trigger();
+    });
+    check(bound.contains(QStringLiteral("1 nesne 'Bina' sınıfına bağlandı")),
+          QStringLiteral("düğme seçili nesneyi sınıfa bağladı"));
+    check(controller_->document().entities().layer[controller_->document().slot_of(old_one)] ==
+              controller_->document().find_layer("BINA"),
+          QStringLiteral("nesne BINA katmanına geldi"));
+
+    // ---- the check reports what is wrong ----
+    runScriptLine(QStringLiteral("ÖZNİTELİK yapi_turu 3 Cam"));
+    endCommand();
+    QAction* audit = findChild<QAction*>(QStringLiteral("ribbonPenCheck"));
+    check(audit != nullptr, QStringLiteral("'Sınıfı denetle' düğmesi şeritte"));
+    const QString audited = say([&] {
+        if (audit != nullptr) audit->trigger();
+    });
+    check(audited.contains(QStringLiteral("Sınıf denetimi")) &&
+              audited.contains(QStringLiteral("'yapi_turu' = 'Cam'")),
+          QStringLiteral("denetim listede olmayan değeri söyledi"));
+    check(audited.contains(QStringLiteral("PARSEL — Parsel")),
+          QStringLiteral("denetim her sınıf katmanını sıralıyor"));
+
+    // ---- the pictures: the sheet, then the layer's own panel rows ----
+    controller_->cancelAll();
+    canvas_->zoomToExtents();
+    QCoreApplication::processEvents();
+    refreshRibbon();
+    if (SARibbonBar* bar = ribbonBar(); bar != nullptr) bar->setCurrentIndex(5); // Harita
+    QCoreApplication::processEvents();
+    picture("kalem-serit");
+    attributePanel_->setLayer(controller_->document().find_layer("BINA"));
+    QCoreApplication::processEvents();
+    check(
+        attributePanel_->probeRowValue(QStringLiteral("sinif")).startsWith(QStringLiteral("bina")),
+        QStringLiteral("katman paneli 'sinif' satırını gösteriyor (%1)")
+            .arg(attributePanel_->probeRowValue(QStringLiteral("sinif"))));
+    layerPanel_->selectLayer(controller_->document().find_layer("BINA"));
+    QCoreApplication::processEvents();
+    picture("kalem-katman-paneli");
+    return failures;
+}
+
 int MainWindow::probeCalculator()
 {
     int failures     = 0;

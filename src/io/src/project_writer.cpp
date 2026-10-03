@@ -409,6 +409,14 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     for (const core::Layer& l : doc.layers())
         layer_groups.push_back(pool.intern(l.group));
 
+    std::vector<std::uint32_t> layer_classes;
+    layer_classes.reserve(doc.layers().size());
+    bool has_layer_classes = false;
+    for (const core::Layer& l : doc.layers()) {
+        layer_classes.push_back(pool.intern(l.feature_class));
+        has_layer_classes = has_layer_classes || !l.feature_class.empty();
+    }
+
     std::vector<core::StyleId> layer_styles;
     layer_styles.reserve(doc.layers().size());
     bool has_layer_styles = false;
@@ -996,6 +1004,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
     blocks.push_back(column(kBlkLayers, layers));
     blocks.push_back(column(kBlkLayerGroups, layer_groups));
+    if (has_layer_classes) blocks.push_back(column(kBlkLayerFeatureClasses, layer_classes));
     if (has_layer_styles) blocks.push_back(column(kBlkLayerStyles, layer_styles));
     blocks.push_back(column(kBlkStyles, styles));
     blocks.push_back(column(kBlkSymbols, symbols));

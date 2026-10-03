@@ -125,26 +125,27 @@ struct Op
 {
     enum class Kind : std::uint8_t {
         None,
-        SetEntityAlive,     ///< entity, bool_arg
-        SetEntityHidden,    ///< entity, bool_arg
-        SetEntityStyle,     ///< entity, style_arg
-        SetLayerVisible,    ///< layer,  bool_arg
-        SetLayerLocked,     ///< layer,  bool_arg
-        SetLayerAppearance, ///< layer,  appearance_arg
-        SetLayerStyle,      ///< layer,  style_arg
-        SetLayerGroup,      ///< layer,  str_arg
-        SetLayerProps,      ///< layer,  props_arg — the plain properties it had before
-        SetCrs,             ///< crs_arg
-        SetAttribute,       ///< attr_col, entity (as the row), attr_arg, str_arg (the column's id)
-        SetText,            ///< entity, str_arg, text_height, text_anchor
-        SetGeometry,        ///< entity, geometry_slot
-        SetKindGeometry,    ///< entity, geometry_slot, kind_arg — the kind it had before
-        SetEntityLayer,     ///< entity, layer
-        AttachForeign,      ///< entity, str_arg (the tag), bytes_arg
-        DetachForeign,      ///< entity, str_arg (the tag)
-        SetAttachment,      ///< entity, has_attach, attach_arg — what it followed before
-        SetDimensionLinks,  ///< entity, bytes_arg — the links it had before (encode_dim_links)
-        SetHatchLinks,      ///< entity, bytes_arg — the sources it had before (encode_hatch_links)
+        SetEntityAlive,       ///< entity, bool_arg
+        SetEntityHidden,      ///< entity, bool_arg
+        SetEntityStyle,       ///< entity, style_arg
+        SetLayerVisible,      ///< layer,  bool_arg
+        SetLayerLocked,       ///< layer,  bool_arg
+        SetLayerAppearance,   ///< layer,  appearance_arg
+        SetLayerStyle,        ///< layer,  style_arg
+        SetLayerGroup,        ///< layer,  str_arg
+        SetLayerFeatureClass, ///< layer, str_arg — the class it followed before
+        SetLayerProps,        ///< layer,  props_arg — the plain properties it had before
+        SetCrs,               ///< crs_arg
+        SetAttribute,      ///< attr_col, entity (as the row), attr_arg, str_arg (the column's id)
+        SetText,           ///< entity, str_arg, text_height, text_anchor
+        SetGeometry,       ///< entity, geometry_slot
+        SetKindGeometry,   ///< entity, geometry_slot, kind_arg — the kind it had before
+        SetEntityLayer,    ///< entity, layer
+        AttachForeign,     ///< entity, str_arg (the tag), bytes_arg
+        DetachForeign,     ///< entity, str_arg (the tag)
+        SetAttachment,     ///< entity, has_attach, attach_arg — what it followed before
+        SetDimensionLinks, ///< entity, bytes_arg — the links it had before (encode_dim_links)
+        SetHatchLinks,     ///< entity, bytes_arg — the sources it had before (encode_hatch_links)
 
         /// The WHOLE guide list, restored as it was.
         ///
@@ -409,10 +410,10 @@ public:
     /// cuts back to when the step is rolled back.
     struct Tail
     {
-        std::uint64_t generation{0}; ///< which content it was taken of (`generation`)
-        std::uint64_t revision{0};   ///< the revision it was taken at
-        std::size_t rows{0};         ///< entity rows
-        bool keys_sorted{true};      ///< whether the key column was in order
+        std::uint64_t generation{0};      ///< which content it was taken of (`generation`)
+        std::uint64_t revision{0};        ///< the revision it was taken at
+        std::size_t rows{0};              ///< entity rows
+        bool keys_sorted{true};           ///< whether the key column was in order
         std::uint64_t next_entity_key{1}; ///< the entity key counter
         std::uint64_t next_layer_key{1};  ///< the layer key counter
         RingGeometry::Tail geometry{};    ///< the geometry arena
@@ -634,6 +635,9 @@ public:
 
     /// Moves a layer in the layer tree. An empty path puts it at the root.
     Status set_layer_group(LayerId l, std::string group, Op& undo_out);
+
+    /// Names the feature class a layer follows (`Layer::feature_class`); empty releases it.
+    Status set_layer_feature_class(LayerId l, std::string feature_class, Op& undo_out);
     /// Sets the document's CRS. Takes a whole `Crs` rather than an id, because a
     /// resolved CRS carries the epoch and the zone meridian and dropping them here
     /// would leave the document naming a system it cannot describe (R36).

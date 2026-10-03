@@ -40,6 +40,9 @@
 
 namespace piricad::command {
 
+/// A package of digitising classes; see feature_classes.hpp.
+struct FeatureClassCatalog;
+
 /// One request to run one command: what, with which arguments, from whom.
 ///
 /// This IS the serialisable form Article 1.4 requires — a journal line, a script
@@ -760,6 +763,15 @@ public:
 
     core::Settings& app_settings() noexcept { return app_settings_; }
 
+    /// The feature class package the `core.kalem.katalog` setting names (TODOS G-04), read when
+    /// first needed and again whenever the file changes, so a corrected definition reaches the next
+    /// command without a restart. Null when the package cannot be read; `feature_classes_error`
+    /// says why. The pointer stays valid while the caller holds it, whatever is reloaded after.
+    std::shared_ptr<const FeatureClassCatalog> feature_classes();
+
+    /// Why the last attempt to read the package failed; empty when it did not.
+    const std::string& feature_classes_error() const noexcept { return classes_error_; }
+
     const core::Settings& app_settings() const noexcept { return app_settings_; }
 
     // The SESSION store holds the input aids — snap modes, ortho, polar step,
@@ -1220,6 +1232,11 @@ private:
     std::vector<core::Point2> tracking_; ///< marked for tracking, newest last
     InputAids aids_{};
     core::StyleLibrary style_library_{};
+
+    std::shared_ptr<const FeatureClassCatalog> classes_; ///< the package, once read
+    std::string classes_path_;                           ///< where it was read from
+    std::uint64_t classes_stamp_{0}; ///< size and modification time of that file
+    std::string classes_error_;      ///< why it could not be read
 
     std::unique_ptr<Transaction> batch_;
     std::string batch_label_;

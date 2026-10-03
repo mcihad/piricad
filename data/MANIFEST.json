@@ -14,6 +14,16 @@
       "licence": "pending-review"
     },
     {
+      "id": "kalem-katalogu-ornek",
+      "path": "catalogs/cad/kalem-katalogu.json",
+      "status": "ready",
+      "phase": 1,
+      "source": "PiriCAD örnek sayısallaştırma sınıfları (bina, yol ekseni, parsel, dere, direk, ağaç, çit); bir kurum tanımı ya da mevzuat metni değildir",
+      "published": "2026-10-03",
+      "licence": "GPL-3.0-or-later",
+      "note": "KALEM / KALEMBAĞLA / KALEMDENETİM için örnek paket; şema catalogs/schema/kalem-katalogu.schema.json. Kurum kendi paketini bu biçimde yazar ve core.kalem.katalog ayarına yolunu verir."
+    },
+    {
       "id": "mpyy-gosterimler",
       "path": "catalogs/mpyy/plan-gosterim.json",
       "status": "partial",

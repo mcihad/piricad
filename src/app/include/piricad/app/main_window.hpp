@@ -395,6 +395,12 @@ public:
     /// U-06).
     int probeSamples();
 
+    /// THE PEN IN THE REAL SHELL (`PIRICAD_KALEM_PROBE`, TODOS G-04): the ribbon's pen box picks a
+    /// class, what is drawn on it starts with the class's defaults, a shape that is not the class's
+    /// is refused, selected objects are bound with the ribbon button and the check reports what is
+    /// wrong.
+    int probeFeatureClass();
+
     /// THE FIELD CALCULATOR WINDOW, driven end to end over a small parcel layer: the lists, a
     /// preview, an apply, a refused expression, one undo (`PIRICAD_CALC_PROBE`, TODOS G-03).
     int probeCalculator();
@@ -916,6 +922,9 @@ private:
     /// the annotation defaults and the editor tabs.
     void refreshRibbon();
     void refreshLayerBox();
+
+    /// Re-reads the pen box: the package's classes, and the one the active layer follows.
+    void refreshPenBox();
     void refreshColourBoxes();
     void refreshRibbonDefaults();
 

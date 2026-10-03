@@ -12,6 +12,7 @@ Daha önce PiriCAD kullanmadıysanız sırayla okuyun:
    — ya da hazır bir işle başlayın: [Örnek projelerle başlayın](baslangic/ornek-projeler.md)
 3. [Arayüz](baslangic/arayuz.md) — pencerede ne nerede
 4. [Bileşenler](baslangic/bilesenler.md) — düğmeler, girdiler ve seçim denetimleri; durumları ve klavyesi
+5. [Kalemle sayısallaştırma](baslangic/kalemle-sayisallastirma.md) — bina, yol, dere gibi sınıfı seçip çizin; eski çizimi sınıfa geçirin
 5. [Stil tasarımcısı](baslangic/stil-tasarimcisi.md) — bir katmanın nasıl çizileceğini tasarlayın
 6. [Yazdırma ve PDF](baslangic/yazdirma.md) — yazdırma alanını seçin, ölçeği verin, PDF alın
 6. [Komut sistemi](komutlar/README.md) — PiriCAD'in çalışma mantığı
@@ -110,6 +111,9 @@ Tek tek komutlar:
 | `STİLAKTAR` | [Stili QGIS'e aktarma](komutlar/exportstyle.md) |
 | `ÖZNİTELİK` | [Nesnelerin verisi](komutlar/attribute.md) |
 | `ÖZNİTELİKHESAPLA` | [Alan hesaplayıcı: bir ifadeyi satırlara yazma](komutlar/attribute_calc.md) |
+| `KALEM` | [Sayısallaştırma kalemi: sınıfı seç, katman ve alanlar kurulsun](komutlar/feature_class.md) |
+| `KALEMBAĞLA` | [Var olan nesneleri bir sınıfa bağlama](komutlar/feature_class_bind.md) |
+| `KALEMDENETİM` | [Nesnelerin hâlâ sınıfın dediği gibi olup olmadığını denetleme](komutlar/feature_class_check.md) |
 | `SÜTUN` | [Öznitelik sütunu tanımlama](komutlar/column.md) |
 | `SEÇ` | [Nesne seçme](komutlar/select.md) |
 | `SİL` | [Nesne silme](komutlar/erase.md) |
@@ -234,6 +238,7 @@ Yapay zeka bu programda geometri üretmez, **komut üretir**; ürettiği her şe
 | [Netcad NCZ çizimleri](veri/netcad-ncz.md) | `.ncz` dosyasını içe alma ve altlık olarak bağlama: nesnelerin eşlemesi, katman ve renkler, akıllı nesneler, pafta çerçeveleri, koordinat sistemi uyarıları, raporun her satırı |
 | [Dışa Aktar penceresi](baslangic/disa-aktarma.md) | Çizimi, bir nesnenin köşelerini ya da bir stili tek pencereden yazma |
 | [Öznitelik tablosu](veri/oznitelik-tablosu.md) | Satırları süzme, düzenleme, alan istatistikleri; süzme ifadesinin dilbilgisi |
+| [Kalem kataloğu](veri/kalem-katalogu.md) | Kurumun sayısallaştırma sınıflarını (bina, yol ekseni, parsel…) veri paketi olarak yazma: geometri, katman, alanlar, varsayılanlar, denetimler |
 | [İfade dili](veri/ifade-dili.md) | Süzgeç ve alan hesaplayıcının ortak dili: yazım, işlevler, `$` sözcükleri, boş hücre kuralı, hata iletileri |
 | [Geometri çekirdeği](veri/geometri-cekirdegi.md) | OpenCASCADE: yayları koruyan hesap, her bilgisayarda aynı milimetre, hangi işlemin hangi aşamada çekirdeğe geçtiği |
 | [Sayısal doğruluk ve toleranslar](veri/hassasiyet.md) | Milimetre depolama, hesap eşikleri, ekrandaki yakalama pikseli, topoloji düğüm toleransı ve dışa aktarmadaki eğri sapması: hangi sayı neye karar verir |

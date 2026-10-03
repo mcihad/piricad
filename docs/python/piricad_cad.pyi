@@ -1905,6 +1905,48 @@ def attribute_calc(
         objects — Yalnız bu nesnelerin kalıcı kimlikleri; verilirse katman ve seçim yok sayılır [kalıcı nesne anahtarı]
     """
 
+def feature_class(
+    *,
+    name: str = ...,
+) -> int:
+    """Sayısallaştırma sınıfını (kalemi) seçer: katmanı ve alanlarını kurar, etkin yapar; çizilen nesne sınıfın varsayılanlarıyla başlar.
+
+    Komut: core.feature_class (KALEM)
+        name — Sınıfın kimliği, adı ya da kısaltması (Bina, Yol ekseni, Parsel…); boşsa sınıflar listelenir
+    """
+
+def feature_class_bind(
+    *,
+    name: str = ...,
+    objects: list[int] = ...,
+    layer: str = ...,
+    map: list[str] = ...,
+    preview: bool = ...,
+) -> int:
+    """Var olan CAD nesnelerini bir sayısallaştırma sınıfına bağlar: katmana alır, alanları eşler, varsayılanları doldurur; önizlemesi ve tek geri alma adımı vardır.
+
+    Komut: core.feature_class_bind (KALEMBAĞLA)
+        name — Bağlanacağı sınıfın kimliği ya da adı
+        objects — Bağlanacak nesnelerin kalıcı kimlikleri; verilmezse katman, o da yoksa seçim [kalıcı nesne anahtarı]
+        layer — Bu katmanın bütün nesneleri bağlanır (nesneler verilmediyse)
+        map — Bir sütunun değerini sınıfın alanına taşır: 'eski_sutun:sinif_alani' (aynı türde ya da metin alanına); birden çok kez verilebilir
+        preview — Hiçbir şey yazma: neyin bağlanacağını ve neyin uymadığını söyle; varsayılan hayır
+    """
+
+def feature_class_check(
+    *,
+    name: str = ...,
+    layer: str = ...,
+    select: bool = ...,
+) -> int:
+    """Bir sınıfı izleyen katmanlardaki nesnelerin hâlâ sınıfın dediği gibi olup olmadığına bakar: geometri, en küçük alan/uzunluk, zorunlu ve izinli değerler.
+
+    Komut: core.feature_class_check (KALEMDENETİM)
+        name — Yalnız bu sınıfın katmanı; verilmezse sınıf izleyen bütün katmanlar
+        layer — Yalnız bu katman
+        select — evet = sorunlu nesneleri seç; varsayılan hayır
+    """
+
 def layout(
     *,
     action: str = ...,

@@ -6,6 +6,7 @@
 #include "piricad/app/icons.hpp"
 #include "piricad/app/measure_text.hpp"
 #include "piricad/app/tokens.hpp"
+#include "piricad/command/feature_classes.hpp"
 #include "piricad/core/dimension.hpp"
 #include "piricad/core/dimension_link.hpp"
 #include "piricad/core/document.hpp"
@@ -174,6 +175,17 @@ void AttributePanel::rebuild()
                  false,
                  tr("KATMAN ad=\"%1\" grup=\"%2\"").arg(name),
                  {}});
+            // THE FEATURE CLASS THE LAYER FOLLOWS (TODOS G-04), when it follows one. Read-only: a
+            // class is taken with `KALEM` or `KALEMBAĞLA`, which build its fields and check the
+            // objects, and a single cell cannot do that.
+            if (!l->feature_class.empty())
+                group.rows.push_back(
+                    {tr("sinif"),
+                     QString::fromStdString(command::reference_class(l->feature_class)),
+                     QString(),
+                     false,
+                     QString(),
+                     {}});
             groups_.push_back(group);
 
             // THE FOUR QUESTIONS A LAYER ANSWERS, one each (TODOS U-05): drawn (`gorunur`, above),

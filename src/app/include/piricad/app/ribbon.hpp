@@ -334,6 +334,12 @@ struct RibbonLive
     RibbonColourBox* stroke{nullptr}; ///< the stroke colour in hand
     RibbonColourBox* fill{nullptr};   ///< the fill colour in hand
 
+    /// The data tab's pen: the feature classes of the package, and the one the active layer
+    /// follows
+    /// (`KALEM`, TODOS G-04). Rebuilt only when the package itself changes.
+    ComboBox* pen{nullptr};
+    const void* penPackage{nullptr}; ///< which loaded package `pen` was filled from
+
     ComboBox* textHeightDefault{nullptr}; ///< `AYAR metin_yüksekliği`
     ComboBox* dimStyleDefault{nullptr};   ///< `AYAR ölçü_stili`
     ComboBox* plotScale{nullptr};         ///< `AYAR plan_ölçeği`

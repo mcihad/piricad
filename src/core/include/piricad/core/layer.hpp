@@ -88,6 +88,14 @@ struct Layer
     /// it.
     bool viewonly{false};
 
+    /// The feature class this layer follows (TODOS G-04): `<package id>/<class id>`, or empty for a
+    /// layer that is just a layer. The CLASS DEFINITION — geometry type, fields, defaults, checks —
+    /// is DATA in a catalogue package and is read from there when a drawing is edited; the layer
+    /// holds only which class it follows, so a drawing opened where the package is missing keeps
+    /// every object and says that it cannot check them, rather than carrying a second copy of the
+    /// rules.
+    std::string feature_class;
+
     Appearance appearance{}; ///< the ByLayer source for this layer's entities
 
     /// The full ByLayer symbol. `appearance` remains the fixed-width cascade

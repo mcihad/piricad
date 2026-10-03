@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://piricad.org/data/catalogs/schema/kalem-katalogu.schema.json",
+  "title": "PiriCAD sayısallaştırma kalemi (özellik sınıfı) kataloğu paketi",
+  "description": "Bir kurumun sayısallaştırma sınıfları: 'Bina', 'Yol ekseni', 'Parsel', 'Dere'. Her sınıf bir geometri türünü, bir katmanı, sınıfın taşıdığı alanları ve varsayılanlarını, gösterimini ve denetimlerini birlikte söyler. KALEM sınıfı seçtirir ve çizilen nesneyi anlamlı bir GIS kaydı yapar; KALEMBAĞLA var olan CAD nesnelerini sınıfa bağlar; KALEMDENETİM nesnelerin hâlâ sınıflarının dediği gibi olup olmadığına bakar. Tanımlar VERİDİR: bir kurumun listesi bu dosyanın kopyasıyla değişir, yeniden derleme gerekmez (CLAUDE.md 5.13).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "package_version",
+    "id",
+    "source",
+    "published",
+    "licence",
+    "siniflar"
+  ],
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "package_version": {
+      "description": "Her içerik değişikliğinde artırılır (data.md R4). Katmanlar bağlandıkları sürümü saklar; sınıf kimliği hiçbir zaman yeniden kullanılmaz (data.md R5).",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "id": {
+      "description": "Paketin kimliği. Bir katman 'paket@sürüm/sınıf' biçiminde bu paketin bir sınıfına bağlanır; '@' ve '/' kimlikte bulunamaz.",
+      "type": "string",
+      "pattern": "^[^@/\\s]+$"
+    },
+    "source": {
+      "description": "Tanımları kimin koyduğu: kurum, yönetmelik ve ek (data.md R2). Örnek paket bunu açıkça söyler.",
+      "type": "string",
+      "minLength": 1
+    },
+    "published": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "licence": { "type": "string", "minLength": 1 },
+    "aciklama": { "type": "string" },
+    "kapsam": {
+      "description": "Paketin neyi kapsadığı ve onay durumu. Yalnız insanlar içindir.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "durum": { "type": "string" },
+        "onay": { "type": "string" }
+      }
+    },
+
+    "siniflar": {
+      "description": "Sınıflar, gösterildikleri sırayla.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/sinif" }
+    }
+  },
+
+  "$defs": {
+    "renk": {
+      "description": "#RRGGBB ya da, saydamlık için, #RRGGBBAA.",
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+    },
+
+    "alan": {
+      "description": "Sınıfın taşıdığı bir alan: öznitelik sütunu.",
+      "type": "object",
+      "required": ["kimlik", "tur"],
+      "additionalProperties": false,
+      "properties": {
+        "kimlik": {
+          "description": "Sütun kimliği, küçük harf ASCII. İki sınıf aynı kimliği aynı türle kullanırsa sütun ikisinin ortağı olur.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "ad": { "description": "Tabloda görünen ad.", "type": "string" },
+        "ozet": { "type": "string" },
+        "tur": {
+          "description": "SÜTUN'un türleriyle aynı sözcükler.",
+          "enum": ["tam_sayi", "uzunluk", "evet_hayir", "metin", "kod", "ondalik", "tarih"]
+        },
+        "zorunlu": {
+          "description": "Boş bırakılabilir ama KALEMDENETİM raporlar; çizim değeri bilinmeden yapılabilir (model.md: yazarken değil, denetlerken sorulur).",
+          "type": "boolean"
+        },
+        "varsayilan": {
+          "description": "Yeni bir nesne bu değerle başlar; türün okuyabileceği metin. Tür okuyamıyorsa paket yüklenmez.",
+          "type": "string"
+        },
+        "basamak": { "description": "ondalik türünde ondalık basamak sayısı.", "type": "integer", "minimum": 0, "maximum": 12 },
+        "secenekler": {
+          "description": "Alanın alabileceği tek değerler; boşsa serbest.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "sinif": {
+      "type": "object",
+      "required": ["id", "ad", "geometri", "katman"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Kararlı, küçük harf, paket içinde tek; bir daha kullanılmaz (data.md R5).",
+          "type": "string",
+          "pattern": "^[^@/\\s]+$"
+        },
+        "ad": { "description": "Türkçe ad, ana ad.", "type": "string", "minLength": 1 },
+        "adlar": {
+          "description": "Sınıfı bulduran başka sözcükler: ASCII karşılığı, İngilizce, kısaltma.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "ozet": { "type": "string" },
+        "kaynak": {
+          "description": "Sınıf bir yönetmelikten ya da standarttan geliyorsa atıfı: yönetmelik, ek, madde, Resmî Gazete tarihi (CLAUDE.md 11.7). Boşsa sınıf bir kurum tanımıdır, mevzuat iddiası taşımaz.",
+          "type": "string"
+        },
+        "geometri": { "enum": ["nokta", "cizgi", "alan"] },
+        "katman": {
+          "type": "object",
+          "required": ["ad"],
+          "additionalProperties": false,
+          "properties": {
+            "ad": { "type": "string", "minLength": 1 },
+            "grup": { "description": "Katman ağacındaki yer, düzeyler '>' ile ayrılır.", "type": "string" },
+            "renk": { "$ref": "#/$defs/renk" },
+            "kalinlik_mm": { "description": "Çizgi kalınlığı, kâğıt milimetresi.", "type": "number", "minimum": 0, "maximum": 20 },
+            "dolgu": { "$ref": "#/$defs/renk" },
+            "aciklama": { "type": "string" }
+          }
+        },
+        "alanlar": { "type": "array", "items": { "$ref": "#/$defs/alan" } },
+        "dogrulama": {
+          "description": "KALEMDENETİM'in baktığı sınırlar. Çizim sırasında değil, denetlenirken sorulur.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "en_az_alan_m2": { "type": "number", "minimum": 0 },
+            "en_az_uzunluk_m": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}
