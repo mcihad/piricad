@@ -98,14 +98,14 @@ struct ExprParser
         if (!failed && i != s.size()) {
             failed = true;
             why    = "beklenmeyen '" + std::string(1, s[i]) + "' karakteri (konum " +
-                     std::to_string(i) + ")";
+                  std::to_string(i) + ")";
         }
         return v;
     }
 
     double additive()
     {
-        double v = multiplicative();
+        double v    = multiplicative();
         const int d = dim;
         while (!failed) {
             skip();
@@ -446,10 +446,14 @@ core::Result<Token> detail::classify(std::string_view raw, int depth)
             ExprParser pa(a);
             ExprParser pb(b);
             pa.allow_units = pb.allow_units = true; // `@1250cm,30`: metres, whatever was written
-            const double dx = pa.parse();
-            const double dy = pb.parse();
-            if (pa.failed) return err(ErrorCode::ParseError, "Göreli dx: " + pa.why);
-            if (pb.failed) return err(ErrorCode::ParseError, "Göreli dy: " + pb.why);
+            const double dx                 = pa.parse();
+            const double dy                 = pb.parse();
+            if (pa.failed)
+                return err(ErrorCode::ParseError, "Göreli dx: " + pa.why + "; yazılan '" +
+                                                      std::string(a) + "'. Örnek: @50,30");
+            if (pb.failed)
+                return err(ErrorCode::ParseError, "Göreli dy: " + pb.why + "; yazılan '" +
+                                                      std::string(b) + "'. Örnek: @50,30");
             t.kind = Token::Kind::Relative;
             t.a    = dx;
             t.b    = dy;
@@ -467,10 +471,18 @@ core::Result<Token> detail::classify(std::string_view raw, int depth)
             ExprParser pa(a);
             ExprParser pb(b);
             pa.allow_units = pb.allow_units = true;
-            const double x = pa.parse();
-            const double y = pb.parse();
-            if (pa.failed) return err(ErrorCode::ParseError, "X koordinatı: " + pa.why);
-            if (pb.failed) return err(ErrorCode::ParseError, "Y koordinatı: " + pb.why);
+            const double x                  = pa.parse();
+            const double y                  = pb.parse();
+            // WHAT WAS TYPED and what would have worked: "sayı bekleniyordu (konum 0)" alone
+            // left a new user guessing which of two numbers, and in what form (TODOS U-06).
+            if (pa.failed)
+                return err(ErrorCode::ParseError, "X koordinatı: " + pa.why + "; yazılan '" +
+                                                      std::string(a) +
+                                                      "'. Örnek: 485320.150,4310220.400");
+            if (pb.failed)
+                return err(ErrorCode::ParseError, "Y koordinatı: " + pb.why + "; yazılan '" +
+                                                      std::string(b) +
+                                                      "'. Örnek: 485320.150,4310220.400");
             t.kind = Token::Kind::Absolute;
             t.a    = x;
             t.b    = y;
@@ -813,8 +825,8 @@ core::Result<double> evaluate_expression(std::string_view expr)
 core::Result<Quantity> evaluate_quantity(std::string_view expr, int target_exp)
 {
     ExprParser p(expr);
-    p.allow_units = true;
-    p.target_exp  = target_exp;
+    p.allow_units  = true;
+    p.target_exp   = target_exp;
     const double v = p.parse();
     if (p.failed)
         return err(ErrorCode::ParseError, "'" + std::string(expr) + "' ifadesi: " + p.why);
@@ -849,14 +861,15 @@ core::Result<double> evaluate_answer(std::string_view text, std::optional<int> l
     }
 
     ExprParser p(t);
-    p.allow_units = true;
-    p.target_exp  = length_exp.value_or(0);
+    p.allow_units  = true;
+    p.target_exp   = length_exp.value_or(0);
     const double v = p.parse();
-    if (p.failed) return err(ErrorCode::ParseError, "'" + std::string(text) + "' okunamadı: " + p.why);
+    if (p.failed)
+        return err(ErrorCode::ParseError, "'" + std::string(text) + "' okunamadı: " + p.why);
     if (p.used_unit && p.dim == 1 && !length_exp)
-        return err(ErrorCode::InvalidArgument,
-                   "Bu istem birimli sayı almıyor; '" + std::string(text) +
-                       "' yerine sayıyı birimsiz yazın.");
+        return err(ErrorCode::InvalidArgument, "Bu istem birimli sayı almıyor; '" +
+                                                   std::string(text) +
+                                                   "' yerine sayıyı birimsiz yazın.");
     return v;
 }
 
@@ -955,9 +968,12 @@ core::Result<ParsedLine> parse_line(std::string_view line)
             std::size_t dots = 0, digits = 0;
             for (std::size_t n = (tail.front() == '-' || tail.front() == '+') ? 1 : 0;
                  n < tail.size(); ++n) {
-                if (tail[n] == '.') ++dots;
-                else if (tail[n] >= '0' && tail[n] <= '9') ++digits;
-                else return false;
+                if (tail[n] == '.')
+                    ++dots;
+                else if (tail[n] >= '0' && tail[n] <= '9')
+                    ++digits;
+                else
+                    return false;
             }
             return dots <= 1 && digits > 0;
         };
@@ -965,8 +981,8 @@ core::Result<ParsedLine> parse_line(std::string_view line)
             std::string low;
             for (const char c : text)
                 low += static_cast<char>(c | 0x20);
-            return text.size() <= 2 && (low == "mm" || low == "cm" || low == "dm" || low == "m" ||
-                                        low == "km");
+            return text.size() <= 2 &&
+                   (low == "mm" || low == "cm" || low == "dm" || low == "m" || low == "km");
         };
         if (raw[k].quote_at == std::string::npos && raw[k + 1].quote_at == std::string::npos &&
             ends_in_number(raw[k].text) && is_unit(raw[k + 1].text)) {
@@ -1087,7 +1103,9 @@ std::string describe(const Token& t)
 {
     switch (t.kind) {
     case Token::Kind::Word: return "'" + t.word + "'";
-    case Token::Kind::Number: return std::to_string(t.a);
+    // A WHOLE NUMBER IS WRITTEN WHOLE: "Girilen: 10.000000" for a 10 the user typed read as a
+    // different value than the one they gave (TODOS U-06).
+    case Token::Kind::Number: return core::format_general(t.a, 15);
     case Token::Kind::Text: return "\"" + t.text + "\"";
     case Token::Kind::Absolute:
         return "point(" + std::to_string(t.a) + "," + std::to_string(t.b) + ")";

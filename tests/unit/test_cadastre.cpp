@@ -584,6 +584,37 @@ TEST_CASE("ALANİFRAZ: istenen alanı tolerans içinde ayırır")
     CHECK(found);
 }
 
+TEST_CASE(
+    "ALANİFRAZ: milimetre basamağının kenarında kalmaz — ulaşılabilen alan tam ayrılır (U-06)")
+{
+    // 30 m x 40 m, the cut line along its west edge: every target below is a whole number of
+    // metres of width and so is REACHABLE EXACTLY. The cutter's corners are rounded to the
+    // millimetre, which makes the area a staircase in the offset; the bisection used to keep the
+    // last offset it tried, which sits a millimetre either side of a step's edge, and refused
+    // "400,00 m²" with "en yakın: 399,96 m²" (the sample parcel layout met it first).
+    for (const core::Mm2 square_metres : {300, 400, 500, 600}) {
+        Rig r;
+        REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+        REQUIRE(r.bus
+                    .execute_line(
+                        "ALAN noktalar=485330,4310200 485360,4310200 485360,4310240 485330,4310240",
+                        Origin::Test)
+                    .ok());
+        const core::Mm2 target = square_metres * 1000000;
+        auto cut               = r.bus.execute_line(
+            "ALANİFRAZ yon=485330,4310200 485330,4310240 nesneler=1 alan=" + std::to_string(target),
+            Origin::Test);
+        const std::string asked = std::to_string(square_metres) + " m²";
+        if (!cut) FAIL_WITH(asked, cut.error().message);
+        REQUIRE(r.doc.live_entity_count() == 2);
+
+        bool exact = false;
+        for (core::EntityId e = 0; e < r.doc.entities().size(); ++e)
+            if (r.doc.alive(e) && abs_area(area_of(r.doc, e)) == target) exact = true;
+        CHECK_MESSAGE(exact, square_metres << " m² tam ayrılmadı");
+    }
+}
+
 TEST_CASE("ALANİFRAZ: parselden büyük bir alan istemek reddedilir")
 {
     Rig r;

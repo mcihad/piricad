@@ -123,6 +123,13 @@ public:
     /// an empty drawing at revision zero is correctly not dirty.
     std::uint64_t saved_revision() const noexcept { return saved_revision_; }
 
+    /// Declares the drawing as it stands to be what is on disk, or what needs no disk: a
+    /// program that has just started, a drawing nobody has touched. `YENİ` and `AÇ` do this
+    /// themselves after their swap; the startup document is set up (its coordinate system
+    /// resolved) before any command runs and is the one caller left (TODOS U-06 — the first
+    /// click on a sample asked "Adsız çizim üzerinde kaydedilmemiş değişiklikler var").
+    void mark_clean() noexcept;
+
     /// Asks every running read to stop — the one in place and the one a host is
     /// running. io.md R15: a cancelled read returns within 100 ms.
     void request_stop();

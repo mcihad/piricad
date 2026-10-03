@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "package_version": "1.0.0",
+  "source": "PiriCAD — kurgusal örnek veri; gerçek bir parsel, ada ya da kişiye ait değildir",
+  "published": "2026-10-03",
+  "licence": "GPL-3.0-or-later",
+  "projeler": [
+    {
+      "id": "olcuden-harita",
+      "kisa": "Beş nokta; sınır, yapı, yol ve 1/500 pafta",
+      "baslik": "Ölçüden harita",
+      "ozet": "Arazide ölçülmüş beş detay noktasından sınırı, yapıyı ve yolu çıkarıp 1/500 ölçekli bir pafta basar.",
+      "betik": "olcuden-harita.json",
+      "yerlesim": "Harita 1-500",
+      "olcek": 500,
+      "deneyin": [
+        { "komut": "ALANÖLÇ nesneler=6", "aciklama": "Parselin alanını ve çevresini okuyun." },
+        { "komut": "ÇIKTIYERLEŞİMİ islem=denetle ad=\"Harita 1-500\"", "aciklama": "Basmadan önce yerleşimin eksiğini sorun." },
+        { "komut": "YAZDIR yerlesim=\"Harita 1-500\" dosya=olcuden-harita.pdf", "aciklama": "1/500 ölçekli PDF'i yazın." }
+      ]
+    },
+    {
+      "id": "parsel-duzenleme",
+      "kisa": "Üç parsel, alana göre ifraz, ada paftası",
+      "baslik": "Parsel düzenleme",
+      "ozet": "Yan yana üç parsel: numaralar öznitelikten etiketlenir, ortadaki alana göre ikiye bölünür, ada paftası basılır.",
+      "betik": "parsel-duzenleme.json",
+      "yerlesim": "Ada 1-500",
+      "olcek": 500,
+      "deneyin": [
+        { "komut": "ALANÖLÇ nesneler=2", "aciklama": "Ortadaki parselin alanını okuyun: 1200 m²." },
+        { "komut": "ALANİFRAZ yon=485330,4310200 485330,4310240 nesneler=2 alan=400000000", "aciklama": "400 m²'lik bir parça ayırın; tek Ctrl+Z hepsini geri alır." },
+        { "komut": "YAZDIR yerlesim=\"Ada 1-500\" dosya=parsel-duzenleme.pdf", "aciklama": "Ada paftasını yazın." }
+      ]
+    },
+    {
+      "id": "plan-cizimi",
+      "kisa": "Konut, ticaret, yeşil alan; 1/1000 plan",
+      "baslik": "Plan çizimi",
+      "ozet": "Konut, ticaret ve yeşil alan kullanımları bir yolla ayrılmış; 1/1000 ölçekli uygulama imar planı paftası hazır.",
+      "betik": "plan-cizimi.json",
+      "yerlesim": "Plan 1-1000",
+      "olcek": 1000,
+      "deneyin": [
+        { "komut": "ALANÖLÇ nesneler=1", "aciklama": "Konut alanının büyüklüğünü okuyun." },
+        { "komut": "ÇIKTIYERLEŞİMİ islem=denetle ad=\"Plan 1-1000\"", "aciklama": "Paftanın eksiğini sorun." },
+        { "komut": "YAZDIR yerlesim=\"Plan 1-1000\" dosya=plan-cizimi.pdf", "aciklama": "1/1000 ölçekli PDF'i yazın." }
+      ]
+    },
+    {
+      "id": "gis-analiz",
+      "kisa": "Dere, bina katları, tampon, öznitelik",
+      "baslik": "GIS analizi",
+      "ozet": "Bir dere ve dört bina, bina katlarıyla birlikte: dere kenarındaki yapıları bulmak için tampon ve öznitelik tablosu.",
+      "betik": "gis-analiz.json",
+      "yerlesim": "",
+      "olcek": 0,
+      "deneyin": [
+        { "komut": "TAMPON nesneler=1 mesafe=15", "aciklama": "Dereden 15 m'lik koruma bandını çıkarın; kaynak nesneye dokunulmaz." },
+        { "komut": "ÖZNİTELİK", "aciklama": "Seçili nesnenin özniteliklerini listeleyin; BİNA katmanında 'kat' sütunu var." }
+      ]
+    },
+    {
+      "id": "aplikasyon",
+      "kisa": "Dört köşe noktası ve istasyon: aplikasyon",
+      "baslik": "Arazi işi — aplikasyon",
+      "ozet": "Projedeki dört köşe noktası ve arazide durulan istasyon: aletin hangi yöne kaç metre gideceğini söyleyen aplikasyon raporu.",
+      "betik": "aplikasyon.json",
+      "yerlesim": "",
+      "olcek": 0,
+      "deneyin": [
+        { "komut": "SEÇ NESNE nesneler=1 nesneler=2 nesneler=3 nesneler=4", "aciklama": "Arazide aplike edilecek dört köşe noktasını seçin." },
+        { "komut": "APLİKASYON istasyon=485270,4310180", "aciklama": "Seçili köşeleri istasyondan aplike edin: her biri için yön ve mesafe çıkar." }
+      ]
+    }
+  ]
+}

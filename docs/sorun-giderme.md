@@ -180,13 +180,45 @@ reddedilir.
 **Çözüm.** Soneki düzeltin ya da kaldırın: `@100<45g`. Sonek yoksa açı `açı_birimi`
 ayarıyla okunur. Bkz. [Komut satırı](komutlar/komut-satiri.md).
 
-### `X koordinatı: sayı bekleniyordu (konum 0)`
+### `X koordinatı: sayı bekleniyordu (konum 0); yazılan 'a'. Örnek: 485320.150,4310220.400`
 
-**Sebep.** Koordinatın X bileşeni sayıya çözülemedi. `Y koordinatı:`, `Göreli dx:`,
-`Göreli dy:`, `Kutupsal mesafe:` ve `Kutupsal açı:` önekleri de aynı anlama gelir.
+**Sebep.** Koordinatın X bileşeni sayıya çözülemedi; mesajda **yazdığınız parça** tırnak
+içindedir. `Y koordinatı:`, `Göreli dx:`, `Göreli dy:`, `Kutupsal mesafe:` ve `Kutupsal açı:`
+önekleri de aynı anlama gelir.
 
 **Çözüm.** Ondalık ayırıcının nokta olduğundan ve koordinatta boşluk bulunmadığından emin
 olun: `485320.150,4310220.400`.
+
+### `'noktalar' parametresi nokta listesi bekliyor. Girilen: 10. Nokta iki sayıdır, …`
+
+**Sebep.** Bir nokta beklenen yere tek bir sayı yazıldı. Nokta, doğu ve kuzey olmak üzere
+iki sayıdır.
+
+**Çözüm.** İki sayıyı virgülle yazın: `ÇİZGİ 485320.150,4310220.400 @50,30`.
+
+### `Nesne bulunamadı veya silinmiş: N. …`
+
+**Sebep.** `N` kimlikli nesne çizimde yok. Mesajın devamı hangisi olduğunu söyler:
+
+- **`Çizimde bu kimlikte hiç nesne olmadı (verilen son kimlik M)`** — o kimlik hiç verilmemiş;
+  yazım hatasıdır. Doğru kimliği [`SEÇ`](komutlar/select.md) ya da
+  [`NESNEBİLGİ`](komutlar/entity_info.md) ile bulun.
+- **`Bu nesne silinmiş: SİL, ifraz ve birleştirme eski kimliği kaldırıp yenilerini verir`** —
+  nesne vardı, bir işlem onu kaldırdı. Parselini ifraz ettiyseniz parça kimlikleri yenidir.
+  Yeni kimliği `SEÇ` ile bulun; işlem az önce olduysa [`GERİAL`](komutlar/undo.md) geri getirir.
+- **`Çizim boş; henüz hiçbir nesneye kimlik verilmedi`** — çizimde nesne yok; önce bir çizim
+  açın ya da bir [örnek proje](baslangic/ornek-projeler.md) yükleyin.
+
+Aynı cümle, kimlik alan bütün komutlarda geçerlidir ("zaten silinmiş" biçimi de).
+
+### `Çıktı yerleşimi yok: 'X'. Çizimdeki yerleşimler: …`
+
+**Sebep.** Verdiğiniz ad bu çizimde bir çıktı yerleşiminin adı değil. Mesaj çizimdeki adları
+sayar (hiç yoksa bunu söyler).
+
+**Çözüm.** Listedeki adlardan birini yazın; ad boşluk içeriyorsa tırnak kullanın:
+`YAZDIR yerlesim="Harita 1-500" dosya=harita.pdf`. Hiç yerleşim yoksa
+`ÇIKTIYERLEŞİMİ islem=ekle ad=<ad>` açar ([`ÇIKTIYERLEŞİMİ`](komutlar/layout.md)).
 
 ### `'(1+2' ifadesi: kapanmamış parantez`
 

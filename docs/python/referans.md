@@ -186,6 +186,7 @@ Bunlar komut değildir, çizimi değiştirmezler ve `cad.doc` altındadır.
 | [`cad.layer`](#cadlayer) | `core.layer` | `KATMAN` | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`cad.layer_visibility`](#cadlayer_visibility) | `core.layer_visibility` | `KATMANGÖRÜNÜM` | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
 | [`cad.layer_state`](#cadlayer_state) | `core.layer_state` | `KATMANDURUM` | Hangi katmanların görünür, kilitli, basılır ve seçilir olduğunu adla kaydeder, tek adımda uygular ve siler. |
+| [`cad.sample`](#cadsample) | `core.sample` | `ÖRNEKPROJE` | Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, aplikasyon) boş bir çizim olarak açar ve ne deneyeceğinizi söyler. |
 | [`cad.layout`](#cadlayout) | `core.layout` | `ÇIKTIYERLEŞİMİ` | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`cad.layout_item`](#cadlayout_item) | `core.layout_item` | `ÇIKTIÖĞE` | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`cad.layout_template`](#cadlayout_template) | `core.layout_template` | `ÇIKTIŞABLON` | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
@@ -2772,6 +2773,24 @@ cad.layer_state(
 | `name` | `str` | `ad` | Durumun adı; kaydet, uygula ve sil için gerekir |
 
 [Komut sayfası](../komutlar/layer_state.md)
+
+### `cad.sample`
+
+Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, aplikasyon) boş bir çizim olarak açar ve ne deneyeceğinizi söyler.
+
+Komut: `core.sample` — `ÖRNEKPROJE`
+
+```python
+cad.sample(
+    name: str,
+) -> int
+```
+
+| Anahtar | Tür | Türkçe adı | Açıklama |
+|---|---|---|---|
+| `name` | `str` | `ad` | Açılacak örnek projenin kimliği ya da başlığı; verilmezse liste gösterilir ve sorulur |
+
+[Komut sayfası](../komutlar/sample.md)
 
 ### `cad.layout`
 

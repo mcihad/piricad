@@ -3772,7 +3772,7 @@ TEST_CASE("birimli sayı: aynı büyüklük hangi yazılırsa yazılsın bire bi
     CHECK_FALSE(evaluate_quantity("(2m*3m)", 0).ok()); ///< an area is not supported
     CHECK_FALSE(evaluate_quantity("(2/3m)", 0).ok());  ///< a number over a length
     CHECK_FALSE(evaluate_quantity("(2m^2)", 0).ok());
-    CHECK_FALSE(evaluate_quantity("5xyz", 0).ok());    ///< not a unit: named, not skipped
+    CHECK_FALSE(evaluate_quantity("5xyz", 0).ok()); ///< not a unit: named, not skipped
     CHECK(evaluate_quantity("5xyz", 0).error().message.find("xyz") != std::string::npos);
 
     // Where units are not asked for they stay an error, as they were: the filter grammar and
@@ -3790,10 +3790,10 @@ TEST_CASE("birimli sayı: satırda bitişik, boşluklu, koordinatta ve tırnakl�
     // The first word of a line is its command; a coordinate is tried the way the shell tries an
     // answer, with a stand-in word in front.
     const auto number_of = [](const char* line) {
-        const std::string full = std::string(line).starts_with("OFSET") ||
-                                         std::string(line).starts_with("KATMAN")
-                                     ? std::string(line)
-                                     : "YANIT " + std::string(line);
+        const std::string full =
+            std::string(line).starts_with("OFSET") || std::string(line).starts_with("KATMAN")
+                ? std::string(line)
+                : "YANIT " + std::string(line);
         auto parsed = parse_line(full);
         REQUIRE_MESSAGE(parsed.ok(), line);
         REQUIRE_MESSAGE(parsed.value().tokens.size() == 1, line);
@@ -3841,7 +3841,8 @@ TEST_CASE("birimli sayı: satırda bitişik, boşluklu, koordinatta ve tırnakl�
     CHECK(number_of("101A").kind == Token::Kind::Word);
 }
 
-TEST_CASE("birimli sayı: cevap bildirilen birimde gelir; uzunluk olmayana birim yazılırsa söylenir (U-02)")
+TEST_CASE("birimli sayı: cevap bildirilen birimde gelir; uzunluk olmayana birim yazılırsa söylenir "
+          "(U-02)")
 {
     // What a prompt takes, with the decimal comma a Turkish keyboard types.
     CHECK(evaluate_answer("12.5", 0).value() == 12.5);
@@ -3892,7 +3893,8 @@ TEST_CASE("birimli sayı: OFSET mesafesi hangi yazımla verilirse aynı belge, a
     CHECK(plain.second.find("\"mesafe\":1000") != std::string::npos);
 }
 
-TEST_CASE("birimli sayı: istemin birimi argümanınkinden farklı olabilir; metre sorulur, milimetre yazılır (U-02)")
+TEST_CASE("birimli sayı: istemin birimi argümanınkinden farklı olabilir; metre sorulur, milimetre "
+          "yazılır (U-02)")
 {
     Fixture f;
     const auto exponent = [&f](const char* id, const char* param, ParamKind kind) {
@@ -7194,8 +7196,8 @@ TEST_CASE("OFSET kose=uc: tuvalin çizdiği paralel yazılanın kendisidir")
     CHECK_EQ(decoded.value().distance, core::Mm{2'000});
 
     const core::EntityId slot = f.doc.slot_of(static_cast<core::EntityKey>(1));
-    auto shown = core::entity_parallel(f.doc, slot, decoded.value().distance,
-                                       core::ParallelSide::Right, decoded.value().join);
+    auto shown                = core::entity_parallel(f.doc, slot, decoded.value().distance,
+                                                      core::ParallelSide::Right, decoded.value().join);
     REQUIRE(shown.ok());
     REQUIRE_EQ(shown.value().pieces.size(), std::size_t{1});
     REQUIRE(s.supply(Value::point({5'000, -5'000})).ok()); ///< a click south: the right
@@ -8748,8 +8750,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + BLOKDÜZENLE (TODOS C-13) + DIŞREFERANS, BLOKKIRP (TODOS C-14)
     // + YERELKOPYA (TODOS F-02) + BAĞIMLILIK (TODOS F-04) + ÖNİZLE (TODOS F-05)
     // + KAPSAMDENETİM (netcad_plan.md N-01) + PRİZMA (N-02) + ÇİFTÇİZGİ (N-11)
-    // + DÖRDÜNCÜKÖŞE (N-13) + KATMANDURUM (TODOS U-05)
-    CHECK_EQ(f.reg.size(), std::size_t{119});
+    // + DÖRDÜNCÜKÖŞE (N-13) + KATMANDURUM (TODOS U-05) + ÖRNEKPROJE (TODOS U-06)
+    CHECK_EQ(f.reg.size(), std::size_t{120});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

@@ -29,6 +29,7 @@ add_library(piricad_command STATIC
     src/validation.cpp
     src/value.cpp
     src/drawing_catalogs.cpp
+    src/samples.cpp
     src/dynamic_entry.cpp
     src/commands/block.cpp
     src/commands/xref.cpp
@@ -45,6 +46,7 @@ add_library(piricad_command STATIC
     src/commands/label.cpp
     src/commands/layer.cpp
     src/commands/layer_state.cpp
+    src/commands/sample.cpp
     src/commands/layer_visibility.cpp
     src/commands/layout.cpp
     src/commands/area.cpp

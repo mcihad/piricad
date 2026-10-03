@@ -283,12 +283,12 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         // typed 12.5 m cannot read differently.
         const auto numeric = [&t, &p, &spec]() -> core::Result<double> {
             const std::optional<int> exponent = p.length_exponent();
-            const auto not_a_length            = [&](const std::string& typed) {
-                return core::err(ErrorCode::InvalidArgument,
-                                 "'" + spec.id + "': '" + p.name +
-                                     "' bir uzunluk değil" +
-                                     (p.unit.empty() ? std::string{} : " (birimi: " + p.unit + ")") +
-                                     "; '" + typed + "' yerine sayıyı birimsiz yazın.");
+            const auto not_a_length           = [&](const std::string& typed) {
+                return core::err(
+                    ErrorCode::InvalidArgument,
+                    "'" + spec.id + "': '" + p.name + "' bir uzunluk değil" +
+                        (p.unit.empty() ? std::string{} : " (birimi: " + p.unit + ")") + "; '" +
+                        typed + "' yerine sayıyı birimsiz yazın.");
             };
             if (t.kind == Token::Kind::Number) {
                 if (!t.is_length) return t.a;
@@ -376,6 +376,9 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         // trap with no lesson in it.
         if (is_coordinate(t) && p.arity.max > 1)
             why += ". Birden çok değer için anahtarı yineleyin: " + p.name + "=1 " + p.name + "=2";
+        // A POINT IS TWO NUMBERS, and "nokta listesi bekliyor. Girilen: 10" does not say so.
+        if ((p.kind == ParamKind::Point || p.kind == ParamKind::PointList) && !is_coordinate(t))
+            why += ". Nokta iki sayıdır, doğu ve kuzey (metre): 485320.150,4310220.400";
         return core::err(ErrorCode::ParseError, why);
     };
 
@@ -1032,7 +1035,13 @@ void Bus::cut_back(const core::Document::Tail& tail, LayerId active)
     // WHAT THE ROLLED-BACK STEP APPENDED GOES WITH ITS EDITS (TODOS F-05,
     // model.md R4a). A tail of another document — the step opened a file —
     // is refused by the document and nothing is cut.
-    if (auto st = doc_.truncate_to(tail); !st && tail.generation == doc_.generation())
+    //
+    // INSIDE A BATCH A REFUSAL IS NOT THE LAST WORD: the step that failed may be a script that
+    // ran others (`BETİK`, `ÖRNEKPROJE`), whose edits are the batch's until it is aborted — the
+    // abort cuts back to the batch's own tail, once, and says so if it cannot. Saying it here as
+    // well was a warning about a state that is already being put right (TODOS U-06).
+    if (auto st = doc_.truncate_to(tail);
+        !st && tail.generation == doc_.generation() && batch_ == nullptr)
         log_warn("Geri alınan adımın izleri kesilemedi: " + st.error().message);
     if (active < doc_.layers().size()) active_layer_ = active;
     if (active_layer_ >= doc_.layers().size()) active_layer_ = 0;

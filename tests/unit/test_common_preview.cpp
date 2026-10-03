@@ -134,9 +134,13 @@ TEST_CASE("ÖNİZLE: duracağı adımı söyler; dış etkili adımları çalı�
                 .execute_line("ÖNİZLE komut=\"ÇİZGİ 0,5 10,5\" komut=\"SİL nesneler=999999\"",
                               Origin::Test)
                 .ok());
-    CHECK(r.said.find("Önizleme: 2. adımda duracak — Nesne bulunamadı veya zaten silinmiş: "
-                      "999999. Uygulanırsa bütünüyle geri alınacak; çizim değişmedi.") !=
+    // THE REFUSAL'S OWN SENTENCE IS COMPLETED with why and what to do (TODOS U-06); the preview's
+    // frame around it is what this case is about.
+    CHECK(r.said.find(
+              "Önizleme: 2. adımda duracak — Nesne bulunamadı veya zaten silinmiş: 999999. ") !=
           std::string::npos);
+    CHECK(r.said.find("SEÇ ya da NESNEBİLGİ ile bulun. Uygulanırsa bütünüyle geri alınacak; çizim "
+                      "değişmedi.") != std::string::npos);
     CHECK(state_of(r) == before);
 
     // A FILE, THE VIEW, THE UNDO STACK: not run, each with its reason, and the
@@ -299,8 +303,9 @@ TEST_CASE("ÖNİZLE: kılavuzdaki çıktılar kelimesi kelimesine (F-05)")
     CHECK(r.doc.find_layer("BANT") == core::kNoLayer);
     CHECK_EQ(r.doc.live_entity_count(), std::size_t{2});
     CHECK_EQ(said("ÖNİZLE komut=\"ÇİZGİ 0,5 10,5\" komut=\"SİL nesneler=99\""),
-             "Önizleme: 2. adımda duracak — Nesne bulunamadı veya zaten silinmiş: 99. Uygulanırsa "
-             "bütünüyle geri alınacak; çizim değişmedi.\n");
+             "Önizleme: 2. adımda duracak — Nesne bulunamadı veya zaten silinmiş: 99. Çizimde bu "
+             "kimlikte hiç nesne olmadı (verilen son kimlik 3). Doğru kimliği SEÇ ya da NESNEBİLGİ "
+             "ile bulun. Uygulanırsa bütünüyle geri alınacak; çizim değişmedi.\n");
     CHECK_EQ(said("ÖNİZLE komut=\"DIŞAAKTAR teslim/ada.dxf\" komut=\"ÇİZGİ 0,5 10,5\""),
              "Önizleme: 2 adım — uygulanırsa 1 nesne eklenecek. Çizim değişmedi.\n"
              "  1. adım (core.export) önizlemede çalıştırılmadı: dosya yazar.\n");

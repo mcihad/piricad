@@ -208,7 +208,14 @@ Task<void> run(Context& ctx)
     // The area behind the line grows monotonically as the line slides, so this
     // converges on THE offset rather than on one of several. Sixty halvings of a
     // parcel-sized range is far below a millimetre.
+    //
+    // THE BEST CUT SEEN IS KEPT, not the last one tried (TODOS U-06). The cutter's corners
+    // are rounded to the millimetre, so the area is a staircase in the offset and the
+    // bisection ends on the edge of a step: the last offset tried can sit a millimetre to
+    // either side of it, and a parcel that has an exact 400,00 m² cut was refused with
+    // "en yakın: 399,96 m²" — the sample parcel layout met it first.
     std::vector<core::KernelFace> kept;
+    core::Mm2 best_gap = -1;
     double lo = low, hi = high;
     for (int i = 0; i < kSteps; ++i) {
         const double mid = (lo + hi) * 0.5;
@@ -222,7 +229,10 @@ Task<void> run(Context& ctx)
         }
 
         const core::Mm2 got = area_of(side.value());
-        kept                = std::move(side.value());
+        if (const core::Mm2 gap = abs_area(got - target); best_gap < 0 || gap < best_gap) {
+            best_gap = gap;
+            kept     = std::move(side.value());
+        }
         if (got < target)
             lo = mid;
         else

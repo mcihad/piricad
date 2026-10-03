@@ -407,6 +407,11 @@ core::Result<std::string> FileService::export_style(std::string path, std::strin
     return note;
 }
 
+void FileService::mark_clean() noexcept
+{
+    saved_revision_ = bus_.document().revision();
+}
+
 // ------------------------------------------------------------------ YENİ ----
 
 core::Result<std::string> FileService::create_new()
@@ -858,8 +863,8 @@ command::Task<core::Result<std::string>> FileService::xref(command::FileRequest 
     if (block != core::kNoBlock) {
         const core::BlockDef& def = doc.blocks().at(block);
         const bool live_same      = command::is_external_reference(doc, block) &&
-                                    std::filesystem::path(def.path).lexically_normal() ==
-                                        std::filesystem::path(file).lexically_normal();
+                               std::filesystem::path(def.path).lexically_normal() ==
+                                   std::filesystem::path(file).lexically_normal();
         if (live_same) {
             if (request.resolved_block != nullptr) *request.resolved_block = def.name;
             co_return "'" + def.name +
@@ -974,7 +979,7 @@ FileService::import_into(command::Transaction* tx, command::Session* session, st
     // carries the count with the first reason, the unit that was used and every
     // type that was read, degraded or left out.
     const ImportOutcome& r = outcome.value();
-    std::string said = "İçe aktarıldı: " + std::to_string(r.entities) + " nesne, " +
+    std::string said       = "İçe aktarıldı: " + std::to_string(r.entities) + " nesne, " +
                        std::to_string(r.layers) + " katman (" + r.driver + ", " + r.crs + ")" +
                        r.diagnostics.transcript();
     for (const std::string& n : adopted.value().notes)
@@ -1085,7 +1090,7 @@ FileService::import_points(command::Transaction* tx, std::string path, bool swap
     // second column.
     const core::AttrTable& table = tx->document().attributes();
     const auto column            = [&](const char* id, const char* label,
-                                       core::AttrType type) -> core::Result<core::AttrId> {
+                            core::AttrType type) -> core::Result<core::AttrId> {
         if (const core::AttrId found = table.find(id); found != core::kNoAttr) return found;
 
         core::AttrSpec spec;

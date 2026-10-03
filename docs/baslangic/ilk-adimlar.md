@@ -187,6 +187,7 @@ elle tutulan ikinci bir liste yoktur.
 
 ## Sırada ne var
 
+- [Örnek projelerle başlayın](ornek-projeler.md) — hazır bir işi açın, düzenleyin, ölçeği doğru basın
 - [Arayüz](arayuz.md) — pencerede ne nerede
 - [Komut sistemi](../komutlar/README.md) — PiriCAD'in çalışma mantığı
 - [Komut satırı](../komutlar/komut-satiri.md) — koordinat girişinin tamamı

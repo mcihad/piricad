@@ -1,0 +1,25 @@
+{
+  "ad": "Örnek: plan çizimi",
+  "komutlar": [
+    { "cmd": "core.layer", "args": { "ad": "KONUT", "renk": 4294944000 } },
+    { "cmd": "core.area", "args": { "noktalar": ["485300,4310200", "485350,4310200", "485350,4310240", "485300,4310240"] } },
+    { "cmd": "core.layer", "args": { "ad": "TICARET", "renk": 4294901760 } },
+    { "cmd": "core.area", "args": { "noktalar": ["485350,4310200", "485390,4310200", "485390,4310240", "485350,4310240"] } },
+    { "cmd": "core.layer", "args": { "ad": "YESIL", "renk": 4278222848 } },
+    { "cmd": "core.area", "args": { "noktalar": ["485300,4310240", "485390,4310240", "485390,4310262", "485300,4310262"] } },
+    { "cmd": "core.layer", "args": { "ad": "YOL", "renk": 4286611584 } },
+    { "cmd": "core.polyline", "args": { "noktalar": ["485290,4310192", "485400,4310192"] } },
+    { "cmd": "core.layer", "args": { "ad": "PLAN_YAZI", "renk": 4278190080 } },
+    { "cmd": "core.text", "args": { "noktalar": ["485318,4310220"], "yazi": "KONUT ALANI", "yukseklik": 2500 } },
+    { "cmd": "core.text", "args": { "noktalar": ["485356,4310220"], "yazi": "TİCARET", "yukseklik": 2500 } },
+    { "cmd": "core.text", "args": { "noktalar": ["485330,4310249"], "yazi": "YEŞİL ALAN", "yukseklik": 2500 } },
+    { "cmd": "core.layout",
+      "args": { "islem": "ekle", "ad": "Plan 1-1000", "kagit": "A4", "yon": "yatay" } },
+    { "cmd": "core.layout_item",
+      "args": { "islem": "ayarla", "yerlesim": "Plan 1-1000", "ad": "harita", "olcek": 1000,
+                "pencere": ["485285,4310180", "485405,4310270"] } },
+    { "cmd": "core.layout_item",
+      "args": { "islem": "ayarla", "yerlesim": "Plan 1-1000", "ad": "baslik",
+                "metin": "ÖRNEK UYGULAMA İMAR PLANI" } }
+  ]
+}

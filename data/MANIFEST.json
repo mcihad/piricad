@@ -74,6 +74,16 @@
       "source": "BÖHHBÜY, MPYY, Planlı Alanlar İmar Yönetmeliği, 3194 sayılı Kanun, TUCBS, TKGM genelgeleri",
       "published": null,
       "licence": "pending-review"
+    },
+    {
+      "id": "ornek-projeler",
+      "path": "ornekler/",
+      "status": "ready",
+      "phase": 1,
+      "source": "PiriCAD ekibi — kurgusal örnek veri (gerçek bir parsel, ada ya da kişiye ait değil)",
+      "published": "2026-10-03",
+      "licence": "GPL-3.0-or-later",
+      "note": "Beş JSON komut betiği ve ornekler.json dizini; ÖRNEKPROJE komutu okur (TODOS U-06). Betikler veridir, çalıştırılabilir kod değildir: komut günlüğü biçimindedir."
     }
   ]
 }

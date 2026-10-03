@@ -390,6 +390,11 @@ public:
     /// and in the property panel (`PIRICAD_LAYERPROPS_PROBE`, TODOS U-05).
     int probeLayerProps();
 
+    /// Each sample project opened the way a new user opens it, then edited with its first
+    /// "Deneyin" line and printed to a PDF at the sheet's size (`PIRICAD_SAMPLE_PROBE`, TODOS
+    /// U-06).
+    int probeSamples();
+
     /// `PIRICAD_MENU_PROBE`: opens every menu in turn, photographs it and prints
     /// what it holds. Returns the failure count.
     ///
@@ -720,6 +725,14 @@ private slots:
     /// `closeEvent` asks — Kaydet, Atla, Vazgeç — and dispatches only once the
     /// user has answered. `AÇ` settles it the same way.
     void newProject();
+
+    /// `Dosya ▸ Örnek projeler ▸ <proje>`: asks about unsaved work, then sends the
+    /// line `ÖRNEKPROJE ad=<id>` exactly as anyone else would (TODOS U-06).
+    void openSample(const QString& id);
+
+    /// Refills `sampleMenu_` from `command::load_samples()` — the list `ÖRNEKPROJE`
+    /// itself reads, so the menu cannot name a project the command does not know.
+    void rebuildSampleMenu();
 
     void openProject();
     void saveProject();
@@ -1214,6 +1227,9 @@ private:
     /// it opens — the same list the quick access row's printer arrow and the
     /// application menu show.
     QMenu* layoutMenu_{nullptr};
+
+    /// `Dosya ▸ Örnek projeler`, rebuilt from the sample index each time it opens.
+    QMenu* sampleMenu_{nullptr};
 
     /// The layout manager, the one entry of that list with a key (`Ctrl+Shift+P`):
     /// made once and kept, so the key has one owner however often the list is

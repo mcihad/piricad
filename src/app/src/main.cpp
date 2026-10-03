@@ -3399,6 +3399,12 @@ int main(int argc, char** argv)
         });
     }
 
+    // EACH SAMPLE PROJECT, opened and edited and printed the way a new user would (TODOS U-06).
+    if (qEnvironmentVariableIsSet("PIRICAD_SAMPLE_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeSamples() == 0 ? 0 : 1); });
+    }
+
     // THE TABLE AND THE MAP ON ONE SELECTION, and the panel over several objects.
     if (qEnvironmentVariableIsSet("PIRICAD_LINK_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
@@ -3952,7 +3958,7 @@ int main(int argc, char** argv)
             const QByteArray wrote   = post(
                 base,
                 envelope("tools/call",
-                         "{\"name\":\"core_layer\",\"arguments\":{\"ad\":\"AJAN\"}," + meta + "}"),
+                           "{\"name\":\"core_layer\",\"arguments\":{\"ad\":\"AJAN\"}," + meta + "}"),
                 "tools/call", "core_layer", &status);
             say("write tool", status, wrote);
             check(status == 200, "yazma aracı 200 vermedi");

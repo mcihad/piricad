@@ -165,11 +165,20 @@ Task<void> run_print(Context& ctx)
                 co_return;
             }
 
-        const std::string named = sheet.as_text();
-        if (ctx.session().bus().document().layouts().find(named) == nullptr) {
-            ctx.session().fail(core::err(core::ErrorCode::NotFound,
-                                         "Çıktı yerleşimi yok: '" + named +
-                                             "'. ÇIKTIYERLEŞİMİ islem=listele ile adları görün."));
+        const std::string named         = sheet.as_text();
+        const core::LayoutStore& sheets = ctx.session().bus().document().layouts();
+        if (sheets.find(named) == nullptr) {
+            // THE NAMES THE DRAWING HAS, so the right spelling is read off the message (TODOS
+            // U-06).
+            std::string have;
+            for (const core::Layout& l : sheets.all())
+                have += (have.empty() ? "" : ", ") + l.name;
+            ctx.session().fail(core::err(
+                core::ErrorCode::NotFound,
+                "Çıktı yerleşimi yok: '" + named + "'. " +
+                    (have.empty() ? std::string("Çizimde hiç çıktı yerleşimi yok; ÇIKTIYERLEŞİMİ "
+                                                "islem=ekle ad=<ad> ile açın.")
+                                  : "Çizimdeki yerleşimler: " + have + ".")));
             co_return;
         }
         request.layout = named;

@@ -9,6 +9,7 @@ Daha önce PiriCAD kullanmadıysanız sırayla okuyun:
 
 1. [Kurulum ve derleme](baslangic/kurulum.md) — programı çalışır hâle getirin
 2. [İlk adımlar](baslangic/ilk-adimlar.md) — on dakikada ilk çiziminiz
+   — ya da hazır bir işle başlayın: [Örnek projelerle başlayın](baslangic/ornek-projeler.md)
 3. [Arayüz](baslangic/arayuz.md) — pencerede ne nerede
 4. [Bileşenler](baslangic/bilesenler.md) — düğmeler, girdiler ve seçim denetimleri; durumları ve klavyesi
 5. [Stil tasarımcısı](baslangic/stil-tasarimcisi.md) — bir katmanın nasıl çizileceğini tasarlayın
@@ -28,6 +29,7 @@ Tek tek komutlar:
 | Komut | Sayfa |
 |---|---|
 | `YENİ` | [Boş çizim başlatma](komutlar/new.md) |
+| `ÖRNEKPROJE` | [Hazır bir örnekle başlayın](komutlar/sample.md) |
 | `AÇ` | [Proje dosyası açma](komutlar/open.md) |
 | `KAYDET` | [Çizimi kaydetme](komutlar/save.md) |
 | `FARKLIKAYDET` | [Yeni ada kaydetme](komutlar/saveas.md) |

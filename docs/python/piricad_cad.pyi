@@ -1857,6 +1857,16 @@ def layer_state(
         name — Durumun adı; kaydet, uygula ve sil için gerekir
     """
 
+def sample(
+    *,
+    name: str = ...,
+) -> int:
+    """Hazır bir örnek projeyi (ölçüden harita, parsel düzenleme, plan, GIS, aplikasyon) boş bir çizim olarak açar ve ne deneyeceğinizi söyler.
+
+    Komut: core.sample (ÖRNEKPROJE)
+        name — Açılacak örnek projenin kimliği ya da başlığı; verilmezse liste gösterilir ve sorulur
+    """
+
 def layout(
     *,
     action: str = ...,

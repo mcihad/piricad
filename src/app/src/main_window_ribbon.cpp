@@ -380,6 +380,9 @@ void MainWindow::buildRibbon()
     // YAZDIR WITH ITS SHEETS BESIDE IT: the printer prints, the arrow at its
     // right lists the drawing's layouts — a new one, the manager, the office's
     // templates and every sheet the drawing holds — rebuilt as it opens.
+    sampleMenu_ = new QMenu(tr("Örnek Projeler"), this);
+    sampleMenu_->setObjectName(QStringLiteral("sampleMenu"));
+    rebuildSampleMenu();
     layoutMenu_ = new QMenu(tr("Çıktı Yerleşimleri"), this);
     layoutMenu_->setObjectName(QStringLiteral("layoutMenu"));
     connect(layoutMenu_, &QMenu::aboutToShow, this, &MainWindow::rebuildLayoutMenu);
@@ -462,13 +465,13 @@ void MainWindow::buildRibbon()
     auto* circleThree    = methodTool(Glyph::CircleThreePoint, tr("Daire — üç nokta"),
                                       QStringLiteral("DAİRE yontem=3n"),
                                       tr("Çevrel çember: üç noktanın hepsi çemberin üzerinde"));
-    auto* circleTangent = methodTool(Glyph::CircleTangent, tr("Daire — iki doğruya teğet"),
-                                     QStringLiteral("DAİRE yontem=ttr"),
-                                     tr("İki doğru, yarıçap ve dairenin geleceği köşe gösterilir"));
-    auto* ellipseAxis   = methodTool(Glyph::EllipseAxis, tr("Elips — eksenin iki ucu"),
-                                     QStringLiteral("ELİPS yontem=eksen"),
-                                     tr("Merkez iki ucun ortasıdır; üçüncü nokta ikinci ekseni "
-                                        "verir"));
+    auto* circleTangent  = methodTool(Glyph::CircleTangent, tr("Daire — iki doğruya teğet"),
+                                      QStringLiteral("DAİRE yontem=ttr"),
+                                      tr("İki doğru, yarıçap ve dairenin geleceği köşe gösterilir"));
+    auto* ellipseAxis    = methodTool(Glyph::EllipseAxis, tr("Elips — eksenin iki ucu"),
+                                      QStringLiteral("ELİPS yontem=eksen"),
+                                      tr("Merkez iki ucun ortasıdır; üçüncü nokta ikinci ekseni "
+                                            "verir"));
     auto* arcThree =
         methodTool(Glyph::ArcThreePoint, tr("Yay — üç nokta"), QStringLiteral("YAY yontem=3n"),
                    tr("Başlangıç, üzerinden geçtiği nokta ve bitiş"));
@@ -1222,6 +1225,17 @@ void MainWindow::buildRibbon()
     };
     verb(actNew_, tr("Boş bir çizim açar"));
     verb(actOpen_, tr("Bir proje dosyası açar"));
+    // HAZIR ÖRNEKLER, beside the verbs that open a drawing: the answer to "where do I
+    // start" for someone who has nothing to open (TODOS U-06). The list is the one
+    // `ÖRNEKPROJE` reads, rebuilt whenever it is shown.
+    sampleMenu_->menuAction()->setData(static_cast<int>(Glyph::Terrain));
+    sampleMenu_->menuAction()->setToolTip(
+        tr("ÖRNEKPROJE — hazır bir örnekle başlayın: ölçüden harita, parsel düzenleme, plan, "
+           "GIS, aplikasyon"));
+    verb(sampleMenu_->menuAction(), tr("Hazır bir işle başlar"), false, [this] {
+        rebuildSampleMenu();
+        return sampleMenu_->actions();
+    });
     verb(actSave_, tr("Çizimi dosyasına yazar"));
     verb(actSaveAs_, tr("Çizimi yeni bir dosyaya yazar"));
     verb(actImport_, tr("Dış bir veri dosyasını çizime ekler"), true);
@@ -2510,7 +2524,7 @@ void MainWindow::refreshContextTabs()
             if (!ribbonLive_->hatchScale->hasFocus()) {
                 const QSignalBlocker hold = quiet(ribbonLive_->hatchScale);
                 const double k            = h.scale.den != 0 ? static_cast<double>(h.scale.num) /
-                                                                   static_cast<double>(h.scale.den)
+                                                        static_cast<double>(h.scale.den)
                                                              : 1.0;
                 ribbonLive_->hatchScale->setEditText(metresText(k, k < 10.0 ? 2 : 0));
             }
@@ -2990,11 +3004,11 @@ int MainWindow::probeRibbonSheet()
     // in either theme. Photograph the actual popup, including editable lists.
     const ThemeMode originalTheme = theme_;
     const auto popupShot          = [&settle, &save](ComboBox* box, const char* name,
-                                                     const QString& themeName) {
+                                            const QString& themeName) {
         box->showPopup();
         settle();
         save(box->view()->window()->grab().toImage(),
-             QStringLiteral("combo-%1-%2").arg(themeName, QString::fromLatin1(name)));
+                      QStringLiteral("combo-%1-%2").arg(themeName, QString::fromLatin1(name)));
         box->hidePopup();
     };
     for (const ThemeMode mode : {ThemeMode::Light, ThemeMode::Dark}) {

@@ -107,6 +107,7 @@ namespace piricad::command {
     X(layer)                                                                                       \
     X(layer_visibility)                                                                            \
     X(layer_state)                                                                                 \
+    X(sample)                                                                                      \
     X(layout)                                                                                      \
     X(layout_item)                                                                                 \
     X(layout_template)                                                                             \

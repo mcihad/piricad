@@ -50,6 +50,7 @@
 
 #include "piricad/command/bus.hpp"
 #include "piricad/command/colour.hpp"
+#include "piricad/command/samples.hpp"
 #include "piricad/command/select_modes.hpp"
 #include "piricad/command/selection.hpp"
 #include "piricad/command/validation.hpp"
@@ -1079,7 +1080,7 @@ void MainWindow::buildActions()
                       "kısaltma: TDZ"));
     actBlock_  = modifyTool(Glyph::BlockDefine, tr("Blok"), QStringLiteral("BLOK"),
                             tr("BLOK — seçilen nesnelerden adlı blok tanımlar ve yerine bir "
-                               "referans koyar  ·  kısaltma: BLK"));
+                                "referans koyar  ·  kısaltma: BLK"));
     actInsert_ = drawTool(Glyph::BlockInsert, tr("Blok Ekle"), QStringLiteral("BLOKEKLE"),
                           tr("BLOKEKLE — tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle "
                              "yerleştirir  ·  kısaltma: BE"));
@@ -1199,8 +1200,8 @@ void MainWindow::buildActions()
     };
     actBlockSave_   = editStep(Glyph::Check, tr("Bloğu Kaydet"), QStringLiteral("blockEditSave"),
                                tr("BLOKDÜZENLE islem=kaydet — bloğun tanımını düzenlenen "
-                                  "nesnelerden yeniden kurar; bütün referanslar yeni biçimi "
-                                  "çizer"),
+                                    "nesnelerden yeniden kurar; bütün referanslar yeni biçimi "
+                                    "çizer"),
                                true);
     actBlockCancel_ = editStep(Glyph::Close, tr("Vazgeç"), QStringLiteral("blockEditCancel"),
                                tr("BLOKDÜZENLE islem=vazgec — açılan nesneleri kaldırır, tanım "
@@ -1497,8 +1498,8 @@ void MainWindow::buildActions()
                                 "gösterilir  ·  kısaltma: PH"));
     actFillet_  = modifyTool(Glyph::Fillet, tr("Yuvarla"), QStringLiteral("YUVARLA"),
                              tr("YUVARLA — köşeye ya da iki nesneye kalacak parçalarından "
-                                "tıklayın; köşeyi teğet bir yayla yuvarlatır, 0 keskin köşe  ·  "
-                                "kısaltma: YV"));
+                                 "tıklayın; köşeyi teğet bir yayla yuvarlatır, 0 keskin köşe  ·  "
+                                 "kısaltma: YV"));
     // EVERY CORNER AT ONCE (TODOS C-06), each its own entry so a hand reaches
     // it: a chain rounded or cut by one size, the corners it does not fit
     // passed over and counted.
@@ -1528,7 +1529,7 @@ void MainWindow::buildActions()
                          "oturumun birim ve kuralıyla okunur  ·  kısaltma: KLV"));
     actLabel_    = commandAction(Glyph::Label, tr("Etiket"), QStringLiteral("ETİKET"),
                                  tr("ETİKET — katmandaki nesneleri özniteliklerinden okuyarak "
-                                    "etiketler  ·  kısaltma: ETK"));
+                                       "etiketler  ·  kısaltma: ETK"));
     actStakeout_ = commandAction(Glyph::Locate, tr("Aplikasyon"), QStringLiteral("APLİKASYON"),
                                  tr("APLİKASYON — istasyondan hedefe semt açısı ve kenar  ·  "
                                     "kısaltma: APL"));
@@ -1539,19 +1540,19 @@ void MainWindow::buildActions()
     // not be in the column at all — which is where a hand looks for PAH.
     actBreak_    = modifyTool(Glyph::Break, tr("Kır"), QStringLiteral("KIR"),
                               tr("KIR — iki nokta arasındaki parçayı çıkarır; tek nokta boşluksuz "
-                                 "böler  ·  kısaltma: KR"));
+                                    "böler  ·  kısaltma: KR"));
     actLengthen_ = modifyTool(Glyph::Lengthen, tr("Uzunluk"), QStringLiteral("UZUNLUK"),
                               tr("UZUNLUK — bir ucu kendi doğrultusunda hareket ettirir  ·  "
                                  "kısaltma: UZN"));
     actJoin_     = modifyTool(Glyph::Join, tr("Uç Uca Ekle"), QStringLiteral("UÇUCA"),
                               tr("UÇUCA — uçları değen çizgileri tek çizgiye ekler; BİRLEŞTİR ile "
-                                 "karıştırmayın  ·  kısaltma: UÇE"));
+                                     "karıştırmayın  ·  kısaltma: UÇE"));
     actExplode_  = modifyTool(Glyph::Explode, tr("Patlat"), QStringLiteral("PATLAT"),
                               tr("PATLAT — çizgiyi kenarlara, alanı sınırına, bloğu bileşenlerine "
-                                 "ayırır  ·  kısaltma: PTL"));
-    actAlign_ = modifyTool(Glyph::Align, tr("Hizala"), QStringLiteral("HİZALA"),
-                           tr("HİZALA — bir ya da iki nokta çiftiyle taşır, döndürür ve istenirse "
-                              "ölçekler  ·  kısaltma: HZL"));
+                                  "ayırır  ·  kısaltma: PTL"));
+    actAlign_    = modifyTool(Glyph::Align, tr("Hizala"), QStringLiteral("HİZALA"),
+                              tr("HİZALA — bir ya da iki nokta çiftiyle taşır, döndürür ve istenirse "
+                                    "ölçekler  ·  kısaltma: HZL"));
     // AND THE SCALING FORM, whose whole line rides on the button: the second
     // pair's length then stretches the objects too — a sketch fitted onto its
     // surveyed corners. It was reachable only by typing `olcekle=evet`.
@@ -1571,7 +1572,7 @@ void MainWindow::buildActions()
                                    "imleci izler  ·  kısaltma: KT"));
     actVertexAdd_  = modifyTool(Glyph::VertexAdd, tr("Köşe Ekle"), QStringLiteral("KÖŞEEKLE"),
                                 tr("KÖŞEEKLE — kenara tıklayın, yeni köşenin yerini gösterin  ·  "
-                                   "kısaltma: KE"));
+                                    "kısaltma: KE"));
     // THE TWO EDITS A CORNER AND AN EDGE STILL LACKED (TODOS C-07): a corner
     // taken out, and an edge's kind changed — straight to arc and back.
     actVertexDelete_ =
@@ -1813,7 +1814,7 @@ void MainWindow::buildActions()
     // ÖLÇ and ALANÖLÇ, and `modifyTool` is what puts them there.
     actEntityInfo_   = modifyTool(Glyph::Info, tr("Nesne Bilgisi"), QStringLiteral("NESNEBİLGİ"),
                                   tr("NESNEBİLGİ — tür, katman, köşe sayısı, çevre, alan ve "
-                                     "öznitelikler  ·  kısaltma: NB"));
+                                       "öznitelikler  ·  kısaltma: NB"));
     actMeasureAngle_ = modifyTool(Glyph::MeasureAngle, tr("Açı Ölç"), QStringLiteral("AÇIÖLÇ"),
                                   tr("AÇIÖLÇ — tepe ve iki kol; açıyı oturumun birim ve "
                                      "kuralıyla yazar  ·  kısaltma: AÇÖ"));
@@ -2956,10 +2957,10 @@ void MainWindow::showPickCycle()
     } else {
         const bool picking = controller_->awaitingInput() &&
                              controller_->promptKind() == command::ParamKind::Selection;
-        const bool ctrl    = c.modifiers.testFlag(Qt::ControlModifier);
-        const bool one     = picking && controller_->promptPickMost() == 1 && !ctrl;
-        result             = c.before;
-        const auto held    = std::find(result.begin(), result.end(), current);
+        const bool ctrl = c.modifiers.testFlag(Qt::ControlModifier);
+        const bool one  = picking && controller_->promptPickMost() == 1 && !ctrl;
+        result          = c.before;
+        const auto held = std::find(result.begin(), result.end(), current);
         if (ctrl) {
             if (held != result.end()) result.erase(held);
         } else if (one || (!picking && !c.modifiers.testFlag(Qt::ShiftModifier))) {
@@ -3602,6 +3603,112 @@ void MainWindow::probeSchemaPage()
         say(QStringLiteral("kare: sutun-formu.png"));
 }
 
+int MainWindow::probeSamples()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[örnek] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+    const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_SAMPLE_PROBE"));
+    if (into.size() > 1) QDir().mkpath(into);
+    const auto picture = [this, &into](const QString& name) {
+        if (into.size() <= 1) return;
+        QCoreApplication::processEvents();
+        QScreen* screen = windowHandle() != nullptr ? windowHandle()->screen() : nullptr;
+        QPixmap frame   = screen != nullptr ? screen->grabWindow(winId()) : QPixmap();
+        if (frame.isNull()) frame = grab();
+        (void)frame.save(into + QLatin1Char('/') + name + QStringLiteral(".png"));
+    };
+    const auto media_box = [](const QString& path) {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) return QSizeF();
+        const QByteArray bytes = file.readAll();
+        const qsizetype at     = bytes.indexOf("/MediaBox");
+        if (at < 0) return QSizeF();
+        const qsizetype open  = bytes.indexOf('[', at);
+        const qsizetype close = bytes.indexOf(']', open);
+        if (open < 0 || close < 0) return QSizeF();
+        const QList<QByteArray> parts =
+            bytes.mid(open + 1, close - open - 1).simplified().split(' ');
+        return parts.size() < 4 ? QSizeF() : QSizeF(parts[2].toDouble(), parts[3].toDouble());
+    };
+
+    auto catalog = command::load_samples();
+    check(catalog.ok(), QStringLiteral("örnek dizini yüklendi"));
+    if (!catalog) return failures;
+
+    bool first = true;
+    for (const command::Sample& s : catalog.value().samples) {
+        const QString id    = QString::fromStdString(s.id);
+        const QString title = QString::fromStdString(s.title);
+        const int before    = transcript_->toPlainText().size();
+
+        // THE FIRST THROUGH THE MENU'S OWN SLOT, on a drawing nobody has touched, which is the
+        // new user's first minute: it asks nothing. The rest go straight to the command, since the
+        // drawing is dirty by then and the slot would put a modal question up.
+        if (first) {
+            // A DRAWING NOBODY HAS TOUCHED IS NOT "UNSAVED WORK": the new user's first click would
+            // otherwise open with a question about changes they never made.
+            check(!controller_->isDirty(), QStringLiteral("açılışta çizim temiz (soru sorulmaz)"));
+            if (controller_->isDirty())
+                runScriptLine(QStringLiteral("ÖRNEKPROJE ad=%1").arg(id));
+            else
+                openSample(id);
+        } else
+            runScriptLine(QStringLiteral("ÖRNEKPROJE ad=%1").arg(id));
+        first = false;
+        QCoreApplication::processEvents();
+
+        const QString said = transcript_->toPlainText().mid(before);
+        check(!said.contains(QStringLiteral("Hata:")),
+              title + QStringLiteral(": açıldı, hata yok"));
+        check(said.contains(QStringLiteral("Örnek proje açıldı: ") + title) &&
+                  said.contains(QStringLiteral("Deneyin")),
+              title + QStringLiteral(": açılış ve 'Deneyin' satırları yazıldı"));
+        check(controller_->document().live_entity_count() >= 4,
+              title + QStringLiteral(": çizim dolu (%1 nesne)")
+                          .arg(controller_->document().live_entity_count()));
+        picture(id);
+
+        // EDITED: the first line it offers, typed as printed, and the drawing changed.
+        for (const command::SampleStep& step : s.steps) {
+            if (step.command.rfind("YAZDIR", 0) == 0) continue;
+            const QString line = QString::fromStdString(step.command);
+            const int mark     = transcript_->toPlainText().size();
+            runScriptLine(line);
+            endCommand();
+            const QString answer = transcript_->toPlainText().mid(mark);
+            check(!answer.contains(QStringLiteral("Hata:")),
+                  title + QStringLiteral(": '%1' çalıştı").arg(line));
+        }
+        picture(id + QStringLiteral("-duzenlendi"));
+
+        // PRINTED at the scale the page promised: the sheet's own PDF, A4 landscape.
+        if (!s.layout.empty()) {
+            const QString pdf = into.size() > 1
+                                    ? into + QLatin1Char('/') + id + QStringLiteral(".pdf")
+                                    : QDir::temp().filePath(id + QStringLiteral(".pdf"));
+            QFile::remove(pdf);
+            runScriptLine(QStringLiteral("YAZDIR yerlesim=\"%1\" dosya=\"%2\"")
+                              .arg(QString::fromStdString(s.layout), pdf));
+            QCoreApplication::processEvents();
+            check(QFileInfo::exists(pdf) && QFileInfo(pdf).size() > 2000,
+                  title + QStringLiteral(": PDF yazıldı (%1 bayt)").arg(QFileInfo(pdf).size()));
+            const QSizeF box = media_box(pdf);
+            check(std::abs(box.width() - 841.89) < 2.0 && std::abs(box.height() - 595.28) < 2.0,
+                  title + QStringLiteral(": PDF A4 yatay (%1 x %2 pt)")
+                              .arg(box.width(), 0, 'f', 1)
+                              .arg(box.height(), 0, 'f', 1));
+            if (into.size() <= 1) QFile::remove(pdf);
+        }
+    }
+    controller_->cancelAll();
+    return failures;
+}
+
 int MainWindow::probeLayerProps()
 {
     int failures     = 0;
@@ -3803,8 +3910,8 @@ int MainWindow::probeLayerProps()
         picture("katman-durumlari-uygulandi");
     }
 
-
-    // ---- 6. A THOUSAND LAYERS (TODOS U-05): the list, the search and a bulk change stay fluid ----
+    // ---- 6. A THOUSAND LAYERS (TODOS U-05): the list, the search and a bulk change stay fluid
+    // ----
     //
     // Measured in the real shell, with the layer list showing: the acceptance is "akıcı", and a
     // number is the only form of that which can be held. The bounds are generous on purpose — this
@@ -3821,8 +3928,9 @@ int MainWindow::probeLayerProps()
         controller_->runLines(lines, QStringLiteral("bin katman"));
         QCoreApplication::processEvents();
         const qint64 made = clock.restart();
-        check(controller_->document().layers().size() >= 1000,
-              QStringLiteral("bin katman oluştu (%1)").arg(controller_->document().layers().size()));
+        check(
+            controller_->document().layers().size() >= 1000,
+            QStringLiteral("bin katman oluştu (%1)").arg(controller_->document().layers().size()));
 
         layerPanel_->refresh();
         QCoreApplication::processEvents();
@@ -3856,25 +3964,28 @@ int MainWindow::probeLayerProps()
         runScriptLine(QStringLiteral("KATMANDURUM islem=uygula ad=BIN"));
         const qint64 applied = clock.restart();
 
-        (void)std::fprintf(stdout,
-                           "[katmanözellik] ölçüm (1000 katman): oluşturma %lld ms, liste %lld ms, "
-                           "arama %lld ms, ters çevir %lld ms, durum kaydet %lld ms, uygula %lld ms\n",
-                           static_cast<long long>(made), static_cast<long long>(listed),
-                           static_cast<long long>(searched), static_cast<long long>(flipped),
-                           static_cast<long long>(saved), static_cast<long long>(applied));
+        (void)std::fprintf(
+            stdout,
+            "[katmanözellik] ölçüm (1000 katman): oluşturma %lld ms, liste %lld ms, "
+            "arama %lld ms, ters çevir %lld ms, durum kaydet %lld ms, uygula %lld ms\n",
+            static_cast<long long>(made), static_cast<long long>(listed),
+            static_cast<long long>(searched), static_cast<long long>(flipped),
+            static_cast<long long>(saved), static_cast<long long>(applied));
         check(listed < 1500 && searched >= 0 && searched < 1000,
               QStringLiteral("1000 katmanda liste ve arama akıcı (liste %1 ms, arama %2 ms)")
                   .arg(listed)
                   .arg(searched));
         check(flipped < 3000 && saved < 3000 && applied < 3000,
-              QStringLiteral("1000 katmanda toplu işlemler akıcı (ters çevir %1, kaydet %2, uygula %3 ms)")
+              QStringLiteral(
+                  "1000 katmanda toplu işlemler akıcı (ters çevir %1, kaydet %2, uygula %3 ms)")
                   .arg(flipped)
                   .arg(saved)
                   .arg(applied));
         bool back = true;
         for (const core::Layer& l : controller_->document().layers())
             back = back && l.visible;
-        check(back, QStringLiteral("durum uygulanınca bin katman da kayıttaki gibi (hepsi görünür)"));
+        check(back,
+              QStringLiteral("durum uygulanınca bin katman da kayıttaki gibi (hepsi görünür)"));
     }
 
     controller_->cancelAll();
@@ -4718,7 +4829,7 @@ int MainWindow::probeViewHistory()
     const std::size_t before_drag = behind();
     const core::Point2 centre     = canvas_->view().centre();
     const auto mouse              = [this](QEvent::Type type, QPointF at, Qt::MouseButton button,
-                                           Qt::MouseButtons held) {
+                              Qt::MouseButtons held) {
         QMouseEvent e(type, at, canvas_->mapToGlobal(at), button, held, Qt::NoModifier);
         QCoreApplication::sendEvent(canvas_, &e);
     };
@@ -6126,7 +6237,7 @@ int MainWindow::probeRealMouse()
         const auto corners           = [this] {
             const command::Session* live = controller_->session();
             return live != nullptr && live->waiting() ? live->prompt().rubber_chain.size()
-                                                      : std::size_t{0};
+                                                                : std::size_t{0};
         };
         const auto press = [this](int key, Qt::KeyboardModifiers mods, QAction* action) {
             if (isActiveWindow()) {
@@ -7191,9 +7302,9 @@ int MainWindow::probeRealMouse()
                 runScriptLine(QStringLiteral("YAKINLAŞ mod=ÇARPAN carpan=0.6"));
                 runScriptLine(QStringLiteral("SEÇ mod=TEMİZLE"));
                 const QString line = QString::fromUtf8(c.line);
-                QAction* tool = line == QStringLiteral("ÖLÇÜ")
-                                    ? actDimension_
-                                    : findChild<QAction*>(QStringLiteral("toolAction.") + line);
+                QAction* tool      = line == QStringLiteral("ÖLÇÜ")
+                                         ? actDimension_
+                                         : findChild<QAction*>(QStringLiteral("toolAction.") + line);
                 check(tool != nullptr && ribbonButton(tool, false) != nullptr,
                       QStringLiteral("Ölçü: %1 şeritteki Ölçü ailesinde").arg(line));
                 if (tool == nullptr) continue;
@@ -7791,7 +7902,7 @@ int MainWindow::probeRealMouse()
             if (const core::EntityId e = slot_of(line); e != core::kNoEntity && doc.alive(e)) {
                 const core::RingSpan rs = doc.geometry().rings_of(doc.entities().slot[e]);
                 moved                   = core::Point2{doc.geometry().ring_xs(rs.first).back(),
-                                                       doc.geometry().ring_ys(rs.first).back()};
+                                     doc.geometry().ring_ys(rs.first).back()};
             }
             check(std::abs(moved.y - 2'500) <= 300,
                   QStringLiteral("açılan çizginin ucu tutamaktan sürüklendi (%1, %2)")
@@ -7895,7 +8006,7 @@ int MainWindow::probeRealMouse()
                     if (m == core::kNoEntity || !doc.texts().has(doc.entities().slot[m])) continue;
                     const core::RingSpan rs = doc.geometry().rings_of(doc.entities().slot[m]);
                     caption_start           = core::Point2{doc.geometry().ring_xs(rs.first)[0],
-                                                           doc.geometry().ring_ys(rs.first)[0]};
+                                                 doc.geometry().ring_ys(rs.first)[0]};
                 }
             const QPointF number_at =
                 screen(core::Point2{landed.x + caption_start.x, landed.y + caption_start.y});
@@ -7930,7 +8041,7 @@ int MainWindow::probeRealMouse()
                 doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(placed)));
             const core::AttrId no = doc.attributes().find("no");
             const bool valued     = placed_slot != core::kNoEntity && no != core::kNoAttr &&
-                                    doc.attribute(no, placed_slot).value().text == "K-7";
+                                doc.attribute(no, placed_slot).value().text == "K-7";
             check(valued, QStringLiteral("yazılan değer referansın 'no' hücresinde: K-7"));
             shoot("oznitelik-cizildi");
 
@@ -8253,10 +8364,10 @@ int MainWindow::probeRealMouse()
                 (void)side.execute_line("KATMAN ad=YOL", command::Origin::Test);
                 for (int r = 0; r < roads; ++r)
                     (void)side.execute_line("ÇİZGİ -4," + std::to_string(-3 - 4 * r) + " 30," +
-                                                std::to_string(-3 - 4 * r),
-                                            command::Origin::Test);
+                                                  std::to_string(-3 - 4 * r),
+                                              command::Origin::Test);
                 (void)side.execute_line("FARKLIKAYDET \"" + base_map.toStdString() + "\"",
-                                        command::Origin::Test);
+                                          command::Origin::Test);
             };
             write_map(1);
             runScriptLine(QStringLiteral("YENİ"));
@@ -8469,14 +8580,14 @@ int MainWindow::probeRealMouse()
             onCanvas(QEvent::MouseMove, screen(shown_corner) + QPointF(4.0, -3.0), Qt::NoButton);
             const core::SnapResult* near_shown = canvas_->snapPreviewForProbe();
             const bool took_shown              = near_shown != nullptr &&
-                                                 near_shown->mode == core::SnapEndpoint &&
-                                                 near_shown->point == shown_corner;
+                                    near_shown->mode == core::SnapEndpoint &&
+                                    near_shown->point == shown_corner;
             const core::Point2 hidden_corner{60'000, 30'000};
             onCanvas(QEvent::MouseMove, screen(hidden_corner) + QPointF(4.0, -3.0), Qt::NoButton);
             const core::SnapResult* near_hidden = canvas_->snapPreviewForProbe();
             const bool took_hidden              = near_hidden != nullptr &&
-                                                  near_hidden->mode == core::SnapEndpoint &&
-                                                  near_hidden->point == hidden_corner;
+                                     near_hidden->mode == core::SnapEndpoint &&
+                                     near_hidden->point == hidden_corner;
             check(took_shown && !took_hidden,
                   QStringLiteral("görünen parsel köşesi yakalandı, sınır dışındaki köşe "
                                  "yakalanmadı"));
@@ -10554,7 +10665,7 @@ QString MainWindow::blockEditLine(bool save) const
 {
     if (!blockEdit_) return {};
     const core::Document& doc = controller_->document();
-    QString line = QStringLiteral("BLOKDÜZENLE islem=%1")
+    QString line              = QStringLiteral("BLOKDÜZENLE islem=%1")
                        .arg(save ? QStringLiteral("kaydet") : QStringLiteral("vazgec"));
     if (blockEdit_->reference != 0)
         line += QStringLiteral(" nesne=%1").arg(blockEdit_->reference);
@@ -10724,8 +10835,8 @@ int MainWindow::probeOsClicks()
                 if (e->type() != QEvent::Enter) {
                     const auto* m = static_cast<QMouseEvent*>(e);
                     where         = QStringLiteral(" @%1,%2")
-                                        .arg(qRound(m->globalPosition().x()))
-                                        .arg(qRound(m->globalPosition().y()));
+                                .arg(qRound(m->globalPosition().x()))
+                                .arg(qRound(m->globalPosition().y()));
                 }
                 say(QStringLiteral("olay %1 %2%3").arg(QLatin1String(what), who, where));
             }
@@ -11221,10 +11332,11 @@ int MainWindow::probeAnswerable()
             double metres; ///< what the run must hold afterwards
             bool accepted;
         };
+
         const Typed typed[] = {
-            {"5", 5.0, true},          {"5 m", 5.0, true},        {"500 cm", 5.0, true},
-            {"5000mm", 5.0, true},     {"(4m+100cm)", 5.0, true}, {"5,5 m", 5.5, true},
-            {"5xyz", 0.0, false},      {"(2m+50)", 0.0, false},
+            {"5", 5.0, true},      {"5 m", 5.0, true},        {"500 cm", 5.0, true},
+            {"5000mm", 5.0, true}, {"(4m+100cm)", 5.0, true}, {"5,5 m", 5.5, true},
+            {"5xyz", 0.0, false},  {"(2m+50)", 0.0, false},
         };
         QAction* offset = nullptr;
         for (QAction* candidate : findChildren<QAction*>())
@@ -11240,7 +11352,8 @@ int MainWindow::probeAnswerable()
             QCoreApplication::processEvents();
             const command::Session* live = controller_->session();
             if (live == nullptr || !live->waiting()) {
-                check(false, QStringLiteral("OFSET mesafeyi sordu (%1)").arg(QString::fromUtf8(t.text)));
+                check(false,
+                      QStringLiteral("OFSET mesafeyi sordu (%1)").arg(QString::fromUtf8(t.text)));
                 continue;
             }
             const QString asked = QString::fromStdString(live->prompt().message);
@@ -11252,9 +11365,8 @@ int MainWindow::probeAnswerable()
             QCoreApplication::processEvents();
 
             const command::Session* after = controller_->session();
-            const bool still_asking =
-                after != nullptr && after->waiting() &&
-                QString::fromStdString(after->prompt().message) == asked;
+            const bool still_asking       = after != nullptr && after->waiting() &&
+                                      QString::fromStdString(after->prompt().message) == asked;
             if (t.accepted) {
                 const command::Value held =
                     after != nullptr ? after->resolved().get("mesafe") : command::Value{};
@@ -11270,8 +11382,7 @@ int MainWindow::probeAnswerable()
                           .arg(t.metres)
                           .arg(value));
             } else {
-                check(still_asking &&
-                          transcript_->toPlainText().size() > transcript_before,
+                check(still_asking && transcript_->toPlainText().size() > transcript_before,
                       QStringLiteral("OFSET mesafesine \"%1\" reddedildi, soru açık, sebep yazıldı")
                           .arg(QString::fromUtf8(t.text)));
             }
@@ -11569,6 +11680,36 @@ int MainWindow::probeMenus()
             QCoreApplication::processEvents();
             if (shooting)
                 (void)appMenu_->grab().toImage().save(QStringLiteral("%1/menu-%2-%3-yazdir.png")
+                                                          .arg(into)
+                                                          .arg(index, 2, 10, QLatin1Char('0'))
+                                                          .arg(title));
+        }
+        // And on `Örnek Projeler` (TODOS U-06): the five jobs a new user can start from, each a
+        // row that names the command it runs.
+        QAbstractButton* samples = nullptr;
+        for (QAbstractButton* b : appMenu_->findChildren<QAbstractButton*>())
+            if (b->objectName() == QStringLiteral("applicationMenuVerb") &&
+                b->text() == QString(sampleMenu_->menuAction()->text()).remove(QLatin1Char('&')))
+                samples = b;
+        if (samples == nullptr) {
+            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: ana menüde Örnek Projeler yok\n");
+            ++failures;
+        } else {
+            samples->setFocus(Qt::TabFocusReason);
+            QCoreApplication::processEvents();
+            int rows = 0;
+            for (QAbstractButton* b : appMenu_->findChildren<QAbstractButton*>())
+                if (b->objectName() == QStringLiteral("applicationMenuChoice") && b->isVisible())
+                    ++rows;
+            if (rows != 5) {
+                (void)std::fprintf(stderr, "[menü] BAŞARISIZ: Örnek Projeler %d satır (5 olmalı)\n",
+                                   rows);
+                ++failures;
+            } else {
+                (void)std::fprintf(stdout, "[menü] tamam: Örnek Projeler 5 örnek sunuyor\n");
+            }
+            if (shooting)
+                (void)appMenu_->grab().toImage().save(QStringLiteral("%1/menu-%2-%3-ornek.png")
                                                           .arg(into)
                                                           .arg(index, 2, 10, QLatin1Char('0'))
                                                           .arg(title));
@@ -12278,9 +12419,9 @@ void MainWindow::refreshPointTab()
         // for objects — it would offer a screen reader no press to find it by.
         const command::Session* live = controller_->session();
         const bool asks_point        = live != nullptr && live->waiting() &&
-                                       (live->prompt().kind == command::ParamKind::Point ||
-                                        live->prompt().kind == command::ParamKind::PointList);
-        const bool draws             = !asks_point || command::takes_draw_layer(live->spec());
+                                (live->prompt().kind == command::ParamKind::Point ||
+                                 live->prompt().kind == command::ParamKind::PointList);
+        const bool draws = !asks_point || command::takes_draw_layer(live->spec());
         promptLayerPick_->setEnabled(draws);
         promptLayerPick_->setProperty(
             "piricad.unavailable",
@@ -12424,8 +12565,8 @@ void MainWindow::onPromptChanged(const QString& prompt)
     if (live != nullptr && live->waiting()) {
         const command::Prompt& asked = live->prompt();
         const bool typed             = asked.kind == command::ParamKind::Text ||
-                                       asked.kind == command::ParamKind::Number ||
-                                       asked.kind == command::ParamKind::Integer;
+                           asked.kind == command::ParamKind::Number ||
+                           asked.kind == command::ParamKind::Integer;
         // UNLESS THE WORDS ARE ALREADY BEING TYPED WHERE THEY GO: the box over
         // a caption opened for this question (`MapCanvas::editTextAt`) keeps
         // the keyboard.
@@ -12788,6 +12929,50 @@ void MainWindow::newProject()
     // same reset without a dialog it could not answer (Article 1.2).
     controller_->runLine(QStringLiteral("YENİ"), command::Origin::Gui);
     refreshWindowTitle();
+}
+
+void MainWindow::openSample(const QString& id)
+{
+    // THE QUESTION AROUND THE COMMAND, as `newProject` asks it: a sample replaces the
+    // drawing, and the one at the workstation must not lose work to a menu click. The
+    // command itself asks nothing (a script has no one to answer).
+    if (!settleBlockEdit(tr("Örnek proje açılmadan önce")) ||
+        !confirmDiscard(tr("Örnek projeye geçmeden önce kaydedilsin mi?")))
+        return;
+    controller_->runLine(QStringLiteral("ÖRNEKPROJE ad=%1").arg(id), command::Origin::Gui);
+    refreshWindowTitle();
+    // THE HISTORY TAB COMES UP, because that is where the command said what the project is and
+    // what to try next. Left on the properties tab the guidance was written to a panel nobody was
+    // looking at, and the new user got a drawing and no hint (TODOS U-06).
+    if (propertyHeader_ != nullptr) propertyHeader_->setCurrent(1);
+    if (transcript_ != nullptr) transcript_->moveCursor(QTextCursor::End);
+}
+
+void MainWindow::rebuildSampleMenu()
+{
+    if (sampleMenu_ == nullptr) return;
+    for (QAction* action : sampleMenu_->actions()) {
+        sampleMenu_->removeAction(action);
+        action->deleteLater();
+    }
+    auto catalog = command::load_samples();
+    if (!catalog) {
+        // SAID IN THE MENU, not swallowed: an empty list would read as "there are none".
+        QAction* none = sampleMenu_->addAction(tr("Örnek projeler bulunamadı"));
+        none->setToolTip(QString::fromStdString(catalog.error().message));
+        none->setEnabled(false);
+        return;
+    }
+    for (const command::Sample& s : catalog.value().samples) {
+        QAction* one = sampleMenu_->addAction(QString::fromStdString(s.title));
+        // THE ROW'S LINE is the short one; the long one is the status bar's.
+        one->setToolTip(QString::fromStdString(s.tagline.empty() ? s.summary : s.tagline));
+        one->setStatusTip(
+            QStringLiteral("ÖRNEKPROJE ad=%1 — %2")
+                .arg(QString::fromStdString(s.id), QString::fromStdString(s.summary)));
+        const QString id = QString::fromStdString(s.id);
+        connect(one, &QAction::triggered, this, [this, id] { openSample(id); });
+    }
 }
 
 void MainWindow::openProject()
@@ -14522,7 +14707,7 @@ void MainWindow::probeToolsByHand()
         const auto say  = [&](const char* when) {
             const command::Session* live = controller_->session();
             (void)std::fprintf(stdout, "[el] %-7s %-12s yanan=%-22s sorulan=\"%s\"\n", step.tool,
-                               when, qPrintable(lit()),
+                                when, qPrintable(lit()),
                                live != nullptr ? live->prompt().message.c_str() : "(yok)");
         };
 

@@ -6,6 +6,37 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — işe dayalı başlangıç: `ÖRNEKPROJE` ve beş örnek proje (U-06)
+
+- **`ÖRNEKPROJE ad=<kimlik>`** (`core.sample`, `ÖRNEK`, `SAMPLE`): çizimin yerine hazır, küçük bir iş koyar —
+  **ölçüden harita**, **parsel düzenleme**, **plan çizimi**, **GIS analizi**, **arazi işi (aplikasyon)**.
+  Projeler `data/ornekler` altında JSON komut betikleridir (koordinatlar kurgusal); komut `YENİ`yi gönderir,
+  betiği tek geri alma adımı olarak çalıştırır, görünümü oturtur ve transkripte projenin ne olduğunu, hazır
+  paftasını ve **sıradaki denemeleri** (komut satırına olduğu gibi yazılan satırlar) yazar. Günlükte kendi
+  satırı yoktur (`BETİK` gibi `ReadOnly`): `YENİ` ve projenin komutları yazılır, oynatma projeyi iki kez kurmaz.
+  Arayüz ve komut satırı ve betik aynı belgeyi ve aynı günlüğü bırakır (`test_samples.cpp` kanıt vakası).
+- **`PiriCAD ▸ Örnek Projeler`** menüsü beş projeyi tek satırlık özetle listeler; seçmek önce "kaydedilsin mi?"
+  diye sorar, sonra komutu gönderir ve **Geçmiş** sekmesini öne getirir. Projeler A4 yatay paftayla biter ve
+  harita çerçevesi ilan edilen ölçekte (1:500, 1:1000) çizimin tamamını gösterir; PDF basılıp ölçek çubuğu
+  cetvelle doğrulandı (40 m = 80 mm). Sayfa: `docs/baslangic/ornek-projeler.md`, `docs/komutlar/sample.md`;
+  kare: `ornek-projeler-menu.png`, `ornek-proje-acildi.png`, `ornek-pafta-1-500.png`.
+- **Hata mesajları nesneyi ve düzeltilebilir nedeni söylüyor.** `Nesne bulunamadı veya (zaten) silinmiş: N`
+  (elliden fazla komutun ortak cümlesi) artık hiç verilmemiş bir kimlik ile bir ifraz/birleştirme/silme ile
+  kalkmış bir kimliği ayırıyor ve ne yapılacağını söylüyor — tek yerde, `Session::fail`; koordinat hataları
+  yazılanı ve çalışan bir örneği gösteriyor (`X koordinatı: … yazılan 'a'. Örnek: …`; "Girilen: 10" artık
+  "10.000000" değil); olmayan çıktı yerleşiminde çizimdeki adlar sayılıyor (`ÇIKTIYERLEŞİMİ`, `YAZDIR`).
+- **Düzeltme — taze açılan program "kaydedilmemiş değişiklik" taşıyordu.** Başlangıç belgesinin koordinat sistemi
+  çözülürken revizyon ilerliyordu; programı açıp hemen kapatmak ya da ilk `Aç`/örnek tıklaması var olmayan
+  değişiklikler için kaydetmeyi soruyordu. `FileService::mark_clean()` başlangıçta çağrılıyor; sonda
+  (`ci-gate-ornek-proje`) "açılışta çizim temiz" diye tutuyor.
+- **Düzeltme — `ALANİFRAZ` ulaşılabilir alanı reddedebiliyordu.** Kesen çizginin köşeleri milimetreye yuvarlandığı
+  için alan basamaklı bir fonksiyondur ve ikiye bölme son denenen kesimi tutuyordu; basamağın kenarında kalıp
+  tam 400,00 m²'lik bir kesimi "en yakın: 399,96 m²" diye reddediyordu. Artık hedefe en yakın kesim tutuluyor
+  (örnek parselde yakalandı; regresyon: `test_cadastre.cpp`, 300/400/500/600 m² tam ayrılıyor).
+- **İç içe betik dıştakine katılıyor.** Bir betiğin içinden `BETİK` ya da `ÖRNEKPROJE` çalıştırmak "Toplu iş zaten
+  açık" diyerek reddediliyordu (aynı komut komut satırında çalışıp betikte çalışmıyordu). İç betik artık açık toplu
+  işe katılır: tek geri alma adımı, hata dış betiği bütünüyle geri alır ve "geri alındı" cümlesi bir kez söylenir.
+
 ### Eklendi — 1000 katmanda akıcılık ölçüldü (U-05)
 
 - Gerçek kabukta bin katmanlı çizim: oluşturma 110 ms, liste 5 ms, arama kutusu 6 ms, görünürlüğü

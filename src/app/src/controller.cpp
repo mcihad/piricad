@@ -138,6 +138,11 @@ Controller::Controller(QObject* parent)
         core::Op discard;
         if (auto st = document_.set_crs(crs_->resolve(document_.crs().id()), discard); !st)
             command::log_warn("başlangıç koordinat sistemi çözülemedi: " + st.error().message);
+        // SETTING THE DRAWING UP IS NOT EDITING IT. The revision moved with the coordinate
+        // system, and a program that started would otherwise be "dirty" with nothing done:
+        // the first click on Aç or a sample, or on the window's close button, asked to save
+        // changes nobody made.
+        files_.mark_clean();
     }
 #if PIRICAD_HAVE_PYTHON
     // `proje` for both hosts, and the project directory is the working directory

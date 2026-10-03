@@ -96,8 +96,10 @@ veya
 make run-script SCRIPT=tests/journal/ornek-parsel.json
 ```
 
-Çalıştırdığınız betiğin kendisi de `core.script` çağırabilir, ama iç içe betik yerine
-komutları tek dosyada toplamak daha okunaklıdır.
+Çalıştırdığınız betiğin kendisi de `core.script` çağırabilir (ya da bir örnek projeyi açan
+[`ÖRNEKPROJE`](sample.md)'ü). İç betik **dıştakinin geri alma adımına katılır**: ikisi birlikte
+tek `GERİAL`'dır ve iç betiğin bir komutu başarısız olursa dış betiğin tamamı geri alınır.
+Yine de komutları tek dosyada toplamak daha okunaklıdır.
 
 Örnek bir betik dosyası — olduğu gibi çalışır:
 

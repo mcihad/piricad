@@ -1,0 +1,22 @@
+{
+  "ad": "Örnek: parsel düzenleme",
+  "komutlar": [
+    { "cmd": "core.layer", "args": { "ad": "PARSEL", "renk": 4278190080 } },
+    { "cmd": "core.area", "args": { "noktalar": ["485300,4310200", "485330,4310200", "485330,4310240", "485300,4310240"] } },
+    { "cmd": "core.area", "args": { "noktalar": ["485330,4310200", "485360,4310200", "485360,4310240", "485330,4310240"] } },
+    { "cmd": "core.area", "args": { "noktalar": ["485360,4310200", "485390,4310200", "485390,4310240", "485360,4310240"] } },
+    { "cmd": "core.column", "args": { "kimlik": "parsel_no", "tur": "tam_sayi", "ad": "Parsel No" } },
+    { "cmd": "core.attribute", "args": { "ad": "parsel_no", "nesne": 1, "deger": "1" } },
+    { "cmd": "core.attribute", "args": { "ad": "parsel_no", "nesne": 2, "deger": "2" } },
+    { "cmd": "core.attribute", "args": { "ad": "parsel_no", "nesne": 3, "deger": "3" } },
+    { "cmd": "core.label", "args": { "katman": "PARSEL", "bicim": "{parsel_no}", "yukseklik": 2000 } },
+    { "cmd": "core.layout",
+      "args": { "islem": "ekle", "ad": "Ada 1-500", "kagit": "A4", "yon": "yatay" } },
+    { "cmd": "core.layout_item",
+      "args": { "islem": "ayarla", "yerlesim": "Ada 1-500", "ad": "harita", "olcek": 500,
+                "pencere": ["485295,4310190", "485395,4310250"] } },
+    { "cmd": "core.layout_item",
+      "args": { "islem": "ayarla", "yerlesim": "Ada 1-500", "ad": "baslik",
+                "metin": "ÖRNEK ADA — PARSELLER" } }
+  ]
+}

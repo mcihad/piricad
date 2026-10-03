@@ -375,7 +375,7 @@ aracı "işaretli" diye söyler ve bölünmüş düğmede iki eylem sunar: **Bas
 Sekme satırının en solundaki **PiriCAD** düğmesi uygulama menüsünü açar. Solda dosyayla
 yapılan işler büyük satırlar halinde, her birinin altında ne yaptığı yazar: **Yeni**
 (**Ctrl+N**), **Aç…** (**Ctrl+O**), **Kaydet** (**Ctrl+S**), **Farklı Kaydet…**
-(**Ctrl+Shift+S**), **İçe Aktar…**, **Dışa Aktar…**, **Yazdır** (**Ctrl+P**), **Çıktı
+(**Ctrl+Shift+S**), **Örnek Projeler** (beş hazır iş; [bkz.](ornek-projeler.md)), **İçe Aktar…**, **Dışa Aktar…**, **Yazdır** (**Ctrl+P**), **Çıktı
 Yerleşimleri**, **Proje Ayarları…**, **Veritabanı…** (**Ctrl+Shift+D**), **Betik
 Çalıştır…** (**Ctrl+R**) ve şeritte yeri olmayan komutlar için **Diğer Komutlar**.
 

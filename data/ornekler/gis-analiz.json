@@ -1,0 +1,18 @@
+{
+  "ad": "Örnek: GIS analizi",
+  "komutlar": [
+    { "cmd": "core.layer", "args": { "ad": "DERE", "renk": 4278190335 } },
+    { "cmd": "core.polyline",
+      "args": { "noktalar": ["485300,4310200", "485330,4310215", "485350,4310212", "485385,4310232"] } },
+    { "cmd": "core.layer", "args": { "ad": "BINA", "renk": 4294901760 } },
+    { "cmd": "core.area", "args": { "noktalar": ["485322,4310222", "485332,4310222", "485332,4310230", "485322,4310230"] } },
+    { "cmd": "core.area", "args": { "noktalar": ["485340,4310225", "485352,4310225", "485352,4310235", "485340,4310235"] } },
+    { "cmd": "core.area", "args": { "noktalar": ["485360,4310240", "485370,4310240", "485370,4310248", "485360,4310248"] } },
+    { "cmd": "core.area", "args": { "noktalar": ["485305,4310225", "485315,4310225", "485315,4310232", "485305,4310232"] } },
+    { "cmd": "core.column", "args": { "kimlik": "kat", "tur": "tam_sayi", "ad": "Kat sayısı", "katman": "BINA" } },
+    { "cmd": "core.attribute", "args": { "ad": "kat", "nesne": 2, "deger": "2" } },
+    { "cmd": "core.attribute", "args": { "ad": "kat", "nesne": 3, "deger": "5" } },
+    { "cmd": "core.attribute", "args": { "ad": "kat", "nesne": 4, "deger": "3" } },
+    { "cmd": "core.attribute", "args": { "ad": "kat", "nesne": 5, "deger": "1" } }
+  ]
+}

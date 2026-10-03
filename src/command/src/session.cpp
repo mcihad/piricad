@@ -520,10 +520,49 @@ void Session::record_awaited(const std::string& param, Value v)
     resolved_.set(param, Value::numbers(std::move(run)));
 }
 
+namespace {
+
+/// "Nesne bulunamadı veya silinmiş: N" is said by some fifty command bodies, each of which knows
+/// that an id is not there and none of which knows WHY — and the why decides the fix (TODOS
+/// U-06): an id that was never given is a typo, one that was given and is gone belongs to a
+/// parcel an ifraz or a merge has replaced. The key allocator knows which, so the one place all
+/// of them fail through completes the sentence. The words they said stay first and unchanged.
+std::string completed_missing_object(const core::Document& doc, std::string message)
+{
+    constexpr std::string_view heads[] = {"Nesne bulunamadı veya silinmiş: ",
+                                          "Nesne bulunamadı veya zaten silinmiş: "};
+    for (const std::string_view head : heads) {
+        if (message.rfind(head, 0) != 0) continue;
+        const std::string_view digits = std::string_view(message).substr(head.size());
+        // Only the bare form: a message that already says more is left as its author wrote it.
+        if (digits.empty() ||
+            !std::ranges::all_of(digits, [](char c) { return c >= '0' && c <= '9'; }))
+            return message;
+        std::uint64_t id = 0;
+        for (const char c : digits)
+            id = id * 10 + static_cast<std::uint64_t>(c - '0');
+        const std::uint64_t next = doc.keys().peek_entity();
+        if (id >= next)
+            return message +
+                   (next <= 1 ? ". Çizim boş; henüz hiçbir nesneye kimlik verilmedi."
+                              : ". Çizimde bu kimlikte hiç nesne olmadı (verilen son "
+                                "kimlik " +
+                                    std::to_string(next - 1) + ")") +
+                   ". Doğru kimliği SEÇ ya da NESNEBİLGİ ile bulun.";
+        return message +
+               ". Bu nesne silinmiş: SİL, ifraz ve birleştirme eski kimliği kaldırıp yenilerini "
+               "verir. Yeni kimliği SEÇ ile bulun; az önce olduysa GERİAL geri getirir.";
+    }
+    return message;
+}
+
+} // namespace
+
 void Session::fail(core::Error e)
 {
-    error_ = std::move(e);
-    state_ = SessionState::Failed;
+    e.message = completed_missing_object(bus_.document(), std::move(e.message));
+    error_    = std::move(e);
+    state_    = SessionState::Failed;
 }
 
 } // namespace piricad::command

@@ -1,0 +1,31 @@
+{
+  "ad": "Örnek: ölçüden harita",
+  "komutlar": [
+    { "cmd": "core.layer", "args": { "ad": "OLCU_NOKTA", "renk": 4278190335 } },
+    { "cmd": "core.point_draw",
+      "args": { "noktalar": ["485310.12,4310205.40", "485352.88,4310203.71", "485356.30,4310231.05",
+                             "485331.47,4310236.92", "485312.90,4310230.18"] } },
+    { "cmd": "core.layer", "args": { "ad": "SINIR", "renk": 4278190080 } },
+    { "cmd": "core.area",
+      "args": { "noktalar": ["485310.12,4310205.40", "485352.88,4310203.71", "485356.30,4310231.05",
+                             "485331.47,4310236.92", "485312.90,4310230.18"] } },
+    { "cmd": "core.layer", "args": { "ad": "YAPI", "renk": 4294901760 } },
+    { "cmd": "core.area",
+      "args": { "noktalar": ["485318.00,4310210.00", "485336.00,4310210.00", "485336.00,4310222.00",
+                             "485318.00,4310222.00"] } },
+    { "cmd": "core.layer", "args": { "ad": "YOL", "renk": 4286611584 } },
+    { "cmd": "core.polyline",
+      "args": { "noktalar": ["485300.00,4310198.00", "485330.00,4310197.20", "485365.00,4310196.50"] } },
+    { "cmd": "core.layer", "args": { "ad": "YAZI", "renk": 4278190080 } },
+    { "cmd": "core.text",
+      "args": { "noktalar": ["485326.00,4310226.00"], "yazi": "PARSEL", "yukseklik": 1500 } },
+    { "cmd": "core.layout",
+      "args": { "islem": "ekle", "ad": "Harita 1-500", "kagit": "A4", "yon": "yatay" } },
+    { "cmd": "core.layout_item",
+      "args": { "islem": "ayarla", "yerlesim": "Harita 1-500", "ad": "harita", "olcek": 500,
+                "pencere": ["485295,4310190", "485375,4310245"] } },
+    { "cmd": "core.layout_item",
+      "args": { "islem": "ayarla", "yerlesim": "Harita 1-500", "ad": "baslik",
+                "metin": "ÖRNEK ARAZİ — ÖLÇÜ HARİTASI" } }
+  ]
+}

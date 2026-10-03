@@ -1,0 +1,13 @@
+{
+  "ad": "Örnek: arazi işi — aplikasyon",
+  "komutlar": [
+    { "cmd": "core.layer", "args": { "ad": "DETAY_NOKTA", "renk": 4278190335 } },
+    { "cmd": "core.point_draw",
+      "args": { "noktalar": ["485300,4310200", "485340,4310200", "485340,4310230", "485300,4310230"] } },
+    { "cmd": "core.layer", "args": { "ad": "PROJE", "renk": 4278190080 } },
+    { "cmd": "core.area",
+      "args": { "noktalar": ["485300,4310200", "485340,4310200", "485340,4310230", "485300,4310230"] } },
+    { "cmd": "core.layer", "args": { "ad": "ISTASYON", "renk": 4294901760 } },
+    { "cmd": "core.point_draw", "args": { "noktalar": ["485270,4310180"] } }
+  ]
+}

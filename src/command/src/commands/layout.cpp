@@ -95,6 +95,23 @@ const char* canonical_verb(std::string_view typed, std::span<const char* const> 
     return nullptr;
 }
 
+/// "Çıktı yerleşimi yok: 'X'" — and the names the drawing HAS, so the one who mistyped one reads
+/// the right spelling off the message instead of running a second command to find it (TODOS U-06).
+std::string no_such_layout(const core::LayoutStore& store, const std::string& named)
+{
+    std::string said = "Çıktı yerleşimi yok: '" + named + "'. ";
+    if (store.empty())
+        return said +
+               "Çizimde hiç çıktı yerleşimi yok; ÇIKTIYERLEŞİMİ islem=ekle ad=<ad> ile açın.";
+    said += "Çizimdeki yerleşimler: ";
+    bool first = true;
+    for (const Layout& l : store.all()) {
+        said += (first ? "" : ", ") + l.name;
+        first = false;
+    }
+    return said + ".";
+}
+
 /// The layout the `yerlesim` argument names, or the only one when there is one and
 /// the argument is empty.
 ///
@@ -106,7 +123,7 @@ const Layout* resolve(const core::LayoutStore& store, const std::string& named,
 {
     if (!named.empty()) {
         const Layout* found = store.find(named);
-        if (found == nullptr) trouble = "Çıktı yerleşimi yok: '" + named + "'.";
+        if (found == nullptr) trouble = no_such_layout(store, named);
         return found;
     }
     if (store.empty()) {
@@ -195,8 +212,8 @@ Task<void> run_layout(Context& ctx)
             return core::turkish_key_equals(l.name, *named);
         });
         if (at == next.end()) {
-            ctx.session().fail(
-                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         no_such_layout(ctx.document().layouts(), *named)));
             co_return;
         }
         next.erase(at);
@@ -219,8 +236,8 @@ Task<void> run_layout(Context& ctx)
         for (Layout& l : next)
             if (core::turkish_key_equals(l.name, *named)) target = &l;
         if (target == nullptr) {
-            ctx.session().fail(
-                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         no_such_layout(ctx.document().layouts(), *named)));
             co_return;
         }
         ctx.record("yeni_ad", fresh);
@@ -325,8 +342,8 @@ Task<void> run_layout(Context& ctx)
         for (Layout& l : next)
             if (core::turkish_key_equals(l.name, *named)) target = &l;
         if (target == nullptr) {
-            ctx.session().fail(
-                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         no_such_layout(ctx.document().layouts(), *named)));
             co_return;
         }
 
@@ -403,8 +420,8 @@ Task<void> run_layout(Context& ctx)
         // pages are written.
         const Layout* found = have.find(*named);
         if (found == nullptr) {
-            ctx.session().fail(
-                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         no_such_layout(ctx.document().layouts(), *named)));
             co_return;
         }
 
@@ -476,8 +493,8 @@ Task<void> run_layout(Context& ctx)
         // loud (TODOS L-15).
         const Layout* found = have.find(*named);
         if (found == nullptr) {
-            ctx.session().fail(
-                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         no_such_layout(ctx.document().layouts(), *named)));
             co_return;
         }
         const std::vector<std::string> trouble      = core::layout_trouble(*found, ctx.document());
@@ -537,8 +554,8 @@ Task<void> run_layout(Context& ctx)
         for (Layout& l : next)
             if (core::turkish_key_equals(l.name, *named)) target = &l;
         if (target == nullptr) {
-            ctx.session().fail(
-                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         no_such_layout(ctx.document().layouts(), *named)));
             co_return;
         }
 
@@ -1269,7 +1286,7 @@ bool column_verb(Context& ctx, Bus& bus, LayoutItem& item, const std::string& op
         item.columns.clear();
     }
     std::vector<core::LayoutColumn>& columns = item.table_columns;
-    const auto position = [&](const char* name, std::size_t last,
+    const auto position                      = [&](const char* name, std::size_t last,
                               std::size_t fallback) -> std::optional<std::size_t> {
         const Value v = ctx.argument(name);
         if (v.empty()) return fallback;

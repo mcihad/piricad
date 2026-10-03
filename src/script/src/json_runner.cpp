@@ -124,7 +124,18 @@ core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string 
     journal_run(bus_, "json", label, sandbox_, script_identity(json), /*consented=*/false);
 
     // One script block is ONE undo step (§2.5) and ONE validation pass (§10.4).
-    if (auto st = bus_.begin_batch(label); !st) return st.error();
+    //
+    // A SCRIPT RUN FROM INSIDE A BATCH JOINS IT (TODOS U-06). `ÖRNEKPROJE` builds a
+    // project by running its script, and a JSON script that says `ÖRNEKPROJE` — a
+    // client like any other (Article 1.2) — would otherwise be refused because a batch
+    // is already open: the same command would work from the command line and fail from
+    // a script. Joined, the inner steps are the outer batch's steps: one undo step, and
+    // a failure here is a failure of the command that called this, which makes the
+    // outer runner roll the whole thing back. The batch's owner closes it, not us.
+    const bool joined = bus_.in_batch();
+    if (!joined) {
+        if (auto st = bus_.begin_batch(label); !st) return st.error();
+    }
 
     RunReport report;
     report.label = label;
@@ -135,17 +146,22 @@ core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string 
             // A failing script leaves nothing behind — not in the drawing, not
             // on the redo stack, not in the journal. Half-applied cadastral or
             // zoning edits are never acceptable (§2.5, TODOS F-05).
-            bus_.abort_batch();
+            if (!joined) bus_.abort_batch();
             // SAID, because the transcript still shows what the lines before it
             // answered as they ran — "1 nesne taşındı" — and none of it stands.
+            // A JOINED SCRIPT does not claim the rollback — its owner does it, and says it once.
             return core::err(result.error().code,
                              "Betik satırı " + std::to_string(report.commands + 1) + " (" +
                                  inv.name + "): " + sentence(result.error().message) +
-                                 " Betik bütünüyle geri alındı; çizim betikten önceki hâlinde.");
+                                 (joined ? std::string()
+                                         : std::string(" Betik bütünüyle geri alındı; çizim "
+                                                       "betikten önceki hâlinde.")));
         }
 
         ++report.commands;
     }
+
+    if (joined) return report;
 
     auto closed = bus_.end_batch();
     if (!closed) return closed.error();
