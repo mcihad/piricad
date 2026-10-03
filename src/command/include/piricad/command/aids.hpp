@@ -41,6 +41,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string_view>
 
 namespace piricad::core {
 /// Forward-declared: the aids read a document to snap against, and this header
@@ -167,6 +168,20 @@ bool aimed_from_origin(const Prompt& p) noexcept;
 /// window at all. Kutupsal izleme still applies there: at half a right angle it
 /// is what draws a square. And with no aid at all for a pick
 /// (`RubberShape::Trim`): the click names a piece, not a point.
-AidSettings aids_for(const AidSettings& set, const Prompt& p);
+///
+/// `temporary` is a ONE-SHOT OBJECT SNAP (`Session::temporary_snap`, `snap_mode_from_word`): the
+/// running object snaps are put aside for this one answer and only that mode looks (TODOS U-03).
+/// The direction locks and the grid stay as they were; a constructed mode borrows a reach when the
+/// settings gave it none, because a person who asked for UZANTI by name wants it found.
+AidSettings aids_for(const AidSettings& set, const Prompt& p, std::uint32_t temporary = 0);
+
+/// THE OBJECT SNAP A WORD NAMES, as its bit, or 0: `orta`, `Uç`, `KESİŞİM`, `ağırlık merkezi`,
+/// `END`. Typed at a point prompt it asks for that snap for the next point only — AutoCAD's
+/// override, which every surveyor knows by hand. The words are the modes' own ids and labels
+/// (`core::snap_mode_id` / `snap_mode_label`, so a mode added there is typeable the day it is)
+/// folded the Turkish way (CLAUDE.md 5.6), the label's first word where that is unambiguous (`uç`,
+/// `dik`, `teğet`), and the three-letter English abbreviations. Only the modes that look at
+/// geometry: the grid, polar and tracking are not objects.
+std::uint32_t snap_mode_from_word(std::string_view typed);
 
 } // namespace piricad::command

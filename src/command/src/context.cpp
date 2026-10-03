@@ -71,7 +71,7 @@ Value snap_value(Session& session, const Prompt& prompt, Value v, bool up_front)
     Bus& bus = session.bus();
     // The aids THIS prompt takes (`aids_for`): dik mod has no say over a
     // rectangle's opposite corner.
-    const AidSettings set = aids_for(bus.aid_settings(), prompt);
+    const AidSettings set = aids_for(bus.aid_settings(), prompt, session.temporary_snap());
 
     const bool object_snap = set.snap_radius > 0 && (set.modes & core::SnapObjectMask) != 0;
     const bool grid        = set.grid_step > 0 && (set.modes & core::SnapGrid) != 0;
@@ -131,6 +131,8 @@ Value apply_input_aids(Session& session, const Prompt& prompt, Value v, bool up_
     // point a hand AIMED is helped, like every aid — a stated coordinate is exact.
     const bool aimed = v.kind() == Value::Kind::Point && v.aimed();
     Value snapped    = snap_value(session, prompt, std::move(v), up_front);
+    // THE ONE-SHOT SNAP IS SPENT by the point it was asked for.
+    if (aimed) session.set_temporary_snap(0);
     if (aimed && !up_front)
         if (const auto held = session.dynamic_point(snapped.as_point())) return Value::point(*held);
     return snapped;

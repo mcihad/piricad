@@ -395,6 +395,25 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
             }
         }
 
+        // AN OBJECT SNAP BY NAME FOR THE NEXT POINT ONLY (TODOS U-03): `orta` typed where a point
+        // is asked puts the running snaps aside and looks for midpoints alone, the way every CAD's
+        // override does. Not when the word is a command (`KES` trims), and only where the prompt
+        // takes aids at all. The point that answers is a stated coordinate like any other — the
+        // snap is never journalled, only where it put the point.
+        if (session_->prompt().aids &&
+            (session_->prompt().kind == command::ParamKind::Point ||
+             session_->prompt().kind == command::ParamKind::PointList) &&
+            registry_.resolve(trimmed.toStdString()) == nullptr) {
+            if (const std::uint32_t bit = command::snap_mode_from_word(trimmed.toStdString());
+                bit != 0) {
+                session_->set_temporary_snap(bit);
+                emit echoed(tr("  Geçici yakalama: %1 — yalnız bir sonraki nokta için.")
+                                .arg(QString::fromUtf8(core::snap_mode_label(bit))));
+                emit dynamicChanged();
+                return command::DispatchResult{};
+            }
+        }
+
         // `G`, `GERİ` OR `U` BETWEEN TWO POINTS TAKES THE LAST ONE BACK. `U` is
         // `GERİAL`'s own name, and read as a command it wrote the run out and then
         // undid all of it — the drawing lost for the one wrong corner the user
@@ -1041,8 +1060,11 @@ core::Result<QString> Controller::dynamicTab(const QString& line)
 
 bool Controller::dynamicRelease()
 {
-    if (!session_ || !session_->dynamic().any_locked()) return false;
+    if (!session_) return false;
+    // WHAT THE PERSON FIXED BESIDE THE CURSOR: the locked figures and a one-shot snap asked for.
+    if (!session_->dynamic().any_locked() && session_->temporary_snap() == 0) return false;
     session_->dynamic().clear();
+    session_->set_temporary_snap(0);
     emit dynamicChanged();
     return true;
 }

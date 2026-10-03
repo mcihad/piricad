@@ -2,6 +2,10 @@
 #include "piricad/command/aids.hpp"
 
 #include "piricad/core/document.hpp"
+#include "piricad/core/text.hpp"
+
+#include <string>
+#include <vector>
 
 namespace piricad::command {
 namespace {
@@ -147,7 +151,7 @@ bool aimed_from_origin(const Prompt& p) noexcept
     return p.has_rubber_band && p.rubber_base;
 }
 
-AidSettings aids_for(const AidSettings& set, const Prompt& p)
+AidSettings aids_for(const AidSettings& set, const Prompt& p, std::uint32_t temporary)
 {
     AidSettings out = set;
     if (p.rubber_shape == RubberShape::Rectangle) out.ortho = false;
@@ -175,7 +179,80 @@ AidSettings aids_for(const AidSettings& set, const Prompt& p)
         out.tracking_reach = 0;
         out.step           = 0;
     }
+
+    // A ONE-SHOT SNAP, after the rest: where the prompt takes no aid at all (a pick, a fence, a
+    // seed) the word has nothing to act on and is left unspent for a prompt that does.
+    if ((temporary & core::SnapObjectMask) != 0 && p.aids && p.rubber_shape != RubberShape::Trim &&
+        p.rubber_shape != RubberShape::TrimFence) {
+        out.modes = static_cast<std::uint32_t>((out.modes & ~core::SnapObjectMask) |
+                                               (temporary & core::SnapObjectMask));
+        if ((temporary & core::SnapConstructedMask) != 0 && out.reach == 0)
+            out.reach = out.snap_radius * 40;
+    }
     return out;
+}
+
+std::uint32_t snap_mode_from_word(std::string_view typed)
+{
+    const std::string word = core::turkish_fold_key(typed);
+    if (word.empty()) return 0;
+
+    // The three-letter names every CAD calls these.
+    struct English
+    {
+        std::uint32_t bit;
+        std::string_view names[2];
+    };
+
+    static constexpr English kEnglish[] = {
+        {core::SnapEndpoint, {"END", "ENDPOINT"}},
+        {core::SnapMidpoint, {"MID", "MIDPOINT"}},
+        {core::SnapCenter, {"CEN", "CENTER"}},
+        {core::SnapIntersection, {"INT", "INTERSECTION"}},
+        {core::SnapPerpendicular, {"PER", "PERPENDICULAR"}},
+        {core::SnapNearest, {"NEA", "NEAREST"}},
+        {core::SnapNode, {"NOD", "NODE"}},
+        {core::SnapQuadrant, {"QUA", "QUADRANT"}},
+        {core::SnapTangent, {"TAN", "TANGENT"}},
+        {core::SnapExtension, {"EXT", "EXTENSION"}},
+        {core::SnapParallel, {"PAR", "PARALLEL"}},
+        {core::SnapApparent, {"APP", "APPARENT"}},
+        {core::SnapInsertion, {"INS", "INSERT"}},
+    };
+
+    // Every spelling of every object mode, once: its id with and without the underscores, its label
+    // with and without the spaces, and the label's first word.
+    const auto spellings = [](std::uint32_t bit) {
+        std::vector<std::string> out;
+        std::string id = core::turkish_fold_key(core::snap_mode_id(bit));
+        out.push_back(id);
+        std::erase(id, '_');
+        out.push_back(id);
+        const std::string label = core::turkish_fold_key(core::snap_mode_label(bit));
+        out.push_back(label);
+        std::string joined = label;
+        std::erase(joined, ' ');
+        out.push_back(joined);
+        out.push_back(label.substr(0, label.find(' ')));
+        return out;
+    };
+
+    // EXACT BEFORE FIRST WORD: `merkez` is the circle's centre and `ağırlık merkezi` the centroid's
+    // whole name, and the first word of the second is `ağırlık`, never `merkez`.
+    std::uint32_t first_word = 0;
+    for (const std::uint32_t* bit = core::snap_mode_bits(); *bit != core::SnapNone; ++bit) {
+        if ((*bit & core::SnapObjectMask) == 0) continue;
+        const std::vector<std::string> all = spellings(*bit);
+        for (std::size_t i = 0; i < 4; ++i)
+            if (all[i] == word) return *bit;
+        if (all[4] == word && first_word == 0) first_word = *bit;
+    }
+    if (first_word != 0) return first_word;
+
+    for (const English& e : kEnglish)
+        for (const std::string_view name : e.names)
+            if (core::turkish_fold_key(name) == word) return e.bit;
+    return 0;
 }
 
 } // namespace piricad::command

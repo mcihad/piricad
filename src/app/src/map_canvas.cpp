@@ -501,7 +501,8 @@ void MapCanvas::updateSnapPreview()
     command::Bus& bus = controller_.bus();
     // The SAME aids the command will apply to this prompt (`command::aids_for`).
     const command::AidSettings aids =
-        asking ? command::aids_for(bus.aid_settings(), session->prompt()) : bus.aid_settings();
+        asking ? command::aids_for(bus.aid_settings(), session->prompt(), session->temporary_snap())
+               : bus.aid_settings();
     const core::Point2 aim = view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
 
     // The SAME base the command will use, so the marker and the result cannot
@@ -1150,6 +1151,21 @@ void MapCanvas::buildSelectionBox()
 
 void MapCanvas::buildSnapMarker()
 {
+    // A ONE-SHOT SNAP ASKED FOR BY NAME (TODOS U-03) says so beside the cursor for as long as it is
+    // waiting, found or not: the person who typed `orta` has to see that the next click will look
+    // for midpoints alone, and that nothing is in reach when nothing is.
+    if (const command::Session* session = controller_.session();
+        session != nullptr && session->waiting() && session->temporary_snap() != 0 &&
+        cursor_valid_) {
+        const std::string text =
+            std::string("yalnız ") + core::snap_mode_label(session->temporary_snap());
+        overlay_.labels.push_back(
+            render::OverlayLabel{tokens_->accent.rgba(), static_cast<float>(cursor_.x()) + 14.0F,
+                                 static_cast<float>(cursor_.y()) + 20.0F,
+                                 static_cast<float>(look_.hint_px), false, text});
+        guide_label_ = guide_label_.empty() ? text : guide_label_ + " · " + text;
+    }
+
     if (!snap_preview_valid_) return;
 
     const render::ScreenPointF p = render::to_f(view_.to_screen(snap_preview_.point));

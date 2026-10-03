@@ -167,6 +167,46 @@ günlükte ve betikte nokta olarak yer alır. Kilit günlüğe girmez; yalnız �
 Fareyle yönü veren bir alan varsa o kısım milimetreye (uzunluk) ve mikro dereceye (açı)
 kadar tam yazılır, yani kilitli uzunlukla tıklamak ile aynı uzunluğu elle yazmak aynı noktadır.
 
+### Geçici nesne yakalama: yalnız bir sonraki nokta için
+
+Sürekli açık yakalamalar (uç, orta, kesişim…) çalışırken bir noktayı tek bir yakalama ile
+almak istediğinizde, nokta beklenirken yakalamanın **adını** yazıp Enter'a basın:
+
+```text
+ÇİZGİ
+60,10                      ← ilk nokta
+orta                       ← Enter — "Geçici yakalama: orta nokta — yalnız bir sonraki nokta için."
+                           ← şimdi bir çizginin ortasına yakın bir yere tıklayın
+```
+
+![Geçici yakalama: "yalnız orta nokta" yazıyor, imleç çizginin ortasına oturdu](gecici-yakalama.png)
+
+Yazılan yakalama, sürekli açık olan nesne yakalamaların **yerine** geçer ve yalnız bir sonraki
+nişanlanan nokta için geçerlidir; o nokta alınınca ya da sonraki soruya geçilince biter. **Esc**
+bekleyen geçici yakalamayı kaldırır (ikinci Esc komutu bırakır). Dik mod, kutupsal izleme ve ızgara
+olduğu gibi kalır. İmlecin yanında "yalnız orta nokta" yazar; yakınında o türde bir nokta yoksa
+nokta olduğu yerde kalır.
+
+| Yazılan | Yakalama |
+|---|---|
+| `uç`, `uç nokta`, `END` | Uç nokta |
+| `orta`, `orta nokta`, `MID` | Orta nokta |
+| `merkez`, `CEN` | Dairenin/yayın merkezi |
+| `ağırlık merkezi` | Kapalı halkanın ağırlık merkezi |
+| `kesişim`, `INT` | İki çizginin kesişimi |
+| `dik`, `dik ayak`, `PER` | Son noktadan dik ayak |
+| `yakın`, `en yakın`, `NEA` | En yakın nokta |
+| `düğüm`, `NOD` | Ölçü noktası |
+| `çeyrek`, `QUA` | Dairenin dört çeyrek noktası |
+| `teğet`, `TAN` | Son noktadan teğet ayağı |
+| `uzantı`, `EXT` · `paralel`, `PAR` · `uzatılmış kesişim`, `APP` | Kurulan noktalar |
+| `ekleme`, `INS` | Ekleme noktası |
+
+Sözcükler yakalama kipinin kendi adlarıdır (büyük/küçük harf ve Türkçe harf farkı gözetilmez).
+Bir komutun da adı olan bir sözcük (`KES` gibi) komut olarak çalışır; yakalama için tam adı
+(`kesişim`) yazın. Yakalama günlüğe girmez: günlükte yalnız çıkan nokta yazılır, yani aynı çizim
+betikte o noktanın koordinatıyla yapılır.
+
 ## Nokta fonksiyonları
 
 Bir nokta yerine **onu nasıl bulduğunuzu** yazarsınız. Fonksiyon, komut çalışmadan
@@ -632,7 +672,6 @@ Aşağıdakiler tasarımın parçasıdır ama bugün çalışmaz:
 | **Ctrl+R** ile komut geçmişinde arama | Faz 1 |
 | `alias.json` ile kullanıcı tanımlı kısaltmalar | Faz 1 |
 | Yazarken açılan parametre ipucu balonu | Faz 1 |
-| Komut ortasında nesne yakalama geçersiz kılma (`ORTA` gibi) | Faz 2 |
 | Ayrılabilir transkript penceresi | Faz 2 |
 
 ## Sırada ne var

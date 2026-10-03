@@ -245,6 +245,13 @@ public:
 
     const DynamicEntry& dynamic() const noexcept { return dynamic_; }
 
+    /// A ONE-SHOT OBJECT SNAP asked for by name at a point prompt (`snap_mode_from_word`, TODOS
+    /// U-03): the bit of the mode that looks for the next aimed point, or 0. Spent by that point,
+    /// and dropped by the next question; the canvas previews it through the same `aids_for`.
+    std::uint32_t temporary_snap() const noexcept { return temporary_snap_; }
+
+    void set_temporary_snap(std::uint32_t bit) noexcept { temporary_snap_ = bit; }
+
     /// The text of the command line, which is the active field's text box. Set by the shell on
     /// every edit of the line; read wherever the point is worked out.
     void set_dynamic_line(std::string line) { dynamic_line_ = std::move(line); }
@@ -373,6 +380,7 @@ private:
 
     void resume_once();
 
+    std::uint32_t temporary_snap_{0};
     DynamicEntry dynamic_{};
     std::string dynamic_line_{};
 

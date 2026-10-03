@@ -4930,6 +4930,70 @@ int MainWindow::probePromptTabs()
         }
         letGo();
 
+        // ---- A ONE-SHOT OBJECT SNAP BY NAME (TODOS U-03) ----
+        //
+        // The running snaps are the end points alone; `orta` typed at the point prompt makes the
+        // next click find the midpoint of a line it is nowhere near an end of, and only that click.
+        {
+            runScriptLine(
+                QStringLiteral("MOD ad=yakalama_modları deger=%1").arg(core::SnapEndpoint));
+            runScriptLine(QStringLiteral("ÇİZGİ 55,35 95,35"));
+            endCommand();
+            letGo();
+            runScriptLine(QStringLiteral("ÇİZGİ"));
+            runScriptLine(QStringLiteral("60,10"));
+            QCoreApplication::processEvents();
+            const core::Point2 middle{75'000, 35'000};
+            const core::Point2 aim{75'700, 35'400}; ///< 0.8 m off: inside the aperture, on no end
+
+            hover(aim);
+            check(canvas_->cursorForProbe() == aim,
+                  QStringLiteral("yalnız uçlar açıkken orta noktaya yakın imleç yakalanmıyor"));
+
+            commandLine_->setText(QStringLiteral("orta"));
+            key(Qt::Key_Return);
+            check(controller_->session() != nullptr &&
+                      controller_->session()->temporary_snap() == core::SnapMidpoint,
+                  QStringLiteral("yazılan 'orta' bir sonraki nokta için geçici yakalama oldu"));
+            hover(aim);
+            check(canvas_->cursorForProbe() == middle,
+                  QStringLiteral("geçici yakalama imleci orta noktaya aldı"));
+            if (!canvas_->guideLabelForProbe().empty())
+                check(canvas_->guideLabelForProbe().find("yalnız orta nokta") != std::string::npos,
+                      QStringLiteral("imleç yanında 'yalnız orta nokta' yazıyor (%1)")
+                          .arg(QString::fromStdString(canvas_->guideLabelForProbe())));
+            picture("gecici-yakalama-orta");
+
+            // Esc takes the snap back before the tool.
+            commandLine_->clear();
+            key(Qt::Key_Escape);
+            check(controller_->session() != nullptr &&
+                      controller_->session()->temporary_snap() == 0,
+                  QStringLiteral("ilk Esc geçici yakalamayı kaldırdı, komut sürüyor"));
+            commandLine_->setText(QStringLiteral("orta"));
+            key(Qt::Key_Return);
+            hover(aim);
+
+            // The click is the same aimed point every click is, and lands on the midpoint.
+            const auto at = canvas_->view().to_screen(aim);
+            const QPointF p(at.x, at.y);
+            QMouseEvent down(QEvent::MouseButtonPress, p, canvas_->mapToGlobal(p), Qt::LeftButton,
+                             Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas_, &down);
+            QMouseEvent up(QEvent::MouseButtonRelease, p, canvas_->mapToGlobal(p), Qt::LeftButton,
+                           Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas_, &up);
+            QCoreApplication::processEvents();
+            check(controller_->session() != nullptr &&
+                      controller_->session()->prompt().rubber_origin == middle &&
+                      controller_->session()->temporary_snap() == 0,
+                  QStringLiteral("tıklama orta noktaya oturdu ve geçici yakalama harcandı"));
+            controller_->finishInteractive();
+            QCoreApplication::processEvents();
+            letGo();
+            runScriptLine(QStringLiteral("MOD ad=yakalama_modları deger=0"));
+        }
+
         // Esc takes the lock back before it takes the tool.
         runScriptLine(QStringLiteral("ÇİZGİ"));
         runScriptLine(QStringLiteral("0,0"));

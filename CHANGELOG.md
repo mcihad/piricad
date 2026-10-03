@@ -6,6 +6,18 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — geçici nesne yakalama: nokta beklenirken `orta`, `uç`, `kesişim`… (U-03)
+
+- Nokta beklenirken bir yakalamanın adını yazıp Enter: sürekli yakalamalar bir kenara konur ve
+  **yalnız bir sonraki nişanlanan nokta** o modla aranır (`orta`, `uç`, `merkez`, `kesişim`, `dik`,
+  `yakın`, `düğüm`, `çeyrek`, `teğet`, `uzantı`, `paralel`, `ekleme`, `END`/`MID`/`CEN`/`INT`/…).
+  İmleç yanında "yalnız orta nokta" yazar, işaretçi o noktayı gösterir; Esc geri alır; yazılan
+  koordinat ve betik noktaları dokunulmaz. Kelimeler modların kendi adlarından üretilir
+  (`snap_mode_id/label`), `KES` gibi komut adları komut kalır (`command.md` R32).
+- Kanıt: `test_temporary_snap.cpp` (4 vaka: sözcükler, `aids_for`, nişanlanan nokta orta noktaya
+  oturur/sonraki oturmaz/günlükte sözcük yok, yazılan koordinat), `PIRICAD_PROMPT_PROBE` bloğu
+  (gerçek pencere, tıklama orta noktaya oturdu) ve `docs/komutlar/gecici-yakalama.png`.
+
 ### Düzeltildi — Türkçe sayı yerel ayarında `12.5` 12 okunuyordu
 
 - **Kusur:** Qt başlarken `setlocale(LC_ALL, "")` çağırır; `LC_NUMERIC=tr_TR` olan bir makinede

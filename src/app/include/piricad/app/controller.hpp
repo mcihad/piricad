@@ -276,7 +276,8 @@ public:
     /// field.
     core::Result<QString> dynamicTab(const QString& line);
 
-    /// ESC, one step: drops the locks. True when there was one to drop.
+    /// ESC, one step: drops the locked figures and a one-shot snap asked for by name. True when
+    /// there was one to drop.
     bool dynamicRelease();
 
     /// An EMPTY Enter with figures locked answers with them. True when it did.

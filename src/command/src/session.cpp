@@ -284,6 +284,7 @@ bool Session::park(std::coroutine_handle<> h, Prompt p)
     // A NEW QUESTION, a new segment: a length locked for the last point is not the next one's.
     dynamic_.clear();
     dynamic_line_.clear();
+    temporary_snap_ = 0;
     if (bus_.on_prompt) bus_.on_prompt(prompt_);
     return true;
 }
