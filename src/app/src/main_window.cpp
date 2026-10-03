@@ -113,6 +113,7 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QRawFont>
+#include <QScreen>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -130,6 +131,7 @@
 #include <QVBoxLayout>
 #include <QWheelEvent>
 #include <QWidgetAction>
+#include <QWindow>
 
 namespace piricad::app {
 
@@ -4659,6 +4661,71 @@ int MainWindow::probePromptTabs()
     runScriptLine(QStringLiteral("MOD ad=yakalama_modları deger=%1").arg(before));
     check(!bar->isContextCategoryVisible(promptPointTab_),
           QStringLiteral("komut bitince Nokta Girişi sekmesi yok"));
+
+    // ---- THE PROMPT'S OWN OPTIONS, as buttons (TODOS U-01) ----
+    //
+    // `Geri Al` and `Kapat` are the keyboard's ⌫ and `K` with a hand to press them; they must
+    // leave the record the typed words leave. A directory in the variable means PHOTOGRAPH IT.
+    {
+        const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_PROMPT_PROBE"));
+        const auto picture = [this, &into](const char* name) {
+            if (into.size() <= 1) return;
+            QDir().mkpath(into);
+            // The tab shows itself when a point is asked, and leaves the hand on the page it
+            // was on; the photograph is of the tab.
+            if (SARibbonCategory* page =
+                    promptPointTab_ != nullptr ? promptPointTab_->categoryPage(0) : nullptr)
+                ribbonBar()->raiseCategory(page);
+            QCoreApplication::processEvents();
+            QScreen* screen = windowHandle() != nullptr ? windowHandle()->screen() : nullptr;
+            QPixmap frame   = screen != nullptr ? screen->grabWindow(winId()) : QPixmap();
+            if (frame.isNull()) frame = grab();
+            (void)frame.save(into + QLatin1Char('/') + QLatin1String(name) +
+                             QStringLiteral(".png"));
+        };
+
+        runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+        runScriptLine(QStringLiteral("ÇOKLUÇİZGİ"));
+        QCoreApplication::processEvents();
+        auto* back = findChild<QAction*>(QStringLiteral("promptPoint.GERI"));
+        auto* word = findChild<QAction*>(QStringLiteral("promptPoint.word.0"));
+        check(back != nullptr && word != nullptr,
+              QStringLiteral("Seçenekler paneli düğmeleri var"));
+        if (back != nullptr && word != nullptr) {
+            check(!back->isEnabled() && !word->isVisible(),
+                  QStringLiteral("ilk noktada Geri Al soluk, seçenek yok"));
+            runScriptLine(QStringLiteral("0,0"));
+            runScriptLine(QStringLiteral("40,0"));
+            runScriptLine(QStringLiteral("40,30"));
+            QCoreApplication::processEvents();
+            check(back->isEnabled() && word->isVisible() && word->text() == QStringLiteral("Kapat"),
+                  QStringLiteral("üç noktadan sonra Geri Al açık, Kapat görünür (%1)")
+                      .arg(word->text()));
+            check(word->toolTip().contains(QStringLiteral("K")),
+                  QStringLiteral("Kapat'ın ipucu yazılacak kısayolu söylüyor (%1)")
+                      .arg(word->toolTip()));
+            picture("istem-secenekleri");
+
+            // GERİ AL TAKES THE NEWEST POINT BACK, and the run goes on from the one before it.
+            back->trigger();
+            QCoreApplication::processEvents();
+            check(controller_->session() != nullptr &&
+                      controller_->session()->prompt().rubber_chain.size() == 2,
+                  QStringLiteral("Geri Al son noktayı geri aldı"));
+            runScriptLine(QStringLiteral("40,30"));
+            word->trigger();
+            QCoreApplication::processEvents();
+            const auto& all                  = controller_->journal().entries();
+            const command::Value::Points run = all.empty()
+                                                   ? command::Value::Points{}
+                                                   : all.back().args.get("noktalar").as_points();
+            check(run.size() == 4 && run.front() == run.back(),
+                  QStringLiteral("Kapat hattı ilk noktaya kapattı (%1 nokta)").arg(run.size()));
+            check(all.back().command_id == "core.polyline",
+                  QStringLiteral("ve günlüğe kapat sözcüğü değil noktalar yazıldı"));
+        }
+        letGo();
+    }
     return failures;
 }
 
@@ -11518,6 +11585,35 @@ void MainWindow::refreshPointTab()
             "piricad.unavailable",
             draws ? QVariant()
                   : QVariant(tr("Bu komut kendi katmanına çizmiyor; katman= almıyor.")));
+    }
+
+    // THE PROMPT'S OWN OPTIONS: Geri Al while a point can be taken back, and one button per
+    // word the prompt takes (`Prompt::words`), labelled and explained by the command.
+    if (promptRetract_ != nullptr) promptRetract_->setEnabled(controller_->canRetract());
+    const command::Session* asking = controller_->session();
+    const bool waiting             = asking != nullptr && asking->waiting();
+    // A PICTURE PER WORD, by its id; a word added later still gets a button, with a tick.
+    static const QHash<QString, Glyph> wordGlyph{{QStringLiteral("kapat"), Glyph::ToArea}};
+    for (qsizetype i = 0; i < promptWords_.size(); ++i) {
+        QAction* button = promptWords_[i];
+        const bool used = waiting && static_cast<std::size_t>(i) < asking->prompt().words.size();
+        button->setVisible(used);
+        if (!used) continue;
+        const command::PromptWord& word = asking->prompt().words[static_cast<std::size_t>(i)];
+        const QString id                = QString::fromStdString(word.id);
+        QStringList typed;
+        for (const std::string& name : word.names)
+            typed << QString::fromStdString(name);
+        button->setText(QString::fromStdString(word.label));
+        // The theme's walk sets an icon from `data()` when the theme changes; a button
+        // relabelled between two prompts needs its picture set here too.
+        const Glyph glyph = wordGlyph.value(id, Glyph::Check);
+        button->setData(static_cast<int>(glyph));
+        button->setIcon(colour_icon(glyph, actionInks()));
+        button->setProperty("piricad.word", id);
+        button->setToolTip(
+            tr("%1 — komut satırına %2 yazmakla aynı")
+                .arg(QString::fromStdString(word.help), typed.join(QStringLiteral(", "))));
     }
 }
 

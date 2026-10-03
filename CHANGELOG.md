@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — istem seçenekleri şeritte düğme; `SPLINE` ve `ALAN`'da `K` (U-01)
+
+- **Nokta Girişi ▸ Seçenekler** paneli: **Geri Al** (⌫/`G` ile aynı `Session::retract`) ve istemin
+  her sözcüğü için bir düğme (**Kapat**). Düğmeler sabit bir havuz; her istemde sözcüğün
+  etiketi, resmi ve ipucuyla (`PromptWord::label/help/names`) yeniden adlandırılıyor, sözcük
+  yoksa gizleniyor — hangi sözcüklerin var olduğunu komut söylüyor, kabuk liste tutmuyor (5.10).
+  Düğme ve yazılan `K` aynı `Session::choose`'a gider (`Controller::chooseWord`), kayıtta fark yok.
+- `SPLINE`'da `K` eğriyi kapatır ve günlüğe `kapali=evet` yazar (nokta yinelenmez); `ALAN`'da
+  halkayı Enter gibi bitirir (yüz zaten kapalıdır, kayıt aynı). Üç noktadan azıyla ikisi de
+  söyleyip sormaya devam eder.
+- Kanıt: `test_draw_methods.cpp` "U-01" (ALAN Enter ile bayt bayt aynı günlük, SPLINE betikle aynı
+  belge), `PIRICAD_PROMPT_PROBE` yeni bloğu (düğmeler, ipucu, Geri Al, Kapat → günlük) ve
+  `docs/baslangic/nokta-girisi-secenekler.png`. `ci-gate-serit` 1440 pikselde temiz.
+
 ### Eklendi — çizim anında komut seçenekleri: `K` ile kapat (U-01)
 
 - İstemler artık bir noktanın yerine geçen **sözcük** alabiliyor (`Prompt::words`, `PromptWord`;

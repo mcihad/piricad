@@ -50,17 +50,28 @@ Task<void> run(Context& ctx)
         points.push_back(*p1);
 
         for (;;) {
-            auto next =
-                co_await ctx.point("noktalar", "Sonraki kontrol noktası — ⌫: son noktayı geri al",
-                                   PointOptions{.rubber_band    = true,
-                                                .rubber_origin  = points.back(),
-                                                .rubber_shape   = RubberShape::Curve,
-                                                .rubber_chain   = points,
-                                                .rubber_payload = preview_payload,
-                                                .can_retract    = true});
+            auto next = co_await ctx.point(
+                "noktalar", "Sonraki kontrol noktası — ⌫: son noktayı geri al, K: kapat",
+                PointOptions{.rubber_band    = true,
+                             .rubber_origin  = points.back(),
+                             .rubber_shape   = RubberShape::Curve,
+                             .rubber_chain   = points,
+                             .rubber_payload = preview_payload,
+                             .can_retract    = true,
+                             .words          = {close_word()}});
             if (next) {
                 points.push_back(*next);
                 continue;
+            }
+            if (ctx.chose() == "kapat") {
+                // A closed spline is a parameter, not a repeated point: `kapali=evet` is what
+                // the record gets (below), so a script says it the same way.
+                if (points.size() < 3) {
+                    ctx.echo("Kapatmak için en az üç kontrol noktası gerekir.");
+                    continue;
+                }
+                closed = true;
+                break;
             }
             if (!ctx.took_back()) break;
             points.pop_back();

@@ -123,6 +123,26 @@
         <source>Panelleri açar ya da kapatır: Katmanlar, Öznitelikler, Yapay Zeka, Komut Günlüğü, Python Konsolu, Komut Satırı; Yerleşimi Sıfırla başlangıç düzenine döner</source>
         <translation>Opens or closes the panels: Layers, Attributes, AI, Command Journal, Python Console, Command Line; Reset Layout returns to the starting arrangement</translation>
     </message>
+    <message>
+        <source>Seçenekler</source>
+        <translation>Options</translation>
+    </message>
+    <message>
+        <source>Geri Al</source>
+        <translation>Undo point</translation>
+    </message>
+    <message>
+        <source>Seçenek</source>
+        <translation>Option</translation>
+    </message>
+    <message>
+        <source>Son noktayı geri alır, çizimin geri kalanı durur — ⌫, G</source>
+        <translation>Takes the newest point back; the rest of the drawing stays — ⌫, G</translation>
+    </message>
+    <message>
+        <source>%1 — komut satırına %2 yazmakla aynı</source>
+        <translation>%1 — the same as typing %2 on the command line</translation>
+    </message>
 </context>
 
 <context>

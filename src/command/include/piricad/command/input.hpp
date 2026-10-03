@@ -122,13 +122,15 @@ struct PromptWord
     std::string id;                 ///< what the body reads: "kapat"
     std::vector<std::string> names; ///< what is typed, Turkish first: KAPAT, K, CLOSE
     std::string label;              ///< what the shell shows beside it: "Kapat"
+    std::string help;               ///< one sentence for its tooltip: what the word does
 };
 
 /// The word a drawing run takes to close on its first point: `K`, `KAPAT`, `CLOSE`. Not `C`:
 /// folded, that is the `Ç` that already names ÇİZGİ.
 inline PromptWord close_word()
 {
-    return PromptWord{"kapat", {"KAPAT", "K", "CLOSE"}, "Kapat"};
+    return PromptWord{
+        "kapat", {"KAPAT", "K", "CLOSE"}, "Kapat", "Çalışmayı ilk noktaya kapatıp bitirir"};
 }
 
 struct Prompt

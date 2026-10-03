@@ -124,6 +124,26 @@
         <source>Panelleri açar ya da kapatır: Katmanlar, Öznitelikler, Yapay Zeka, Komut Günlüğü, Python Konsolu, Komut Satırı; Yerleşimi Sıfırla başlangıç düzenine döner</source>
         <translation>Panelleri açar ya da kapatır: Katmanlar, Öznitelikler, Yapay Zeka, Komut Günlüğü, Python Konsolu, Komut Satırı; Yerleşimi Sıfırla başlangıç düzenine döner</translation>
     </message>
+    <message>
+        <source>Seçenekler</source>
+        <translation>Seçenekler</translation>
+    </message>
+    <message>
+        <source>Geri Al</source>
+        <translation>Geri Al</translation>
+    </message>
+    <message>
+        <source>Seçenek</source>
+        <translation>Seçenek</translation>
+    </message>
+    <message>
+        <source>Son noktayı geri alır, çizimin geri kalanı durur — ⌫, G</source>
+        <translation>Son noktayı geri alır, çizimin geri kalanı durur — ⌫, G</translation>
+    </message>
+    <message>
+        <source>%1 — komut satırına %2 yazmakla aynı</source>
+        <translation>%1 — komut satırına %2 yazmakla aynı</translation>
+    </message>
 </context>
 
 <context>

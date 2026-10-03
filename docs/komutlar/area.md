@@ -119,6 +119,11 @@ geri alınır: öteki köşeler ve kapanacak alanın kılavuzu yerinde kalır, k
 yeniden ister. İlk köşeyi de geri alırsanız komut `Alanın ilk köşesi`ni yeniden sorar.
 Geri alınan köşe günlüğe yazılmaz.
 
+**Halkayı bitirmek.** Alan zaten kapalı bir halkadır; bitirmek için Enter yeter. Başka
+CAD programlarından gelen alışkanlıkla `K` yazıp Enter'a basmak (`KAPAT`, `CLOSE`) ya da
+şeritteki **Nokta Girişi ▸ Seçenekler ▸ Kapat** da aynı işi görür ve günlükte Enter ile aynı
+kaydı bırakır. Üç köşeden azıyla kapatmaz, bunu söyler ve sormaya devam eder.
+
 Henüz belgede olmayan köşeler de uç nokta olarak, aralarındaki kenarlar orta, yakın,
 dik ve kesişim olarak yakalanır.
 

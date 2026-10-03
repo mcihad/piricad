@@ -1285,6 +1285,8 @@ private:
     QList<QAction*> promptSnaps_;
     /// The `Nokta Girişi` tab's `Katmanı nesneden al`, greyed per command.
     QAction* promptLayerPick_{nullptr};
+    QAction* promptRetract_{nullptr}; ///< "Geri Al": the newest point of the run
+    QList<QAction*> promptWords_;     ///< the prompt's own words, as buttons (`Prompt::words`)
 
     /// A BLOCK DEFINITION OUT ON THE SHEET for editing (`BLOKDÜZENLE aç`). What
     /// belongs to the edit is the client's to say — the command is stateless so

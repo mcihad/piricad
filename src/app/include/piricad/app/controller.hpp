@@ -246,6 +246,11 @@ public:
     /// when the prompt has nothing to take back.
     bool retractPoint();
 
+    /// Answers the running command's prompt with one of its WORDS (`command::Prompt::words`),
+    /// the way the typed line `K` does: the keyboard and the ribbon's button reach the one
+    /// `Session::choose`. False, with the refusal said, when the prompt takes no such word.
+    bool chooseWord(const QString& id);
+
     /// FINISHES the running command the way the right mouse button means it: the
     /// open-ended shape closes on what it has, and the tool that started it stays
     /// armed for the next one. The same unwinding as `cancelInteractive` — the

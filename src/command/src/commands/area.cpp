@@ -54,16 +54,27 @@ Task<void> run(Context& ctx)
         recorded.push_back(*p1);
 
         for (;;) {
-            auto p2 = co_await ctx.point("noktalar", "Sonraki köşe — ⌫: son köşeyi geri al",
-                                         PointOptions{.rubber_band   = true,
-                                                      .rubber_origin = built.back().points.back(),
-                                                      .rubber_shape  = RubberShape::Ring,
-                                                      .rubber_chain  = built.back().points,
-                                                      .can_retract   = true});
+            auto p2 =
+                co_await ctx.point("noktalar", "Sonraki köşe — ⌫: son köşeyi geri al, K: kapat",
+                                   PointOptions{.rubber_band   = true,
+                                                .rubber_origin = built.back().points.back(),
+                                                .rubber_shape  = RubberShape::Ring,
+                                                .rubber_chain  = built.back().points,
+                                                .can_retract   = true,
+                                                .words         = {close_word()}});
             if (p2) {
                 built.back().points.push_back(*p2);
                 recorded.push_back(*p2);
                 continue;
+            }
+            if (ctx.chose() == "kapat") {
+                // A face is a closed ring already, so closing is ENDING it — what Enter does —
+                // and nothing is added to the record. Fewer than three corners is no face.
+                if (built.back().points.size() < 3) {
+                    ctx.echo("Kapatmak için en az üç köşe gerekir.");
+                    continue;
+                }
+                break;
             }
             if (!ctx.took_back()) break;
             built.back().points.pop_back();

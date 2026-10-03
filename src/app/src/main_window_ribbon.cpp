@@ -1989,6 +1989,35 @@ void MainWindow::buildContextTabs(SARibbonBar* bar, const RibbonFamilies& famili
     connect(promptLayerPick_, &QAction::triggered, this, &MainWindow::pickLayerFromObject);
     layerPanel->addLargeAction(promptLayerPick_);
 
+    // THE PROMPT'S OWN OPTIONS, as buttons (TODOS U-01): taking the newest point back and the
+    // words a prompt takes beside a point (`command::Prompt::words`: Kapat). They are the
+    // keyboard's answers — ⌫ and `K` — with a hand to press them; both reach `Session::retract`
+    // and `Session::choose`, so the mouse has no road the line does not (CLAUDE.md 1.2, 5.15).
+    //
+    // A FIXED POOL, NOT A LIST WE KEEP: the words come from the running command, so the panel
+    // holds a few buttons that are relabelled for each prompt and hidden when it has fewer
+    // (`refreshPointTab`). Which words exist is the command's to say (5.10).
+    SARibbonPanel* options = pointing->addPanel(tr("Seçenekler"));
+    promptRetract_         = new QAction(tr("Geri Al"), this);
+    promptRetract_->setObjectName(QStringLiteral("promptPoint.GERI"));
+    promptRetract_->setData(static_cast<int>(Glyph::Undo));
+    promptRetract_->setToolTip(tr("Son noktayı geri alır, çizimin geri kalanı durur — ⌫, G"));
+    connect(promptRetract_, &QAction::triggered, this,
+            [this] { (void)controller_->retractPoint(); });
+    options->addLargeAction(promptRetract_);
+    promptWords_.clear();
+    for (int i = 0; i < 3; ++i) {
+        auto* word = new QAction(tr("Seçenek"), this);
+        word->setObjectName(QStringLiteral("promptPoint.word.%1").arg(i));
+        word->setData(static_cast<int>(Glyph::Check));
+        word->setVisible(false);
+        connect(word, &QAction::triggered, this, [this, word] {
+            (void)controller_->chooseWord(word->property("piricad.word").toString());
+        });
+        promptWords_ << word;
+        options->addLargeAction(word);
+    }
+
     SARibbonPanel* send = pointing->addPanel(tr("Satır"));
     auto* go            = new QAction(tr("Gönder"), this);
     go->setObjectName(QStringLiteral("promptPoint.GONDER"));

@@ -389,11 +389,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
         // points it implies — so the line is only the keyboard's way to the same answer.
         if (const command::PromptWord* word =
                 command::prompt_word(session_->prompt(), trimmed.toStdString())) {
-            if (const auto st = session_->choose(word->id); !st) {
-                refused(st.error());
-                return st.error();
-            }
-            settleSession();
+            (void)chooseWord(QString::fromStdString(word->id));
             return command::DispatchResult{};
         }
 
@@ -976,6 +972,17 @@ bool Controller::retractPoint()
         return false;
     }
     emit echoed(tr("Son nokta geri alındı."));
+    settleSession();
+    return true;
+}
+
+bool Controller::chooseWord(const QString& id)
+{
+    if (!session_ || !session_->waiting()) return false;
+    if (const auto st = session_->choose(id.toStdString()); !st) {
+        refused(st.error());
+        return false;
+    }
     settleSession();
     return true;
 }

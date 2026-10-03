@@ -283,7 +283,10 @@ Makinası). Seçim sekmesi gibi öne gelmez ve soru bitince kaybolur.
 | **Yakalama** | Her yakalama modu bir anahtardır: uç nokta, orta nokta, merkez, kesişim… `MOD yakalama_modları` yazar, basılı hâli ayardan okunur |
 | **Hesap** | Her [nokta fonksiyonu](../komutlar/komut-satiri.md#nokta-fonksiyonları) bir düğmedir: Son Nokta, Numaralı Nokta, Orta Nokta, Göreli, Dik Ayak, Semt ve Kenar, Kesişim, Ara Nokta, Uzantı, X ve Y, Boyunca |
 | **Katman** | **Katmanı nesneden al**: basıp bir nesneye tıklayın, komutun çizdikleri o nesnenin katmanına gider; etkin katman değişmez. Kendi katmanına çizmeyen bir komutta soluktur |
+| **Seçenekler** | **Geri Al** (⌫, `G`): son noktayı geri alır, soluktur ilk noktada. İstemin kendi sözcükleri de burada düğme olur — çizim sırasında **Kapat** (`K`): çalışmayı ilk noktaya kapatıp bitirir. Düğmenin ipucu, aynı işi yapan yazılacak sözcükleri söyler |
 | **Satır** | **Gönder** (Enter) · **Vazgeç** (Esc) |
+
+![Nokta Girişi sekmesi: ÇOKLUÇİZGİ üç noktadan sonra Geri Al ve Kapat seçenekleriyle](nokta-girisi-secenekler.png)
 
 **Hesap düğmesi fonksiyonu satıra başlatır**, tıkladığınız noktalar içine yazılır, sayıları
 siz yazarsınız: **Dik Ayak**'a basıp taban çizgisinin iki ucuna tıklayın, `,30,5` yazın ve

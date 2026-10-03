@@ -198,6 +198,71 @@ TEST_CASE("U-01: üç noktadan azıyla K kapatmaz, söyler ve sormaya devam eder
     CHECK(ring_of(r.doc, 1) == std::vector<core::Point2>{kA, kB, kC, kA});
 }
 
+TEST_CASE("U-01: ALAN'da K halkayı bitirir, Enter ile aynı kaydı bırakır")
+{
+    Rig typed;
+    {
+        auto started = typed.bus.begin_interactive("ALAN");
+        REQUIRE(started.ok());
+        Session& s = *started.value();
+        for (const core::Point2 p : {kA, kB, kC, kD})
+            REQUIRE(s.supply(Value::point(p)).ok());
+        REQUIRE(s.choose("kapat").ok());
+        REQUIRE(typed.bus.finish(s).ok());
+    }
+    Rig ended;
+    {
+        auto started = ended.bus.begin_interactive("ALAN");
+        REQUIRE(started.ok());
+        Session& s = *started.value();
+        for (const core::Point2 p : {kA, kB, kC, kD})
+            REQUIRE(s.supply(Value::point(p)).ok());
+        REQUIRE(s.supply(Value{}).ok());
+        REQUIRE(ended.bus.finish(s).ok());
+    }
+    // A face is closed already: the word adds no repeated point, and the record is the one
+    // Enter leaves, byte for byte.
+    CHECK(journalled_run(typed.journal) == Value::Points{kA, kB, kC, kD});
+    CHECK_EQ(typed.doc.content_hash(), ended.doc.content_hash());
+    CHECK_EQ(typed.journal.entries().back().args.to_json().dump(),
+             ended.journal.entries().back().args.to_json().dump());
+
+    // Two corners are no face: said, and the prompt stays.
+    Rig r;
+    auto started = r.bus.begin_interactive("ALAN");
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    REQUIRE(s.supply(Value::point(kA)).ok());
+    REQUIRE(s.supply(Value::point(kB)).ok());
+    REQUIRE(s.choose("kapat").ok());
+    REQUIRE(s.waiting());
+    CHECK(r.echoed.find("en az üç köşe") != std::string::npos);
+}
+
+TEST_CASE("U-01: SPLINE'da K eğriyi kapatır ve günlüğe kapali=evet yazar")
+{
+    Rig r;
+    auto started = r.bus.begin_interactive("SPLINE");
+    REQUIRE(started.ok());
+    Session& s = *started.value();
+    for (const core::Point2 p : {kA, kB, kC, kD})
+        REQUIRE(s.supply(Value::point(p)).ok());
+    REQUIRE(s.choose("kapat").ok());
+    REQUIRE(r.bus.finish(s).ok());
+
+    // The closure is the command's own parameter, so a script says it the same way and the
+    // control points are not repeated.
+    REQUIRE_EQ(r.journal.size(), std::size_t{1});
+    const Value* closed = r.journal.entries().back().args.find("kapali");
+    REQUIRE(closed != nullptr);
+    CHECK(closed->as_bool());
+    CHECK(journalled_run(r.journal) == Value::Points{kA, kB, kC, kD});
+
+    Rig script;
+    REQUIRE(script.bus.execute_line("SPLINE 0,0 10,0 10,10 0,10 kapali=evet", Origin::Script).ok());
+    CHECK_EQ(r.doc.content_hash(), script.doc.content_hash());
+}
+
 TEST_CASE("U-01: istemin almadığı sözcük reddedilir ve istem açık kalır")
 {
     Rig r;

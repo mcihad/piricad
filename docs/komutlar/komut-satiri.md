@@ -443,12 +443,15 @@ G                              ← Enter — 99,99 geri alındı, çizgi 10,0'da
 ```
 
 **İstemin kendi seçenekleri.** Bazı istemler bir noktanın yerine geçen bir sözcük de alır;
-istem metni bunu söyler (`… K: kapat`). Şimdilik `ÇİZGİ` ve `ÇOKLUÇİZGİ` sonraki noktayı
-beklerken **`K`** (`KAPAT`, `CLOSE`) yazılabilir: çalışma ilk noktaya kapanır ve biter. Sözcük
+istem metni bunu söyler (`… K: kapat`). Şimdilik `ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN` ve `SPLINE` sonraki noktayı
+beklerken **`K`** (`KAPAT`, `CLOSE`) yazılabilir: çalışma ilk noktaya kapanır ve biter;
+`SPLINE`'da eğri kapanır (`kapali=evet`), `ALAN`'da halka biter (Enter ile aynı). Şeritte aynı
+iş **Nokta Girişi ▸ Seçenekler ▸ Kapat** düğmesidir. Sözcük
 tek başına bir satır olmalıdır — `K 1,2` bir koordinat çiftidir, kapatma değil — ve komut
 adlarından önce bakılır; `C` bu istemde ayrılmamıştır, çünkü `Ç` zaten `ÇİZGİ`nin adıdır.
-Seçenek günlüğe girmez: kapatma, ilk noktanın bir kez daha verilmesi olarak yazılır, yani
-`ÇOKLUÇİZGİ 0,0 10,0 10,10 0,0` yazmakla aynı çizimi ve aynı günlük satırını verir.
+Seçenek günlüğe girmez: `ÇİZGİ` ve `ÇOKLUÇİZGİ`'de kapatma ilk noktanın bir kez daha verilmesi olarak
+yazılır, yani `ÇOKLUÇİZGİ 0,0 10,0 10,10 0,0` yazmakla aynı çizimi ve aynı günlük satırını verir;
+`SPLINE`'da `kapali=evet` olarak yazılır.
 
 **Yazdığınız koordinat yazdığınız yere düşer.** Nesne yakalama, ızgara, dik mod, kutupsal
 izleme ve iz yalnız **fareyle nişan aldığınız** noktaya uygulanır. Komut satırına yazılan,

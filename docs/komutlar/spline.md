@@ -59,6 +59,11 @@ basın, veya komut satırına `G` yazıp Enter'a basın (`GERİ` ve `U` da olur)
 kontrol noktası** geri alınır; eğrinin geri kalanı tuvalde kalır ve komut o noktayı
 yeniden ister. Geri alınan nokta günlüğe yazılmaz.
 
+**Eğriyi kapatmak.** Üç ya da daha fazla kontrol noktasından sonra komut satırına `K`
+yazıp Enter'a basın (`KAPAT` ve `CLOSE` da olur) ya da şeritteki **Nokta Girişi ▸ Seçenekler ▸
+Kapat** düğmesine basın: eğri son noktadan ilkine kapanır ve komut biter. Kapatma ilk noktayı
+yinelemez; günlüğe `kapali=evet` yazılır, yani `SPLINE … kapali=evet` ile aynı eğriyi verir.
+
 Henüz belgede olmayan kontrol noktaları uç nokta olarak yakalanır; aralarındaki düz
 parçalar eğrinin üzerinde olmadığı için yakalanmaz.
 
