@@ -378,9 +378,9 @@ Task<void> run(Context& ctx)
             std::istringstream words(text);
             std::string word;
             while (words >> word) {
-                try {
-                    parts.push_back(std::stod(word));
-                } catch (const std::exception&) {
+                if (const std::optional<double> part = core::parse_decimal(word)) {
+                    parts.push_back(*part);
+                } else {
                     ctx.session().fail(core::err(
                         core::ErrorCode::ParseError,
                         "'desen' çizgi kalınlığının katı olarak sayılardan oluşur; "

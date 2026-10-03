@@ -29,6 +29,7 @@ add_library(piricad_command STATIC
     src/validation.cpp
     src/value.cpp
     src/drawing_catalogs.cpp
+    src/dynamic_entry.cpp
     src/commands/block.cpp
     src/commands/xref.cpp
     src/commands/block_clip.cpp

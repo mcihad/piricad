@@ -136,6 +136,37 @@ yazıldığı her yere yazılır. Ayrıntı ve bütün liste: [Nokta fonksiyonla
 ÇİZGİ 485320.150,4310220.400 @50,30 @100<45 @(100*3),0 @80<90d orta(son,@50,0)
 ```
 
+### İmleç yanında uzunluk ve açı: dinamik girdi
+
+Bir çizgiyi, sonraki noktayı beklerken sürüklüyorsanız (ÇİZGİ, ÇOKLUÇİZGİ, TAŞI…) imlecin
+yanında iki alan görünür: **Uzunluk** ve **Açı**. Hangisini söylemek istiyorsanız yazarsınız;
+öbürünü fare belirlemeye devam eder. Alanlar **DİNAMİK GİRDİ** anahtarına bağlıdır
+(durum çubuğu; kapalıysa yalnız eski okuma kalır).
+
+| Siz | Olan |
+|---|---|
+| `12.5` yazıp **Enter** | İmlecin gösterdiği yönde 12,5 m ilerleyen nokta (**doğrudan mesafe girişi**). `12,5` virgüllü ise koordinattır, mesafe değil |
+| `12.5` yazıp **Tab** | Uzunluk **kilitlenir** (satır boşalır, imlecin yanında "kilitli" yazar); fareyi nereye oynatırsanız oynatın nokta 12,5 m uzakta kalır, yön fareyi izler |
+| Uzunluk kilitliyken `50` yazıp **Enter** | Nokta tam olarak `@12.5<50` yazmışsınız gibi: 12,5 m, 50 grad |
+| Yalnız açıyı kilitlemek için **Tab** (boş satırda), `50`, **Tab** | Açı kilitli, uzunluk fareninki |
+| Boş satırda **Tab** | Alan değiştirir; kilitli bir alana geçerseniz değeri satıra geri gelir, kilidi kalkar, düzeltirsiniz |
+| **Esc** | Önce kilitleri kaldırır; ikinci Esc komutu bırakır |
+| Fareyle **tıklamak** | Kilitliyse nokta kilitli değere oturur: tıkladığınız yer yalnız serbest alanı belirler |
+
+![Uzunluk kilitli: 12,5 m, açı fareyi izliyor](dinamik-girdi-kilitli.png)
+
+![Uzunluk kilitli, açı yazılıyor: kılavuz 50 grade döndü](dinamik-girdi-aci.png)
+
+Uzunluk birimli de yazılır (`1250 cm`, `12.5 m`, `(2m+50cm)`; bkz. [Birimli sayılar](#birimli-sayılar)),
+açı oturumun birim ve kuralıyla (`45`, `45d`, `100g`, `0.7r`) yazılır. Kilitlediğiniz değer
+tuşlara bastığınız anda doğrulanır; geçersizse (`0`, `abc`, `45zz`) neden söylenir, kilitlenmez.
+
+**Yazdığınız satır aynı satırdır.** Enter, alanları `@12.5<50` gibi yazılabilir bir satıra
+çevirir ve onu yazmışsınız gibi çalıştırır; transkriptte `Nokta: @12.5<50` görürsünüz,
+günlükte ve betikte nokta olarak yer alır. Kilit günlüğe girmez; yalnız çıkan nokta girer.
+Fareyle yönü veren bir alan varsa o kısım milimetreye (uzunluk) ve mikro dereceye (açı)
+kadar tam yazılır, yani kilitli uzunlukla tıklamak ile aynı uzunluğu elle yazmak aynı noktadır.
+
 ## Nokta fonksiyonları
 
 Bir nokta yerine **onu nasıl bulduğunuzu** yazarsınız. Fonksiyon, komut çalışmadan

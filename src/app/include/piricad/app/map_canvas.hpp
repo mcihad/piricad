@@ -60,6 +60,10 @@ namespace piricad::core {
 class Settings;
 } // namespace piricad::core
 
+namespace piricad::command {
+class Session; ///< command/session.hpp: the running command, read for its dynamic input
+} // namespace piricad::command
+
 namespace piricad::core {
 struct AreaGhost; ///< core/area_edit.hpp; the .cpp includes the definition
 /// Forward-declared on purpose: `entity_kind.hpp` names a member `emit`, which
@@ -378,6 +382,9 @@ public:
     /// Empty when nothing is being dragged or the reading is switched off.
     const std::string& guideLabelForProbe() const noexcept { return guide_label_; }
 
+    /// The point a click would land on right now, held to any locked figures (probes).
+    core::Point2 cursorForProbe() const { return cursorWorld(); }
+
     /// The words the canvas last wrote beside objects — a figure typed by hand,
     /// a broken tie, a letter the typeface lacks — for the mouse probe.
     std::vector<std::string> noteTextsForProbe() const;
@@ -498,6 +505,11 @@ private:
     void buildSelectionBox();
     void buildSnapMarker();
     void buildCrosshair();
+
+    /// The length and the angle beside the dragged guide, as the fields they are
+    /// (`command::DynamicEntry`), from `a` (the base) to `b` (where the click will land).
+    void buildDynamicFields(const command::Session& session, render::ScreenPointF a,
+                            render::ScreenPointF b);
     void buildRuler();
 
     /// Sets the platform pointer for the moment: blank over the canvas, because
@@ -506,9 +518,21 @@ private:
     void applyPointer();
 
     /// The cursor in document millimetres: the snapped point when an aid has
-    /// fired, else the raw position — where a click would land.
+    /// fired, else the raw position — where a click would land. HELD TO THE FIGURES the person has
+    /// locked or typed beside it (`Session::dynamic_point`), because that is where the click lands
+    /// then, and the guide must be drawn where the point will be.
     core::Point2 cursorWorld() const;
 
+    /// The same before the figures: what the aids made of the aim. The dynamic input starts from
+    /// it, and the controller asks for it when a bare length has to borrow the hand's direction.
+    core::Point2 aimedWorld() const;
+
+public:
+    /// Where the hand is after the aids, or nothing when the pointer is off the drawing
+    /// (`Controller::setCursorProvider`).
+    std::optional<core::Point2> aimedCursor() const;
+
+private:
     /// The face-at-wanted-area ghost for the running ALANDÜZENLE prompt, or an
     /// empty one when no such prompt is up (core/area_edit.hpp).
     core::AreaGhost areaGhost() const;

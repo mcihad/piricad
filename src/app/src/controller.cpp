@@ -374,6 +374,27 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
     // answer is converted to that and handed over. Nothing about which client is
     // asking enters into it (Article 1.2).
     if (session_ && session_->waiting()) {
+        // THE LENGTH AND THE ANGLE TYPED BESIDE THE CURSOR (TODOS U-02): a bare length, or any line
+        // while a figure is locked, is the figures made into the line a person could have typed
+        // (`@12.5<45`) and run as that — so it reaches the command, the transcript and the journal
+        // as the coordinate it is. Before everything below, which would read `12.5` as nothing.
+        if (dynamicApplies()) {
+            const bool bare = command::DynamicEntry::is_bare_length(trimmed.toStdString());
+            if (bare || session_->dynamic().any_locked()) {
+                auto composed = composeDynamic(trimmed);
+                if (composed) {
+                    session_->dynamic().clear();
+                    session_->set_dynamic_line({});
+                    emit dynamicChanged();
+                    emit echoed(tr("  Nokta: %1").arg(composed.value()));
+                    return runLineResult(composed.value(), origin);
+                }
+                // A figure meant as one and not a value is said; any other line — a command, a
+                // coordinate — goes on its way, a lock notwithstanding.
+                if (bare) return composed.error();
+            }
+        }
+
         // `G`, `GERİ` OR `U` BETWEEN TWO POINTS TAKES THE LAST ONE BACK. `U` is
         // `GERİAL`'s own name, and read as a command it wrote the run out and then
         // undid all of it — the drawing lost for the one wrong corner the user
@@ -974,6 +995,80 @@ bool Controller::retractPoint()
     emit echoed(tr("Son nokta geri alındı."));
     settleSession();
     return true;
+}
+
+bool Controller::dynamicApplies() const
+{
+    return session_ && session_->waiting() && cursorProvider_ &&
+           command::takes_dynamic_entry(session_->prompt()) &&
+           bus_.app_settings().get("core.arayuz.dinamik_girdi").as_bool();
+}
+
+core::Result<QString> Controller::composeDynamic(const QString& line)
+{
+    const std::string text    = line.toStdString();
+    const core::Point2 origin = session_->prompt().rubber_origin;
+    core::Point2 cursor       = origin;
+    if (session_->dynamic().needs_cursor(text)) {
+        const std::optional<core::Point2> at = cursorProvider_ ? cursorProvider_() : std::nullopt;
+        if (!at)
+            return core::err(core::ErrorCode::InvalidArgument,
+                             "Yön için imleç tuvalde olmalı; ya da uzunluğa açıyı da kilitleyin "
+                             "(uzunluk, Tab, açı).");
+        cursor = *at;
+    }
+    command::ResolveContext ctx;
+    ctx.convention = bus_.angle_convention();
+    auto composed  = session_->dynamic().compose(origin, cursor, text, ctx);
+    if (!composed) return composed.error();
+    return QString::fromStdString(composed.value());
+}
+
+core::Result<QString> Controller::dynamicTab(const QString& line)
+{
+    if (!dynamicApplies())
+        return core::err(core::ErrorCode::InvalidArgument, "Bu istem uzunluk ve açı almıyor.");
+    command::ResolveContext ctx;
+    ctx.convention = bus_.angle_convention();
+    auto next      = session_->dynamic().tab(line.toStdString(), ctx);
+    if (!next) {
+        refused(next.error());
+        return next.error();
+    }
+    emit dynamicChanged();
+    return QString::fromStdString(next.value());
+}
+
+bool Controller::dynamicRelease()
+{
+    if (!session_ || !session_->dynamic().any_locked()) return false;
+    session_->dynamic().clear();
+    emit dynamicChanged();
+    return true;
+}
+
+bool Controller::acceptDynamic()
+{
+    if (!dynamicApplies() || !session_->dynamic().any_locked()) return false;
+    auto line = composeDynamic(QString());
+    if (!line) {
+        refused(line.error());
+        return true; ///< said; the figures stay for another try
+    }
+    session_->dynamic().clear();
+    session_->set_dynamic_line({});
+    emit dynamicChanged();
+    emit echoed(tr("  Nokta: %1").arg(line.value()));
+    (void)runLineResult(line.value(), command::Origin::CommandLine);
+    return true;
+}
+
+void Controller::noteLine(const QString& text)
+{
+    if (!session_) return;
+    session_->set_dynamic_line(text.toStdString());
+    if (session_->waiting() && command::takes_dynamic_entry(session_->prompt()))
+        emit dynamicChanged();
 }
 
 bool Controller::chooseWord(const QString& id)

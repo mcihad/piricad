@@ -6,6 +6,38 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — Türkçe sayı yerel ayarında `12.5` 12 okunuyordu
+
+- **Kusur:** Qt başlarken `setlocale(LC_ALL, "")` çağırır; `LC_NUMERIC=tr_TR` olan bir makinede
+  C kütüphanesinin ondalık ayracı **virgül** olur ve ayrıştırıcının `std::strtod("12.5")`'i 12
+  veriyordu. Yani gerçek uygulamada yazılan `@12.5<50` on iki metreydi, `485320.150` doğu
+  koordinatı 485320, DXF yazıcısının `%.15g`'si dosyaya `12,5` yazacaktı (başka hiçbir programın
+  okuyamayacağı bir dosya). Bulan: dinamik girdi probunun `12.5` yazıp 12,0004 m ölçmesi.
+  Önceki turun OFSET `5,5 m` probu bunu `5` göstererek de gizlemişti (toleransı bir tam sayıydı).
+- **Düzeltme iki katmanlı:** `main.cpp` `QApplication`dan hemen sonra `LC_NUMERIC`i `C`ye
+  döndürüyor (`ui.md` R57); ev sahibine güvenmesin diye kütüphaneler de kendi başına doğru:
+  `core::parse_decimal` (ayrıştırıcı, `guide`, `style`, GDAL parametre okuyucusu) ve
+  `core::format_general` (DXF yazıcısı) yerelin ayracını nokta yapıyor; virgülü hiçbir yerelde
+  sayı saymıyor.
+- **Kanıt:** `test_locale.cpp` (parser, ifade, kutupsal, TUREF koordinatı, `format_general` ve
+  DXF dosyası `tr_TR` altında; yerel yüklü değilse PENDING), `prompt-tabs-tr-sayi` ctest'i.
+
+### Eklendi — imleç yanında dinamik girdi: Uzunluk ve Açı alanları, Tab ile kilit (U-02)
+
+- Sonraki noktayı bekleyen sürüklenen kılavuzda iki alan: **Uzunluk** ve **Açı**. Yazılan satır
+  etkin alanın kutusudur; **Tab** değeri kilitler ve öbür alana geçer (boş satırda Tab gezer,
+  kilitliyi düzenlemeye açar), **Enter** noktayı verir, **Esc** önce kilitleri kaldırır,
+  tıklamak kilitli değere oturur. Yalın `12.5` + Enter imlecin yönünde 12,5 m'dir. Ekranda
+  kilit durumu yazıyor ("kilitli", mavi), etkin alan `>` ile, geçersiz değer kırmızı.
+- Durum `Session`da (`DynamicEntry`, `command.md` R31): her soruda sıfırlanır, kilit günlüğe
+  girmez. Nokta, alanların **yazılabilir bir satıra** (`@12.5<50`) çevrilip tek gramerle
+  (`parse_point`) okunmasıyla çıkar; fare kısmı milimetre ve mikro dereceye tam yazılır. Tıklama
+  `apply_input_aids` yolunda, yalnız nişanlanan noktada kilide oturur; tuval aynı çağrıyla
+  kılavuzu çizer.
+- Kanıt: `test_dynamic_entry.cpp` (10 vaka: yalın uzunluk, Tab kilidi, iki kilit = yazılan satır,
+  yalnız açı, birim/ifade, geçersiz, gezinme, gösterim, 300 tohumlu özellik), `PIRICAD_PROMPT_PROBE`
+  dinamik bloğu (gerçek pencere + ekransız), kareler `dinamik-girdi-*`.
+
 ### Eklendi — favorilerin sırası kişinin (U-01)
 
 - Komut paletinde yıldızlı bir komutun üzerindeyken **Alt+↑ / Alt+↓** onu Favoriler içinde bir yer

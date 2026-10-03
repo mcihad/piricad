@@ -35,6 +35,7 @@
 #include <QStringList>
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -251,6 +252,39 @@ public:
     /// `Session::choose`. False, with the refusal said, when the prompt takes no such word.
     bool chooseWord(const QString& id);
 
+    // ---- DYNAMIC INPUT (TODOS U-02) -------------------------------------------------------------
+    //
+    // The length and the angle typed beside the cursor live on the session (`Session::dynamic`);
+    // these are the shell's hands on them. The command line IS the active field's text box, so
+    // nothing here edits text — `Tab` locks what the line holds, `Enter` answers with the figures,
+    // and the answer is the line a person could have typed, run as such (CLAUDE.md 1.2, 5.11).
+
+    /// Where the hand is, in document millimetres AFTER the aids, or nothing when it is off the
+    /// drawing. The canvas knows; the controller asks, so a headless client has no cursor and the
+    /// length typed for it must come with its angle.
+    using CursorProvider = std::function<std::optional<core::Point2>()>;
+
+    void setCursorProvider(CursorProvider provider) { cursorProvider_ = std::move(provider); }
+
+    /// Whether the running prompt takes a length and an angle and the shell can answer for them:
+    /// a point asked for with a guide from a base, `Dinamik girdi` switched on.
+    bool dynamicApplies() const;
+
+    /// TAB. Locks what the line holds into the active field and moves on; on an empty line it walks
+    /// to the other field and takes a locked one up again for editing. The result is the text the
+    /// line should hold now. Refused, with the reason said, when the line is no value for the
+    /// field.
+    core::Result<QString> dynamicTab(const QString& line);
+
+    /// ESC, one step: drops the locks. True when there was one to drop.
+    bool dynamicRelease();
+
+    /// An EMPTY Enter with figures locked answers with them. True when it did.
+    bool acceptDynamic();
+
+    /// The command line changed: the active field's text, kept where the point is worked out.
+    void noteLine(const QString& text);
+
     /// FINISHES the running command the way the right mouse button means it: the
     /// open-ended shape closes on what it has, and the tool that started it stays
     /// armed for the next one. The same unwinding as `cancelInteractive` — the
@@ -387,6 +421,10 @@ signals:
     /// interface shows arrives through one of these, which is why a change made
     /// from the command line updates the screen exactly as a menu click does.
     void echoed(const QString& text);
+
+    /// The figures typed or locked beside the cursor changed, or the line they are typed in did:
+    /// the canvas redraws its readout and the guide.
+    void dynamicChanged();
     void documentChanged();
     void selectionChanged();
     void promptChanged(const QString& prompt);
@@ -437,6 +475,13 @@ signals:
                    const QString& line);
 
 private:
+    CursorProvider cursorProvider_{}; ///< see `setCursorProvider`
+
+    /// The line the figures make (`DynamicEntry::compose`) for `line` and the hand's place; the
+    /// reason when they make none. Does not say it: its caller decides whether the line was meant
+    /// as one.
+    core::Result<QString> composeDynamic(const QString& line);
+
     /// Says a refusal on the transcript — and, when it names a way out, that
     /// line too, and `remedyOffered` for the shell.
     void refused(const core::Error& error);

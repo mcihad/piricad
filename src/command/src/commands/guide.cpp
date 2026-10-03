@@ -115,15 +115,10 @@ bool angle_from_word(const std::string& word, core::AngleConvention session, dou
     for (char& c : digits)
         if (c == ',') c = '.';
 
-    try {
-        std::size_t used = 0;
-        const double v   = std::stod(digits, &used);
-        if (used != digits.size()) return false;
-        out = v;
-        return true;
-    } catch (...) {
-        return false;
-    }
+    const std::optional<double> v = core::parse_decimal(digits);
+    if (!v) return false;
+    out = *v;
+    return true;
 }
 
 Task<void> run(Context& ctx)

@@ -126,7 +126,14 @@ Value apply_input_aids(Session& session, const Prompt& prompt, Value v, bool up_
                                                     prompt.rubber_chain.front(), at,
                                                     session.bus().angle_convention()));
     }
-    return snap_value(session, prompt, std::move(v), up_front);
+    // A CLICK HELD TO WHAT THE PERSON LOCKED (TODOS U-02): the aim has been through the aids; if a
+    // length or an angle is locked, or one is typed in the line, the point is put on it. Only a
+    // point a hand AIMED is helped, like every aid — a stated coordinate is exact.
+    const bool aimed = v.kind() == Value::Kind::Point && v.aimed();
+    Value snapped    = snap_value(session, prompt, std::move(v), up_front);
+    if (aimed && !up_front)
+        if (const auto held = session.dynamic_point(snapped.as_point())) return Value::point(*held);
+    return snapped;
 }
 
 Context::Context(Session& session, Transaction& tx, const core::Document& doc)

@@ -1252,9 +1252,8 @@ void append_group(std::string& out, int code, const std::string& value)
 
 std::string number_text(double d)
 {
-    char buf[64];
-    (void)std::snprintf(buf, sizeof(buf), "%.15g", d);
-    return buf;
+    // A POINT on every machine: a DXF with a comma in its coordinates is a file nobody reads.
+    return core::format_general(d, 15);
 }
 
 /// Splices what the library cannot write into the written file, by the handle

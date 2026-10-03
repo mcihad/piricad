@@ -8,10 +8,30 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 
 namespace piricad::core {
+
+/// A DECIMAL NUMBER READ THE WAY THE LANGUAGE WRITES ONE: the point is `.` and nothing else is, on
+/// every machine.
+///
+/// `std::strtod` and `std::stod` read the decimal separator of the PROCESS'S numeric locale, and Qt
+/// puts a Turkish user's `LC_NUMERIC=tr_TR` there (`setlocale(LC_ALL, "")`) — where the separator
+/// is a comma, `strtod("12.5")` stops at the point and answers 12, and a typed `@12.5<50` is twelve
+/// metres. The app resets the category at start-up; this does not depend on it, because a library
+/// that reads a coordinate must not need its host to have been careful (CLAUDE.md 5.11, §7.3).
+///
+/// The whole of `text` has to be the number: nothing when it is empty, has anything after the
+/// number, or is no number. The result is the correctly rounded double, identical to what
+/// `strtod` gives in the "C" locale.
+std::optional<double> parse_decimal(std::string_view text);
+
+/// `printf("%.<significant>g")` with a POINT, whatever the numeric locale: the writing half of
+/// `parse_decimal`. A file format has one decimal separator and it is not the user's — DXF written
+/// by a Turkish machine with a comma in every coordinate is a file no other program reads.
+std::string format_general(double value, int significant);
 
 /// Turkish-aware UTF-8 upper-casing, restricted to ASCII + the six Turkish pairs.
 ///

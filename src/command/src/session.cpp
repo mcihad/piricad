@@ -263,11 +263,27 @@ void Session::resume_once()
     }
 }
 
+std::optional<core::Point2> Session::dynamic_point(core::Point2 snapped) const
+{
+    if (state_ != SessionState::Waiting || !takes_dynamic_entry(prompt_)) return std::nullopt;
+    const bool typing = !dynamic_line_.empty() && DynamicEntry::is_bare_length(dynamic_line_);
+    if (!dynamic_.any_locked() && !typing) return std::nullopt;
+
+    ResolveContext ctx;
+    ctx.convention = bus_.angle_convention();
+    auto point     = dynamic_.resolve(prompt_.rubber_origin, snapped, dynamic_line_, ctx);
+    if (!point) return std::nullopt;
+    return point.value();
+}
+
 bool Session::park(std::coroutine_handle<> h, Prompt p)
 {
     parked_ = h;
     prompt_ = std::move(p);
     state_  = SessionState::Waiting;
+    // A NEW QUESTION, a new segment: a length locked for the last point is not the next one's.
+    dynamic_.clear();
+    dynamic_line_.clear();
     if (bus_.on_prompt) bus_.on_prompt(prompt_);
     return true;
 }

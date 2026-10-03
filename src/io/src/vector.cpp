@@ -402,7 +402,7 @@ std::string_view style_value(const char* style, std::string_view key)
     return {};
 }
 
-/// A leading decimal number, or nothing. `std::stod` on a scanned parameter.
+/// A leading decimal number, or nothing. `core::parse_decimal` on a scanned parameter.
 ///
 /// Compared against the digit range rather than asked of `<cctype>`: the
 /// classifiers are banned outright in this tree (CLAUDE.md 5.6) because they are
@@ -422,11 +422,7 @@ std::optional<double> leading_number(std::string_view value, std::string_view un
     // paper, and the two are not interchangeable.
     if (value.substr(end) != unit) return std::nullopt;
 
-    try {
-        return std::stod(std::string(value.substr(0, end)));
-    } catch (...) {
-        return std::nullopt;
-    }
+    return core::parse_decimal(value.substr(0, end));
 }
 
 /// The character height an OGR LABEL style declares, in ground millimetres.

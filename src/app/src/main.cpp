@@ -22,6 +22,7 @@
 #include "piricad/command/log.hpp"
 #include "piricad/core/circle.hpp"
 
+#include <clocale>
 #include <csignal>
 
 // glibc and the BSDs carry `<execinfo.h>`; MSVC does not, and there the handler
@@ -240,6 +241,17 @@ int main(int argc, char** argv)
     // integer one. `design.md` §12 asks for this by name, and the icons are SVG
     // for the same reason.
     QApplication app(argc, argv);
+
+    // THE C LIBRARY READS AND WRITES NUMBERS WITH A POINT, WHATEVER THE USER'S LOCALE SAYS. Qt
+    // calls `setlocale(LC_ALL, "")` as it starts, so on a Turkish machine (`LC_NUMERIC=tr_TR`) the
+    // decimal separator of `strtod` and `snprintf` is a COMMA — and the parser's `strtod("12.5")`
+    // read 12: a typed `@12.5<50` was twelve metres, a `485320.150` easting was 485320, and the DXF
+    // writer's
+    // `%g` would have written `12,5` into a file every other program reads with a point. The
+    // grammar is the same on every machine (CLAUDE.md 5.11) and a figure is the same figure (§7.3),
+    // so the numeric category goes back to "C" at once; Qt's own formatting (`QLocale`, the Turkish
+    // comma on screen) does not read it. Nothing else in the locale is touched.
+    std::setlocale(LC_NUMERIC, "C");
 
     // THE SHELL DRAWS ITS OWN MENUS (design.md 7: they sit in the title bar),
     // so no window ever wants the platform's menu bar — and on macOS a native

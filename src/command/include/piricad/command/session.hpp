@@ -8,6 +8,7 @@
 #pragma once
 
 #include "piricad/command/context.hpp"
+#include "piricad/command/dynamic_entry.hpp"
 #include "piricad/command/input.hpp"
 #include "piricad/command/spec.hpp"
 #include "piricad/command/task.hpp"
@@ -237,6 +238,26 @@ public:
 
     const Prompt& prompt() const noexcept { return prompt_; }
 
+    /// THE LENGTH AND THE ANGLE BEING TYPED BESIDE THE CURSOR (`DynamicEntry`, TODOS U-02). The
+    /// state lives with the question it is an answer to: every new prompt starts it afresh, so a
+    /// lock never outlives the point it was for. The shell edits it; the aids read it.
+    DynamicEntry& dynamic() noexcept { return dynamic_; }
+
+    const DynamicEntry& dynamic() const noexcept { return dynamic_; }
+
+    /// The text of the command line, which is the active field's text box. Set by the shell on
+    /// every edit of the line; read wherever the point is worked out.
+    void set_dynamic_line(std::string line) { dynamic_line_ = std::move(line); }
+
+    const std::string& dynamic_line() const noexcept { return dynamic_line_; }
+
+    /// WHERE THE AIM LANDS ONCE THE FIGURES THE PERSON HAS LOCKED OR TYPED ARE HELD TO: `snapped`
+    /// (the aim after the aids) put on the locked length, the locked angle, or both. Nothing when
+    /// the prompt takes no dynamic entry, nothing is locked or typed, or the figures are no value —
+    /// the aim then stands as it was. The canvas draws this point and the click answers with it, so
+    /// what is shown is what is taken (the same call, CLAUDE.md 1.2).
+    std::optional<core::Point2> dynamic_point(core::Point2 snapped) const;
+
     const CommandSpec& spec() const noexcept { return *spec_; }
 
     Transaction& transaction() noexcept { return *tx_; }
@@ -351,6 +372,9 @@ private:
     }
 
     void resume_once();
+
+    DynamicEntry dynamic_{};
+    std::string dynamic_line_{};
 
     bool retracted_{false}; ///< the last empty answer was `retract`
     std::string word_{};    ///< the last empty answer was this `PromptWord::id`

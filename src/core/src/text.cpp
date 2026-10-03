@@ -2,6 +2,9 @@
 #include "piricad/core/text.hpp"
 
 #include <array>
+#include <clocale>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 namespace piricad::core {
@@ -155,6 +158,50 @@ std::string turkish_fold_key(std::string_view s)
 bool turkish_key_equals(std::string_view a, std::string_view b)
 {
     return turkish_fold_key(a) == turkish_fold_key(b);
+}
+
+std::optional<double> parse_decimal(std::string_view text)
+{
+    // A COMMA IS NOT THIS LANGUAGE'S POINT, and must not become one because the locale's is: it is
+    // refused up front, so `12,5` is no number here on any machine (a prompt that wants the Turkish
+    // comma turns it into a point first, `evaluate_answer`).
+    if (text.empty() || text.find(',') != std::string_view::npos) return std::nullopt;
+
+    // THE POINT THE C LIBRARY EXPECTS, written where ours stands. `localeconv` is the numeric
+    // category's own answer, so in the "C" locale this is the text unchanged.
+    const char* point = std::localeconv()->decimal_point;
+    std::string local;
+    if (point != nullptr && !(point[0] == '.' && point[1] == '\0')) {
+        for (const char c : text) {
+            if (c == '.')
+                local += point;
+            else
+                local += c;
+        }
+    } else {
+        local.assign(text);
+    }
+
+    char* end          = nullptr;
+    const double value = std::strtod(local.c_str(), &end);
+    if (end == local.c_str() || *end != '\0') return std::nullopt;
+    return value;
+}
+
+std::string format_general(double value, int significant)
+{
+    char buffer[64];
+    (void)std::snprintf(buffer, sizeof buffer, "%.*g", significant, value);
+    std::string out(buffer);
+
+    // Whatever the category's point is — a comma, an Arabic one — goes back to '.'.
+    const char* point = std::localeconv()->decimal_point;
+    if (point != nullptr && !(point[0] == '.' && point[1] == '\0')) {
+        const std::size_t length = std::strlen(point);
+        if (const std::size_t at = out.find(point); at != std::string::npos)
+            out.replace(at, length, ".");
+    }
+    return out;
 }
 
 } // namespace piricad::core

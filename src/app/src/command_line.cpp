@@ -117,6 +117,11 @@ CommandLine::CommandLine(Controller& controller, QWidget* parent)
     refreshCompletions();
 
     connect(this, &QLineEdit::returnPressed, this, &CommandLine::submit);
+
+    // THE LINE IS THE ACTIVE FIELD'S TEXT BOX when a length and an angle are being typed beside the
+    // cursor (TODOS U-02): the controller keeps its text where the point is worked out.
+    connect(this, &QLineEdit::textChanged, this,
+            [this](const QString& line) { controller_.noteLine(line); });
 }
 
 void CommandLine::applyTheme(ThemeMode mode)
@@ -307,7 +312,9 @@ void CommandLine::keyPressEvent(QKeyEvent* event)
         // them; then Esc lets go of the command AND the selection, as it does on
         // the canvas (`Controller::cancelAll`).
         if (text().isEmpty() && !composing_) {
-            controller_.cancelAll();
+            // A LOCKED LENGTH OR ANGLE GOES BEFORE THE COMMAND DOES: Esc takes back the figures the
+            // person fixed, and only a second one puts the tool away.
+            if (!controller_.dynamicRelease()) controller_.cancelAll();
         } else {
             clear();
             endCompose();
@@ -335,6 +342,19 @@ void CommandLine::keyPressEvent(QKeyEvent* event)
 
 bool CommandLine::event(QEvent* event)
 {
+    // TAB, WHILE A LENGTH AND AN ANGLE CAN BE TYPED: lock what the line holds and move to the other
+    // field. Taken here, ahead of the focus chain, which would otherwise carry the keyboard off the
+    // line at the moment the person is half-way through a figure.
+    if (event->type() == QEvent::KeyPress) {
+        const auto* key = static_cast<QKeyEvent*>(event);
+        if ((key->key() == Qt::Key_Tab || key->key() == Qt::Key_Backtab) &&
+            controller_.dynamicApplies()) {
+            const auto next = controller_.dynamicTab(text());
+            if (next) setText(next.value());
+            event->accept();
+            return true;
+        }
+    }
     if (event->type() == QEvent::ShortcutOverride && text().isEmpty()) {
         const auto* key = static_cast<QKeyEvent*>(event);
         if (key->matches(QKeySequence::Undo) || key->matches(QKeySequence::Redo)) {

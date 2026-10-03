@@ -44,6 +44,8 @@ add_executable(piricad_tests
     unit/test_colour.cpp
     unit/test_curve_path.cpp
     unit/test_draw_methods.cpp
+    unit/test_dynamic_entry.cpp
+    unit/test_locale.cpp
     unit/test_split_join.cpp
     unit/test_fillet.cpp
     unit/test_grips.cpp
@@ -367,6 +369,20 @@ if(TARGET piricad)
                 "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
                 $<TARGET_FILE:piricad>)
     set_tests_properties(prompt-tabs PROPERTIES TIMEOUT 120)
+
+    # AND THE SAME UNDER A TURKISH NUMERIC LOCALE. Qt hands the C library the user's `LC_NUMERIC`, and
+    # on `tr_TR` the library's decimal separator is a comma: `strtod("12.5")` read 12, so a typed
+    # `@12.5<50` was twelve metres. The probe asserts the process reads a point and that the dynamic
+    # input's typed length is exactly what was typed. A machine without the locale runs it in "C"
+    # (the probe prints which), where it is the same case as above.
+    add_test(NAME prompt-tabs-tr-sayi
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                LC_NUMERIC=tr_TR.UTF-8
+                PIRICAD_PROMPT_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
+    set_tests_properties(prompt-tabs-tr-sayi PROPERTIES TIMEOUT 120)
 
     # AND THE PLOT. A PDF is written by Qt, so `unit` cannot see one: this runs
     # the real binary, prints a parcel onto an A3 profile, and checks the page

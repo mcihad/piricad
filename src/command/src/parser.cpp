@@ -325,11 +325,11 @@ struct ExprParser
         if (allow_units && unit_after_number(unit_exp)) {
             used_unit = true;
             dim       = 1;
-            return std::strtod((literal + "e" + std::to_string(unit_exp - target_exp)).c_str(),
-                               nullptr);
+            return core::parse_decimal(literal + "e" + std::to_string(unit_exp - target_exp))
+                .value_or(0.0);
         }
         if (failed) return 0.0;
-        return std::strtod(literal.c_str(), nullptr);
+        return core::parse_decimal(literal).value_or(0.0);
     }
 };
 

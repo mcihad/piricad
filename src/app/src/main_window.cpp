@@ -75,6 +75,7 @@
 #include <QToolButton>
 
 #include <array>
+#include <clocale>
 #include <cmath>
 #include <limits>
 #include <span>
@@ -525,10 +526,14 @@ MainWindow::MainWindow(QWidget* parent)
         // and with nothing running, the last command again (`son_komut`).
         if (controller_->supplyPickedObjects()) return;
         if (canvas_->acceptGuide()) return;
+        // FIGURES LOCKED BESIDE THE CURSOR answer before "done pointing" ends the run on them.
+        if (controller_->acceptDynamic()) return;
         if (canvas_->finishPointRun()) return;
         (void)controller_->repeatLast(Controller::Repeat::Key);
     });
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
+    // WHERE THE HAND IS, for a length typed without its angle (TODOS U-02): the canvas knows.
+    controller_->setCursorProvider([this] { return canvas_->aimedCursor(); });
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
     connect(layerPanel_, &LayerPanel::propertiesRequested, this, &MainWindow::openStyleDesigner);
     connect(layerPanel_, &LayerPanel::attributeTableRequested, this,
@@ -4769,6 +4774,176 @@ int MainWindow::probePromptTabs()
                   QStringLiteral("ve günlüğe kapat sözcüğü değil noktalar yazıldı"));
         }
         letGo();
+    }
+
+    // ---- THE LENGTH AND THE ANGLE TYPED BESIDE THE CURSOR (TODOS U-02) ----
+    //
+    // A line is dragged out from its first point; a length is typed and locked with Tab, the mouse
+    // swings round it and the length does not move, an angle is typed, and Enter answers — with the
+    // very point the typed line `@12.5<…` gives. A directory in the variable means PHOTOGRAPH IT.
+    {
+        const QString into = QString::fromLocal8Bit(qgetenv("PIRICAD_PROMPT_PROBE"));
+        const auto picture = [this, &into](const char* name) {
+            if (into.size() <= 1) return;
+            QDir().mkpath(into);
+            QCoreApplication::processEvents();
+            QScreen* screen = windowHandle() != nullptr ? windowHandle()->screen() : nullptr;
+            QPixmap frame   = screen != nullptr ? screen->grabWindow(winId()) : QPixmap();
+            if (frame.isNull()) frame = grab();
+            (void)frame.save(into + QLatin1Char('/') + QLatin1String(name) +
+                             QStringLiteral(".png"));
+        };
+        const auto hover = [this](core::Point2 world) {
+            const auto at = canvas_->view().to_screen(world);
+            const QPointF p(at.x, at.y);
+            QMouseEvent move(QEvent::MouseMove, p, canvas_->mapToGlobal(p), Qt::NoButton,
+                             Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(canvas_, &move);
+            QCoreApplication::processEvents();
+        };
+        const auto key = [this](int code, const QString& text = QString()) {
+            QKeyEvent down(QEvent::KeyPress, code, Qt::NoModifier, text);
+            QCoreApplication::sendEvent(commandLine_, &down);
+            QCoreApplication::processEvents();
+        };
+        const auto type = [&](const QString& text) {
+            for (const QChar c : text)
+                key(c.unicode() == '.' ? Qt::Key_Period : Qt::Key_0 + (c.unicode() - '0'),
+                    QString(c));
+        };
+
+        // THE PROCESS'S NUMBERS ARE C'S, whatever `LC_NUMERIC` the machine has: on a Turkish one
+        // `strtod("12.5")` read 12 and a typed `@12.5<50` was twelve metres. The gate runs this
+        // probe with `LC_NUMERIC=tr_TR.UTF-8`, and says what it started under.
+        {
+            const char* env = std::getenv("LC_NUMERIC");
+            (void)std::fprintf(stdout, "[istem] bilgi: LC_NUMERIC ortamı = %s, işlem = %s\n",
+                               env != nullptr ? env : "(yok)", std::setlocale(LC_NUMERIC, nullptr));
+            check(std::strtod("12.5", nullptr) == 12.5,
+                  QStringLiteral("C kütüphanesi ondalık noktayı nokta okuyor"));
+            command::ResolveContext numbers;
+            numbers.convention = controller_->bus().angle_convention();
+            const auto typed   = command::parse_point("@12.5<100g", core::Point2{0, 0}, numbers);
+            check(typed.ok() && typed.value() == core::Point2{12'500, 0},
+                  QStringLiteral("yazılan @12.5<100g on iki buçuk metre"));
+        }
+
+        letGo();
+        runScriptLine(QStringLiteral("MOD ad=yakalama_modları deger=0"));
+        runScriptLine(QStringLiteral("ÇİZGİ"));
+        QCoreApplication::processEvents();
+        runScriptLine(QStringLiteral("0,0"));
+        canvas_->setFocus();
+        commandLine_->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        const command::Session* live = controller_->session();
+        check(live != nullptr && live->waiting() && command::takes_dynamic_entry(live->prompt()),
+              QStringLiteral("ÇİZGİ ikinci noktada uzunluk ve açı alıyor"));
+
+        // Dragged out towards the north-east: 30 m east, 20 m north.
+        hover(core::Point2{30'000, 20'000});
+        // WHAT THE CANVAS DRAWS is written by the frame, which an offscreen run never renders: the
+        // fields are asked of the model (the canvas draws exactly `shown`), and the drawn label is
+        // checked where there is one.
+        const auto fields = [this] {
+            return controller_->session()->dynamic().shown(
+                core::Point2{0, 0}, canvas_->cursorForProbe(),
+                controller_->session()->dynamic_line(), controller_->bus().angle_convention());
+        };
+        const bool rendered = !canvas_->guideLabelForProbe().empty();
+        if (!rendered)
+            (void)std::fprintf(stdout, "[istem] BEKLEMEDE: kare çizilmedi (ekransız); alan yazısı "
+                                       "yalnız gerçek pencerede denetlenir\n");
+        check(
+            fields()[0].active && !fields()[0].locked && !fields()[1].locked &&
+                (!rendered || (canvas_->guideLabelForProbe().find("Uzunluk") != std::string::npos &&
+                               canvas_->guideLabelForProbe().find("Açı") != std::string::npos)),
+            QStringLiteral("imleç yanında iki alan var, uzunluk etkin (%1)")
+                .arg(QString::fromStdString(fields()[0].text)));
+
+        // The length is typed — shown as typed, not yet locked — then locked with Tab.
+        type(QStringLiteral("12.5"));
+        check(fields()[0].typing && fields()[0].text == "12,5 m" &&
+                  (!rendered || canvas_->guideLabelForProbe().find("12,5 m") != std::string::npos),
+              QStringLiteral("yazılan uzunluk alanda görünüyor (%1)")
+                  .arg(QString::fromStdString(fields()[0].text)));
+        key(Qt::Key_Tab);
+        check(commandLine_->text().isEmpty() &&
+                  controller_->session()->dynamic().locked(command::DynField::Length),
+              QStringLiteral("Tab uzunluğu kilitledi ve satırı boşalttı"));
+        check(fields()[0].locked && fields()[0].text == "12,5 m" && fields()[1].active &&
+                  (!rendered || canvas_->guideLabelForProbe().find("kilitli") != std::string::npos),
+              QStringLiteral("kilit durumu ekranda yazıyor (%1)")
+                  .arg(QString::fromStdString(fields()[0].text)));
+        picture("dinamik-girdi-uzunluk-kilitli");
+
+        // The mouse swings through three directions and far: the length does not move.
+        for (const core::Point2 w : {core::Point2{5'000, 40'000}, core::Point2{-30'000, 10'000},
+                                     core::Point2{70'000, 5'000}}) {
+            hover(w);
+            const core::Point2 held = canvas_->cursorForProbe();
+            const double metres =
+                std::hypot(static_cast<double>(held.x), static_cast<double>(held.y)) / 1000.0;
+            check(std::abs(metres - 12.5) <= 0.002,
+                  QStringLiteral("fare oynarken uzunluk 12,5 m kaldı (%1 m)").arg(metres));
+        }
+
+        // The angle typed and Enter: the point is exactly what `@12.5<50` gives.
+        hover(core::Point2{30'000, 20'000});
+        type(QStringLiteral("50"));
+        picture("dinamik-girdi-aci-yazildi");
+        key(Qt::Key_Return);
+        QCoreApplication::processEvents();
+        controller_->finishInteractive();
+        QCoreApplication::processEvents();
+        {
+            const auto& all                  = controller_->journal().entries();
+            const command::Value::Points run = all.empty()
+                                                   ? command::Value::Points{}
+                                                   : all.back().args.get("noktalar").as_points();
+            command::ResolveContext ctx;
+            ctx.convention  = controller_->bus().angle_convention();
+            const auto want = command::parse_point("@12.5<50", core::Point2{0, 0}, ctx);
+            check(run.size() == 2 && want.ok() && run.back() == want.value(),
+                  QStringLiteral("Enter, yazılan @12.5<50 ile aynı noktayı verdi (%1 nokta)")
+                      .arg(run.size()));
+        }
+        letGo();
+
+        // A bare length and Enter: that far along wherever the hand points.
+        runScriptLine(QStringLiteral("ÇİZGİ"));
+        runScriptLine(QStringLiteral("0,0"));
+        QCoreApplication::processEvents();
+        hover(core::Point2{0, 40'000}); ///< due north under semt
+        type(QStringLiteral("7"));
+        key(Qt::Key_Return);
+        controller_->finishInteractive();
+        QCoreApplication::processEvents();
+        {
+            const auto& all                  = controller_->journal().entries();
+            const command::Value::Points run = all.empty()
+                                                   ? command::Value::Points{}
+                                                   : all.back().args.get("noktalar").as_points();
+            check(run.size() == 2 && std::abs(static_cast<double>(run.back().x)) <= 2.0 &&
+                      std::abs(static_cast<double>(run.back().y) - 7'000.0) <= 2.0,
+                  QStringLiteral("yalın 7 + Enter, imleç yönünde 7 m gitti"));
+        }
+        letGo();
+
+        // Esc takes the lock back before it takes the tool.
+        runScriptLine(QStringLiteral("ÇİZGİ"));
+        runScriptLine(QStringLiteral("0,0"));
+        QCoreApplication::processEvents();
+        hover(core::Point2{10'000, 10'000});
+        type(QStringLiteral("3"));
+        key(Qt::Key_Tab);
+        check(controller_->session()->dynamic().any_locked(), QStringLiteral("uzunluk kilitli"));
+        commandLine_->clear();
+        key(Qt::Key_Escape);
+        check(controller_->session() != nullptr && !controller_->session()->dynamic().any_locked(),
+              QStringLiteral("ilk Esc kilidi kaldırdı, komut sürüyor"));
+        letGo();
+        runScriptLine(QStringLiteral("MOD ad=yakalama_modları deger=%1").arg(before));
     }
     return failures;
 }
@@ -11633,15 +11808,21 @@ void MainWindow::refreshPointTab()
 
     // THE PROMPT'S OWN OPTIONS: Geri Al while a point can be taken back, and one button per
     // word the prompt takes (`Prompt::words`), labelled and explained by the command.
-    if (promptRetract_ != nullptr) promptRetract_->setEnabled(controller_->canRetract());
+    //
+    // GREYED OR HIDDEN ONLY WHILE THE TAB IS UP, like the layer pick above: at any other time — no
+    // command running — the tab is not on screen and its buttons stay pressable, so a screen reader
+    // finds the whole tree (`probeAccessible` asks every ribbon button for its press).
     const command::Session* asking = controller_->session();
     const bool waiting             = asking != nullptr && asking->waiting();
+    const bool tab_up = waiting && (asking->prompt().kind == command::ParamKind::Point ||
+                                    asking->prompt().kind == command::ParamKind::PointList);
+    if (promptRetract_ != nullptr) promptRetract_->setEnabled(!tab_up || controller_->canRetract());
     // A PICTURE PER WORD, by its id; a word added later still gets a button, with a tick.
     static const QHash<QString, Glyph> wordGlyph{{QStringLiteral("kapat"), Glyph::ToArea}};
     for (qsizetype i = 0; i < promptWords_.size(); ++i) {
         QAction* button = promptWords_[i];
         const bool used = waiting && static_cast<std::size_t>(i) < asking->prompt().words.size();
-        button->setVisible(used);
+        button->setVisible(used || !tab_up);
         if (!used) continue;
         const command::PromptWord& word = asking->prompt().words[static_cast<std::size_t>(i)];
         const QString id                = QString::fromStdString(word.id);

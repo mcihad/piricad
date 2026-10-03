@@ -1161,7 +1161,7 @@ kullanıcı için tek başına renk yeterli değildir.
 | **DİK** | `MOD dik_mod` | İmleci yatay ve düşey eksene kilitler (F8) |
 | **POLAR** | `MOD yakalama_modları` (kutupsal biti) | Önceki noktadan çıkan kutupsal ışınlara yakalar |
 | **OSNAP** | `MOD yakalama_modları` | Nesne yakalamayı açar/kapatır; kapatınca maske hatırlanır, açınca geri gelir (F3). Sağ tık mod listesini açar |
-| **DİNAMİK GİRDİ** | `TERCİH core.arayuz.dinamik_girdi` | İmlecin yanındaki koordinat ve uzunluk okumasını açar/kapatır |
+| **DİNAMİK GİRDİ** | `TERCİH core.arayuz.dinamik_girdi` | İmlecin yanındaki Uzunluk ve Açı alanlarını açar/kapatır; alanlara yazılır, **Tab** kilitler ([dinamik girdi](../komutlar/komut-satiri.md#imleç-yanında-uzunluk-ve-açı-dinamik-girdi)) |
 | **KALINLIK** | `TERCİH çizgi_kalınlığı` | Çizgi kalınlıklarını paftadaki ölçüsüyle çizer; kapalıyken her çizgi tek piksel kıl çizgidir. Kalınlık nesnede ve çıktıda durur, yalnız ekran değişir |
 
 Sağ tıklamak anahtarın ayarını açar: OSNAP ve POLAR'da yakalama modları listesi,

@@ -2010,7 +2010,7 @@ void MainWindow::buildContextTabs(SARibbonBar* bar, const RibbonFamilies& famili
         auto* word = new QAction(tr("Seçenek"), this);
         word->setObjectName(QStringLiteral("promptPoint.word.%1").arg(i));
         word->setData(static_cast<int>(Glyph::Check));
-        word->setVisible(false);
+        word->setToolTip(tr("Soran komutun seçeneği; komut satırına sözcüğü yazmakla aynı"));
         connect(word, &QAction::triggered, this, [this, word] {
             (void)controller_->chooseWord(word->property("piricad.word").toString());
         });

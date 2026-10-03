@@ -93,6 +93,7 @@ MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
     // pressed on the ribbon, the command cancelled at the command line — left
     // an empty box floating over the drawing, and it took every click that
     // landed on it: a dimension placed there simply never happened.
+    connect(&controller_, &Controller::dynamicChanged, this, [this] { update(); });
     connect(&controller_, &Controller::promptChanged, this, [this](const QString&) {
         const bool asking_text =
             controller_.awaitingInput() && controller_.promptKind() == command::ParamKind::Text;
@@ -1304,6 +1305,40 @@ std::string bearing_text(core::Point2 a, core::Point2 b, core::AngleConvention c
 
 } // namespace
 
+void MapCanvas::buildDynamicFields(const command::Session& session, render::ScreenPointF a,
+                                   render::ScreenPointF b)
+{
+    const auto fields = session.dynamic().shown(session.prompt().rubber_origin, aimedWorld(),
+                                                session.dynamic_line(), look_.angle);
+    const std::array<QString, 2> names{tr("Uzunluk"), tr("Açı")};
+
+    // ON the line at its middle, lifted clear of it and one field under the other; beside the
+    // cursor they would fight the snap marker and its mode name.
+    const float x = (a.x + b.x) * 0.5F + 8.0F;
+    float y       = (a.y + b.y) * 0.5F - 6.0F;
+    std::string said;
+    for (std::size_t i = 0; i < fields.size(); ++i) {
+        const auto& field = fields[i];
+        // THE STATE IN WORDS AND IN COLOUR, so it reads without the colour: the marker is the field
+        // the line is typing into, "kilitli" the one the mouse can no longer move, and a figure
+        // that is no value is red. ASCII markers only: the canvas's own atlas is the font, and a ▸
+        // or a thin bar in it was a box. `>` marks the field the line is typing into, `|` the
+        // caret.
+        std::string text =
+            (field.active ? "> " : "  ") + names[i].toStdString() + ": " + field.text;
+        if (field.typing) text += "|";
+        if (field.locked) text += "  kilitli";
+        const auto& colour = field.invalid  ? tokens_->danger
+                             : field.locked ? tokens_->accent
+                                            : tokens_->readout;
+        overlay_.labels.push_back(render::OverlayLabel{
+            colour.rgba(), x, y, static_cast<float>(look_.hint_px), false, text});
+        y += static_cast<float>(look_.hint_px) + 3.0F;
+        said += (i == 0 ? "" : " · ") + text;
+    }
+    guide_label_ = said;
+}
+
 void MapCanvas::buildGuides()
 {
     const core::GuideStore& guides = controller_.document().guides();
@@ -1757,10 +1792,24 @@ core::AreaGhost MapCanvas::areaGhost() const
     return core::area_edit_ghost(ring, *request, cursorWorld(), std::max<core::Mm>(snap, 1));
 }
 
-core::Point2 MapCanvas::cursorWorld() const
+core::Point2 MapCanvas::aimedWorld() const
 {
     return snap_preview_valid_ ? snap_preview_.point
                                : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+}
+
+core::Point2 MapCanvas::cursorWorld() const
+{
+    const core::Point2 aimed = aimedWorld();
+    if (const command::Session* session = controller_.session())
+        if (const auto held = session->dynamic_point(aimed)) return *held;
+    return aimed;
+}
+
+std::optional<core::Point2> MapCanvas::aimedCursor() const
+{
+    if (!cursor_valid_) return std::nullopt;
+    return aimedWorld();
 }
 
 void MapCanvas::addGhost(std::size_t batch, const std::vector<command::GhostRun>& runs)
@@ -2820,6 +2869,12 @@ void MapCanvas::buildOverlay()
             const auto snapped = view_.to_screen(snap_preview_.point);
             to                 = QPointF(snapped.x, snapped.y);
         }
+        // HELD TO THE FIGURES THE PERSON LOCKED OR TYPED (TODOS U-02): the guide ends where the
+        // click will land, and the mouse moving does not move what is locked.
+        if (const auto held = session->dynamic_point(aimedWorld())) {
+            const auto at = view_.to_screen(*held);
+            to            = QPointF(at.x, at.y);
+        }
 
         const std::size_t batch          = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
         const command::RubberShape shape = session->prompt().rubber_shape;
@@ -3790,12 +3845,14 @@ void MapCanvas::buildOverlay()
             shape != command::RubberShape::Dimension &&
             shape != command::RubberShape::DimensionNext) {
             const core::Point2 from_world = session->prompt().rubber_origin;
-            const core::Point2 to_world =
-                snap_preview_valid_ ? snap_preview_.point
-                                    : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+            const core::Point2 to_world   = aimedWorld();
 
             const core::Mm length = core::segment_length(from_world, to_world);
-            if (length > 0) {
+            if (command::takes_dynamic_entry(session->prompt())) {
+                // THE TWO FIGURES, as fields (TODOS U-02): a length and an angle that can be typed,
+                // locked with Tab, and shown as what they are — the cursor's, typed, or held.
+                buildDynamicFields(*session, render::to_f(from), toScreenF(to));
+            } else if (length > 0) {
                 std::string text = trimmed(static_cast<double>(length) / 1000.0, 3) + " m";
                 text += "  " + bearing_text(from_world, to_world, look_.angle);
 
@@ -4554,6 +4611,11 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
             return;
         }
         if (acceptGuide()) {
+            update();
+            return;
+        }
+        // LOCKED FIGURES ANSWER, before "that is the shape, done" would end the run on them.
+        if (controller_.acceptDynamic()) {
             update();
             return;
         }
